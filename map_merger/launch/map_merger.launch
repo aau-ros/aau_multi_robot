@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="log_path" default="$(env HOME)/logs" />
+ 	<arg name="robot_name" default="" />
+    <arg name="robot_prefix" default="" />
+    <arg name="robot_local_map_frame" default="map" />
+    <arg name="use_sim_time" default="false" />
+    <arg name="output" default="log" />
+	<arg name="position_local_robot_topic" default="odom" />
+
+  
+	<node pkg="map_merger" type="map_merger" name="map_merger" output="log"   >
+   		<param name="log_path" value="$(arg log_path)" />
+		<param name="robot_name" value="$(arg robot_name)" />
+		<param name="robot_prefix" value="$(arg robot_prefix)" />
+		<param name="local_map_frame_id" value="$(arg robot_local_map_frame)"/>
+		<param name="exchange_position" value="true" />
+		<param name="has_local_map" value="true" />
+		<param name="position_local_robot_topic" value="odom" />
+		<param name="seconds_send_timer" value="8" />
+		<param name="seconds_pub_timer" value="6" />
+		<param name="seconds_recompute_transform" value="25" />
+		<param name="seconds_send_position" value="1" />
+		<param name="position_other_robots_topic" value="position_other_robots"/>       
+    	<param name="split_size" value="2048" />
+    	<param name="splitted" value="true" />
+    	<param name="local_map_topic" value="$(arg robot_prefix)/map" />
+    	<param name="meta_topic_over_network" value="$(arg robot_prefix)/map_meta" />
+    	<param name="local_map_metadata_topic" value="$(arg robot_prefix)/map_metadata" />
+	</node>  
+</launch>
