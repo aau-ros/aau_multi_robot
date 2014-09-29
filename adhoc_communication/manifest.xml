@@ -1,0 +1,16 @@
+<package>
+  <description brief="ad_hoc_comm">
+
+     Implementation of Dynamic Soure Routing in ROS.
+
+  </description>
+  <author>Guenther Cwioro g.cwioro@gmx.net</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/adhoc_communication</url>
+  <depend package="roscpp"/>
+  <depend package="nav_msgs"/>
+  <depend package="geometry_msgs"/>
+</package>
+
+
