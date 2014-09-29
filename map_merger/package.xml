@@ -2,24 +2,24 @@
 <package>
   <name>map_merger</name>
   <version>0.1.1</version>
-  <description>The map_merger package</description>
+  <description> Map merger is a package to merge several maps on the fly to one global map, if possible </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="student@todo.todo">student</maintainer>
+  <maintainer email="peter_kohout@gmx.at">Peter Kohout</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
+  <license>BSD</license>
 
 
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/map_merger</url> -->
+  <url type="website">http://wiki.ros.org/map_merger/</url>
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
