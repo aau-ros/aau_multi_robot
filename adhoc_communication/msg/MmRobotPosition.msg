@@ -1,0 +1,2 @@
+string src_robot
+geometry_msgs/PoseStamped position

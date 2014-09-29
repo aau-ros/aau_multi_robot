@@ -1,0 +1,5 @@
+string dst_robot
+string topic
+adhoc_communication/MmMapUpdate map_update
+---
+uint8 status

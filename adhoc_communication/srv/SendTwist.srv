@@ -1,0 +1,5 @@
+string dst_robot
+string topic
+geometry_msgs/Twist twist
+---
+uint8 status

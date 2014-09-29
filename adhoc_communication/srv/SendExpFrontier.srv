@@ -1,0 +1,5 @@
+string dst_robot
+string topic
+adhoc_communication/ExpFrontier frontier
+---
+uint8 status

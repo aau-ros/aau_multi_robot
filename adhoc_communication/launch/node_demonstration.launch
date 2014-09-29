@@ -1,0 +1,21 @@
+<!-- This launchfile is to demonstrate the network node. Run this file on two different computers which are in the same ad-hoc network
+-->
+<launch>
+
+<param name="num_link_retrans" value="3" />
+<param name="num_e2e_retrans" value="10" />
+<param name="num_rreq" value="1" />
+<param name="max_frame_size" value="1500" />
+<param name="hop_limit_min" value="0" />
+<param name="hop_limit_max" value="0" />
+<param name="hop_limit_increment" value="3" />
+<param name="max_packet_size" value="10000" />
+<param name="beacon_interval" value="500" />
+<param name="enable_cooperative_relaying" value="true" />
+<param name="p_tx" value="16" />
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="network_node" />
+
+
+
+</launch>

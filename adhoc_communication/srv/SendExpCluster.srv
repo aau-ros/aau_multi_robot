@@ -1,0 +1,5 @@
+string topic
+string dst_robot
+adhoc_communication/ExpCluster cluster
+---
+uint8 status

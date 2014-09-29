@@ -1,0 +1,9 @@
+string group_name
+---
+bool member
+bool activated
+bool connected
+bool root
+bool joining
+string route_uplink
+string[] downlinks

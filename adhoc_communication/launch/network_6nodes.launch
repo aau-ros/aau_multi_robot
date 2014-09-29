@@ -1,0 +1,35 @@
+<!-- To see a visualisation of this network look at launch_files_overview.
+-->
+<launch>
+
+<param name="num_link_retrans" value="3" />
+<param name="num_e2e_retrans" value="10" />
+<param name="num_rreq" value="1" />
+<param name="max_frame_size" value="1500" />
+<param name="hop_limit_min" value="0" />
+<param name="hop_limit_max" value="0" />
+<param name="hop_limit_increment" value="3" />
+<param name="max_packet_size" value="10000" />
+<param name="beacon_interval" value="500" />
+<param name="enable_cooperative_relaying" value="false" />
+
+
+
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode11" args="lo node11 11:00:00:00:00:00 node22 22:00:00:00:00:00 node21 21:00:00:00:00:00" />
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode21" args="lo node21 21:00:00:00:00:00 node11 11:00:00:00:00:00 node31 31:00:00:00:00:00" />
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode22" args="lo node22 22:00:00:00:00:00 node11 11:00:00:00:00:00 node31 31:00:00:00:00:00 node32 32:00:00:00:00:00" />
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode31" args="lo node31 31:00:00:00:00:00 node21 21:00:00:00:00:00 node22 22:00:00:00:00:00 node32 32:00:00:00:00:00 node41 41:00:00:00:00:00" />
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode32" args="lo node32 32:00:00:00:00:00 node22 22:00:00:00:00:00 node31 31:00:00:00:00:00 node41 41:00:00:00:00:00" />
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="networkNode41" args="lo node41 41:00:00:00:00:00 node31 31:00:00:00:00:00 node32 32:00:00:00:00:00" />
+
+
+
+
+
+
+
+</launch>

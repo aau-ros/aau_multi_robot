@@ -1,0 +1,54 @@
+<!-- To make this file work on your system you must change the args of the simulation node (stage) 
+-->
+
+<launch>
+
+
+
+<node pkg="stage_ros" type="stageros" name="simulation" args="$(find adhoc_communication)/world/sim_world.world" />
+
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_0">
+	<param name="mac" value="00:11:00:00:00:00"/>
+	<param name="robot_name" value="robot_0"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="3" />
+	<param name="num_e2e_retrans" value="3" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="1500000" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="true" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_1"  >
+	<param name="mac" value="11:00:00:00:00:00"/>
+	<param name="robot_name" value="robot_1"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="3" />
+	<param name="num_e2e_retrans" value="3" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="1500000" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="true" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+
+
+
+</launch>

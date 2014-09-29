@@ -1,0 +1,145 @@
+<!-- To make this file work on your system you must change the args of the simulation node (stage) 
+-->
+
+<launch>
+
+<arg name="rebuild_mc_tree" default="true"/>
+<arg name="max_pack_s" default="1000000000"/>
+<arg name="recursive_mc_ack" default="false"/>
+<arg name="loss_ratio" default="0"/>
+<arg name="num_link_retrans" default="3"/>
+<arg name="num_e2e_retrans" default="3"/>
+<arg name="enable_cooperative_relaying" default="true"/>
+
+
+<node pkg="adhoc_communication" type="communication_tester" name="robot_output_0"  output="screen" args="-p robot_0 -n" launch-prefix="xterm -e" />
+<node pkg="adhoc_communication" type="communication_tester" name="robot_output_1"  output="screen" args="-p robot_1 -n" launch-prefix="xterm -e" />
+<node pkg="adhoc_communication" type="communication_tester" name="robot_output_2"  output="screen" args="-p robot_2 -n" launch-prefix="xterm -e" />
+<node pkg="adhoc_communication" type="communication_tester" name="robot_output_3"  output="screen" args="-p robot_3 -n" launch-prefix="xterm -e" />
+<node pkg="adhoc_communication" type="communication_tester" name="robot_output_4"  output="screen" args="-p robot_4 -n" launch-prefix="xterm -e" />
+
+
+<node pkg="stage_ros" type="stageros" name="simulation" args="$(find adhoc_communication)/world/sim_world.world" />
+
+
+
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_0">
+
+	<param name="mac" value="00:11:00:00:00:00"/>
+	<param name="robot_name" value="robot_0"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="$(arg num_link_retrans)" />
+	<param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="$(arg max_pack_s)" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="rebuild_mc_tree" value="$(arg rebuild_mc_tree)" />
+	<param name="loss_ratio" value="$(arg loss_ratio)" />
+	<param name="recursive_mc_ack" value="$(arg recursive_mc_ack)" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_1"  >
+	<param name="mac" value="11:00:00:00:00:00"/>
+	<param name="robot_name" value="robot_1"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="$(arg num_link_retrans)" />
+	<param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="recursive_mc_ack" value="$(arg recursive_mc_ack)" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="$(arg max_pack_s)" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+	<param name="rebuild_mc_tree" value="$(arg rebuild_mc_tree)" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="loss_ratio" value="$(arg loss_ratio)" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_2" >
+	<param name="mac" value="22:00:00:00:00:00"/>
+	<param name="robot_name" value="robot_2"/>
+	<param name="loss_ratio" value="$(arg loss_ratio)" />
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="$(arg num_link_retrans)" />
+	<param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="$(arg max_pack_s)" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+	<param name="recursive_mc_ack" value="$(arg recursive_mc_ack)" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="rebuild_mc_tree" value="$(arg rebuild_mc_tree)" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_3" >
+	<param name="mac" value="33:00:00:00:00:00"/>
+	<param name="robot_name" value="robot_3"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="$(arg num_link_retrans)" />
+	<param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+	<param name="num_rreq" value="1" />
+	<param name="loss_ratio" value="$(arg loss_ratio)" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="recursive_mc_ack" value="$(arg recursive_mc_ack)" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="$(arg max_pack_s)" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+	<param name="simulation_mode" value="true"/>
+<param name="robots_in_simulation" value="5" />
+	<param name="rebuild_mc_tree" value="$(arg rebuild_mc_tree)" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="robot_4" >
+	<param name="mac" value="44:00:00:00:00:00"/>
+	<param name="robot_name" value="robot_4"/>
+	<param name="interface" value="lo"/>
+	<param name="num_link_retrans" value="$(arg num_link_retrans)" />
+	<param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+	<param name="loss_ratio" value="$(arg loss_ratio)" />
+	<param name="num_rreq" value="1" />
+	<param name="max_frame_size" value="1500" />
+	<param name="recursive_mc_ack" value="$(arg recursive_mc_ack)" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="$(arg max_pack_s)" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+	<param name="simulation_mode" value="true"/>
+	<param name="robots_in_simulation" value="5" />
+	<param name="rebuild_mc_tree" value="$(arg rebuild_mc_tree)" />
+	<param name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00!robot_3,33:00:00:00:00:00!robot_4,44:00:00:00:00:00!" />
+	<param name="p_tx" value="1" />
+</node>
+
+
+
+</launch>

@@ -1,0 +1,5 @@
+string dst_robot
+string topic
+adhoc_communication/CMgrRobotUpdate update
+---
+uint8 status

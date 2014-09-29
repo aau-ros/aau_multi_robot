@@ -1,0 +1,38 @@
+ <!-- To make this file work on your system you must change the args of the simulation node (stage) 
+-->
+
+<launch>
+
+
+
+<arg name="interface" default="wlan0"/>
+<arg name="loss_ratio" default="0"/>
+<arg name="p_tx" default="15"/>
+
+
+<node pkg="adhoc_communication" type="adhoc_communication" name="adhoc_communication">
+	<param name="interface" value="$(arg interface)"/>
+	<param name="loss_ratio" value="$(arg loss_ratio)"/>
+	<param name="p_tx" value="$(arg p_tx)"/>
+
+
+<!--param name="sim_robot_macs" value="hans,AC:7B:A1:9B:1D:D3!kim,00:21:6A:75:22:B6!joy,8c:70:5A:30:23:30!robotnet,00:24:D7:04:C1:54"/-->
+
+
+	<param name="num_link_retrans" value="3" />
+	<param name="num_e2e_retrans" value="3" />
+	<param name="num_rreq" value="2" />
+	<param name="max_frame_size" value="1500" />
+	<param name="hop_limit_min" value="0" />
+	<param name="hop_limit_max" value="0" />
+	<param name="hop_limit_increment" value="3" />
+	<param name="max_packet_size" value="150000000" />
+	<param name="beacon_interval" value="100" />
+	<param name="enable_cooperative_relaying" value="true" />
+	<param name="simulation_mode" value="false"/>	
+</node>
+
+
+
+
+</launch>

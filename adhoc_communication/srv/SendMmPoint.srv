@@ -1,0 +1,5 @@
+string dst_robot
+string topic
+adhoc_communication/MmPoint point
+---
+uint8 status
