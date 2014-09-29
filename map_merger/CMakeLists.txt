@@ -109,6 +109,7 @@ include_directories(
 ## Declare a cpp executable
 # add_executable(map_merger_node src/map_merger_node.cpp)
 find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(map_merger src/main.cpp src/mapmerger.cpp src/mapmerger.h src/mapstitch.h src/mapstitch.cpp src/updateentry.cpp src/updateentry.h src/updatemanager.cpp src/updatemanager.h )
 target_link_libraries(map_merger ${OpenCV_LIBS} ${catkin_LIBRARIES} )
 ## Add cmake target dependencies of the executable/library
