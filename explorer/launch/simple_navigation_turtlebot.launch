@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="log_path" />
+  <arg name="frontier_selection" default="7"/>
+
+  <node pkg="explorer" type="explorer" respawn="false" name="navigation" output="screen">
+    <param name="frontier_selection" value="$(arg frontier_selection)"/>
+    <rosparam file="$(find explorer)/param/turtlebot_costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find explorer)/param/turtlebot_costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find explorer)/param/turtlebot_local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find explorer)/param/turtlebot_global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find turtlebot_navigation)/param/move_base_params.yaml" command="load" />
+    <param name="log_path" value="$(arg log_path)" />
+  </node>
+</launch>
+

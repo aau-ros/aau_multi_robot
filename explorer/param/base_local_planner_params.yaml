@@ -2,14 +2,23 @@ controller_frequency: 5.0
 recovery_behavior_enabled: true
 clearing_rotation_allowed: true
 TrajectoryPlannerROS:
-  max_vel_x: 1.50 #0.50
-  min_vel_x: 0.1 #0.10
+  max_vel_x: 2.0 #0.50
+  min_vel_x: 0.5 #0.10
+  max_vel_theta:  1.0
+  min_vel_theta: -1.0
+  min_in_place_vel_theta: 0.6
+
   max_rotational_vel: 1.5
   min_in_place_rotational_vel: 0.1
   acc_lim_th: 0.75
-  acc_lim_x: 0.50
-  acc_lim_y: 0.50
+  acc_lim_x: 1.0 #0.50
+  acc_lim_y: 1.0 #0.50
   transform_tolerance: 10
+
+  meter_scoring: true
+  pdist_scale: 0.6
+  gdist_scale: 0.8
+  occdist_scale: 0.01
 
   holonomic_robot: false
   yaw_goal_tolerance: 0.3 #0.3

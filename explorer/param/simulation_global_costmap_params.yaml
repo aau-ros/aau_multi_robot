@@ -1,8 +1,9 @@
 global_costmap:
    map_topic: map_merger/global_map
    update_frequency: 2.0
-   publish_frequency: 0.0 #10.0
+   publish_frequency: 10.0 #10.0
    static_map: true
+   rolling_window: false
    transform_tolerance: 10
    track_unknown_space: true
    unknown_cost_value: 255
