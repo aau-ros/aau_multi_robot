@@ -1,0 +1,5 @@
+string topic
+string data
+uint8 hop_limit
+---
+uint8 status
