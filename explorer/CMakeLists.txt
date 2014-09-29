@@ -4,7 +4,16 @@ project(explorer)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation tf costmap_2d navfn adhoc_communication map_merger)
+find_package(catkin REQUIRED COMPONENTS 
+roscpp 
+rospy 
+std_msgs 
+message_generation 
+tf 
+costmap_2d 
+navfn 
+adhoc_communication 
+map_merger)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -117,17 +126,16 @@ add_library(hungarian src/hungarian.cpp)
 add_library(munkres src/src/munkres.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
-add_dependencies(exploration_planner adhoc_communicationi hungarian munkres )
+add_dependencies(exploration_planner adhoc_communication_gencpp hungarian munkres )
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
-
+target_link_libraries(explorer exploration_planner hungarian munkres ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(explorer explorer_generate_messages_cpp)
+add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(explorer exploration_planner hungarian munkres ${catkin_LIBRARIES})
 #target_link_libraries(explorer profiler)
 #target_link_libraries(explorer tcmalloc)
 
