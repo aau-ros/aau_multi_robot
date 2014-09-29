@@ -1,0 +1,9 @@
+max_obstacle_height: 0.60  # assume something like an arm is mounted on top of the robot
+obstacle_range: 11.9
+raytrace_range: 11.9
+
+inflation_radius: 0.60
+
+footprint: [[-0.2, -0.2], [-0.2, 0.2], [0.2, 0.2],[0.2, -0.2]]
+
+

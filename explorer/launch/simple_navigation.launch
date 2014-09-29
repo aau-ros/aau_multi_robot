@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+
+<launch>
+
+
+  <arg name="turtlebot" default="true"/>
+  <arg name="pioneer" default="false"/>
+  <arg name="simulation" default="false"/>
+
+  <param name="log_path" value="$(arg log_path)" />
+
+
+<group if="$(arg simulation)">
+  <param name="use_sim_time"  value="true"/>
+  <rosparam file="$(find simple_navigation)/param/simulation_costmap_common_params.yaml" command="load" ns="global_costmap" />
+  <rosparam file="$(find simple_navigation)/param/simulation_costmap_common_params.yaml" command="load" ns="local_costmap" />
+  <rosparam file="$(find simple_navigation)/param/simulation_local_costmap_params.yaml" command="load" />
+  <rosparam file="$(find simple_navigation)/param/simulation_global_costmap_params.yaml" command="load" />
+  <node pkg="simple_navigation" type="simple_navigation" respawn="false" name="simple_navigation" output="screen">
+  </node>
+</group>
+
+
+
+<group if="$(arg turtlebot)">
+  <node pkg="simple_navigation" type="simple_navigation" respawn="false" name="simple_navigation" output="screen">
+
+    <rosparam file="$(find simple_navigation)/param/turtlebot_costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_global_costmap_params.yaml" command="load" />
+
+  </node>
+</group>
+
+
+
+<group if="$(arg pioneer)">
+  <node pkg="simple_navigation" type="simple_navigation" respawn="false" name="simple_navigation" output="screen">
+
+    <rosparam file="$(find simple_navigation)/param/pioneer_costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_global_costmap_params.yaml" command="load" />
+
+  </node>
+</group>
+
+</launch>
+

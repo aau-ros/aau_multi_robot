@@ -1,0 +1,6 @@
+int64 id
+int64 detected_by_robot
+float64 robot_home_position_x
+float64 robot_home_position_y
+float64 x_coordinate
+float64 y_coordinate

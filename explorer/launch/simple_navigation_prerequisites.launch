@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="turtlebot" default="true"/>
+  <arg name="pioneer" default="false"/> 
+  <arg name="simulation" default="false"/>
+
+  <param name="/use_sim_time" value="$(arg simulation)"/>
+
+  <include file="$(find sound_play)/soundplay_node.launch"/>
+  
+  <!-- ******************************************************************************* --> 
+  <!-- ********** START THE MINIMAL LAUNCH FILE TO LOAD AL NECESSARY TOPICS ********** -->
+  <!-- ******************************************************************************* -->
+
+<group if="$(arg turtlebot)">
+  <arg name="base"       value="$(optenv TURTLEBOT_BASE kobuki)"/>  <!-- create, rhoomba -->
+  <arg name="battery"    value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/> 
+  <arg name="stacks"     value="$(optenv TURTLEBOT_STACKS hexagons)"/>  <!-- circles, hexagons -->
+  <arg name="3d_sensor"  value="$(optenv TURTLEBOT_3D_SENSOR kinect)"/>  <!-- kinect, asus_xtion_pro -->
+  
+  <include file="$(find turtlebot_bringup)/launch/includes/_zeroconf.launch"/>
+  <include file="$(find turtlebot_bringup)/launch/includes/_robot.launch">
+    <arg name="base" value="$(arg base)" />
+    <arg name="stacks" value="$(arg stacks)" />
+    <arg name="3d_sensor" value="$(arg 3d_sensor)" />
+  </include>
+  <include file="$(find turtlebot_bringup)/launch/includes/_mobile_base.launch">
+    <arg name="base" value="$(arg base)" />
+  </include>
+  <include file="$(find turtlebot_bringup)/launch/includes/_netbook.launch">
+    <arg name="battery" value="$(arg battery)" />
+  </include>
+  <include file="$(find turtlebot_bringup)/launch/includes/_app_manager.launch"/>
+</group>
+
+
+<group if="$(arg pioneer)">
+  <include file="$(find pkohout_pioneer)/launch/minimal.launch"/>
+</group>
+
+
+  <!-- ******************************************************************************* --> 
+  <!-- ********** START THE 3D SENSOR TO ESTABLISH MAPPING ********** -->
+  <!-- ******************************************************************************* -->
+
+<group if="$(arg turtlebot)">
+  <include file="$(find turtlebot_bringup)/launch/3dsensor.launch">
+    <arg name="rgb_processing" value="false" />
+    <arg name="depth_registration" value="false" />
+    <arg name="depth_processing" value="false" />
+  </include>
+</group>
+ 
+  <!-- ******************************************************************************* -->
+  <!-- ********** START THE GMAPPING NODE ********** -->
+  <!-- ******************************************************************************* -->
+
+  <arg name="scan_topic" default="scan" />
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+
+    <param name="base_frame" value="base_link" unless="$(arg turtlebot)"/>
+    <param name="base_frame" value="base_footprint" unless="$(arg pioneer)"/>
+
+    <param name="odom_frame" value="odom"/>
+    <param name="map_update_interval" value="1.0"/>
+    <param name="maxUrange" value="3.9"/>
+    <param name="maxRange" value="15.0"/>
+    <param name="sigma" value="0.01"/>
+    <param name="kernelSize" value="1"/>
+    <param name="lstep" value="0.01"/>
+    <param name="astep" value="0.01"/>
+    <param name="iterations" value="5"/>
+    <param name="lsigma" value="0.075"/>
+    <param name="ogain" value="3.0"/>
+    <param name="lskip" value="0"/>
+    <param name="srr" value="0.01"/>
+    <param name="srt" value="0.02"/>
+    <param name="str" value="0.01"/>
+    <param name="stt" value="0.02"/>
+    <param name="linearUpdate" value="0.05"/>
+    <param name="angularUpdate" value="0.05"/>
+    <param name="temporalUpdate" value="-1.0"/>
+    <param name="resampleThreshold" value="0.5"/>
+    <param name="particles" value="10"/>
+  
+    <param name="xmin" value="-8.0"/>
+    <param name="ymin" value="-8.0"/>
+    <param name="xmax" value="8.0"/>
+    <param name="ymax" value="8.0"/>
+
+    <param name="delta" value="0.05"  unless="$(arg turtlebot)"/>
+    <param name="delta" value="0.02" unless="$(arg pioneer)"/>
+    <param name="llsamplerange" value="0.01"/>
+    <param name="llsamplestep" value="0.01"/>
+    <param name="lasamplerange" value="0.005"/>
+    <param name="lasamplestep" value="0.005"/>
+    <remap from="scan" to="$(arg scan_topic)"/>
+  </node>
+
+
+  <!-- ******************************************************************************* -->
+  <!-- ********** START MOVE BASE ********** -->
+  <!-- ******************************************************************************* -->
+
+  <include file="$(find turtlebot_navigation)/launch/includes/_velocity_smoother.launch"/>
+
+<group if="$(arg turtlebot)">
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find simple_navigation)/param/turtlebot_costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/turtlebot_global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/base_local_planner_params.yaml" command="load" />
+    <remap from="cmd_vel" to="cmd_vel_mux/input/navi_raw"/>
+  </node>
+</group>
+
+
+<group if="$(arg pioneer)">
+ <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find simple_navigation)/param/pioneer_costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/pioneer_global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find simple_navigation)/param/base_local_planner_params.yaml" command="load" />
+    <remap from="cmd_vel" to="/Rosaria/cmd_vel"/>
+  </node>
+</group>
+
+</launch>
+ 
