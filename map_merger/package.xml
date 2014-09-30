@@ -50,8 +50,8 @@
   <run_depend>message_runtime</run_depend>
   <run_depend>nav_msgs</run_depend>
   <run_depend>message_generation</run_depend>
-  <build_depend>libopencv-dev</build_depend>
-  <run_depend>libopencv-dev</run_depend>
+  <build_depend>libopencv</build_depend>
+  <run_depend>libopencv</run_depend>
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- You can specify that this package is a metapackage here: -->
