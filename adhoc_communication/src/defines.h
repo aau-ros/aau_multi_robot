@@ -1,8 +1,7 @@
-/*
- * defines.h
- *
- *  Created on: 23.07.2013
- *      Author: Günther Cwioro
+/*!
+ * \file defines.h
+ * \brief Includes all preprocessor defines
+ * \author Günther Cwioro
  */
 
 #ifndef DEFINES_H_

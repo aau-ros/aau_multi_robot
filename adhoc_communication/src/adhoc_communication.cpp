@@ -1,9 +1,7 @@
-/*
- * ad_hoc_communication.cpp
- *
- *  Created on: 03.07.2013
- *      Author: Günther Cwioro
- *              g.cwioro@gmx.net
+/*!
+ * \file adhoc_communication.cpp
+ * \author Günther Cwioro
+ * \brief Main file for the ad hoc communication node including the main function.
  *
  * Description:
  * This node implements a dynamic source routing protocol, which allows you to send data through a network of independent nodes.
@@ -84,6 +82,10 @@ bool getGroupStateF(adhoc_communication::GetGroupState::Request &req, adhoc_comm
     }
 }
 
+
+/*!
+ * \brief Shuts down the rode node.
+ */
 void shutDown()
 {
     ros::shutdown();
@@ -96,6 +98,13 @@ bool shutDownRos(adhoc_communication::ShutDown::Request &req, adhoc_communicatio
     return true;
 }
 
+/*!
+ * \brief Service to tell the node to attempt to connect to a multicast group.
+ * \param [in] req The service request object.
+ * \param [out] res The service response object.
+ *
+ * Implements the ROS service join_mc_group to tell a node to connect to a multicast group.
+ */
 bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_communication::ChangeMCMembership::Response &res)
 {
     /* Description:
