@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>explorer</name>
-  <version>0.1.4</version>
+  <version>0.1.3</version>
   <description>
       The explorer package utilizes frontier based exploration for multi-robot
       systems. Beside frontier detection, coordinated and uncoordinated
