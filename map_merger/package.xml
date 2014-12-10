@@ -9,8 +9,8 @@
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
   <maintainer email="peter_kohout@gmx.at">Peter Kohout</maintainer>
 
-  <author>Peter Kohout</author>
-  <author>Torsten Andre</author>
+  <author email="peter_kohout@gmx.at">Peter Kohout</author>
+  <author email="torsten.andre@aau.at">Torsten Andre</author>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->

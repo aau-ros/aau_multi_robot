@@ -165,7 +165,7 @@ add_dependencies(adhoc_communication adhoc_communication_gencpp)
 
 #add_custom_command(
 #TARGET adhoc_communication 
-#COMMAND echo "Setting UID bit and changing owner to root of adhoc_communication node requiring root privileges using sudo."
+COMMAND echo "Don't forget to set UID bit and changing owner to root of adhoc_communication node. The node requires root privileges using sudo to have access to the Linux RAW_SOCKET to send data."
 #COMMAND sudo chown root ../../devel/lib/adhoc_communication/adhoc_communication
 #COMMAND sudo chmod +s ../../devel/lib/adhoc_communication/adhoc_communication
 #)
