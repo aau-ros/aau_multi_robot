@@ -2,8 +2,8 @@
 Changelog for package map_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.5 (2014-12-10)
+------------------
 * Fixed compilation error map_merger
 * Contributors: Torsten Andre
 
