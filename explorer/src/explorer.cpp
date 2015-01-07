@@ -7,7 +7,6 @@
 #include <move_base_msgs/MoveBaseAction.h>
 #include <move_base_msgs/MoveBaseActionFeedback.h>
 #include <costmap_2d/costmap_2d_ros.h>
-#include <costmap_2d/cell_data.h>
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/cost_values.h>
 #include <costmap_2d/costmap_2d_publisher.h>
