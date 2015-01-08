@@ -2,6 +2,12 @@
 Changelog for package adhoc_communication
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Removed residual manifest.xml
+* Fixed CMAKES errors
+* Contributors: Torsten Andre
+
 0.1.5 (2014-12-10)
 ------------------
 * Fixed compilation error map_merger
