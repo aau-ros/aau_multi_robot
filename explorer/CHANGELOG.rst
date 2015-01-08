@@ -2,8 +2,8 @@
 Changelog for package explorer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-01-08)
+------------------
 * Fixed linking error in explorer
 * Removed residual manifest.xml
 * Update package.xml

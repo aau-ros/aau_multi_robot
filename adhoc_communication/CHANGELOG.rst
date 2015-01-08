@@ -2,8 +2,8 @@
 Changelog for package adhoc_communication
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.6 (2015-01-08)
+------------------
 * Removed residual manifest.xml
 * Fixed CMAKES errors
 * Contributors: Torsten Andre
