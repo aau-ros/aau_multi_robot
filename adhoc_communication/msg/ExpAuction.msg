@@ -1,7 +1,7 @@
 bool auction_status_message
 bool start_auction
 bool auction_finished
-uint32[] occupied_ids
+ExpAuctionElement[] occupied_ids
 ExpCluster[] requested_clusters
 uint32 auction_id
 string robot_name

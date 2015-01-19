@@ -30,7 +30,6 @@
   <include file="$(find turtlebot_bringup)/launch/includes/netbook.launch.xml">
     <arg name="battery" value="$(arg battery)" />
   </include>
-</group>
 
 
 
@@ -55,8 +54,7 @@
   <arg name="scan_topic" default="scan" />
   <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
 
-    <param name="base_frame" value="base_link" unless="$(arg turtlebot)"/>
-    <param name="base_frame" value="base_footprint" unless="$(arg pioneer)"/>
+    <param name="base_frame" value="base_footprint"/>
 
     <param name="odom_frame" value="odom"/>
     <param name="map_update_interval" value="1.0"/>
@@ -80,13 +78,12 @@
     <param name="resampleThreshold" value="0.5"/>
     <param name="particles" value="10"/>
   
-    <param name="xmin" value="-8.0"/>
-    <param name="ymin" value="-8.0"/>
-    <param name="xmax" value="8.0"/>
-    <param name="ymax" value="8.0"/>
+    <param name="xmin" value="-75.0"/>
+    <param name="ymin" value="-75.0"/>
+    <param name="xmax" value="75.0"/>
+    <param name="ymax" value="75.0"/>
 
-    <param name="delta" value="0.05"  unless="$(arg turtlebot)"/>
-    <param name="delta" value="0.02" unless="$(arg pioneer)"/>
+    <param name="delta" value="0.02"/>
     <param name="llsamplerange" value="0.01"/>
     <param name="llsamplestep" value="0.01"/>
     <param name="lasamplerange" value="0.005"/>

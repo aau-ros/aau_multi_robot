@@ -1,2 +1,2 @@
-uint32[] ids_contained
+ExpClusterElement[] ids_contained
 float64 bid 
