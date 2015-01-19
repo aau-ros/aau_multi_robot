@@ -50,11 +50,13 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    #AuctionStatus.msg
    ExpAuction.msg
+   ExpAuctionElement.msg
    ExpFrontierElement.msg
    MmControl.msg
    MmMapUpdate.msg
    MmRobotPosition.msg
    ExpCluster.msg
+   ExpClusterElement.msg
    ExpFrontier.msg
    MmListOfPoints.msg
    MmPoint.msg
