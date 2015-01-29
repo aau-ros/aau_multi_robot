@@ -323,7 +323,7 @@ public:
                             /*********** EXPLORATION STRATEGY ************
                              * 0 ... Navigate to nearest frontier TRAVEL PATH
                              * 1 ... Navigate using auctioning with cluster selection using 
-                             *       NEAREST selection
+                             *       NEAREST selection (Kuhn-Munkres)
                              * 2 ... Navigate to furthest frontier
                              * 3 ... Navigate to nearest frontier EUCLIDEAN DISTANCE
                              * 4 ... Navigate to random Frontier
