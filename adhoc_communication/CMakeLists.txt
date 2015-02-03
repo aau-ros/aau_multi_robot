@@ -50,11 +50,13 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    #AuctionStatus.msg
    ExpAuction.msg
+   ExpAuctionElement.msg
    ExpFrontierElement.msg
    MmControl.msg
    MmMapUpdate.msg
    MmRobotPosition.msg
    ExpCluster.msg
+   ExpClusterElement.msg
    ExpFrontier.msg
    MmListOfPoints.msg
    MmPoint.msg
@@ -199,11 +201,11 @@ COMMAND echo "Do not forget to set UID bit and changing owner to root of adhoc_c
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
- install(FILES
-   simulation_5.launch
- #  simulation_2.launch
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
- )
+# install(FILES
+#   simulation_5.launch
+#   simulation_2.launch
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
 
 

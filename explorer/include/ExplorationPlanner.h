@@ -27,7 +27,8 @@ namespace explorationPlanner
             struct frontier_t
             {
                 int id;
-                int detected_by_robot;
+                int detected_by_robot;  
+                std::string detected_by_robot_str;
                 double robot_home_x;
                 double robot_home_y;
                 double x_coordinate;
@@ -39,6 +40,7 @@ namespace explorationPlanner
             struct responded_t
             {
                 int robot_number; 
+                std::string robot_str;
                 int auction_number; 
             };
             
@@ -49,9 +51,15 @@ namespace explorationPlanner
                 int unreachable_frontier_count;
             } cluster;
             
+            struct transform_point_t
+            {
+                int id; 
+                std::string robot_str;
+            };
+            
             struct requested_cluster_t
             {
-                std::vector<int> requested_ids;
+                std::vector<transform_point_t> requested_ids;
                 int own_cluster_id; 
             };
             
@@ -64,6 +72,7 @@ namespace explorationPlanner
             struct auction_element_t
             {
                 int robot_id; 
+                std::string detected_by_robot_str;
                 std::vector<auction_pair_t> auction_element;
             };
             
@@ -90,7 +99,7 @@ namespace explorationPlanner
             ros::Subscriber sub_frontiers, sub_visited_frontiers, sub_negotioation, sub_negotioation_first;
             ros::Subscriber sub_control;
             ros::Subscriber sub_auctioning, sub_auctioning_status;
-            ros::Subscriber sub_position;        
+            ros::Subscriber sub_position, sub_robot;        
             
             ros::Publisher pub_auctioning_first; 
             ros::Subscriber sub_auctioning_first; 
@@ -103,7 +112,7 @@ namespace explorationPlanner
             ros::NodeHandle nh_transform, nh_negotiation, nh_negotiation_first;
             ros::NodeHandle nh_auction, nh_auction_status; 
             ros::NodeHandle nh_cluster, nh_cluster_grid;
-            ros::NodeHandle nh_position;
+            ros::NodeHandle nh_position, nh_robot;
             ros::NodeHandle nh_control; 
             ros::NodeHandle *nh_service;
             ros::NodeHandle nh; 
@@ -132,7 +141,7 @@ namespace explorationPlanner
             std::vector<cluster_t> clusters;
             std::vector<adhoc_communication::ExpCluster> unrecognized_occupied_clusters;
             
-            std::vector<int> transformedPointsFromOtherRobot_frontiers, transformedPointsFromOtherRobot_visited_frontiers;
+            std::vector<transform_point_t> transformedPointsFromOtherRobot_frontiers, transformedPointsFromOtherRobot_visited_frontiers;
             
             std::vector<int> already_used_ids, id_previously_detected;
             
@@ -176,16 +185,17 @@ namespace explorationPlanner
             int robot_name;
             double robot_home_x, robot_home_y;
             std::string move_base_frame, robots_in_simulation;
-            std::string robot_name_param;
+            std::string robot_str;
+            std::vector<std::string> new_robots;
             int next_auction_position_x, next_auction_position_y;
             
             ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter);
             void printFrontiers();
             bool respondToAuction(std::vector<requested_cluster_t> requested_cluster_ids, int auction_id_number);
-            bool clusterIdToElementIds(int cluster_id, std::vector<int>* occupied_ids);
+            bool clusterIdToElementIds(int cluster_id, std::vector<transform_point_t>* occupied_ids);
             bool initialize_auctioning(std::vector<double> *final_goal);
-            bool auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool);
-            bool selectClusterBasedOnAuction(std::vector<double> *goal, std::vector<int> *cluster_in_use_already_count);
+            bool auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool, std::vector<std::string> *robot_str_name);
+            bool selectClusterBasedOnAuction(std::vector<double> *goal, std::vector<int> *cluster_in_use_already_count, std::vector<std::string> *robot_str_name_to_return);
             bool InitSelectClusterBasedOnAuction(std::vector<double> *goal);
             int calculateAuctionBID(int cluster_number, std::string strategy);
             std::string lookupRobotName(int robot_name_int);
@@ -194,8 +204,9 @@ namespace explorationPlanner
             int calculate_travel_path(double x, double y);
             int estimate_trajectory_plan(double start_x, double start_y, double target_x, double target_y);
             void Callbacks();
+//            void new_robot_callback(const std_msgs::StringConstPtr &msg);
             int checkClustersID(adhoc_communication::ExpCluster cluster_to_check);
-            bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id);
+            bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name);
             void sort(int strategy);
             void simulate();
             void visualize_Frontiers();
@@ -209,12 +220,12 @@ namespace explorationPlanner
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);
             void clearVisitedFrontiers();
             void clearUnreachableFrontiers();
-            bool storeFrontier(double x, double y, int detected_by_robot, int id);
-            bool storeVisitedFrontier(double x, double y, int detected_by_robot, int id);
-            bool storeUnreachableFrontier(double x, double y, int detected_by_robot, int id);
-            bool removeStoredFrontier(int id);
-            bool removeVisitedFrontier(int id);
-            bool removeUnreachableFrontier(int id);
+            bool storeFrontier(double x, double y, int detected_by_robot, std::string detected_by_robot_str, int id);
+            bool storeVisitedFrontier(double x, double y, int detected_by_robot, std::string detected_by_robot_str, int id);
+            bool storeUnreachableFrontier(double x, double y, int detected_by_robot, std::string detected_by_robot_str, int id);
+            bool removeStoredFrontier(int id, std::string detected_by_robot_str);
+            bool removeVisitedFrontier(int id, std::string detected_by_robot_str);
+            bool removeUnreachableFrontier(int id, std::string detected_by_robot_str);
             bool publish_frontier_list();
             bool publish_visited_frontier_list();
             bool publish_negotiation_list(frontier_t negotiation_frontier, int cluster);
