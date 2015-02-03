@@ -2,6 +2,12 @@
 Changelog for package adhoc_communication
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixed CMakeLists error
+* Added dynamic naming of robots
+* Contributors: Neuhold Daniel, Torsten Andre
+
 0.1.6 (2015-01-08)
 ------------------
 * Removed residual manifest.xml
