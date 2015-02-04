@@ -2,8 +2,8 @@
 Changelog for package explorer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2015-02-04)
+------------------
 * Deleted deprecated file
 * Added dynamic naming of robots
 * Contributors: Neuhold Daniel, Torsten Andre

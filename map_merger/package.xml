@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>map_merger</name>
-  <version>0.1.6</version>
+  <version>0.1.7</version>
   <description> Map merger is a package to merge several maps on the fly to one global map, if possible </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 

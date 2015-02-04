@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>adhoc_communication</name>
-  <version>0.1.6</version>
+  <version>0.1.7</version>
   <description>The adhoc_communication package allows to exchange data over an ad-hoc network setup by robots running the corresponding node. The package allows you to exchange data over serveral roscores by wrapping transmitting the data to the destination and publishing the data on a predefined topic at the destination host. Routing is accomplished using the hostname of the robots.
   </description>
 

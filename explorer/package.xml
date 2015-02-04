@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>explorer</name>
-  <version>0.1.6</version>
+  <version>0.1.7</version>
   <description>
       The explorer package utilizes frontier based exploration for multi-robot systems. Beside frontier detection, coordinated and uncoordinated exploration strategies are available to select goal points. Coordinated exploration enhances robot distribution and reduces redundancy in exploration reducing exploration time.
   </description>
