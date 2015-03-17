@@ -212,7 +212,6 @@ public:
 			visualize_home_point();
 		}
 
-		ROS_INFO("---------- SET HOME/ GOAL POINT DONE --------");
 
 		// instantiate the planner
 		exploration = new explorationPlanner::ExplorationPlanner(robot_id, robot_prefix_empty, robot_name);
@@ -224,6 +223,7 @@ public:
                                
                 robot_home_position_x = robotPose.getOrigin().getX();
                 robot_home_position_y = robotPose.getOrigin().getY();
+		ROS_INFO("Set home point to (%lf,%lf).",robot_home_position_x,robot_home_position_y);
                
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
@@ -342,6 +342,10 @@ public:
                             * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
                             * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN DISTANCE)
                             */
+                            if(frontier_selection < 0 || frontier_selection > 6)
+                            {
+                                ROS_FATAL("You selected an invalid exploration strategy. Please make sure to set it in the interval [0,6]. The current value is %d.", frontier_selection);
+                            }
                             if(frontier_selection == 2)
                             {
 
