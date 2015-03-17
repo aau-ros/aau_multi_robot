@@ -93,6 +93,7 @@ catkin_package(
 ## Build ##
 ###########
 
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 FIND_LIBRARY( #TCMALLOC_LIBRARY tcmalloc
 	/usr/local/lib
