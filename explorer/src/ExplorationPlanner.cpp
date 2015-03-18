@@ -94,7 +94,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     ros::NodeHandle tmp;
     nh_service = &tmp;
     
-    ROS_ERROR("SendFrontier: %s     SendAuction: %s", sendFrontier_msgs.c_str(), sendAuction_msgs.c_str());
+    ROS_DEBUG("Sending frontier: '%s'     SendAuction: '%s'", sendFrontier_msgs.c_str(), sendAuction_msgs.c_str());
     
     ssendFrontier = nh_service->serviceClient<adhoc_communication::SendExpFrontier>(sendFrontier_msgs);
     ssendAuction = nh_service->serviceClient<adhoc_communication::SendExpAuction>(sendAuction_msgs);
@@ -1266,7 +1266,7 @@ bool ExplorationPlanner::storeVisitedFrontier(double x, double y, int detected_b
         {
             if(clusters.at(i).cluster_element.at(j).id == id)
             {
-                ROS_ERROR("Set cluster unreachable count to 0");
+                ROS_INFO("Set cluster unreachable count to 0");
                 clusters.at(i).unreachable_frontier_count = 0;
                 break_flag = true; 
                 break;
@@ -1365,7 +1365,7 @@ bool ExplorationPlanner::storeUnreachableFrontier(double x, double y, int detect
         {
             if(clusters.at(i).cluster_element.at(j).id == id)
             {
-                ROS_ERROR("Increasing cluster unreachable count");
+                ROS_WARN("Increasing cluster unreachable count");
                 clusters.at(i).unreachable_frontier_count++;
                 break_flag = true; 
                 break;
@@ -1499,7 +1499,7 @@ bool ExplorationPlanner::sendToMulticast(std::string multi_cast_group, adhoc_com
     std::string destination_name = multi_cast_group + robo_name; //for multicast
 //    std::string destination_name = robo_name; // unicast
     
-    ROS_ERROR("sentToMulticast  at destination: %s  topic: %s",destination_name.c_str(), topic.c_str());
+    ROS_DEBUG("sending to my multicast group '%s' on topic: '%s'",destination_name.c_str(), topic.c_str());
     service_frontier.request.dst_robot = destination_name; 
     service_frontier.request.frontier = frontier_to_send;
     service_frontier.request.topic = topic;
@@ -1510,12 +1510,12 @@ bool ExplorationPlanner::sendToMulticast(std::string multi_cast_group, adhoc_com
 
             if(service_frontier.response.status)
             {
-                    ROS_DEBUG("sendToMulticast has been sent successfully!");
+                    ROS_DEBUG("adhoc comm returned successful transmission");
                     return true;
             }
             else
             {
-                ROS_DEBUG("Failed to send sendToMulticast!");
+                ROS_DEBUG("Failed to send to multicast group %s!",destination_name.c_str());
                 return false;
             }                  
     }
@@ -1545,7 +1545,7 @@ bool ExplorationPlanner::sendToMulticastAuction(std::string multi_cast_group, ad
     std::string destination_name = multi_cast_group + robo_name; //for multicast
 //    std::string destination_name = robo_name; // unicast
     
-    ROS_ERROR("sentToMulticastAuction   at destination: %s  topic: %s",destination_name.c_str(), topic.c_str());
+    ROS_DEBUG("sending auction to multicast group '%s' on topic '%s'",destination_name.c_str(), topic.c_str());
     service_auction.request.dst_robot = destination_name; 
     service_auction.request.auction = auction_to_send;
     service_auction.request.topic = topic;
@@ -1556,12 +1556,12 @@ bool ExplorationPlanner::sendToMulticastAuction(std::string multi_cast_group, ad
 
             if(service_auction.response.status)
             {
-                    ROS_ERROR("sendToMulticast has been sent successfully!");
+                    ROS_DEBUG("Auction was multicasted successfully.");
                     return true;
             }
             else
             {
-                ROS_ERROR("Failed to send sendToMulticast!");
+                ROS_ERROR("Failed to send auction to multicast group '%s'!",destination_name.c_str());
                 return false;
             }                  
     }
