@@ -1180,21 +1180,18 @@ bool ExplorationPlanner::removeStoredFrontier(int id, std::string detected_by_ro
     {
         if(robot_prefix_empty_param == true)
         {
-            ROS_INFO("Frontier id: %d", frontiers.at(i).id);
-            ROS_INFO("Frontier ro: %s", frontiers.at(i).detected_by_robot_str.c_str());
+            ROS_DEBUG("Removing frontier with id '%d' detected by robot '%s'", frontiers.at(i).id, frontiers.at(i).detected_by_robot_str.c_str());
             if(frontiers.at(i).id == id && frontiers.at(i).detected_by_robot_str.compare(detected_by_robot_str) == 0)
             {
                 ROS_DEBUG("Removing Frontier ID: %d  at position: %d  of Robot: %s", frontiers.at(i).id, i, frontiers.at(i).detected_by_robot_str.c_str());
                 store_frontier_mutex.lock();
-                ROS_INFO("Erasing ...");
                 frontiers.erase(frontiers.begin()+i);
-                ROS_INFO("Erased");
 //                if(i > 0)
 //                {
 //                    i --;
 //                }
                 store_frontier_mutex.unlock();
-                break; //FIXME ... only a test
+                //break; //FIXME ... only a test
             }
         }else
         {
@@ -1521,7 +1518,7 @@ bool ExplorationPlanner::sendToMulticast(std::string multi_cast_group, adhoc_com
     }
     else
     {
-     ROS_ERROR("Failed call service sendToMulticast [%s]",ssendFrontier.getService().c_str());
+     ROS_WARN("Failed to call service sendToMulticast [%s]",ssendFrontier.getService().c_str());
      return false;
     }
 }
@@ -1561,13 +1558,13 @@ bool ExplorationPlanner::sendToMulticastAuction(std::string multi_cast_group, ad
             }
             else
             {
-                ROS_ERROR("Failed to send auction to mutlicast group %s!",destination_name.c_str());
+                ROS_WARN("Failed to send auction to mutlicast group %s!",destination_name.c_str());
                 return false;
             }                  
     }
     else
     {
-     ROS_ERROR("Failed call service sendToMulticastAuction [%s]",ssendAuction.getService().c_str());
+     ROS_WARN("Failed to call service sendToMulticastAuction [%s]",ssendAuction.getService().c_str());
      return false;
     }
 }
@@ -2920,7 +2917,7 @@ std::vector<int> ExplorationPlanner::getMapNeighbours(unsigned int point_x, unsi
  */
 void ExplorationPlanner::findFrontiers() {
 
-    ROS_INFO("Find Frontiers");
+        ROS_INFO("Find Frontiers");
         allFrontiers.clear();
 	int select_frontier = 1;
 	std::vector<double> final_goal,start_points;
@@ -2950,6 +2947,7 @@ void ExplorationPlanner::findFrontiers() {
 			allFrontiers.push_back(new_frontier_point);
 		}
 	}
+        ROS_INFO("Found %lu frontier cells which are transformed into frontiers points. Starting transformation...", allFrontiers.size());
 
 	/*
 	 * Iterate over all frontiers. The frontiers stored in allFrontiers are
@@ -3834,15 +3832,27 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
     {
         
 	Matrix<double> mat = convert_boost_matrix_to_munkres_matrix<double>(m);
-        ROS_INFO("Matrix :");
+        ROS_INFO("Matrix (%ux%u):",mat.rows(),mat.columns());
            
 	// Display begin matrix state.
 	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
-		for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
-			std::cout.width(2);
-			std::cout << mat(new_row,new_col) << " ";
-		}
-		std::cout << std::endl;
+            if(new_row > 9)
+            {
+                int rows_left = mat.rows() - new_row + 1;
+                std::cout << "... (" << rows_left << " more)";
+                break;
+            }
+            for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
+                if(new_col > 9)
+                {
+                    int columns_left = mat.columns() - new_col + 1;
+                    std::cout << "... (" << columns_left << " more)";
+                    break;
+                }
+                std::cout.width(2);
+                std::cout << mat(new_row,new_col) << " ";
+            }
+            std::cout << std::endl;
 	}
 	std::cout << std::endl;
 
@@ -3890,11 +3900,23 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
         ROS_INFO("Solved :");
 	// Display solved matrix.
 	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
-		for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
-			std::cout.width(2);
-			std::cout << mat(new_row,new_col) << " ";
-		}
-		std::cout << std::endl;
+            if(new_row > 9)
+            {
+                int rows_left = mat.rows() - new_row + 1;
+                std::cout << "... (" << rows_left << " more)";
+                break;
+            }
+            for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
+                if(new_col > 9)
+                {
+                    int columns_left = mat.columns() - new_col + 1;
+                    std::cout << "... (" << columns_left << " more)";
+                    break;
+                }
+                std::cout.width(2);
+                std::cout << mat(new_row,new_col) << " ";
+            }
+            std::cout << std::endl;
 	}
 
 	std::cout << std::endl;
@@ -5083,7 +5105,7 @@ void ExplorationPlanner::visualize_Clusters()
         cluster_polygon.header.seq = i+1;
 
         pub_clusters.publish<geometry_msgs::PolygonStamped>(cluster_polygon);  
-        break;// FIXME
+        //break;// FIXME
     }
 }
 

@@ -927,7 +927,11 @@ public:
             boost::filesystem::path boost_log_path(log_path.c_str());
             if(!boost::filesystem::exists(boost_log_path))
                 if(!boost::filesystem::create_directories(boost_log_path))
-                    ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+                    // directory not created; check if it is there anyways
+                    if(!boost::filesystem::is_directory(boost_log_path))
+                        ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+                    else
+                        ROS_INFO("Successfully created directory %s.", log_path.c_str());
              
         }
         
