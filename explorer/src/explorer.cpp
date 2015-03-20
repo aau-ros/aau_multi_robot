@@ -519,7 +519,7 @@ public:
                                         {
                                             cluster_element = final_goal.at(4);
                                             counter_waiting_for_clusters++;
-                                            ROS_ERROR("Negotiation was not successful, try next cluster");
+                                            ROS_WARN("Negotiation was not successful, try next cluster");
                                         }
                                         count++;
                                         /*
@@ -612,7 +612,7 @@ public:
                                     robot_str.clear();
                                     goal_determined = exploration->determine_goal(5, &final_goal, 0, cluster_element, &robot_str);
                                     
-                                    ROS_ERROR("Cluster element: %d", cluster_element);
+                                    ROS_DEBUG("Cluster element: %d", cluster_element);
                                     
                                     int cluster_vector_position = -1;
  
@@ -633,17 +633,17 @@ public:
                                             }
                                         }
                                     }
-                                    ROS_ERROR("Cluster vector position: %d", cluster_vector_position);
+                                    ROS_DEBUG("Cluster vector position: %d", cluster_vector_position);
                                     
                                     if(cluster_vector_position >= 0)
                                     {
                                         if(exploration->clusters.at(cluster_vector_position).unreachable_frontier_count >= number_unreachable_frontiers_for_cluster)
                                         {
                                             goal_determined = false;
-                                            ROS_ERROR("Cluster inoperateable");
+                                            ROS_WARN("Cluster inoperateable");
                                         }else
                                         {
-                                            ROS_ERROR("Cluster operateable");
+                                            ROS_WARN("Cluster operateable");
                                         }
                                     }
                                     
@@ -677,7 +677,7 @@ public:
                                                  * If NO goals are selected at all, iterate over the global
                                                  * map to find some goals. 
                                                  */
-                                                ROS_ERROR("No goals are available at all");
+                                                ROS_WARN("No goals are available at all");
                                                 cluster_element = -1;
                                                 break;
                                             }
@@ -767,7 +767,7 @@ public:
                         }
 			else
 			{
-				ROS_ERROR("No navigation performed");				
+				ROS_WARN("No navigation performed");				
 			}		
 			ROS_DEBUG("                                             ");
                         ROS_DEBUG("                                             ");
@@ -1218,7 +1218,7 @@ public:
                                  * If NO goals are selected at all, iterate over the global
                                  * map to find some goals. 
                                  */
-                                ROS_ERROR("No goals are available at all");
+                                ROS_WARN("No goals are available at all");
                                 cluster_element = -1;
                                 break;
                             }
@@ -1374,7 +1374,7 @@ public:
                                     }
                                     else if(backoff_sucessfull == false)
                                     {
-                                        ROS_ERROR("Navigation to global costmap back-off goal not possible"); 
+                                        ROS_WARN("Navigation to global costmap back-off goal not possible"); 
                                         ROS_INFO("Storing as unreachable...");
                                         exploration->storeUnreachableFrontier(global_goal.at(0),global_goal.at(1),global_goal.at(2), robot_str.at(0), global_goal.at(3));
                                         ROS_INFO("Stored unreachable frontier");
