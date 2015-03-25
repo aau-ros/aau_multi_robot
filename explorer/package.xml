@@ -56,6 +56,7 @@
   <build_depend>sound_play</build_depend>
   <build_depend>adhoc_communication</build_depend>
   <build_depend>map_merger</build_depend>
+  <build_depend>message_generation</build_depend>
 
   <run_depend>rospy</run_depend>
   <run_depend>roscpp</run_depend>
