@@ -81,6 +81,8 @@ public:
         nh.param<std::string>("robot_prefix",robot_prefix,"");
         ROS_INFO("robot prefix: \"%s\"", robot_prefix.c_str());
 
+        nh.setParam("explorerOperating", true);
+
         //char hostname_c[1024];
         //hostname_c[1023] = '\0';
         //gethostname(hostname_c, 1023);
@@ -90,9 +92,7 @@ public:
         std::string service = robot_prefix + std::string("/map_merger/logOutput");
         mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
 
-        // create explorer service to switch from exploration to rendezvous
-        //switchRend_server = nh.advertiseService<explorer::switchExplRend::Request, explorer::switchExplRend::Response>("switchExplRend", &Explorer::switchExplRend_srv);
-        switchRend_server = nh.advertiseService("switchExplRend", &Explorer::switchExplRend_srv);
+        //switchRend_server = nh.advertiseService("switchExplRend", &Explorer::switchExplRend_srv);
 
         if(robot_prefix.empty())
         {
@@ -243,16 +243,29 @@ public:
                 
 	}
 
-    void switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
-        // read parameter ExplState
-        // set paramter according req
-        // set res according State
-        res.state = "test";
-        ROS_DEBUG("In switchExplRend service function!, service Request = %d; service Response = %s", req, res);
-    }
+//    void switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
+//        ROS_DEBUG("In switchExplRend service function!");
 
-	void explore() 
-        {
+          //bool temp;
+          //nh.getParam("explorerOperating",temp);
+
+//        if(temp && (!req.explore)){
+//           nh.setParam("explorerOperating", false);
+//        }
+
+          //nh.getParam("explorerOperating",temp);
+//        if(temp){
+//            res.state = "explorer is operating";
+//        } else {
+//            res.state = "rendezvous is operating";
+//        }
+
+//        ROS_DEBUG("SwitchExplRend Servie state: %s", res.state.c_str());
+
+//    }
+
+    void explore()
+    {
 		/*
 		 * Sleep is required to get the actual 
 		 * costmap updated with obstacle and inflated 
@@ -272,8 +285,10 @@ public:
                  */
         time_start = ros::Time::now();
                 
-                
-		while (exploration_finished == false) 
+        bool explorerOp;
+        nh.getParam("explorerOperating",explorerOp);
+
+        while (exploration_finished == false && explorerOp)
         {
             Simulation == false;
             if(Simulation == false)
@@ -1631,9 +1646,10 @@ private:
 
     ros::ServiceClient mm_log_client;
 
-    ros::ServiceServer switchRend_server;
+    //ros::ServiceServer switchRend_server;
         
     ros::NodeHandle nh;
+
     ros::Time time_start;
 
 	//Create a move_base_msgs to define a goal to steer the robot to
@@ -1668,6 +1684,12 @@ int main(int argc, char **argv) {
 	 */
 	tf::TransformListener tf(ros::Duration(10));
     Explorer simple(tf);
+
+    //ros::NodeHandle *nodeHandle;
+
+    // create explorer service to switch from exploration to rendezvous
+    //ros::ServiceServer switchRend_server = nh.advertiseService<explorer::switchExplRend::Request, explorer::switchExplRend::Response>("switchExplRend", &Explorer::switchExplRend_srv);
+    // ros::ServiceServer switchRend_server = nodeHandle->advertiseService<explorer::switchExplRend::Request, explorer::switchExplRend::Response>("switchExplRend", boost::bind(&Explorer::switchExplRend_srv, &simple, _1, _2));
 
 	/*
 	 * The ros::spin command is needed to wait for any call-back. This could for
