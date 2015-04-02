@@ -92,8 +92,6 @@ public:
         std::string service = robot_prefix + std::string("/map_merger/logOutput");
         mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
 
-        //switchRend_server = nh.advertiseService("switchExplRend", &Explorer::switchExplRend_srv);
-
         if(robot_prefix.empty())
         {
           char hostname_c[1024];
@@ -243,26 +241,26 @@ public:
                 
 	}
 
-//    void switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
-//        ROS_DEBUG("In switchExplRend service function!");
+    bool switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
+        bool currentState;
+        nh.getParam("explorerOperating",currentState);
 
-          //bool temp;
-          //nh.getParam("explorerOperating",temp);
+        if(currentState && (!req.explore)){
+           nh.setParam("explorerOperating", false);
+        } else if(!currentState && req.explore){
+           nh.setParam("explorerOperating", true);
+        } else {
+            // do not change state
+        }
 
-//        if(temp && (!req.explore)){
-//           nh.setParam("explorerOperating", false);
-//        }
-
-          //nh.getParam("explorerOperating",temp);
-//        if(temp){
-//            res.state = "explorer is operating";
-//        } else {
-//            res.state = "rendezvous is operating";
-//        }
-
-//        ROS_DEBUG("SwitchExplRend Servie state: %s", res.state.c_str());
-
-//    }
+        nh.getParam("explorerOperating",currentState);
+        if(currentState){
+            res.state = "explorer is operating";
+        } else {
+            res.state = "rendezvous is operating";
+        }
+        return true;
+    }
 
     void explore()
     {
@@ -280,11 +278,15 @@ public:
         twi_publisher.publish(twi);
         ros::Duration(5.0).sleep();
         twi_publisher.publish(twi);
-                /*
-                 * START TAKING THE TIME DURING EXPLORATION     
-                 */
+
+        // create service to switch from exploration to rendezvous
+        switchRend_server = nh.advertiseService("switchExplRend", &Explorer::switchExplRend_srv, this);
+
+        /*
+         * START TAKING THE TIME DURING EXPLORATION
+         */
         time_start = ros::Time::now();
-                
+
         bool explorerOp;
         nh.getParam("explorerOperating",explorerOp);
 
@@ -728,68 +730,71 @@ public:
                     exploration->visualize_Frontiers();
                     //exploration->visualize_visited_Frontiers();
 
+                    nh.getParam("explorerOperating",explorerOp);
 
                     //if (Simulation == false)//cluster_element_size != 0)
                     // {
-                        ROS_INFO("Navigating to Goal");
+                    ROS_INFO("Navigating to Goal");
 
-                        if(goal_determined == true)
+                    if(goal_determined == true)
+                    {
+                        if(OPERATE_WITH_GOAL_BACKOFF == true)
                         {
-                            if(OPERATE_WITH_GOAL_BACKOFF == true)
-                            {
-                                ROS_DEBUG("Doing smartGoalBackoff");
-                                backoff_sucessfull = exploration->smartGoalBackoff(final_goal.at(0),final_goal.at(1), costmap2d_global, &backoffGoal);
-                            }
-                            else
-                            {
-                                backoff_sucessfull = true;
-                            }
+                            ROS_DEBUG("Doing smartGoalBackoff");
+                            backoff_sucessfull = exploration->smartGoalBackoff(final_goal.at(0),final_goal.at(1), costmap2d_global, &backoffGoal);
                         }
+                        else
+                        {
+                            backoff_sucessfull = true;
+                        }
+                    }
 
-                        if(backoff_sucessfull == true)
+                    if(backoff_sucessfull == true)
+                    {
+                        if(OPERATE_WITH_GOAL_BACKOFF == true)
                         {
-                            if(OPERATE_WITH_GOAL_BACKOFF == true)
-                            {
-                                ROS_INFO("Doing navigation to backoff goal");
-                                navigate_to_goal = navigate(backoffGoal);
-                            }
-                            else
-                            {
-                                ROS_INFO("Doing navigation to goal");
-                                navigate_to_goal = navigate(final_goal);
-                            }
+                            ROS_INFO("Doing navigation to backoff goal");
+                            navigate_to_goal = navigate(backoffGoal);
                         }
-                        else if(backoff_sucessfull == false && goal_determined == false)
+                        else
                         {
+                            ROS_INFO("Doing navigation to goal");
                             navigate_to_goal = navigate(final_goal);
-                            goal_determined = false;
                         }
+                    }
+                    else if(backoff_sucessfull == false && goal_determined == false)
+                    {
+                        navigate_to_goal = navigate(final_goal);
+                        goal_determined = false;
+                    }
 
 
-                        if(navigate_to_goal == true && goal_determined == true)
-                        {
-                            exploration->calculate_travel_path(exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).x_coordinate, exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).y_coordinate);
+                    if(navigate_to_goal == true && goal_determined == true)
+                    {
+                        exploration->calculate_travel_path(exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).x_coordinate, exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).y_coordinate);
 
-                            ROS_DEBUG("Storeing visited...");
-                            exploration->storeVisitedFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
-                            ROS_DEBUG("Stored Visited frontier");
+                        ROS_DEBUG("Storeing visited...");
+                        exploration->storeVisitedFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
+                        ROS_DEBUG("Stored Visited frontier");
 
-                        }
-                        else if(navigate_to_goal == false && goal_determined == true)
-                        {
-                            ROS_DEBUG("Storeing unreachable...");
-                            exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
-                            ROS_DEBUG("Stored unreachable frontier");
-                        }
+                    }
+                    else if(navigate_to_goal == false && goal_determined == true)
+                    {
+                        ROS_DEBUG("Storeing unreachable...");
+                        exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
+                        ROS_DEBUG("Stored unreachable frontier");
+                    }
 
-                        //exploration->clearVisitedFrontiers();
-                        //exploration->clearUnreachableFrontiers();
+                    //exploration->clearVisitedFrontiers();
+                    //exploration->clearUnreachableFrontiers();
 
-                        //exploration->publish_frontier_list();
-                        //exploration->publish_visited_frontier_list();
+                    //exploration->publish_frontier_list();
+                    //exploration->publish_visited_frontier_list();
+
+                    nh.getParam("explorerOperating",explorerOp);
 
             }
-            else           // simulation == true
+            else           // Simulation == true
 			{
 				ROS_ERROR("No navigation performed");				
 			}		
@@ -1479,50 +1484,50 @@ public:
 		goal_msgs.target_pose.pose.orientation.z = 0;
 		goal_msgs.target_pose.pose.orientation.w = 1;
 
-		ac.sendGoal(goal_msgs);
-               
-        //ac.waitForResult(ros::Duration(20)); EDIT Peter: Test if it also works with smaller value!
+        ac.sendGoal(goal_msgs);
+
         ac.waitForResult(ros::Duration(waitForResult)); //here Parameter!
         while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
         {
             ros::Duration(0.5).sleep();
         }
-		ROS_INFO("Not longer PENDING");
+        ROS_INFO("Not longer PENDING");
 
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             ros::Duration(0.5).sleep();
         }
-		ROS_INFO("Not longer ACTIVE");
+        ROS_INFO("Not longer ACTIVE");
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
         {
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED)
             {
-				ROS_INFO("ABORTED");
-                                
+                ROS_INFO("ABORTED");
+
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
-				return false;
-			}
-			/*
-			 double my_time = ros::Time::now().toSec();
-			 //ROS_ERROR("my_time: %f     timeout: %f",my_time,timeout);
-			 if(my_time >= timeout)
-			 {
-			 ROS_ERROR("Timeout exceeded");
-			 break;
-			 }
-			 if(ac.getState() == actionlib::SimpleClientGoalState::PREEMPTED){ROS_ERROR("PREEMPTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::ABORTED){ROS_ERROR("ABORTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::REJECTED){ROS_ERROR("REJECTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::RECALLED){ROS_ERROR("RECALLED");}
-			 */
-		}
+                return false;
+            }
+            /*
+             double my_time = ros::Time::now().toSec();
+             //ROS_ERROR("my_time: %f     timeout: %f",my_time,timeout);
+             if(my_time >= timeout)
+             {
+             ROS_ERROR("Timeout exceeded");
+             break;
+             }
+             if(ac.getState() == actionlib::SimpleClientGoalState::PREEMPTED){ROS_ERROR("PREEMPTED");}
+             if(ac.getState() == actionlib::SimpleClientGoalState::ABORTED){ROS_ERROR("ABORTED");}
+             if(ac.getState() == actionlib::SimpleClientGoalState::REJECTED){ROS_ERROR("REJECTED");}
+             if(ac.getState() == actionlib::SimpleClientGoalState::RECALLED){ROS_ERROR("RECALLED");}
+             */
+        }
         ROS_INFO("TARGET REACHED");
 
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
+
 		return true;
 	}
 
@@ -1602,7 +1607,9 @@ public:
       double time;
     } map_progress;
         
-	ros::Subscriber sub_move_base, sub_obstacle;    
+    ros::Subscriber sub_move_base, sub_obstacle;
+
+    ros::ServiceServer switchRend_server;
         
 	// create a costmap
 	costmap_2d::Costmap2DROS* costmap2d_local;
@@ -1645,8 +1652,6 @@ private:
     ros::Publisher pub_frontiers;
 
     ros::ServiceClient mm_log_client;
-
-    //ros::ServiceServer switchRend_server;
         
     ros::NodeHandle nh;
 
@@ -1688,8 +1693,7 @@ int main(int argc, char **argv) {
     //ros::NodeHandle *nodeHandle;
 
     // create explorer service to switch from exploration to rendezvous
-    //ros::ServiceServer switchRend_server = nh.advertiseService<explorer::switchExplRend::Request, explorer::switchExplRend::Response>("switchExplRend", &Explorer::switchExplRend_srv);
-    // ros::ServiceServer switchRend_server = nodeHandle->advertiseService<explorer::switchExplRend::Request, explorer::switchExplRend::Response>("switchExplRend", boost::bind(&Explorer::switchExplRend_srv, &simple, _1, _2));
+    //ros::ServiceServer switchRend_server = nodeHandle->advertiseService("switchExplRend", &Explorer::switchExplRend_srv, &simple);
 
 	/*
 	 * The ros::spin command is needed to wait for any call-back. This could for
@@ -1704,7 +1708,8 @@ int main(int argc, char **argv) {
          * Otherwise it produces unused output.
          */
     boost::thread thr_map(boost::bind(&Explorer::map_info, &simple));
-        
+
+
         /*
          * FIXME
          * Which rate is required in order not to oversee
