@@ -18,7 +18,9 @@
 
 #if !defined(_MATRIX_H_)
 #define _MATRIX_H_
+#ifndef __GXX_EXPERIMENTAL_CXX0X__
 #define __GXX_EXPERIMENTAL_CXX0X__
+#endif
 #include <initializer_list>
 
 template <class T>

@@ -10,7 +10,7 @@
     
 
     <!-- SIMULATION -->
-    <node if="$(arg use_sim_time)" pkg="explorer" type="explorer" name="explorer" output="screen">
+    <node if="$(arg use_sim_time)" pkg="explorer" type="explorer" name="explorer" output="$(arg output)">
 
 	<param name="explorerOperating" value="true"/>
 
