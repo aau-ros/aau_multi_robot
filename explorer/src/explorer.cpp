@@ -241,25 +241,6 @@ public:
                 
 	}
 
-    bool switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
-        bool currentState;
-        nh.getParam("explorerOperating",currentState);
-
-        if(currentState && (!req.explore)){
-           nh.setParam("explorerOperating", false);
-        } else if(!currentState && req.explore){
-           nh.setParam("explorerOperating", true);
-        }
-
-        nh.getParam("explorerOperating",currentState);
-        if(currentState){
-            res.state = "explorer is operating";
-        } else {
-            res.state = "rendezvous is operating";
-        }
-        return true;
-    }
-
     void explore()
     {
 		/*
@@ -696,6 +677,7 @@ public:
                     }
 
                    nh.getParam("explorerOperating",explorerOp);
+
                    if(explorerOp == true)
                    {
                         if(backoff_sucessfull == true)
@@ -719,22 +701,38 @@ public:
                    }
                    else
                    {
-                       ROS_INFO(" ------------------------ ");
-                       ROS_INFO(" RENDEZVOUS is operating! ");
-                       ROS_INFO(" Robot should return to home position, wait there for 10 sec and explore again!");
-                       ROS_INFO(" ------------------------ ");
+                       ROS_DEBUG(" ------------------------ ");
+                       ROS_DEBUG(" RENDEZVOUS is operating! ");
+                       ROS_DEBUG(" Robot should start to move from rendezvous to home position and back ");
+                       ROS_DEBUG(" ------------------------ ");
 
-                       // store actual position | next rendezvous point ... rendezvous
-
-                       if(move_robot(0, home_point_x, home_point_y) == false)
-                       {
-                           ROS_INFO("move_robot to home position failed!");
+                       //save position
+                       if(!costmap2d_local->getRobotPose(robotPose)){
+                           ROS_ERROR("Failed to get RobotPose");
                        }
+                       double rend_x = robotPose.getOrigin().getX();
+                       double rend_y = robotPose.getOrigin().getY();
 
-                       ros::Duration(10).sleep();
-                       nh.setParam("explorerOperating", true);
+                       while(explorerOp == false)
+                       {
+                           if(move_robot(0, home_point_x, home_point_y) == false)
+                           {
+                               ROS_INFO("move_robot to home position failed!");
+                           }
 
-                       // move_robot(rendezvous);
+                           nh.getParam("explorerOperating", explorerOp);
+
+                           // wait for 10 sec at home position
+                           ros::Duration(10).sleep();
+
+                           if(move_robot(1, rend_x, rend_y) == false)
+                           {
+                               ROS_INFO("move_robot to rendezvous failed!");
+                               nh.setParam("explorerOperating", true);
+                           }
+
+                           nh.getParam("explorerOperating", explorerOp);
+                       }
                    }
 
                     if(navigate_to_goal == true && goal_determined == true)
@@ -1563,6 +1561,26 @@ public:
 		return true;
 	}
 
+    bool switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
+        bool currentState;
+        nh.getParam("explorerOperating",currentState);
+
+        if(currentState && (!req.explore)){
+           nh.setParam("explorerOperating", false);
+        } else if(!currentState && req.explore){
+           nh.setParam("explorerOperating", true);
+        }
+
+        nh.getParam("explorerOperating",currentState);
+        if(currentState){
+            res.state = "explorer is operating";
+        } else {
+            res.state = "rendezvous is operating";
+        }
+        return true;
+    }
+
+
 public:
 
     struct map_progress_t
@@ -1631,7 +1649,7 @@ private:
 	geometry_msgs::PointStamped homePoint;
 
 	std::vector<geometry_msgs::PoseStamped> goals;
-	tf::Stamped<tf::Pose> robotPose;
+    tf::Stamped<tf::Pose> robotPose;
 
 	explorationPlanner::ExplorationPlanner *exploration;       
         
