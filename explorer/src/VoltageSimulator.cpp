@@ -31,8 +31,7 @@ int main(int argc, char** argv) {
 	ros::Rate loop_rate(0.5);
 	battery_state.data = VOLTAGE_MAX;
 	while ( ros::ok() ) {
-		ROS_INFO("Publishing voltage %f...", battery_state.data);
-		voltage_pub.publish(battery_state);
+        voltage_pub.publish(battery_state);
 		// Decrease by 0.1 every second if we're not at cut off
 		if (battery_state.data > VOLTAGE_MIN)
 			battery_state.data += -0.01;
