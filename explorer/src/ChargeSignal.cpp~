@@ -12,17 +12,11 @@ int main(int argc, char** argv) {
 	ros::NodeHandle n;
 	ros::Publisher charge_pub = n.advertise<std_msgs::Empty>("charge_complete", 1000);
 	std_msgs::Empty empty_msg;
-	ros::Rate loop_rate(0.01);
-	int count = 0;
+	ros::Rate loop_rate(0.0035);
 	while ( ros::ok() ) {
-		ROS_INFO("Publishing... %d", count);
 		charge_pub.publish(empty_msg);
 		ros::spinOnce();
 		loop_rate.sleep();
-		++count;
-		// Seems we lose a message otherwise?
-		//if (count == 2)
-		// break;
 	}
 	return 0;
 }

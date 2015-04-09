@@ -8,11 +8,12 @@ complete' signal to be published before beginning from the start.
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
-//#include <p2os_driver/BatteryState.h>
-#define VOLTAGE_MAX 13.5
+
+#define VOLTAGE_MAX 12.8
 #define VOLTAGE_MIN 11.0
+
 using namespace std;
-// p2os_driver::BatteryState battery_state;
+
 std_msgs::Float64 battery_state;
 /*
 Message indicating charging is complete.
@@ -34,7 +35,6 @@ int main(int argc, char** argv) {
 		voltage_pub.publish(battery_state);
 		// Decrease by 0.1 every second if we're not at cut off
 		if (battery_state.data > VOLTAGE_MIN)
-			//battery_state.voltage += -0.1;
 			battery_state.data += -0.01;
 		ros::spinOnce();
 		loop_rate.sleep();

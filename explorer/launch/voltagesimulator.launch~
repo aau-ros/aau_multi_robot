@@ -1,5 +1,5 @@
 <?xml version="1.0"?> 
 <launch>
-    <node pkg="explorer" type="voltagesimulator" name="voltagesimulator" output="$(arg output)">
+    <node pkg="explorer" type="voltagesimulator" name="voltagesimulator" output="screen">
     </node>
 </launch>
