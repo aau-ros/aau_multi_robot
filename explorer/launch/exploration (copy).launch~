@@ -1,0 +1,58 @@
+<?xml version="1.0"?> 
+<launch>
+    <arg name="robot_name" default="robot_0" />
+    <arg name="robot_prefix" />
+    <arg name="log_path" />
+    <arg name="output" default="log"/>
+    <arg name="frontier_selection" default="7"/>
+    <arg name="use_sim_time" default="false" />
+    <param name="use_sim_time"  value="$(arg use_sim_time)"/>
+
+    <!-- SIMULATION -->
+    <node if="$(arg use_sim_time)" pkg="explorer" type="explorer" name="explorer" output="$(arg output)">
+	<!-- costmaps -->
+	<param name="local_costmap/robot_base_frame" value="$(arg robot_prefix)/base_footprint" />
+        <param name="local_costmap/global_frame" value="$(arg robot_prefix)/odom" />
+        <param name="robot_prefix" value="$(arg robot_prefix)"/>
+	<param name="global_costmap/robot_base_frame" value="$(arg robot_prefix)/base_footprint" />
+	<param name="global_costmap/global_frame" value="$(arg robot_prefix)/map" />
+	<param name="global_costmap/map_topic" value="map_merger/global_map" />
+	<param name="local_costmap/map_topic" value="map_merger/global_map" />
+	<param name="local_costmap/observation_sources" value="scan" />
+	<param name="local_costmap/scan/topic" value="base_scan" />
+	<param name="local_costmap/scan/data_type" value="LaserScan" />
+	<param name="local_costmap/scan/marking" value="true" />
+	<param name="local_costmap/scan/clearing" value="true" />
+	<param name="observation_persistence" value="0.1" />
+	<param name="local_costmap/base_scan/marking" value="true" />
+
+	<!-- simulation parameters -->
+        <param name="log_path" value="$(arg log_path)" />
+	<param name="robot_name" value="$(arg robot_name)" />
+
+	<!-- move_base -->
+	<param name="base_link" value="$(arg robot_prefix)/base_link" />
+	<param name="move_base_frame" value="$(arg robot_prefix)/map" />
+
+	<!-- exploration parameters -->
+	<param name="frontier_selection" value="$(arg frontier_selection)" />
+	<rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="global_costmap" />
+	<rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="local_costmap" />
+	<rosparam file="$(find explorer)/param/simulation_local_costmap_params.yaml" command="load" />
+	<rosparam file="$(find explorer)/param/simulation_global_costmap_params.yaml" command="load" />
+
+    	<remap from="/$(arg robot_name)/$(arg robot_name)/map" to="/$(arg robot_name)/map" />
+    	<!-- <remap from="/$(arg robot_name)/$(arg robot_name)/base_scan" to="/$(arg robot_name)/base_scan" /> -->
+    </node>
+
+    <!-- REAL HARDWARE -->
+    <include unless="$(arg use_sim_time)" file="$(find explorer)/launch/simple_navigation_prerequisites_hydro_$(env ROBOT_PLATFORM).launch">
+	<arg name="log_path" value="$(arg log_path)" />
+	
+<!--Edit Peter: output is not used in Pioneer launch file <arg name="output" value="$(arg output)" /> -->
+    </include>
+    <include unless="$(arg use_sim_time)" file="$(find explorer)/launch/simple_navigation_$(env ROBOT_PLATFORM).launch">
+	<arg name="frontier_selection" value="$(arg frontier_selection)" />
+	<arg name="log_path" value="$(arg log_path)" />
+    </include>
+</launch>

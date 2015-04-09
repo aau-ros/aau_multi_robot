@@ -436,6 +436,7 @@ ROS_INFO("Battery state2: %f   ",battery);
                             {
                                 exploration->sort(2);
                                 exploration->sort(3);
+				
 
 				ROS_INFO("Battery state: %f   ",battery);
 				/*if(battery <= 0.55) 

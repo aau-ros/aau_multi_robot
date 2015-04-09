@@ -1,0 +1,235 @@
+#include <stdio.h>
+#include <Aria.h>
+#include "ros/ros.h"
+#include "geometry_msgs/Twist.h"
+#include "std_msgs/Float64.h"
+#include "std_msgs/Float32.h"
+#include "std_msgs/Int8.h"
+#include <sstream>
+
+
+// Node that interfaces between ROS and mobile robot base features via ARIA library. 
+//
+// RosAria uses the roscpp client library, see http://www.ros.org/wiki/roscpp for
+// information, tutorials and documentation.
+class RosAriaNode
+{
+  public:
+    RosAriaNode(ros::NodeHandle n);
+    virtual ~RosAriaNode();
+    
+  public:
+    int Setup();
+    void cmdvel_cb( const geometry_msgs::TwistConstPtr &);
+    void spin();
+    void publish();
+    void readParameters();
+
+  protected:
+    ros::NodeHandle n;
+    ros::Publisher voltage_pub;
+
+    ros::Publisher recharge_state_pub;
+    std_msgs::Int8 recharge_state;
+
+    ros::Publisher state_of_charge_pub;
+
+    ros::Subscriber cmdvel_sub;
+
+    std::string serial_port;
+    int serial_baud;
+
+    ArRobotConnector *conn;
+    ArRobot *robot;
+    ArFunctorC<RosAriaNode> myPublishCB;
+    // Debug Aria
+    bool debug_aria;
+    std::string aria_log_filename;
+
+};
+
+void RosAriaNode::readParameters()
+{
+  // Robot Parameters  
+  robot->lock();
+  ros::NodeHandle n_("~");
+  robot->unlock();
+}
+
+RosAriaNode::RosAriaNode(ros::NodeHandle nh) : 
+  myPublishCB(this, &RosAriaNode::publish), serial_port(""), serial_baud(0)
+{
+  // read in runtime parameters
+  n = nh;
+
+  // port and baud
+  n.param( "port", serial_port, std::string("/dev/ttyUSB0") );
+  ROS_INFO( "RosAria: using port: [%s]", serial_port.c_str() );
+
+  n.param("baud", serial_baud, 0);
+  if(serial_baud != 0)
+  ROS_INFO("RosAria: using serial port baud rate %d", serial_baud);
+
+  // handle debugging more elegantly
+  n.param( "debug_aria", debug_aria, false ); // default not to debug
+  n.param( "aria_log_filename", aria_log_filename, std::string("Aria.log") );
+
+  voltage_pub = n.advertise<std_msgs::Float64>("battery_voltage", 1000);
+  recharge_state_pub = n.advertise<std_msgs::Int8>("battery_recharge_state", 5, true /*latch*/ );
+  recharge_state.data = -2;
+  state_of_charge_pub = n.advertise<std_msgs::Float32>("battery_state_of_charge", 100);
+
+  // subscribe to services
+  cmdvel_sub = n.subscribe( "cmd_vel", 1, (boost::function <void(const geometry_msgs::TwistConstPtr&)>)
+    boost::bind(&RosAriaNode::cmdvel_cb, this, _1 ));
+}
+
+RosAriaNode::~RosAriaNode()
+{
+ 
+  robot->stopRunning();
+  robot->waitForRunExit();
+  Aria::shutdown();
+}
+
+int RosAriaNode::Setup()
+{
+  // Note, various objects are allocated here which are never deleted (freed), since Setup() is only supposed to be
+  // called once per instance, and these objects need to persist until the process terminates.
+
+  robot = new ArRobot();
+  ArArgumentBuilder *args = new ArArgumentBuilder(); //  never freed
+  ArArgumentParser *argparser = new ArArgumentParser(args); // Warning never freed
+  argparser->loadDefaultArguments(); // adds any arguments given in /etc/Aria.args.  Useful on robots with unusual serial port or baud rate (e.g. pioneer lx)
+
+  // Now add any parameters given via ros params (see RosAriaNode constructor):
+
+  // if serial port parameter contains a ':' character, then interpret it as hostname:tcpport
+  // for wireless serial connection. Otherwise, interpret it as a serial port name.
+  size_t colon_pos = serial_port.find(":");
+  if (colon_pos != std::string::npos)
+  {
+    args->add("-remoteHost"); // pass robot's hostname/IP address to Aria
+    args->add(serial_port.substr(0, colon_pos).c_str());
+    args->add("-remoteRobotTcpPort"); // pass robot's TCP port to Aria
+    args->add(serial_port.substr(colon_pos+1).c_str());
+  }
+  else
+  {
+    args->add("-robotPort"); // pass robot's serial port to Aria
+    args->add(serial_port.c_str());
+  }
+
+  // if a baud rate was specified in baud parameter
+  if(serial_baud != 0)
+  {
+    args->add("-robotBaud");
+    char tmp[100];
+    snprintf(tmp, 100, "%d", serial_baud);
+    args->add(tmp);
+  }
+  
+  if( debug_aria )
+  {
+    // turn on all ARIA debugging
+    args->add("-robotLogPacketsReceived"); // log received packets
+    args->add("-robotLogPacketsSent"); // log sent packets
+    args->add("-robotLogVelocitiesReceived"); // log received velocities
+    args->add("-robotLogMovementSent");
+    args->add("-robotLogMovementReceived");
+    ArLog::init(ArLog::File, ArLog::Verbose, aria_log_filename.c_str(), true);
+  }
+
+
+  // Connect to the robot
+  conn = new ArRobotConnector(argparser, robot); // warning never freed
+  if (!conn->connectRobot()) {
+    ROS_ERROR("RosAria: ARIA could not connect to robot! (Check ~port parameter is correct, and permissions on port device.)");
+    return 1;
+  }
+
+  // causes ARIA to load various robot-specific hardware parameters from the robot parameter file in /usr/local/Aria/params
+  if(!Aria::parseArgs())
+  {
+    ROS_ERROR("RosAria: ARIA error parsing ARIA startup parameters!");
+    return 1;
+  }
+
+  readParameters();
+ // callback will be called by ArRobot background processing thread for every SIP data packet received from robot
+robot->addSensorInterpTask("ROSPublishingTask", 100, &myPublishCB);
+  // Run ArRobot background processing thread
+  robot->runAsync(true);
+
+  return 0;
+}
+
+void RosAriaNode::spin()
+{
+  ros::spin();
+}
+
+void RosAriaNode::publish()
+{
+  
+  //Publish battery information
+  // TODO: Decide if BatteryVoltageNow (normalized to (0,12)V)  is a better option
+  std_msgs::Float64 batteryVoltage;
+  batteryVoltage.data = robot->getRealBatteryVoltageNow();
+  voltage_pub.publish(batteryVoltage);
+
+  if(robot->haveStateOfCharge())
+  {
+    std_msgs::Float32 soc;
+    soc.data = robot->getStateOfCharge()/100.0;
+    state_of_charge_pub.publish(soc);
+  }
+
+  // publish recharge state if changed
+  char s = robot->getChargeState();
+  if(s != recharge_state.data)
+  {
+    ROS_INFO("RosAria: publishing new recharge state %d.", s);
+    recharge_state.data = s;
+    recharge_state_pub.publish(recharge_state);
+  }
+
+  
+}
+
+void RosAriaNode::cmdvel_cb( const geometry_msgs::TwistConstPtr &msg)
+{
+  ROS_INFO( "new speed: [%0.2f,%0.2f]", msg->linear.x*1e3, msg->angular.z);
+
+  robot->lock();
+  robot->setVel(msg->linear.x*1e3);
+  if(robot->hasLatVel())
+    robot->setLatVel(msg->linear.y*1e3);
+  robot->setRotVel(msg->angular.z*180/M_PI);
+  robot->unlock();
+
+}
+
+
+int main( int argc, char** argv )
+{
+  ros::init(argc,argv, "RosAria");
+  ros::NodeHandle n(std::string("~"));
+  Aria::init();
+
+  RosAriaNode *node = new RosAriaNode(n);
+
+  if( node->Setup() != 0 )
+  {
+    ROS_FATAL( "RosAria: ROS node setup failed... \n" );
+    return -1;
+  }
+
+  node->spin();
+
+  delete node;
+
+  ROS_INFO( "RosAria: Quitting... \n" );
+  return 0;
+  
+}
