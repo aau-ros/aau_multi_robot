@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="log_path" />
+<!--  <include file="$(find sound_play)/soundplay_node.launch"/> -->
+  
+  <!-- ******************************************************************************* --> 
+  <!-- ********** START THE MINIMAL LAUNCH FILE TO LOAD AL NECESSARY TOPICS ********** -->
+  <!-- ******************************************************************************* -->
+  <include file="$(find pioneer_setup)/launch/demo.launch">
+     <arg name="log_path" value="$(arg log_path)" />  
+  </include>
+
+
+</launch>
+ 
