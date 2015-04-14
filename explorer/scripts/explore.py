@@ -29,11 +29,10 @@ else:
     output_type = "log"
 
 rospack = rospkg.RosPack()
-launch_file = "now.launch";
 sim_id = args.sim_id[0]
 
 package_path = rospack.get_path("explorer")
-launch_file = "launch_exploration.launch";
+launch_file = "auto_generated_launch_exploration.launch";
 launch_path = os.path.join(package_path, "launch", launch_file)
 
 t = time.localtime()
@@ -65,4 +64,4 @@ fh_launch_file.write("</launch>\n")
 fh_launch_file.close()
 
 print("start_time_run_%s" %sim_id, "%s" %time.ctime())
-os.system("roslaunch explorer launch_exploration.launch")
+os.system("roslaunch explorer %s" %launch_file)

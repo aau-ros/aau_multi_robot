@@ -7,7 +7,7 @@
   <!-- ******************************************************************************* --> 
   <!-- ********** START THE MINIMAL LAUNCH FILE TO LOAD AL NECESSARY TOPICS ********** -->
   <!-- ******************************************************************************* -->
-  <include file="$(find pkohout_pioneer)/launch/demo.launch">
+  <include file="$(find pioneer_setup)/launch/demo.launch">
      <arg name="log_path" value="$(arg log_path)" />  
   </include>
 

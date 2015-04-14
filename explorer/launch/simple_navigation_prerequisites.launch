@@ -37,7 +37,7 @@
 
 
 <group if="$(arg pioneer)">
-  <include file="$(find pkohout_pioneer)/launch/minimal.launch"/>
+  <include file="$(find pioneer_setup)/launch/minimal.launch"/>
 </group>
 
 
