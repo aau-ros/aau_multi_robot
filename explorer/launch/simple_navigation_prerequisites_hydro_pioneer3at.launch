@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<launch>
+	<arg name="log_path" />
+	<include file="$(find explorer)/launch/simple_navigation_prerequisites_hydro_pioneer.launch">
+		<arg name="log_path" value="$(arg log_path)" />
+	</include>
+</launch>
+ 
