@@ -25,6 +25,7 @@
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
 #include <explorer/switchExplRend.h>
+#include <explorer/getPosition.h>
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -260,6 +261,9 @@ public:
 
         // create service to switch from exploration to rendezvous
         switchRend_server = nh.advertiseService("switchExplRend", &Explorer::switchExplRend_srv, this);
+
+        // create service to get current position of robot
+        getPosition_server = nh.advertiseService("getPosition", &Explorer::getPosition_srv, this);
 
         /*
          * START TAKING THE TIME DURING EXPLORATION
@@ -1581,6 +1585,23 @@ public:
         return true;
     }
 
+    bool getPosition_srv(explorer::getPosition::Request &req, explorer::getPosition::Response &res){
+
+        if (!costmap2d_local->getRobotPose(robotPose)) {
+            ROS_ERROR("Failed to get RobotPose");
+        }
+        else
+        {
+            double x = robotPose.getOrigin().getX();
+            double y = robotPose.getOrigin().getY();
+
+            res.x = x;
+            res.y = y;
+
+            return true;
+        }
+    }
+
 
 public:
 
@@ -1594,6 +1615,7 @@ public:
     ros::Subscriber sub_move_base, sub_obstacle;
 
     ros::ServiceServer switchRend_server;
+    ros::ServiceServer getPosition_server;
         
 	// create a costmap
 	costmap_2d::Costmap2DROS* costmap2d_local;

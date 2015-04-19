@@ -1,5 +1,7 @@
 #include "rendezvous.h"
 
+#define OPERATE_ON_GLOBAL_MAP true
+
 Rendezvous::Rendezvous()
 {
     nh = new ros::NodeHandle("~");
@@ -12,16 +14,34 @@ Rendezvous::Rendezvous()
     std::string service = robot_prefix + std::string("/explorer/switchExplRend");
     expl_client = nh->serviceClient<explorer::switchExplRend>(service.c_str());
 
+    // create client for explorer service
+    service = robot_prefix + std::string("/explorer/getPosition");
+    position_client = nh->serviceClient<explorer::getPosition>(service.c_str());
+
+    ros::Duration(50).sleep();
+
     // get and set home point
-    this->home_x = robotPose.getOrigin().getX();
-    this->home_y = robotPose.getOrigin().getY();
+    explorer::getPosition srv;
+    srv.request.name = "test";
+    if(this->position_client.call(srv) == false)
+    {
+        ROS_ERROR("Failed to call explorer service 'getPosition'");
+    }
+    else
+    {
+        this->home_x = srv.response.x;
+        this->home_y = srv.response.y;
+    }
+
+    //this->home_x = robotPose.getOrigin().getX();
+    //this->home_y = robotPose.getOrigin().getY();
 
 }
 
 void Rendezvous::relayRobot()
 {
     // wait till robots are moving
-    ros::Duration(30).sleep();
+    ros::Duration(50).sleep();
 
     // call service to stop explorer
     explorer::switchExplRend srv_msg;
@@ -29,15 +49,29 @@ void Rendezvous::relayRobot()
 
     if(this->expl_client.call(srv_msg) == false)
     {
-        ROS_ERROR("Failed to call explorer service");
+        ROS_ERROR("Failed to call explorer service 'switchExplRend'");
+    }
+
+    //call service to get current robot position from explorer
+    double rend_x;
+    double rend_y;
+    explorer::getPosition srv;
+    if(this->position_client.call(srv) == false)
+    {
+        ROS_ERROR("Failed to call explorer service 'getPosition'");
+    }
+    else
+    {
+        rend_x = srv.response.x;
+        rend_y = srv.response.y;
     }
 
     //remember actual point as rendezvous
-    if(!costmap2d_local->getRobotPose(robotPose)){
-        ROS_ERROR("Failed to get RobotPose");
-    }
-    double rend_x = this->robotPose.getOrigin().getX();
-    double rend_y = this->robotPose.getOrigin().getY();
+//    if(!costmap2d_local->getRobotPose(robotPose)){
+//        ROS_ERROR("Failed to get RobotPose");
+//    }
+//    double rend_x = this->robotPose.getOrigin().getX();
+//    double rend_y = this->robotPose.getOrigin().getY();
 
 
     // continue moving between home and rendezvous

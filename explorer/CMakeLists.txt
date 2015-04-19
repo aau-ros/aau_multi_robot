@@ -57,6 +57,7 @@ map_merger)
 add_service_files(
     FILES
     switchExplRend.srv
+    getPosition.srv
  )
 
 ## Generate actions in the 'action' folder
