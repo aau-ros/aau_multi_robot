@@ -1590,16 +1590,21 @@ public:
         if (!costmap2d_local->getRobotPose(robotPose)) {
             ROS_ERROR("Failed to get RobotPose");
         }
+
+        std::string str1 = "home";
+
+        if(str1.compare(req.name) == 0)
+        {
+            res.x = this->home_point_x;
+            res.y = this->home_point_y;
+        }
         else
         {
-            double x = robotPose.getOrigin().getX();
-            double y = robotPose.getOrigin().getY();
-
-            res.x = x;
-            res.y = y;
-
-            return true;
+            res.x = robotPose.getOrigin().getX();
+            res.y = robotPose.getOrigin().getY();
         }
+
+        return true;
     }
 
 

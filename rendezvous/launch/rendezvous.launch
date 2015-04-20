@@ -1,9 +1,12 @@
 <?xml version ="1.0"?>
 <launch>
 	<arg name="robot_name" default="robot_0" />
-    	<arg name="robot_prefix" />
+    	<arg name="robot_prefix" default=""/>
 
-	<node pkg="rendezvous" type="rendezvous" name="rendezvous" />
-
-	<param name="waitForResult" value="3" />
+	<node pkg="rendezvous" type="rendezvous" name="rendezvous" >
+		<param name="robot_name" value="$(arg robot_name)" />
+		<param name="robot_prefix" value="$(arg robot_prefix)" />
+		<param name="waitForResult" value="3" />
+		<param name="move_base_frame" value="$(arg robot_prefix)/map" />
+	</node>
 </launch>
