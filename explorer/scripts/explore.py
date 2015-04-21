@@ -18,6 +18,7 @@ parser.add_argument("--exp-strategy",dest="exploration_strategy",type=int,nargs=
 		    help="The strategy to be used for exploration.",choices=range(0,7))
 parser.add_argument("--screen-output",dest="screen_output",default=False,help="Set ROS output to screen.",
 		    action="store_true")
+parser.add_argument("--interface",dest='interface',nargs='?',type=str,default='wlan0')
 
 args, unknown = parser.parse_known_args()
 
@@ -29,11 +30,10 @@ else:
     output_type = "log"
 
 rospack = rospkg.RosPack()
-launch_file = "now.launch";
 sim_id = args.sim_id[0]
 
 package_path = rospack.get_path("explorer")
-launch_file = "launch_exploration.launch";
+launch_file = "auto_generated_launch_exploration.launch";
 launch_path = os.path.join(package_path, "launch", launch_file)
 
 t = time.localtime()
@@ -47,22 +47,32 @@ fh_launch_file.write("<launch>\n")
 
 fh_launch_file.write("\t<include file=\"$(find explorer)/launch/simple_navigation_prerequisites_hydro_$(env ROBOT_PLATFORM).launch\">\n")
 fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" % log_path)
-fh_launch_file.write("\t</include>\n")
+fh_launch_file.write("\t</include>\n\n")
 
 fh_launch_file.write("\t<include file=\"$(find explorer)/launch/simple_navigation_$(env ROBOT_PLATFORM).launch\">\n")
 fh_launch_file.write("\t\t<arg name=\"frontier_selection\" value=\"%s\" />" %args.exploration_strategy)
 fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" % log_path)
-fh_launch_file.write("\t</include>\n")
+fh_launch_file.write("\t</include>\n\n")
 
-fh_launch_file.write("\t\t<include file=\"$(find map_merger)/launch/map_merger.launch\">\n")
-fh_launch_file.write("\t\t\t<arg name=\"output\" value=\"%s\" />" %output_type)
-fh_launch_file.write("\t\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
-fh_launch_file.write("\t\t\t<arg name=\"use_sim_time\" value=\"false\" />\n")
-fh_launch_file.write("\t\t</include>\n")
+fh_launch_file.write("\t<include file=\"$(find adhoc_communication)/launch/adhoc_communication.launch\">\n")
+fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
+fh_launch_file.write("\t\t<arg name=\"interface\" value=\"%s\" />\n" %args.interface)
+fh_launch_file.write("\t</include>\n\n")
+
+fh_launch_file.write("\t<include file=\"$(find connection_manager)/launch/connection_manager.launch\">\n")
+fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
+fh_launch_file.write("\t\t<arg name=\"output\" value=\"%s\" />\n" %output_type)
+fh_launch_file.write("\t</include>\n\n")
+
+fh_launch_file.write("\t<include file=\"$(find map_merger)/launch/map_merger.launch\">\n")
+fh_launch_file.write("\t\t<arg name=\"output\" value=\"%s\" />\n" %output_type)
+fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
+fh_launch_file.write("\t\t<arg name=\"use_sim_time\" value=\"false\" />\n")
+fh_launch_file.write("\t</include>\n\n")
 
 
 fh_launch_file.write("</launch>\n")
 fh_launch_file.close()
 
 print("start_time_run_%s" %sim_id, "%s" %time.ctime())
-os.system("roslaunch explorer launch_exploration.launch")
+os.system("roslaunch explorer %s" %launch_file)
