@@ -28,6 +28,11 @@ public:
     void relayRobot();
     void exploreRobot();
 
+    void printRendezvousPoints();
+
+    void stopStartExplorer();
+
+
 private:
 	double home_x, home_y;
 	ros::ServiceClient expl_client;

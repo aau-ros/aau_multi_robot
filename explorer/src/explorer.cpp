@@ -707,37 +707,7 @@ public:
                    {
                        ROS_DEBUG(" ------------------------ ");
                        ROS_DEBUG(" RENDEZVOUS is operating! ");
-                       ROS_DEBUG(" Robot should start to move from rendezvous to home position and back ");
                        ROS_DEBUG(" ------------------------ ");
-
-//                       //save position
-//                       if(!costmap2d_local->getRobotPose(robotPose)){
-//                           ROS_ERROR("Failed to get RobotPose");
-//                       }
-//                       double rend_x = robotPose.getOrigin().getX();
-//                       double rend_y = robotPose.getOrigin().getY();
-
-//                       while(explorerOp == false)
-//                       {
-//                           if(move_robot(0, home_point_x, home_point_y) == false)
-//                           {
-//                               ROS_INFO("move_robot to home position failed!");
-//                           }
-
-//                           nh.getParam("explorerOperating", explorerOp);
-
-//                           // wait for 10 sec at home position
-//                           ros::Duration(10).sleep();
-
-//                           if(move_robot(1, rend_x, rend_y) == false)
-//                           {
-//                               ROS_INFO("move_robot to rendezvous failed!");
-//                               nh.setParam("explorerOperating", true);
-//                           }
-
-//                           nh.getParam("explorerOperating", explorerOp);
-//                       }
-
                    }
 
                     if(navigate_to_goal == true && goal_determined == true)
