@@ -3,6 +3,8 @@
 #include <explorer/getPosition.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
+#include "rendezvous/RendezvousPoint.h"
+#include <std_msgs/Float64.h>
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
@@ -18,6 +20,9 @@ public:
 	Rendezvous();
     ros::NodeHandle *nh;
     int iAm;
+    std::string myBuddy_prefix;
+    ros::Publisher pub;
+    ros::Subscriber sub;
 
     // parameter
     std::string robot_prefix;
@@ -29,6 +34,7 @@ public:
     void exploreRobot();
 
     void printRendezvousPoints();
+    void new_Rendezvous_available(const rendezvous::RendezvousPointConstPtr& msg);
 
     void stopStartExplorer();
 
@@ -43,6 +49,7 @@ private:
 
     void callbackMoveToRendezvous();
     void addRendezvous(double new_x, double new_y);
+
 };
 
 
