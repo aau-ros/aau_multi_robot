@@ -1,25 +1,24 @@
 /*
 Voltage simulation node
-Publishes values corresponding to a simulated battery from a given
-max to a given cut off.
-Once the cut off is reached, cease decreasing and wait for a 'charge
-complete' signal to be published before beginning from the start.
+Here we are publishing the battery voltage values.
+When the battery voltage is to low we don't decrease the value
+because the robot would be shut down already.
 */
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
 
-#define VOLTAGE_MAX 12.8
+#define VOLTAGE_MAX 13.5
 #define VOLTAGE_MIN 11.0
 
 using namespace std;
 
 std_msgs::Float64 battery_state;
-/*
-Message indicating charging is complete.
-*/
+
+// Callback message when charging is done.
+
 void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
-	ROS_INFO("Got signal we are charged.");
+    ROS_INFO("charging done.");
 	battery_state.data = VOLTAGE_MAX;
 }
 int main(int argc, char** argv) {
@@ -32,7 +31,7 @@ int main(int argc, char** argv) {
 	battery_state.data = VOLTAGE_MAX;
 	while ( ros::ok() ) {
         voltage_pub.publish(battery_state);
-		// Decrease by 0.1 every second if we're not at cut off
+        // Decrease by a value until we are at the cut off voltage
 		if (battery_state.data > VOLTAGE_MIN)
 			battery_state.data += -0.01;
 		ros::spinOnce();

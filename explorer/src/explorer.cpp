@@ -48,9 +48,9 @@ class Explorer {
 public:
 
 	Explorer(tf::TransformListener& tf) :
-        counter(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
+        counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),th(12), robot_id(0){
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),cut_off_voltage(11), th(12), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -700,13 +700,20 @@ public:
                                 exploration->sort(3);
 
                 ROS_INFO("Battery state: %f, ",battery);
-                if(battery <= th)
+              /*  if(battery <= th)
 				{	
 					battery_voltage = false;
                 }else{
                     battery_voltage = true;
-                }
-				
+                } */
+                traveled_distance();
+                if(available_distance < distance_to_home)
+                     {
+                        battery_voltage = false;
+                     }else{
+                        battery_voltage = true;
+                     }
+
                 while(true)
                 {
                     goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
@@ -1611,6 +1618,53 @@ public:
 
 		return true;
 	}
+    void traveled_distance(){
+
+        /* calculate the energy conumption and the traveled distance so far. */
+
+        //old_simulation_time = ros::Time::now().toSec();
+        if(battery_voltage == true){
+        if(cnt == 0){
+            //new_simulation_time = old_simulation_time - time_start.toSec();
+            temp = battery;
+            x_temp = robotPose.getOrigin().getX();
+            y_temp = robotPose.getOrigin().getY();
+        }else{
+             //new_simulation_time = old_simulation_time - new_simulation_time;
+            new_battery = temp - battery;
+            temp = battery;
+            x_diff = robotPose.getOrigin().getX() - x_temp;
+            y_diff = robotPose.getOrigin().getY() - y_temp;
+            temp_distance = sqrt(x_diff*x_diff + y_diff*y_diff);
+            x_temp = robotPose.getOrigin().getX();
+            y_temp = robotPose.getOrigin().getY();
+        }
+
+
+        energy_consumption += new_battery;
+        distance_to_home += temp_distance;
+        ROS_INFO("count: %d simulation time: %f energy consumption: %f  distance_to_home: %f"
+                 , cnt, new_battery,energy_consumption, distance_to_home );
+        cnt++;
+        if(cnt >= 15){
+            possible_traveling_distance();
+        }else{
+            available_distance = 2 * distance_to_home;
+        }
+        }else{
+         cnt = 0;
+        }
+    }
+    void possible_traveling_distance(){
+
+        /*calculate how many distance per unit we can travel before we are running out of energy. */
+
+        double available_battery_voltage = 0.0;
+        available_battery_voltage = battery - cut_off_voltage;
+        available_distance = (distance_to_home * available_battery_voltage)/energy_consumption;
+        ROS_INFO("count: %d simulation available distance: %f"
+                 , cnt, available_distance);
+    }
 
 public:
 
@@ -1642,12 +1696,16 @@ public:
         bool Simulation, goal_determined;
         bool robot_prefix_empty;
         bool battery_voltage;
-        double th, battery;
+        int cut_off_voltage;
+        double th, battery, new_battery,temp;
+        double old_simulation_time, new_simulation_time;
+        double distance_to_home, temp_distance, energy_consumption;
+        double x_temp, y_temp,x_diff, y_diff, available_distance;
 
         int accessing_cluster, cluster_element_size, cluster_element;
         int global_iterattions;
         bool cluster_flag, cluster_initialize_flag;
-        int global_iterations_counter; 
+        int global_iterations_counter;
         int waitForResult;
         std::string move_base_frame;
         std::string robot_prefix;               /// The prefix for the robot when used in simulation
@@ -1687,7 +1745,7 @@ private:
 	double x_val, y_val, home_point_x, home_point_y;
 	int seq, feedback_value, feedback_succeed_value, rotation_counter,
 			home_point_message, goal_point_message;
-	int counter;
+    int counter,cnt;
 	bool pioneer, exploration_finished;
 };
 
