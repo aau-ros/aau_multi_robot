@@ -85,7 +85,7 @@ map_merger)
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES explorer
-  CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime adhoc_communication map_merger 
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication map_merger
 #  DEPENDS system_lib
 )
 
@@ -118,31 +118,26 @@ FIND_PATH( #GOOGLEPERFTOOLS_INCLUDE_DIR google/heap-profiler.h
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
- include_directories(include)
-include_directories(include ${catkin_INCLUDE_DIRS}   ) # /usr/local/Aria/include
-#link_directories(/usr/local/Aria/lib)
+# include_directories(include)
+include_directories(include ${catkin_INCLUDE_DIRS})
+
 ## Declare a cpp library
 add_library(exploration_planner src/ExplorationPlanner.cpp)
 add_library(hungarian src/hungarian.cpp)
 add_library(munkres src/src/munkres.cpp)
-#add_library(rosaria src/rosaria.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
-add_dependencies(exploration_planner adhoc_communication_gencpp hungarian munkres)
+add_dependencies(exploration_planner adhoc_communication_gencpp hungarian munkres )
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
-add_executable(voltagesimulator src/voltagesimulator.cpp)
-add_executable(chargeSignal src/chargeSignal.cpp)
-target_link_libraries( explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES})
+target_link_libraries(explorer exploration_planner hungarian munkres ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp )
+add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES} )
-target_link_libraries(voltagesimulator   ${catkin_LIBRARIES} )
-target_link_libraries(chargeSignal    ${catkin_LIBRARIES} )
+target_link_libraries(explorer exploration_planner hungarian munkres ${catkin_LIBRARIES})
 #target_link_libraries(explorer profiler)
 #target_link_libraries(explorer tcmalloc)
 

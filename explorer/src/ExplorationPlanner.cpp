@@ -3363,6 +3363,7 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
      * 0 ... select nearest cluster from OWN calculations
      * 1 ... gather information of others, estimate trajectory length based on
      *       distance information and select the optimal cluster using the 
+     *       KuhnMunkres algorithm.
      */
     int method_used = 2;
     
@@ -4163,7 +4164,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
             }
             return false;
         }
-        
+    
         else if(strategy == 2)
         {
             for (int i = 0 + count; i < frontiers.size(); i++)
@@ -4183,7 +4184,6 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                 }
             }
         }    
-	   
         else if(strategy == 3)
         {
             while(true)
