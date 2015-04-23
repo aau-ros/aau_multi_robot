@@ -132,8 +132,8 @@ add_dependencies(exploration_planner adhoc_communication_gencpp hungarian munkre
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
-add_executable(VoltageSimulator src/VoltageSimulator.cpp)
-add_executable(ChargeSignal src/ChargeSignal.cpp)
+add_executable(voltagesimulator src/voltagesimulator.cpp)
+add_executable(chargeSignal src/chargeSignal.cpp)
 target_link_libraries( explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -141,8 +141,8 @@ add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES} )
-target_link_libraries(VoltageSimulator   ${catkin_LIBRARIES} )
-target_link_libraries(ChargeSignal    ${catkin_LIBRARIES} )
+target_link_libraries(voltagesimulator   ${catkin_LIBRARIES} )
+target_link_libraries(chargeSignal    ${catkin_LIBRARIES} )
 #target_link_libraries(explorer profiler)
 #target_link_libraries(explorer tcmalloc)
 

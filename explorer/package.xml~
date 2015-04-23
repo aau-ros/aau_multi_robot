@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>battery_simulation</name>
+  <name>explorer</name>
   <version>0.1.6</version>
   <description>
       The explorer package utilizes frontier based exploration for multi-robot systems. Beside frontier detection, coordinated and uncoordinated exploration strategies are available to select goal points. Coordinated exploration enhances robot distribution and reduces redundancy in exploration reducing exploration time.
@@ -46,11 +46,31 @@
   <build_depend>rospy</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  <build_depend>costmap_2d</build_depend>
+  <build_depend>navfn</build_depend>
+  <build_depend>nav_core</build_depend>
+  <build_depend>map_merger</build_depend>
+  <build_depend>move_base</build_depend>
+  <build_depend>voxel_grid</build_depend>
+  <build_depend>sound_play</build_depend>
+  <build_depend>adhoc_communication</build_depend>
+  <build_depend>map_merger</build_depend>
+  <build_depend>p2os</build_depend>
 
   <run_depend>rospy</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
-
+  <run_depend>message_runtime</run_depend>
+  <run_depend>costmap_2d</run_depend>
+  <run_depend>navfn</run_depend>
+  <run_depend>nav_core</run_depend>
+  <run_depend>map_merger</run_depend>
+  <run_depend>move_base</run_depend>
+  <run_depend>voxel_grid</run_depend>
+  <run_depend>sound_play</run_depend>
+  <run_depend>adhoc_communication</run_depend>
+  <run_depend>p2os</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
