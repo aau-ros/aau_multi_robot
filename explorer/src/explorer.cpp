@@ -25,7 +25,6 @@
 //#include <sound_play/sound_play.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-#include <std_msgs/Empty.h>
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -34,9 +33,15 @@
 //#endif
 boost::mutex costmap_mutex;
 
+<<<<<<< HEAD
 #define OPERATE_ON_GLOBAL_MAP true		// global or local costmap as basis for exploration
 #define OPERATE_WITH_GOAL_BACKOFF false	// navigate to a goal point which is close to (but not exactly at) selected goal (in case selected goal is too close to a wall)
 
+=======
+#define OPERATE_ON_GLOBAL_MAP true
+#define OPERATE_WITH_GOAL_BACKOFF false
+double battery;
+>>>>>>> parent of b3a4db1... Robots now drive back to home when energy level is at 50%.
 void sleepok(int t, ros::NodeHandle &nh)
 {
     if (nh.ok())
@@ -50,7 +55,7 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),th(12), robot_id(0){
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -237,11 +242,11 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
                 
 	}
-	void callback(const std_msgs::Float64::ConstPtr& msg)
-    {
+	void chatterCallback(const std_msgs::Float64::ConstPtr& msg)
+	{
  		battery = msg->data;
+ROS_INFO("Battery state2: %f   ",battery);
 	}
-
 	void explore() 
         {
 		/*
@@ -250,7 +255,7 @@ public:
 		 * obstacle information. This is rquired for the
 		 * first time explore() is called.
 		 */
-                ROS_DEBUG("Sleeping 5s for costmaps to be updated.");
+		ROS_DEBUG("Sleeping 5s for costmaps to be updated.");
                 geometry_msgs::Twist twi;
                 //should be a parameter!! only for testing on Wed/17/9/14
                 ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/Rosaria/cmd_vel",3);
@@ -265,8 +270,8 @@ public:
 
 		
                 ros::NodeHandle bat;
-                ros::Subscriber sub = bat.subscribe<std_msgs::Float64>("battery_state",1000,&Explorer::callback,this);
-
+		ros::Subscriber sub = bat.subscribe<std_msgs::Float64>("battery_state",1000,&Explorer::chatterCallback,this);
+                
 		while (exploration_finished == false) 
                 {
                     Simulation == false; 
@@ -412,6 +417,39 @@ public:
                                 exploration->sort(2);
                                 exploration->sort(3);
 
+                                while(true)
+                                {   
+                                    goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
+                                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
+                                    if(goal_determined == false)
+                                    {
+                                        break;
+                                    }
+                                    else
+                                    {                        
+                                        //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
+                                        negotiation = true;
+                                        if(negotiation == true)
+                                        {
+                                            break;
+                                        }
+                                        count++;
+                                    }
+                                }
+
+                            }
+			    else if(frontier_selection == 7)
+                            {
+                                exploration->sort(2);
+                                exploration->sort(3);
+
+				ROS_INFO("Battery state: %f   ",battery);
+				/*if(battery <= 0.55) 
+				{
+					exploration_has_finished();
+                                        exploration_finished = true;
+					break;
+				}*/
                                 while(true)
                                 {   
                                     goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
@@ -694,39 +732,7 @@ public:
                                     }
                                 }
 
-                            }else if(frontier_selection == 7)
-                            {
-                            	exploration->sort(2);
-                                exploration->sort(3);
-
-                ROS_INFO("Battery state: %f, ",battery);
-                if(battery <= th)
-				{	
-					battery_voltage = false;
-                }else{
-                    battery_voltage = true;
-                }
-				
-                while(true)
-                {
-                    goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
-                    if(goal_determined == false)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
-                        negotiation = true;
-                        if(negotiation == true)
-                        {
-                            break;
-                        }
-                        count++;
-                     }
-                  }
-               }
+                            } 
 
 
                              /*
@@ -758,29 +764,25 @@ public:
                                         backoff_sucessfull = true;
                                     }
                                 }
-                                ROS_INFO("Battery voltage %d", battery_voltage);
-                                if(battery_voltage == true)
+
+                                if(backoff_sucessfull == true)
                                 {
-                                    if(backoff_sucessfull == true )
+                                    if(OPERATE_WITH_GOAL_BACKOFF == true)
                                     {
-                                        if(OPERATE_WITH_GOAL_BACKOFF == true)
-                                        {
-                                            ROS_INFO("Doing navigation to backoff goal");
-                                            navigate_to_goal = navigate(backoffGoal);
-                                        }else
-                                        {
-                                            ROS_INFO("Doing navigation to goal");
-                                            navigate_to_goal = navigate(final_goal);
-                                        }
-                                    }
-                                    else if(backoff_sucessfull == false && goal_determined == false)
+                                        ROS_INFO("Doing navigation to backoff goal");
+                                        navigate_to_goal = navigate(backoffGoal);
+                                    }else
                                     {
+                                        ROS_INFO("Doing navigation to goal");
                                         navigate_to_goal = navigate(final_goal);
-                                        goal_determined = false;
                                     }
-                                }else{
-                                   navigate_to_goal = move_robot(0, home_point_x, home_point_y);
                                 }
+                                else if(backoff_sucessfull == false && goal_determined == false)
+                                {
+                                    navigate_to_goal = navigate(final_goal);
+                                    goal_determined = false;
+                                }
+
 
                                 if(navigate_to_goal == true && goal_determined == true)
                                 {
@@ -1324,10 +1326,9 @@ public:
 		 * If received goal is not empty (x=0 y=0), drive the robot to this point
 		 * and mark that goal as seen in the last_goal_position vector!!!
 		 * Otherwise turn the robot by 90° to the right and search again for a better
-		 * frontier. 
+		 * frontier.
 		 */
                 bool completed_navigation = false;
-		// only drive the robot to the point if there is enough energy available.
 		if (goal_determined == true)
 		{
                         visualize_goal_point(goal.at(0), goal.at(1));
@@ -1621,29 +1622,26 @@ public:
             double time;
         } map_progress;
         
-        ros::Subscriber sub_move_base, sub_obstacle;
+	ros::Subscriber sub_move_base, sub_obstacle;    
         
 	// create a costmap
-        costmap_2d::Costmap2DROS* costmap2d_local;
+	costmap_2d::Costmap2DROS* costmap2d_local;
         costmap_2d::Costmap2DROS* costmap2d_local_size;
-        costmap_2d::Costmap2DROS* costmap2d_global;
-        costmap_2d::Costmap2D costmap;
+	costmap_2d::Costmap2DROS* costmap2d_global;
+	costmap_2d::Costmap2D costmap;
 
         std::vector<map_progress_t> map_progress_during_exploration;
         
         std::vector<int> clusters_available_in_pool;
         
-        int home_position_x, home_position_y;
+	int home_position_x, home_position_y;
         int robot_id, number_of_robots;
         int frontier_selection, costmap_width, global_costmap_iteration, number_unreachable_frontiers_for_cluster;
         int counter_waiting_for_clusters;
         
         double robot_home_position_x, robot_home_position_y;
-        bool Simulation, goal_determined;
+	bool Simulation, goal_determined;
         bool robot_prefix_empty;
-        bool battery_voltage;
-        double th, battery;
-
         int accessing_cluster, cluster_element_size, cluster_element;
         int global_iterattions;
         bool cluster_flag, cluster_initialize_flag;

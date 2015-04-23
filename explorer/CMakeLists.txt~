@@ -119,7 +119,7 @@ FIND_PATH( #GOOGLEPERFTOOLS_INCLUDE_DIR google/heap-profiler.h
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
  include_directories(include)
-include_directories(include ${catkin_INCLUDE_DIRS}   ) # /usr/local/Aria/include
+#include_directories(include ${catkin_INCLUDE_DIRS}  /usr/local/Aria/include ) 
 #link_directories(/usr/local/Aria/lib)
 ## Declare a cpp library
 add_library(exploration_planner src/ExplorationPlanner.cpp)
