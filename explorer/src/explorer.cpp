@@ -15,7 +15,6 @@
 #include <costmap_2d/observation_buffer.h>
 #include <tf/transform_listener.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Float64.h>
 //#include <costmap_2d/voxel_costmap_2d.h>
 #include <actionlib/client/simple_action_client.h>
 #include <boost/thread.hpp>
@@ -25,6 +24,7 @@
 //#include <sound_play/sound_play.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
+
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -236,14 +236,12 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
                 
 	}
-	void chatterCallback(const std_msgs::Float64::ConstPtr& msg)
-	{
- 		battery = msg->data;
-	}
+
+
 	void explore() 
         {
 		/*
-		 * Sleep is required to get the actual a 
+		 * Sleep is required to get the actual 
 		 * costmap updated with obstacle and inflated 
 		 * obstacle information. This is rquired for the
 		 * first time explore() is called.
@@ -333,8 +331,6 @@ public:
                              *       negotiation)
                              * 6 ... Cluster frontiers, then navigate to random cluster
                              *       (with and without negotiation)
-			     * 7 ... Navigate to nearest frontier TRAVEL PATH and consider 
-			     *       staying-alivie path planning
                              */
 
                             /******************** SORT *******************
@@ -411,41 +407,6 @@ public:
                                 exploration->sort(2);
                                 exploration->sort(3);
 
-                                while(true)
-                                {   
-                                    goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
-                                    if(goal_determined == false)
-                                    {
-                                        break;
-                                    }
-                                    else
-                                    {                        
-                                        //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
-                                        negotiation = true;
-                                        if(negotiation == true)
-                                        {
-                                            break;
-                                        }
-                                        count++;
-                                    }
-                                }
-
-                            }
-			    else if(frontier_selection == 7)
-                            {
-                                exploration->sort(2);
-                                exploration->sort(3);
-				std_msgs::Float64 batteryVoltage;
-				ros::Subscriber sub = nh.subscribe<std_msgs::Float64>("/Rosaria/battery_state_of_charge",50,&Explorer::chatterCallback,this);
-				ros::spinOnce();
-				ROS_DEBUG("Battery state: %f   ",battery);
-				if(battery <= 0.55) 
-				{
-					exploration_has_finished();
-                                        exploration_finished = true;
-					break;
-				}
                                 while(true)
                                 {   
                                     goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
