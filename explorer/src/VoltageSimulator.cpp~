@@ -9,7 +9,7 @@ complete' signal to be published before beginning from the start.
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float64.h>
 
-#define VOLTAGE_MAX 12.8
+#define VOLTAGE_MAX 13.5
 #define VOLTAGE_MIN 11.0
 
 using namespace std;
