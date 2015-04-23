@@ -31,13 +31,12 @@
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
 
-#define STRAIGHT_COST 100
-#define MAX_DISTANCE 2000
-#define MAX_GOAL_RANGE 0.2 //0.8
-#define MINIMAL_FRONTIER_RANGE 0.2
-#define INNER_DISTANCE 5
-#define MAX_NEIGHBOR_DIST 1
-#define CLUSTER_MERGING_DIST 0.8 //3
+#define MAX_DISTANCE 2000			// max distance to starting point
+#define MAX_GOAL_RANGE 0.2			// min distance between frontiers (search)
+#define MINIMAL_FRONTIER_RANGE 0.2	// distance between frontiers (selection)
+#define INNER_DISTANCE 5			// radius (in cells) around goal point without obstacles (backoff goal point)
+#define MAX_NEIGHBOR_DIST 1			// radius (in cells) around selected goal without obstacles
+#define CLUSTER_MERGING_DIST 0.8	// max (euclidean) distance between clusters that are merged
 
 using namespace explorationPlanner;
 
