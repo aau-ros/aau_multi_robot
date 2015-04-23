@@ -33,15 +33,9 @@
 //#endif
 boost::mutex costmap_mutex;
 
-<<<<<<< HEAD
 #define OPERATE_ON_GLOBAL_MAP true		// global or local costmap as basis for exploration
 #define OPERATE_WITH_GOAL_BACKOFF false	// navigate to a goal point which is close to (but not exactly at) selected goal (in case selected goal is too close to a wall)
 
-=======
-#define OPERATE_ON_GLOBAL_MAP true
-#define OPERATE_WITH_GOAL_BACKOFF false
-double battery;
->>>>>>> parent of b3a4db1... Robots now drive back to home when energy level is at 50%.
 void sleepok(int t, ros::NodeHandle &nh)
 {
     if (nh.ok())
