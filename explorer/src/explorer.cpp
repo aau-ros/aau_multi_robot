@@ -34,9 +34,8 @@
 //#endif
 boost::mutex costmap_mutex;
 
-
-#define OPERATE_ON_GLOBAL_MAP true
-#define OPERATE_WITH_GOAL_BACKOFF false
+#define OPERATE_ON_GLOBAL_MAP true		// global or local costmap as basis for exploration
+#define OPERATE_WITH_GOAL_BACKOFF false	// navigate to a goal point which is close to (but not exactly at) selected goal (in case selected goal is too close to a wall)
 
 void sleepok(int t, ros::NodeHandle &nh)
 {
