@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include <explorer/switchExplRend.h>
 #include <explorer/getPosition.h>
+#include <explorer/MissionFinished.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include "rendezvous/RendezvousPoint.h"
@@ -43,6 +44,9 @@ private:
 	double home_x, home_y;
 	ros::ServiceClient expl_client;
     ros::ServiceClient position_client;
+    ros::ServiceClient mission_client;
+
+    bool missionFinished;
 
     std::vector<RendezvousPoint> *rendezvousPoints;
     RendezvousPoint currentRendezvous;

@@ -26,6 +26,7 @@
 #include <map_merger/LogMaps.h>
 #include <explorer/switchExplRend.h>
 #include <explorer/getPosition.h>
+#include <explorer/MissionFinished.h>
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -263,6 +264,9 @@ public:
 
         // create service to get current position of robot
         getPosition_server = nh.advertiseService("getPosition", &Explorer::getPosition_srv, this);
+
+        // create service to get information about mission (finished or not)
+        missionFinished_server = nh.advertiseService("MissionFinished", &Explorer::missionFinished_srv, this);
 
         /*
          * START TAKING THE TIME DURING EXPLORATION
@@ -1576,6 +1580,11 @@ public:
         return true;
     }
 
+    bool missionFinished_srv(explorer::MissionFinished::Request &req, explorer::MissionFinished::Response &res){
+        res.finished = exploration_finished;
+        return true;
+    }
+
 
 public:
 
@@ -1590,6 +1599,7 @@ public:
 
     ros::ServiceServer switchRend_server;
     ros::ServiceServer getPosition_server;
+    ros::ServiceServer missionFinished_server;
         
 	// create a costmap
 	costmap_2d::Costmap2DROS* costmap2d_local;

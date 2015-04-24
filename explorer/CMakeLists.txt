@@ -58,6 +58,7 @@ add_service_files(
     FILES
     switchExplRend.srv
     getPosition.srv
+    MissionFinished.srv
  )
 
 ## Generate actions in the 'action' folder
