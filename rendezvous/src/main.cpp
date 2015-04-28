@@ -13,7 +13,7 @@ int main(int argc, char **argv)
     //rendzv->exploreRobot();
     //rendzv->stopStartExplorer();
 
-    //replace by classification() method then
+    //replace by classification() method
     std::string robot0 = "/robot_0";
     std::string robot1 = "/robot_1";
 
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     }
     else if(rendzv->iAm == RELAY)
     {
-        // subscribe to rendezvous points topic of my EXPLORE robot
+        // subscribe to rendezvous points topic of my explore robot
         std::string topic_name = rendzv->myBuddy_prefix + std::string("/rendezvous/RendezvousPoints");
         rendzv->sub = rendzv->nh->subscribe(topic_name, 10, &Rendezvous::new_Rendezvous_available, rendzv);
         rendzv->relayRobot();

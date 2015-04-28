@@ -21,7 +21,7 @@ Rendezvous::Rendezvous()
     service = robot_prefix + std::string("/explorer/MissionFinished");
     mission_client = nh->serviceClient<explorer::MissionFinished>(service.c_str());
 
-    // wait for information about home to be available
+    // wait till information about home is available
     ros::Duration(20).sleep();
 
     // get and set home point
@@ -51,7 +51,7 @@ void Rendezvous::exploreRobot()
         ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
     }
 
-    ROS_DEBUG("EXPLORER is now exploring till timeout!");
+    ROS_DEBUG("EXPLORER will now explore for 40 sec!");
 
     ros::Duration(40).sleep();
 
@@ -96,7 +96,44 @@ void Rendezvous::callbackMoveToRendezvous()
     pub.publish(msg);
     ROS_DEBUG("EXPLORER published new Rendezvous Point: x = %f, y = %f", msg.x, msg.y);
 
-    ros::Duration(40).sleep();
+    // determine last not visited rendezvous, move there and wait for 25 sec at rendezvous
+    for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
+        i != rendezvousPoints->end(); ++i)
+    {
+        if(i->visited == false){
+            currentRendezvous = *i;
+            ROS_DEBUG("EXPLORER should move to x = %f , y = %f (= its current rendezvous)!", currentRendezvous.x, currentRendezvous.y);
+            break;
+        }
+    }
+
+    if(currentRendezvous.x == home_x && currentRendezvous.y == home_y)
+    {
+        ROS_DEBUG("EXPLORER: Current rendezvous is home, explorer will not move there!");
+    }
+    else
+    {
+        if(move_robot(currentRendezvous.x, currentRendezvous.y)){
+            ROS_DEBUG("EXPLORER at Rendezvous now. It will wait here for 5 sec!");
+            ros::Duration(5).sleep();
+        }
+        else
+        {
+            ROS_DEBUG("EXPLORER failed to move to rendezvous!");
+        }
+     }
+
+    // mark rendezvous as visited
+    // case 1: robot reached rendezvous -> marking ok
+    // case 2: robot failed to reach rendezvous -> probably rendezvous not reachable, robot should not try again .. TODO
+    // case 3: rendezvous == home -> marking ok, bc explore robot should not return home till mission is finished
+    for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
+        i != rendezvousPoints->end(); ++i)
+    {
+        if(i->x == currentRendezvous.x && i->y == currentRendezvous.y){
+            i->visited = true;
+        }
+    }
 
 //    ROS_DEBUG("EXPLORER: Vector of rendezvous points after adding current position as new one");
 //    printRendezvousPoints();
@@ -144,10 +181,13 @@ void Rendezvous::callbackMoveToRendezvous()
     }
     else if(mission_srv.response.finished == false)          // if mission is not finished, explore further
     {
+        ROS_DEBUG("EXPLORER will explore further because mission is not finished.");
         exploreRobot();
     }
     else                                            // if mission is finished, start explorer
     {
+        ROS_DEBUG("EXPLORER :  mission finished !!!!");
+        ROS_DEBUG("will start explorer again, should return home");
         srv_msg.request.explore = true;
         if(expl_client.call(srv_msg) == false)
         {
@@ -162,12 +202,13 @@ void Rendezvous::callbackMoveToRendezvous()
 void Rendezvous::new_Rendezvous_available(const rendezvous::RendezvousPointConstPtr& msg)
 {
     ROS_DEBUG("RELAY received Point x = %f, y = %f", msg->x, msg->y);
-    // first change point a little to avoid crush
+
+    // first change point a little to avoid crush then add it to own vector of rendezvous
     addRendezvous((msg->x)+0.5, (msg->y)+0.5);
 
     // TODO: check if manipulated point is still in map, else change it in another direction
 
-    ROS_DEBUG("RELAY: Vector of rendezvous points after adding next one (+0.5 in each direction) from explorer");
+    ROS_DEBUG("RELAY: Vector of rendezvous points");
     printRendezvousPoints();
 }
 
@@ -175,7 +216,6 @@ void Rendezvous::new_Rendezvous_available(const rendezvous::RendezvousPointConst
 void Rendezvous::relayRobot()
 {
     // stop explorer
-    ROS_DEBUG("RELAY will stop explorer now!");
     explorer::switchExplRend srv_msg;
     srv_msg.request.explore = false;
 
@@ -183,6 +223,8 @@ void Rendezvous::relayRobot()
     {
         ROS_DEBUG("In Rendezvous::relayRobot()");
         ROS_ERROR("Failed to call explorer service 'switchExplRend'");
+    } else {
+        ROS_DEBUG("RELAY stopped explorer!");
     }
 
     explorer::MissionFinished mission_srv;
@@ -195,22 +237,23 @@ void Rendezvous::relayRobot()
 
     while(missionFinished == false)
     {
+
         // if new rendezvous available, get it
         ros::spinOnce();
 
-        // move to last not visited rendezvous or stay at home
+        // move to last not visited rendezvous or stay if there isn't any new rendezvous
         for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
             i != rendezvousPoints->end(); ++i)
         {
-            if(i->visited == false){
+            if(i->visited == false)
+            {
                 currentRendezvous = *i;
                 ROS_DEBUG("RELAY should move to x = %f , y = %f (= its current rendezvous)!", currentRendezvous.x, currentRendezvous.y);
                 break;
             }
-            else            // if there is no new rendezvous yet, stay at home
+            else
             {
-                currentRendezvous.x = home_x;
-                currentRendezvous.y = home_y;
+                // no new rendezvous available -> stay
             }
         }
 
@@ -225,49 +268,55 @@ void Rendezvous::relayRobot()
                 }
             }
 
-            if(currentRendezvous.x != home_x && currentRendezvous.y != home_y)
-            {
-                ROS_INFO("RELAY at rendezvous now, it will return to Home in 10 sec.");
-                ros::Duration(10).sleep();
-
-                if(move_robot(home_x, home_y))
-                {
-                     ROS_INFO("RELAY at home now, it will wait there for 40 sec.");
-                     ros::Duration(30).sleep();
-                }
-
-                if(this->mission_client.call(mission_srv) == false)
-                {
-                    ROS_ERROR("Failed to call explorer service 'missionFinished'");
-                } else {
-                    missionFinished = mission_srv.response.finished;
-                }
-
-            }
-            else
-            {
-                ROS_INFO("RELAY already at home. It should wait here for next rendzevous to be published");
-                ros::Duration(10).sleep();
-
-                if(this->mission_client.call(mission_srv) == false)
-                {
-                    ROS_ERROR("Failed to call explorer service 'missionFinished'");
-                } else {
-                    missionFinished = mission_srv.response.finished;
-                }
-            }
-
+            ROS_DEBUG("RELAY at rendezvous, it will return to Home in 10 sec.");
+            ros::Duration(10).sleep();
 
             // TODO: wait there for EXPLORE robot
+
+            if(move_robot(home_x, home_y))
+            {
+                 ROS_DEBUG("RELAY at home, it will wait there for 20 sec.");
+
+                 if(this->mission_client.call(mission_srv) == false)
+                 {
+                     ROS_ERROR("Failed to call explorer service 'missionFinished'");
+                 } else {
+                     missionFinished = mission_srv.response.finished;
+                 }
+
+
+            }
+
+            ros::Duration(20).sleep();
 
         }
         else
         {
             ROS_ERROR("Failed to move robot to rendezvous!");
-            ROS_DEBUG("Try to move it to x = %f, y = %f", currentRendezvous.x-0.4, currentRendezvous.y-0.4);
-            move_robot((currentRendezvous.x-0.4), (currentRendezvous.y-0.4));
+            //ROS_DEBUG("Try to move it to x = %f, y = %f", currentRendezvous.x-0.4, currentRendezvous.y-0.4);
+            //move_robot((currentRendezvous.x-0.4), (currentRendezvous.y-0.4));
+
+            // mark rendezvous as visited
+            for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
+                i != rendezvousPoints->end(); ++i)
+            {
+                if(i->x == currentRendezvous.x && i->y == currentRendezvous.y){
+                    i->visited = true;
+                }
+            }
+
+            ros::Duration(20).sleep();
+        }
+
+        if(this->mission_client.call(mission_srv) == false)
+        {
+            ROS_ERROR("Failed to call explorer service 'missionFinished'");
+        } else {
+            missionFinished = mission_srv.response.finished;
         }
     }
+
+    ROS_DEBUG("RELAY :  mission finished !!!!");
 }
     // get current robot position (:= rendezvous)
 //    double rend_x;
@@ -383,6 +432,9 @@ bool Rendezvous::move_robot(double position_x, double position_y)
 // Test function
 void Rendezvous::stopStartExplorer()
 {
+    // robots should stop explorer after 40 sec,
+    // wait for 30 sec and start explorer again
+
     ros::Duration(40).sleep();
 
     ROS_DEBUG("%s  should stop explorer now!", robot_prefix.c_str());
