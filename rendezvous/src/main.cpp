@@ -9,9 +9,14 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "rendezvous");
     Rendezvous *rendzv = new Rendezvous();
 
+
+    //ros::Duration(80.0).sleep();
     //rendzv->relayRobot();
-    //rendzv->exploreRobot();
+
     //rendzv->stopStartExplorer();
+
+
+//    //rendzv->exploreRobot();
 
     //replace by classification() method
     std::string robot0 = "/robot_0";
@@ -46,6 +51,6 @@ int main(int argc, char **argv)
         rendzv->relayRobot();
     }
 
-
+      //rendzv->stopStartExplorer();
 
 }

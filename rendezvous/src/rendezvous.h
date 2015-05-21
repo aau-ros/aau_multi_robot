@@ -6,6 +6,7 @@
 #include <actionlib/client/simple_action_client.h>
 #include "rendezvous/RendezvousPoint.h"
 #include <std_msgs/Float64.h>
+#include <geometry_msgs/PointStamped.h>
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
@@ -51,8 +52,14 @@ private:
     std::vector<RendezvousPoint> *rendezvousPoints;
     RendezvousPoint currentRendezvous;
 
+    geometry_msgs::PointStamped rendezvousPoint;
+    int rendezvous_point_message;
+    ros::Publisher pub_rendezvous;
+
     void callbackMoveToRendezvous();
     void addRendezvous(double new_x, double new_y);
+    void visualize_rendezvous(double x, double y);
+    bool reachable(double x, double y);
 
 };
 
