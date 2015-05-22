@@ -48,6 +48,7 @@ private:
     ros::ServiceClient mission_client;
 
     bool missionFinished;
+    int numberMeetings;
 
     std::vector<RendezvousPoint> *rendezvousPoints;
     RendezvousPoint currentRendezvous;
@@ -56,9 +57,19 @@ private:
     int rendezvous_point_message;
     ros::Publisher pub_rendezvous;
 
+    geometry_msgs::PointStamped visited_rendezvousPoint;
+    int visited_rendezvous_point_message;
+    ros::Publisher pub_visited_rendezvous;
+
+    geometry_msgs::PointStamped unreachable_rendezvousPoint;
+    int unreachable_rendezvous_point_message;
+    ros::Publisher pub_unreachable_rendezvous;
+
     void callbackMoveToRendezvous();
     void addRendezvous(double new_x, double new_y);
     void visualize_rendezvous(double x, double y);
+    void visualize_visited_rendezvous(double x, double y);
+    void visualize_unreachable_rendezvous(double x, double y);
     bool reachable(double x, double y);
 
 };

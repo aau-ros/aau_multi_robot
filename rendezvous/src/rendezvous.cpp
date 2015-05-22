@@ -43,6 +43,12 @@ Rendezvous::Rendezvous()
 
 void Rendezvous::exploreRobot()
 {
+    // count number of rendezvous and
+    // increase exploration time
+    // starts with 1, so first exploration is 90 sec
+
+    numberMeetings++;
+
     // explore till timeout
     explorer::switchExplRend srv_msg;
     srv_msg.request.explore = true;
@@ -51,9 +57,11 @@ void Rendezvous::exploreRobot()
         ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
     }
 
-    ROS_DEBUG("explore 60 sec!");
+    double explorationTime = (80.0 + (10*numberMeetings));
 
-    ros::Duration(60).sleep();
+    ROS_DEBUG("explore %f sec!", explorationTime);
+
+    ros::Duration(explorationTime).sleep();
 
     callbackMoveToRendezvous();
 }
@@ -120,10 +128,12 @@ void Rendezvous::callbackMoveToRendezvous()
         if(move_robot(currentRendezvous.x, currentRendezvous.y)){
             ROS_DEBUG("EXPLORER at Rendezvous, wait here for 5 sec!");
             ros::Duration(5).sleep();
+            visualize_visited_rendezvous(currentRendezvous.x, currentRendezvous.y);
         }
         else
         {
             ROS_DEBUG("EXPLORER failed to move to rendezvous!");
+            visualize_unreachable_rendezvous(currentRendezvous.x, currentRendezvous.y);
         }
      }
 
@@ -141,7 +151,7 @@ void Rendezvous::callbackMoveToRendezvous()
 
     ROS_DEBUG("--------------- EXPLORER: Vector of rendezvous points --------------------- ");
     printRendezvousPoints();
-    ROS_DEBUG("-------------------------------------------------------------------");
+    ROS_DEBUG("--------------------------------------------------------------------------------------");
 
     // (if mission is not finished) explore again till next timeout
 
@@ -178,22 +188,26 @@ void Rendezvous::new_Rendezvous_available(const rendezvous::RendezvousPointConst
     // check if manipulated point is reachable
     // then add it to own vector of rendezvous
 
-    bool  pointOK = false;
+//    bool  pointOK = false;
+//    double delta = 0.0001;
+//    int i = 0;
+
+//    while(pointOK == false && i <= 6)
+//    {
+//        i++;
+//        pointOK = reachable((msg->x)+delta, (msg->y)+delta);
+//        ROS_DEBUG("Point ( %f / %f ) is not reachable for relay.", (msg->x)+delta, (msg->y)+delta);
+//        delta = delta*i;
+//    }
+
+//    if(pointOK == false){
+//        ROS_WARN("Given rendezvous R(%f / %f) is not reachable for RELAY!", msg->x, msg->y);
+//    } else {
+//        addRendezvous((msg->x)+delta, (msg->y)+delta);
+//    }
+
     double delta = 0.0001;
-    int i = 0;
-
-    while(pointOK == false && i <= 6)
-    {
-        i++;
-        pointOK = reachable((msg->x)+delta, (msg->y)+delta);
-        delta = delta*i;
-    }
-
-    if(i==6){
-        ROS_WARNING("Given rendezvous is not reachable for RELAY!");
-    } else {
-        addRendezvous((msg->x)+delta, (msg->y)+delta);
-    }
+    addRendezvous((msg->x)+delta, (msg->y)+delta);
 
     ROS_DEBUG("RELAY: Vector of rendezvous points");
     printRendezvousPoints();
@@ -255,6 +269,8 @@ void Rendezvous::relayRobot()
                 }
             }
 
+            visualize_visited_rendezvous(currentRendezvous.x, currentRendezvous.y);
+
             ROS_DEBUG("RELAY at rendezvous; return home in 10 sec.");
             ros::Duration(10).sleep();
 
@@ -281,8 +297,8 @@ void Rendezvous::relayRobot()
         else
         {
             ROS_ERROR("Failed to move robot to rendezvous!");
-            //ROS_DEBUG("Try to move it to x = %f, y = %f", currentRendezvous.x-0.4, currentRendezvous.y-0.4);
-            //move_robot((currentRendezvous.x-0.4), (currentRendezvous.y-0.4));
+
+            visualize_unreachable_rendezvous(currentRendezvous.x, currentRendezvous.y);
 
             // mark rendezvous as visited (relay should not try to reach this rendezvous again, bc maybe its not reachable)
             for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
@@ -383,6 +399,33 @@ void Rendezvous::visualize_rendezvous(double x, double y)
     pub_rendezvous.publish < geometry_msgs::PointStamped > (rendezvousPoint);
 }
 
+
+void Rendezvous::visualize_visited_rendezvous(double x, double y)
+{
+    visited_rendezvousPoint.header.seq = visited_rendezvous_point_message++;
+    visited_rendezvousPoint.header.stamp = ros::Time::now();
+    visited_rendezvousPoint.header.frame_id = move_base_frame;
+    visited_rendezvousPoint.point.x = x;
+    visited_rendezvousPoint.point.y = y;
+
+    ros::NodeHandle nh("visited_rendezvous");
+    pub_visited_rendezvous = nh.advertise < geometry_msgs::PointStamped > ("visited_rendezvous", 100, true);
+    pub_visited_rendezvous.publish < geometry_msgs::PointStamped > (visited_rendezvousPoint);
+}
+
+void Rendezvous::visualize_unreachable_rendezvous(double x, double y)
+{
+    unreachable_rendezvousPoint.header.seq = unreachable_rendezvous_point_message++;
+    unreachable_rendezvousPoint.header.stamp = ros::Time::now();
+    unreachable_rendezvousPoint.header.frame_id = move_base_frame;
+    unreachable_rendezvousPoint.point.x = x;
+    unreachable_rendezvousPoint.point.y = y;
+
+    ros::NodeHandle nh("unreachable_rendezvous");
+    pub_unreachable_rendezvous = nh.advertise < geometry_msgs::PointStamped > ("unreachable_rendezvous", 100, true);
+    pub_unreachable_rendezvous.publish < geometry_msgs::PointStamped > (unreachable_rendezvousPoint);
+}
+
 void Rendezvous::addRendezvous(double new_x, double new_y)
 {
     RendezvousPoint rend;
@@ -407,7 +450,8 @@ void Rendezvous::printRendezvousPoints()
 
 bool Rendezvous::reachable(double x, double y)
 {
-    MoveBaseClient testGoal("move_base_test", true);
+    ROS_DEBUG("Determine if goal ( %f / %f) is reachable", x, y);
+    MoveBaseClient testGoal("move_base", true);
     while(!testGoal.waitForServer(ros::Duration(10.0)));
     move_base_msgs::MoveBaseGoal goal_msg;
 
@@ -423,8 +467,16 @@ bool Rendezvous::reachable(double x, double y)
     testGoal.sendGoal(goal_msg);
 
     testGoal.waitForResult(ros::Duration(waitForResult));
-    while(testGoal.getState() == actionlib::SimpleClientGoalState::)
 
+    while (testGoal.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+        ROS_DEBUG(" current state: %s", testGoal.getState().toString().c_str());
+        if (testGoal.getState() == actionlib::SimpleClientGoalState::ABORTED)
+        {
+
+            return false;
+        }
+    }
     return true;
 }
 
@@ -458,18 +510,23 @@ bool Rendezvous::move_robot(double position_x, double position_y)
     ac.waitForResult(ros::Duration(waitForResult));
     while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
     {
+        //ROS_DEBUG(" current state: %s", ac.getState().toString().c_str());
         ros::Duration(0.5).sleep();
     }
 
     while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
     {
+        //ROS_DEBUG(" current state: %s", ac.getState().toString().c_str());
         ros::Duration(0.5).sleep();
+
     }
 
     while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
     {
+        //ROS_DEBUG(" current state: %s", ac.getState().toString().c_str());
         if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED)
         {
+            ROS_DEBUG(" current state: %s", ac.getState().toString().c_str());
             return false;
         }
     }

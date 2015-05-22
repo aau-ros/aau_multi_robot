@@ -279,6 +279,7 @@ public:
         while (exploration_finished == false)
         {
             Simulation == false;
+
             if(Simulation == false)
             {
                 /*
@@ -684,34 +685,35 @@ public:
                     }
 
                    nh.getParam("explorerOperating",explorerOp);
+                   if(explorerOp == false){
+                       ROS_INFO("Interrupt exploration for rendezvous!");
+                   }
 
-                   if(explorerOp == true)
+                   while(explorerOp == false)
                    {
-                        if(backoff_sucessfull == true)
+                    nh.getParam("explorerOperating",explorerOp);
+                   }
+
+
+                   if(backoff_sucessfull == true)
+                   {
+                        if(OPERATE_WITH_GOAL_BACKOFF == true)
                         {
-                            if(OPERATE_WITH_GOAL_BACKOFF == true)
-                            {
-                                ROS_INFO("Doing navigation to backoff goal");
-                                navigate_to_goal = navigate(backoffGoal);
-                            }
-                            else
-                            {
-                                ROS_INFO("Doing navigation to goal");
-                                navigate_to_goal = navigate(final_goal);
-                            }
+                            ROS_INFO("Doing navigation to backoff goal");
+                            navigate_to_goal = navigate(backoffGoal);
                         }
-                        else if(backoff_sucessfull == false && goal_determined == false)
+                        else
                         {
+                            ROS_INFO("Doing navigation to goal");
                             navigate_to_goal = navigate(final_goal);
-                            goal_determined = false;
                         }
                    }
-                   else
+                   else if(backoff_sucessfull == false && goal_determined == false)
                    {
-                       ROS_DEBUG(" ------------------------ ");
-                       ROS_DEBUG(" RENDEZVOUS is operating! ");
-                       ROS_DEBUG(" ------------------------ ");
+                        navigate_to_goal = navigate(final_goal);
+                        goal_determined = false;
                    }
+
 
                     if(navigate_to_goal == true && goal_determined == true)
                     {
@@ -722,7 +724,7 @@ public:
                         ROS_DEBUG("Stored Visited frontier");
 
                     }
-                    else if(navigate_to_goal == false && goal_determined == true && explorerOp == true)
+                    else if(navigate_to_goal == false && goal_determined == true)
                     {
                         ROS_DEBUG("Storeing unreachable...");
                         exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
@@ -1365,7 +1367,7 @@ public:
 
 		goalPoint.header.seq = goal_point_message++;
 		goalPoint.header.stamp = ros::Time::now();
-                goalPoint.header.frame_id = move_base_frame; //"map"
+        goalPoint.header.frame_id = move_base_frame; //"map"
 		goalPoint.point.x = x;// - robotPose.getOrigin().getX();
 		goalPoint.point.y = y;// - robotPose.getOrigin().getY();
 
