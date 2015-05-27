@@ -208,6 +208,7 @@ namespace explorationPlanner
             int checkClustersID(adhoc_communication::ExpCluster cluster_to_check);
             bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name);
             void sort(int strategy);
+	    void sort_distance(bool energy_above_th);
             void simulate();
             void visualize_Frontiers();
             void visualize_visited_Frontiers();
@@ -215,6 +216,7 @@ namespace explorationPlanner
             void clear_Visualized_Cluster_Cells(std::vector<int> ids);
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void findFrontiers();
+            bool determine_goal_staying_alive(double available_distance, double traveled_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name);
             bool check_efficiency_of_goal(double x, double y);
             void clearVisitedAndSeenFrontiersFromClusters();
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);
@@ -300,6 +302,7 @@ namespace explorationPlanner
             unsigned int* obstacle_trans_array_;
             int* frontier_map_array_;
             int home_position_x_,home_position_y_;
+	    double x_last, y_last;
 
             bool* is_goal_array_;
             bool initialized_;

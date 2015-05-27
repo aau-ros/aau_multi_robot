@@ -15,7 +15,6 @@
 #include <costmap_2d/observation_buffer.h>
 #include <tf/transform_listener.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Float64.h>
 //#include <costmap_2d/voxel_costmap_2d.h>
 #include <actionlib/client/simple_action_client.h>
 #include <boost/thread.hpp>
@@ -25,7 +24,12 @@
 //#include <sound_play/sound_play.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-#include <std_msgs/Empty.h>
+#include "battery_simulation/Voltage.h"
+#include <std_msgs/Int32.h>
+//#include <boost/shared_ptr.hpp>
+//#include <diagnostic_msgs/DiagnosticArray.h>
+//#include <diagnostic_msgs/DiagnosticStatus.h>
+//#include <diagnostic_msgs/KeyValue.h>
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -34,8 +38,8 @@
 //#endif
 boost::mutex costmap_mutex;
 
-#define OPERATE_ON_GLOBAL_MAP true		// global or local costmap as basis for exploration
-#define OPERATE_WITH_GOAL_BACKOFF false	// navigate to a goal point which is close to (but not exactly at) selected goal (in case selected goal is too close to a wall)
+#define OPERATE_ON_GLOBAL_MAP true
+#define OPERATE_WITH_GOAL_BACKOFF false
 
 void sleepok(int t, ros::NodeHandle &nh)
 {
@@ -50,7 +54,8 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),cut_off_voltage(11), th(12), robot_id(0){
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),energy_above_th(true),
+        cut_off_voltage(11), traveled_distance(0.01), energy_consumption(0),available_distance(1000), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -237,10 +242,19 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
                 
 	}
-	void callback(const std_msgs::Float64::ConstPtr& msg)
+    void callback(const battery_simulation::Voltage::ConstPtr& msg)
     {
- 		battery = msg->data;
+ //       battery = msg->voltage;
+        if(msg->recharge == true)
+        {
+            battery_voltage = true;
+        }
 	}
+    void bat_callback(const std_msgs::Int32::ConstPtr& msg)
+    {
+        battery = msg->data;
+    }
+
 
 	void explore() 
         {
@@ -264,9 +278,11 @@ public:
                 time_start = ros::Time::now();
 
 		
-                ros::NodeHandle bat;
-                ros::Subscriber sub = bat.subscribe<std_msgs::Float64>("battery_state",1000,&Explorer::callback,this);
+                ros::NodeHandle bat,bat_per;
+                ros::Subscriber sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
+                ros::Subscriber sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
 
+              //  ros::Subscriber diag_sub_ = bat.subscribe("/diagnostics", 1000, &Explorer::diagCallback, this);
 		while (exploration_finished == false) 
                 {
                     Simulation == false; 
@@ -338,8 +354,8 @@ public:
                              *       negotiation)
                              * 6 ... Cluster frontiers, then navigate to random cluster
                              *       (with and without negotiation)
-			     * 7 ... Navigate to nearest frontier TRAVEL PATH and consider 
-			     *       staying-alivie path planning
+                             * 7 ... Navigate to nearest frontier TRAVEL PATH and consider
+                             *       energy efficient staying-alive path planning
                              */
 
                             /******************** SORT *******************
@@ -350,6 +366,7 @@ public:
                             * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
                             * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN DISTANCE)
                             */
+
                             if(frontier_selection == 2)
                             {
 
@@ -696,44 +713,70 @@ public:
 
                             }else if(frontier_selection == 7)
                             {
-                            	exploration->sort(2);
-                                exploration->sort(3);
+                            /*    if(cnt < 10)
+                                {
+                                    exploration->sort(2);
+                                    while(true)
+                                    {
+                                        goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
+                                        if(goal_determined == false)
+                                        {
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
+                                            negotiation = true;
+                                            if(negotiation == true)
+                                            {
+                                                break;
+                                            }
+                                            count++;
+                                        }
+                                    }
 
-                ROS_INFO("Battery state: %f, ",battery);
-              /*  if(battery <= th)
-				{	
-					battery_voltage = false;
-                }else{
-                    battery_voltage = true;
-                } */
-                traveled_distance();
-                if(available_distance < distance_to_home)
-                     {
-                        battery_voltage = false;
-                     }else{
-                        battery_voltage = true;
-                     }
+                                }else{*/
+                                    exploration->sort(2);
+                                    exploration->sort_distance(energy_above_th);
+                                    while(true)
+                                    {
+                                        goal_determined = exploration->determine_goal_staying_alive(available_distance, traveled_distance, &final_goal, count, &robot_str);
+                                        ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
+                                        if(goal_determined == false)
+                                        {
+                                           // if(cnt>0)
+                                            battery_voltage = false;
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
+                                            negotiation = true;
+                                            if(negotiation == true)
+                                            {
+                                                break;
+                                            }
+                                            count++;
+                                        }
+                                   // }
+                                }
 
-                while(true)
-                {
-                    goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
-                    if(goal_determined == false)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
-                        negotiation = true;
-                        if(negotiation == true)
-                        {
-                            break;
-                        }
-                        count++;
-                     }
-                  }
-               }
+                                ROS_INFO("Battery state: %d, ",battery);
+                                  if(battery <= 50)
+                                {
+                                    energy_above_th = false;
+                                }else{
+                                    energy_above_th = true;
+                                }
+                                travel_distance();
+                              /*  if(available_distance > traveled_distance)
+                                {
+                                    battery_voltage = true;
+                                }else{
+                                    battery_voltage = false;
+                                }*/
+
+                            }
 
 
                              /*
@@ -1618,50 +1661,67 @@ public:
 
 		return true;
 	}
-    void traveled_distance(){
+    void travel_distance(){
 
-        /* calculate the energy conumption and the traveled distance so far. */
+        /* Calculate the energy consumption and the traveled distance so far. */
 
         //old_simulation_time = ros::Time::now().toSec();
-        if(battery_voltage == true){
-        if(cnt == 0){
-            //new_simulation_time = old_simulation_time - time_start.toSec();
-            temp = battery;
-            x_temp = robotPose.getOrigin().getX();
-            y_temp = robotPose.getOrigin().getY();
-        }else{
-             //new_simulation_time = old_simulation_time - new_simulation_time;
-            new_battery = temp - battery;
-            temp = battery;
-            x_diff = robotPose.getOrigin().getX() - x_temp;
-            y_diff = robotPose.getOrigin().getY() - y_temp;
-            temp_distance = sqrt(x_diff*x_diff + y_diff*y_diff);
-            x_temp = robotPose.getOrigin().getX();
-            y_temp = robotPose.getOrigin().getY();
-        }
+        if(battery_voltage == true)
+        {
+            if(cnt == 0)
+            {
+                //new_simulation_time = old_simulation_time - time_start.toSec();
+                temp = battery;
+                x_temp = robotPose.getOrigin().getX();
+                y_temp = robotPose.getOrigin().getY();
+            }else{
+                //new_simulation_time = old_simulation_time - new_simulation_time;
+                if(temp>+battery)
+                    new_battery = temp - battery;
+                temp = battery;
+                x_diff = robotPose.getOrigin().getX() - x_temp;
+                y_diff = robotPose.getOrigin().getY() - y_temp;
+                temp_distance = x_diff*x_diff + y_diff*y_diff;
+                x_temp = robotPose.getOrigin().getX();
+                y_temp = robotPose.getOrigin().getY();
+            }
 
 
-        energy_consumption += new_battery;
-        distance_to_home += temp_distance;
-        ROS_INFO("count: %d simulation time: %f energy consumption: %f  distance_to_home: %f"
-                 , cnt, new_battery,energy_consumption, distance_to_home );
-        cnt++;
-        if(cnt >= 15){
-            possible_traveling_distance();
-        }else{
-            available_distance = 2 * distance_to_home;
-        }
-        }else{
-         cnt = 0;
+            energy_consumption += new_battery;
+            traveled_distance += sqrt(temp_distance);
+            ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d (1,25) traveled_distance: %f"
+                 , cnt, new_battery,energy_consumption, traveled_distance );
+            cnt++;
+
+            if(cnt >= 7){
+                possible_traveling_distance();
+            }else
+            {
+                /* The available distance depends on the mean of the already traveled distance.
+                The first few iterations are very inaccurate. Therefore we want to make sure that the available
+                distance is higher than the distance that we already traveled to avoid that the robot returns to early
+                to the home point.*/
+                available_distance = 10000 * traveled_distance;
+            }
+        }else
+        {
+            ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d (1,25) traveled_distance: %f"
+                     , cnt, new_battery,energy_consumption, traveled_distance );
+            cnt = 0;
+            temp = 0;
+            new_battery = 0;
+            available_distance = 100000;
+            energy_consumption = 0;
+            traveled_distance = 0;
         }
     }
     void possible_traveling_distance(){
 
-        /*calculate how many distance per unit we can travel before we are running out of energy. */
+        /*Calculate how many distance per unit we can travel before we are running out of energy. */
 
-        double available_battery_voltage = 0.0;
-        available_battery_voltage = battery - cut_off_voltage;
-        available_distance = (distance_to_home * available_battery_voltage)/energy_consumption;
+//        double available_battery_per = 0.0;
+//        available_battery_per = 100 - battery;
+        available_distance = (traveled_distance * battery)/energy_consumption;
         ROS_INFO("count: %d simulation available distance: %f"
                  , cnt, available_distance);
     }
@@ -1695,11 +1755,11 @@ public:
         double robot_home_position_x, robot_home_position_y;
         bool Simulation, goal_determined;
         bool robot_prefix_empty;
-        bool battery_voltage;
+        bool battery_voltage, energy_above_th;
         int cut_off_voltage;
-        double th, battery, new_battery,temp;
+        int battery, new_battery,temp, energy_consumption;
         double old_simulation_time, new_simulation_time;
-        double distance_to_home, temp_distance, energy_consumption;
+        double traveled_distance, temp_distance;
         double x_temp, y_temp,x_diff, y_diff, available_distance;
 
         int accessing_cluster, cluster_element_size, cluster_element;

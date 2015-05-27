@@ -1,0 +1,5 @@
+<?xml version="1.0"?> 
+<launch>
+    <node pkg="battery_simulation" type="BatteryState" name="BatteryState" output="screen">
+    </node>
+</launch>

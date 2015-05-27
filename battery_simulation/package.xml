@@ -27,8 +27,8 @@
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
   <!-- Authors do not have to be maintianers, but could be -->
   <!-- Example: -->
-  <author email="dneuhold@edu.aau.at">Daniel Neuhold</author>
-  <author email="torsten.andre@aau.at">Torsten Andre</author>
+  <author email="sfillafe@edu.aau.at">Daniel Neuhold</author>
+ 
 
 
   <!-- The *_depend tags are used to specify dependencies -->
@@ -46,11 +46,12 @@
   <build_depend>rospy</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
 
   <run_depend>rospy</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
-
+  <run_depend>message_runtime</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

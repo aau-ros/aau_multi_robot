@@ -31,12 +31,13 @@
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
 
-#define MAX_DISTANCE 2000			// max distance to starting point
-#define MAX_GOAL_RANGE 0.2			// min distance between frontiers (search)
-#define MINIMAL_FRONTIER_RANGE 0.2	// distance between frontiers (selection)
-#define INNER_DISTANCE 5			// radius (in cells) around goal point without obstacles (backoff goal point)
-#define MAX_NEIGHBOR_DIST 1			// radius (in cells) around selected goal without obstacles
-#define CLUSTER_MERGING_DIST 0.8	// max (euclidean) distance between clusters that are merged
+#define STRAIGHT_COST 100
+#define MAX_DISTANCE 2000
+#define MAX_GOAL_RANGE 0.2 //0.8
+#define MINIMAL_FRONTIER_RANGE 0.2
+#define INNER_DISTANCE 5
+#define MAX_NEIGHBOR_DIST 1
+#define CLUSTER_MERGING_DIST 0.8 //3
 
 using namespace explorationPlanner;
 
@@ -68,7 +69,9 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
 
-            
+    x_last = robotPose.getOrigin().getX();
+    y_last = robotPose.getOrigin().getY();
+
     responded_t init_responded;
     init_responded.auction_number = 0;
     init_responded.robot_number = 0;
@@ -285,6 +288,7 @@ void ExplorationPlanner::initialize_planner(std::string name,
 
 bool ExplorationPlanner::clusterFrontiers()
 {
+
 //    ROS_INFO("Clustering frontiers");
     
     int strategy = 1;
@@ -2981,7 +2985,7 @@ void ExplorationPlanner::findFrontiers() {
                                 if (fabs(wx - frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE) 
                                 {  
 					result = false;
-					break;
+                    break;
 				}
 			}
 			if (result == true)
@@ -4128,6 +4132,41 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
     return false;
 }
 
+bool ExplorationPlanner::determine_goal_staying_alive(double available_distance, double traveled_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name)
+{
+    if (!costmap_ros_->getRobotPose(robotPose))
+    {
+            ROS_ERROR("Failed to get RobotPose");
+    }
+    for (int i = 0 + count; i < frontiers.size(); i++)
+    {
+        if(i>4)
+            return false;
+
+        if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
+        {
+            double x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
+            double y = frontiers.at(i).y_coordinate -  robotPose.getOrigin().getY();
+            double distance_to_homepoint = sqrt(x * x + y * y) + traveled_distance;
+            ROS_INFO("dth:%f travd: %f",available_distance,distance_to_homepoint);
+            if(available_distance > distance_to_homepoint)
+            {
+                ROS_INFO("------------------------------------------------------------------");
+                ROS_INFO("Determined frontier with ID: %d   at x: %f     y: %f   detected by Robot %d", frontiers.at(i).id, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, frontiers.at(i).detected_by_robot);
+
+                final_goal->push_back(frontiers.at(i).x_coordinate);
+                final_goal->push_back(frontiers.at(i).y_coordinate);
+                final_goal->push_back(frontiers.at(i).detected_by_robot);
+                final_goal->push_back(frontiers.at(i).id);
+
+                robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
+                return true;
+            }else{
+                return false;
+            }
+        }
+    }
+}
 
 bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name)
 {
@@ -4462,6 +4501,88 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
         return lhs.cluster_element.front().dist_to_robot < rhs.cluster_element.front().dist_to_robot; 
     }
 }
+void ExplorationPlanner::sort_distance(bool energy_above_th)
+{
+
+        tf::Stamped < tf::Pose > robotPose;
+        if (!costmap_ros_->getRobotPose(robotPose))
+        {
+                ROS_ERROR("Failed to get RobotPose");
+        }
+
+        if (frontiers.size() > 0)
+        {
+            double d_gbe, suc_fct;
+            int w1 = 10, w2 = 15, w3 = 3, w4 = 9;
+            for (int i = 4; i >= 0; i--) {
+                for (int j = 0; j < 5 - 1; j++) {
+
+                    /*
+                    Successor Function
+                        f = w1 · d_g + w2 · theta + w3 · d_gb + w4 · d_gbe
+
+                            Parameter:
+                                w1...w4 ... weight
+                                d_g     ... Distance from the robots current position to the frontier.
+                                theta   ... A linear function θ ∈ [0, 1] measuring how much the robot has to turn to reach the frontier.
+                                d_gb    ... Distance from the frontier to the charging station.
+                                d_gbe   ... −d_gb if the robot has more than half of its energy left; d_gb if the robot has less than half of its energy left.
+                    */
+                    // search for the frontier with the minimal succesor function and sort it from the minimum to the maximum.
+                    double x_pos = robotPose.getOrigin().getX();
+                    double y_pos = robotPose.getOrigin().getY();
+
+                    // calculate d_g
+                    double x = frontiers.at(j).x_coordinate - x_pos;
+                    double y = frontiers.at(j).y_coordinate - y_pos;
+                    double d_g = sqrt(x * x + y * y);
+                    double x_next = frontiers.at(j+1).x_coordinate - x_pos;
+                    double y_next = frontiers.at(j+1).y_coordinate - y_pos;
+                    double d_g_next = sqrt(x_next * x_next + y_next * y_next);
+
+                    // calculate theta
+                    double theta_s = atan2(y_last - y_pos,x_last - x_pos);
+                    double theta_g = atan2(y_pos - frontiers.at(j).y_coordinate, x_pos - frontiers.at(j).x_coordinate);
+                    double theta = 1/M_PI * (M_PI - abs(abs(theta_s-theta_g)-M_PI));
+                    double theta_g_next = atan2(y_pos - frontiers.at(j+1).y_coordinate, x_pos - frontiers.at(j+1).x_coordinate);
+                    double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s-theta_g_next)-M_PI));
+
+                    // calculate d_gb
+                    x = frontiers.at(j).x_coordinate - robot_home_x;
+                    y = frontiers.at(j).y_coordinate - robot_home_y;
+                    double d_gb = sqrt(x * x + y * y);
+                    x_next = frontiers.at(j+1).x_coordinate - robot_home_x;
+                    y_next = frontiers.at(j+1).y_coordinate - robot_home_y;
+                    double d_gb_next = sqrt(x_next * x_next + y_next * y_next);
+
+                    // calculate d_gbe
+                    if(energy_above_th == true){
+                        d_gbe = -d_gb;
+                    }else{
+                        d_gbe = d_gb;
+                    }
+
+
+                    // calculate successor function
+                    suc_fct = w1 * d_g + w2 * theta + w3 * d_gb + w4 * d_gbe;
+                    double suc_fct_next = w1 * d_g_next + w2 * theta_next + w3 * d_gb_next + w4 * d_gbe;
+
+                    if (suc_fct > suc_fct_next) {
+                            frontier_t temp = frontiers.at(j+1);
+                            frontiers.at(j + 1) = frontiers.at(j);
+                            frontiers.at(j) = temp;
+                    }
+
+                }
+                ROS_INFO("successor function: %f",suc_fct);
+            }
+            x_last = robotPose.getOrigin().getX();
+            y_last = robotPose.getOrigin().getY();
+        } else
+        {
+                ROS_INFO("Sorting not possible, no frontiers available!!!");
+        }
+}
 
 void ExplorationPlanner::sort(int strategy)
 {
@@ -4763,7 +4884,8 @@ void ExplorationPlanner::sort(int strategy)
             }
             ROS_DEBUG("Starting to sort the clusters itself");
             std::sort(clusters.begin(), clusters.end(), sortCluster);  
-        }  
+
+        }
         
         ROS_INFO("Done sorting");
     
@@ -5282,7 +5404,7 @@ void ExplorationPlanner::setupMapData() {
 
 		map_width_ = costmap_ros_->getCostmap()->getSizeInCellsX();
 		map_height_ = costmap_ros_->getCostmap()->getSizeInCellsY();
-		num_map_cells_ = map_width_ * map_height_;
+        num_map_cells_ = map_width_ * map_height_;
 
 		ROS_INFO("Costmap size in cells: width:%d   height: %d   map_cells:%d",map_width_,map_height_,num_map_cells_);
 
@@ -5474,7 +5596,7 @@ int ExplorationPlanner::isFrontier(int point) {
 				 */
 
                             //return(backoff(point));
-;                           return(point);
+                           return(point);
 			}
 		}
 	}

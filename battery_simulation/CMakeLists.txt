@@ -12,15 +12,24 @@ project(battery_simulation)
 find_package(catkin REQUIRED COMPONENTS 
 roscpp 
 rospy 
-std_msgs) 
+std_msgs
+message_generation) 
+
+add_message_files(
+  FILES
+  Voltage.msg
+)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES battery_simulation
-  CATKIN_DEPENDS  roscpp rospy std_msgs 
+  CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
-
 
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
@@ -29,9 +38,13 @@ include_directories(include ${catkin_INCLUDE_DIRS} )
 
 add_executable(VoltageSimulator src/VoltageSimulator.cpp)
 add_executable(ChargeSignal src/ChargeSignal.cpp)
+add_executable(BatteryState src/BatteryState.cpp)
 
 target_link_libraries(VoltageSimulator   ${catkin_LIBRARIES} )
 target_link_libraries(ChargeSignal    ${catkin_LIBRARIES} )
+target_link_libraries(BatteryState    ${catkin_LIBRARIES} )
+
+add_dependencies(VoltageSimulator battery_simulator_generate_messages_cpp)
 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)

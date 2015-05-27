@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 
 
 
-    ros::Rate loop_rate(0.003);
+    ros::Rate loop_rate(0.0023);
 
 	while ( ros::ok() ) {
         charge.publish(charge_msg);
