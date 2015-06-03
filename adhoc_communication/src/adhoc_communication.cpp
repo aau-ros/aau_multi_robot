@@ -341,6 +341,20 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
     return true;
 }
 
+bool sendRendezvous(adhoc_communication::SendRendezvous::Request &req, adhoc_communication::SendRendezvous::Response & res)
+{
+    /* Description:
+     * Service call to exchange information at rendezvous.
+     */
+
+    ROS_DEBUG("Service called to exchange new rendezvous...");
+    string s_msg = getSerializedMessage(req.msg);
+    /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
+    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_RENDEZVOUS, req.topic);
+
+    return res.status;
+}
+
 /*tutorial*/
 bool sendQuaternion(adhoc_communication::SendQuaternion::Request &req,
         adhoc_communication::SendQuaternion::Response & res)
@@ -1110,6 +1124,8 @@ int main(int argc, char **argv)
     ros::ServiceServer shutDownRosS = n_pub->advertiseService(robot_prefix + node_prefix + "shut_down", shutDownRos);
 
     ros::ServiceServer getGroupStatusS = n_pub->advertiseService(robot_prefix + node_prefix + "get_group_state", getGroupStateF);
+
+    ros::ServiceServer sendRendezvousS = n_pub->advertiseService(robot_prefix + node_prefix + "send_rendezvous", sendRendezvous);
 
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_new_robot, 1000, true));
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_remove_robot, 1000, true));
@@ -3128,6 +3144,13 @@ void publishPacket(Packet * p)
                 desializeObject((unsigned char*) payload.data(), payload.length(), &r_up);
 
                 publishMessage(r_up, p->topic_);
+            }
+            else if (p->data_type_ == FRAME_DATA_TYPE_RENDEZVOUS)
+            {
+                adhoc_communication::RzvPoint rendezvous_msg;
+                desializeObject((unsigned char*) payload.data(), payload.length(), &rendezvous_msg);
+
+                publishMessage(rendezvous_msg, p->topic_);
             }
             else
                 ROS_ERROR("UNKNOWN DATA TYPE!");

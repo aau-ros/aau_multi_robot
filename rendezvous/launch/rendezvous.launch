@@ -8,5 +8,8 @@
 		<param name="robot_prefix" value="$(arg robot_prefix)" />
 		<param name="waitForResult" value="3" />
 		<param name="move_base_frame" value="$(arg robot_prefix)/map" />
+		<param name="maxWaitTime" value="40.0" />
+		<param name="explorationTime" value="80.0" />
+		<param name="rendezvousTime" value="40.0" />
 	</node>
 </launch>

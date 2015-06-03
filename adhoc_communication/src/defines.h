@@ -50,7 +50,8 @@ unsigned char bcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};	/*Broadcast a
 #define FRAME_DATA_TYPE_AUCTION 0x61	//C
 #define FRAME_DATA_TYPE_CLUSTER 0x63	//C
 #define FRAME_DATA_TYPE_TWIST 0x54	//T -> Twist
-#define FRAME_DATA_TYPE_ROBOT_UPDATE 0x52	//R 
+#define FRAME_DATA_TYPE_ROBOT_UPDATE 0x52 //R 
+#define FRAME_DATA_TYPE_RENDEZVOUS 0x72  //r -> Rendezvous
 /*Tutorial*/
 #define FRAME_DATA_TYPE_QUATERNION 0x51 //0x51 in hex means Q in ASCII -> stands for QUATERNION
 

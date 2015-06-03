@@ -1,7 +1,6 @@
 #include "rendezvous.h"
 
-#define EXPLORER 1
-#define RELAY 2
+
 
 
 int main(int argc, char **argv)
@@ -15,18 +14,33 @@ int main(int argc, char **argv)
     //replace by classification() method
     std::string robot0 = "/robot_0";
     std::string robot1 = "/robot_1";
+    std::string topic = rendzv->robot_prefix + std::string("/rendezvous/checkCommunicationRange");
+    std::string rendezvous_topic = rendzv->robot_prefix + std::string("/rendezvous/rendezvousAgreement");
 
     if(robot1.compare(rendzv->robot_prefix) == 0)
     {
         rendzv->iAm = EXPLORER;
         rendzv->myBuddy_prefix = "/robot_0";
         ROS_DEBUG("%s is an explorer", rendzv->robot_prefix.c_str());
+
+        rendzv->sub_hallo = rendzv->nh->subscribe(topic, 1, &Rendezvous::callback_hallo, rendzv);
+        //rendzv->sub_rendezvous = rendzv->nh->subscribe(rendezvous_topic, 1, &Rendezvous::callback_rendezvous, rendzv);
+
+        //rendzv->exploreRobot();
+        rendzv->test_relay_base_station();
+
     }
     else if(robot0.compare(rendzv->robot_prefix) == 0)
     {
         rendzv->iAm = RELAY;
         rendzv->myBuddy_prefix = "/robot_1";
         ROS_DEBUG("%s is a relay", rendzv->robot_prefix.c_str());
+
+        rendzv->sub_hallo = rendzv->nh->subscribe(topic, 1, &Rendezvous::callback_hallo, rendzv);
+        //rendzv->sub_rendezvous = rendzv->nh->subscribe(rendezvous_topic, 1, &Rendezvous::callback_rendezvous, rendzv);
+
+        //rendzv->relayRobot();
+        rendzv->base_station();
     }
     // end replace
 
@@ -49,8 +63,8 @@ int main(int argc, char **argv)
 
 // --------------------------------------  using ad_hoc_communication node -----------------------------------
 
-    std::string topic = rendzv->robot_prefix + std::string("/rendezvous/checkCommunicationRange");
-    rendzv->sub_hallo = rendzv->nh->subscribe(topic, 1, &Rendezvous::callback_hallo, rendzv);
+    //std::string topic = rendzv->robot_prefix + std::string("/rendezvous/checkCommunicationRange");
+    //rendzv->sub_hallo = rendzv->nh->subscribe(topic, 1, &Rendezvous::callback_hallo, rendzv);
 
 //    if(rendzv->iAm == EXPLORER)
 //    {
@@ -62,7 +76,7 @@ int main(int argc, char **argv)
 //        rendzv->relayRobot();
 //    }
 
-    rendzv->test_hallo();
+    //rendzv->test_hallo();
 
 // -----------------------------------------------------------------------------------------------------------
 

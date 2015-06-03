@@ -49,6 +49,7 @@ using std::string;
 #include "adhoc_communication/ExpCluster.h"
 #include "adhoc_communication/CMgrDimensions.h"
 #include "adhoc_communication/CMgrRobotUpdate.h"
+#include "adhoc_communication/RzvPoint.h"
 
 /* Custom SRV Types*/
 #include "adhoc_communication/ChangeMCMembership.h"
@@ -69,6 +70,7 @@ using std::string;
 #include "adhoc_communication/ShutDown.h"
 #include "adhoc_communication/BroadcastCMgrRobotUpdate.h"
 #include "adhoc_communication/BroadcastString.h"
+#include "adhoc_communication/SendRendezvous.h"
 
 
 #include "nav_msgs/Odometry.h"
