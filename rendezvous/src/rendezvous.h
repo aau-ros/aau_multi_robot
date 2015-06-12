@@ -11,9 +11,18 @@
 #include "rendezvous/RendezvousPoint.h"
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PointStamped.h>
+#include <navfn/navfn_ros.h>
+//#include <navfn/navfn.h>
+//#include <navfn/MakeNavPlan.h>
 
 #define EXPLORER 1
 #define RELAY 2
+#define BASE 3
+
+#define A 0
+#define B 1
+#define C 2
+#define D 3
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
@@ -34,6 +43,10 @@ public:
     ros::Subscriber sub;
     ros::Subscriber sub_hallo;
     ros::Subscriber sub_rendezvous;
+    ros::Publisher pub_hallo;
+    ros::Publisher pub_rendezvous;
+
+    navfn::NavfnROS nav;
 
     // parameter
     std::string robot_prefix;
@@ -72,12 +85,16 @@ private:
     bool teamMemberInRange;
     bool rendezvousSuccessful;
 
+    int rendezvous_state;
+    RendezvousPoint possibleRendezvous;
+    RendezvousPoint nextRendezvous;
+
     std::vector<RendezvousPoint> *rendezvousPoints;
-    RendezvousPoint currentRendezvous;
+    //RendezvousPoint currentRendezvous;
 
     geometry_msgs::PointStamped rendezvousPoint;
     int rendezvous_point_message;
-    ros::Publisher pub_rendezvous;
+    //ros::Publisher pub_rendezvous;
 
     geometry_msgs::PointStamped visited_rendezvousPoint;
     int visited_rendezvous_point_message;

@@ -7,10 +7,11 @@ project(rendezvous)
 find_package(catkin REQUIRED COMPONENTS
 roscpp
 std_msgs
-#adhoc_communication
+adhoc_communication
 message_generation
 actionlib
 move_base_msgs
+navfn
 )
 
 ## System dependencies are found with CMake's conventions

@@ -34,6 +34,7 @@
 //#include <google/heap-profiler.h>
 //#endif
 boost::mutex costmap_mutex;
+boost::mutex explore_mutex;     //protects rw of variable 'explorerOperating', which determines if explorer is operating or rendezvous
 
 #define OPERATE_ON_GLOBAL_MAP true		// global or local costmap as basis for exploration
 #define OPERATE_WITH_GOAL_BACKOFF false	// navigate to a goal point which is close to (but not exactly at) selected goal (in case selected goal is too close to a wall)
@@ -51,7 +52,7 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0){
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), explorerOperating(true){
 
         
         nh.param("frontier_selection",frontier_selection,1);
@@ -684,16 +685,24 @@ public:
                         }
                     }
 
-                   nh.getParam("explorerOperating",explorerOp);
+                   // stall exploration for rendezvous if explorerOperating is false
+                   explore_mutex.lock();
+                   explorerOp = explorerOperating;
+                   explore_mutex.unlock();
+
                    if(explorerOp == false){
                        ROS_INFO("Interrupt exploration for rendezvous!");
+                   }else{
+                       //ROS_DEBUG("explore further");
                    }
 
                    while(explorerOp == false)
                    {
-                    nh.getParam("explorerOperating",explorerOp);
+                       explore_mutex.lock();
+                       explorerOp = explorerOperating;
+                       explore_mutex.unlock();
+                       ros::Duration(0.1).sleep();
                    }
-
 
                    if(backoff_sucessfull == true)
                    {
@@ -713,7 +722,6 @@ public:
                         navigate_to_goal = navigate(final_goal);
                         goal_determined = false;
                    }
-
 
                     if(navigate_to_goal == true && goal_determined == true)
                     {
@@ -736,6 +744,8 @@ public:
 
                     //exploration->publish_frontier_list();
                     //exploration->publish_visited_frontier_list();
+
+
 
             }
             else           // Simulation == true
@@ -1394,8 +1404,7 @@ public:
 
 	}
 
-	bool move_robot(int seq, double position_x, double position_y) {
-            
+    bool move_robot(int seq, double position_x, double position_y) {
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
 
@@ -1542,21 +1551,28 @@ public:
 	}
 
     bool switchExplRend_srv(explorer::switchExplRend::Request &req, explorer::switchExplRend::Response &res){
-        bool currentState;
-        nh.getParam("explorerOperating",currentState);
 
-        if(currentState && (!req.explore)){
-           nh.setParam("explorerOperating", false);
-        } else if(!currentState && req.explore){
-           nh.setParam("explorerOperating", true);
+        //ROS_DEBUG("received service request: %d", req.explore);
+        explore_mutex.lock();
+        if((explorerOperating==true) && (req.explore==false))
+        {
+           explorerOperating = false;
+        }
+        else if((explorerOperating==false) && (req.explore==true))
+        {
+           //nh.setParam("explorerOperating", true);
+           explorerOperating = true;
         }
 
-        nh.getParam("explorerOperating",currentState);
-        if(currentState){
+        if(explorerOperating == true){
             res.state = "explorer is operating";
         } else {
             res.state = "rendezvous is operating";
         }
+        explore_mutex.unlock();
+
+        nh.setParam("explorerOperating", explorerOperating);
+
         return true;
     }
 
@@ -1648,6 +1664,8 @@ private:
     ros::NodeHandle nh;
 
     ros::Time time_start;
+
+    bool explorerOperating;  // sets state of the explorer; explorer stalls if false
 
 	//Create a move_base_msgs to define a goal to steer the robot to
 	move_base_msgs::MoveBaseActionGoal action_goal_msg;
