@@ -26,8 +26,7 @@
 #include <map_merger/LogMaps.h>
 #include "battery_simulation/Voltage.h"
 #include <std_msgs/Int32.h>
-//#include <boost/shared_ptr.hpp>
-//#include <diagnostic_msgs/DiagnosticArray.h>
+#include <diagnostic_msgs/DiagnosticArray.h>
 //#include <diagnostic_msgs/DiagnosticStatus.h>
 //#include <diagnostic_msgs/KeyValue.h>
 
@@ -55,7 +54,7 @@ public:
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
         counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),energy_above_th(true),
-        cut_off_voltage(11), traveled_distance(0.01), energy_consumption(0),available_distance(1000), robot_id(0){
+        cut_off_voltage(11), traveled_distance(0.01), energy_consumption(0),available_distance(1000),simulate(true), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -250,11 +249,26 @@ public:
             battery_voltage = true;
         }
 	}
+
     void bat_callback(const std_msgs::Int32::ConstPtr& msg)
     {
         battery = msg->data;
     }
 
+    void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
+    {
+        for( size_t status_i = 0; status_i < msg->status.size(); ++status_i )
+           {
+             if( msg->status[status_i].name.compare("Power System") != std::string::npos)
+              {
+                  for (size_t value_i = 0; value_i < msg->status[status_i].values.size(); ++value_i)
+                  {
+                       if( msg->status[status_i].values[value_i].key.compare("Battery") == 0 )
+                        battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                  }
+             }
+        }
+    }
 
 	void explore() 
         {
@@ -277,12 +291,22 @@ public:
                  */
                 time_start = ros::Time::now();
 
-		
-                ros::NodeHandle bat,bat_per;
-                ros::Subscriber sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
-                ros::Subscriber sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
+                ros::NodeHandle bat,bat_per,real_bat_per;
 
-              //  ros::Subscriber diag_sub_ = bat.subscribe("/diagnostics", 1000, &Explorer::diagCallback, this);
+                std::string env_var;
+                ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
+
+                if( env_var.compare("turtlebot")==0)
+                {
+                    ros::Subscriber sub = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
+                    simulate = false;
+                }else
+                {
+                    ros::Subscriber sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
+                    ros::Subscriber sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
+                    simulate = true;
+                }
+
 		while (exploration_finished == false) 
                 {
                     Simulation == false; 
@@ -1755,7 +1779,7 @@ public:
         double robot_home_position_x, robot_home_position_y;
         bool Simulation, goal_determined;
         bool robot_prefix_empty;
-        bool battery_voltage, energy_above_th;
+        bool battery_voltage, energy_above_th, simulate;
         int cut_off_voltage;
         int battery, new_battery,temp, energy_consumption;
         double old_simulation_time, new_simulation_time;
