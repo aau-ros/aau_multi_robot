@@ -24,6 +24,25 @@ void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
     battery_state.recharge = true;
 }
 int main(int argc, char** argv) {
+
+        /* simple model
+        Motion: p_m = p_l + m*(a+g*y)*v  app.: p_m = 0,2 + 10*v
+            p_l ... transforming loss
+            m   ... mass of the robot
+            a   ... acceleration
+            y   ... ground friction constant
+            g   ... gravity constant
+            v   ... speed
+
+        Sensing: p_sens = c_0 + c_1 * f_s   app.: p_sens = 0,51 + 0,0039 * f_s
+            c_0 ... positive constant coefficient
+            c_1 ... positive constant coefficient
+            f_s ... sensing frequency
+
+        Microcontroller
+            p = 4,6W
+        */
+		
 	ROS_INFO("Voltage simulator launching...");
 	ros::init(argc, argv, "voltage_simulate");
 	ros::NodeHandle n;
