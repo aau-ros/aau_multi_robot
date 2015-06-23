@@ -2,6 +2,7 @@
 <launch>
 	<arg name="robot_name" default="robot_0" />
     	<arg name="robot_prefix" default=""/>
+	<arg name="use_sim_time" default="false" />
 
 	<node pkg="rendezvous" type="rendezvous" name="rendezvous" >
 		<param name="robot_name" value="$(arg robot_name)" />

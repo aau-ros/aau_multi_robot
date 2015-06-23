@@ -9,7 +9,7 @@ Rendezvous::Rendezvous()
     nh->param<int>("waitForResult", waitForResult, 3);
     nh->param<std::string>("move_base_frame",move_base_frame,"map");
     nh->param<double>("maxWaitTime", maxWaitTime, 40.0);                // how long robots wait at rendezvous for others
-    nh->param<double>("explorationTime", explorationTime, 60.0);        // how long explorer explores before returning to rendezvous
+    nh->param<double>("explorationTime", explorationTime, 50.0);        // how long explorer explores before returning to rendezvous
     nh->param<double>("rendezvousTime", rendezvousTime, 10.0);          // how long robots stay at rendezvous to exchange information
 
     this->rendezvousPoints = new std::vector<RendezvousPoint>;
@@ -441,7 +441,7 @@ bool Rendezvous::hallo(double max_wait_time)
         ros::spinOnce();
         if(teamMemberInRange == true)
         {
-            ROS_DEBUG("second robot is in communication range!");
+            //ROS_DEBUG("second robot is in communication range!");
             return true;
         }
         else
@@ -517,7 +517,7 @@ bool Rendezvous::rendezvous()
 
     rendezvous_state = A;
 
-    ROS_DEBUG("In rendezvous(): i am %s, initial state is: %s", iAm, rendezvous_state);
+    //ROS_DEBUG("In rendezvous(): i am %s, initial state is: %s", iAm, rendezvous_state);
 
     adhoc_communication::RzvPoint point_msg;
     adhoc_communication::SendRendezvous rzv_msg;

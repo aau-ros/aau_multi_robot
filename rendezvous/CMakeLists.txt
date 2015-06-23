@@ -70,8 +70,8 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs  # Or other packages containing msgs
-  #adhoc_communication
+#  std_msgs  # Or other packages containing msgs
+  adhoc_communication
 )
 
 ###################################
@@ -86,7 +86,7 @@ generate_messages(
 catkin_package(
 # INCLUDE_DIRS include
 #  LIBRARIES rendezvous
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+  CATKIN_DEPENDS roscpp adhoc_communication nav_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -114,8 +114,8 @@ target_link_libraries(rendezvous ${catkin_LIBRARIES} )
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(rendezvous_node rendezvous_generate_messages_cpp)
 
-add_dependencies(rendezvous rendezvous_gencpp rendezvous_generate_messages_cpp)
-
+#add_dependencies(rendezvous rendezvous_gencpp rendezvous_generate_messages_cpp)
+add_dependencies(rendezvous adhoc_communication_gencpp rendezvous_gencpp)
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(rendezvous_node
 #   ${catkin_LIBRARIES}
