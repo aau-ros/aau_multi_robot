@@ -27,8 +27,6 @@
 #include "battery_simulation/Voltage.h"
 #include <std_msgs/Int32.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
-//#include <diagnostic_msgs/DiagnosticStatus.h>
-//#include <diagnostic_msgs/KeyValue.h>
 
 //#define PROFILE
 //#ifdef PROFILE
@@ -53,7 +51,7 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),energy_above_th(true),
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100), energy_above_th(true),
         cut_off_voltage(11), traveled_distance(0.01), energy_consumption(0),available_distance(1000),simulate(true), robot_id(0){
 
         
@@ -243,28 +241,37 @@ public:
 	}
     void callback(const battery_simulation::Voltage::ConstPtr& msg)
     {
- //       battery = msg->voltage;
         if(msg->recharge == true)
         {
-            battery_voltage = true;
+            battery_voltage = true;          
         }
 	}
 
     void bat_callback(const std_msgs::Int32::ConstPtr& msg)
     {
         battery = msg->data;
+        ROS_INFO("Battery callback: %d",msg->data);
     }
 
     void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
     {
         for( size_t status_i = 0; status_i < msg->status.size(); ++status_i )
            {
-             if( msg->status[status_i].name.compare("Power System") != std::string::npos)
+             if( msg->status[status_i].name.compare("/Power System/Battery") == 0)
               {
                   for (size_t value_i = 0; value_i < msg->status[status_i].values.size(); ++value_i)
                   {
-                       if( msg->status[status_i].values[value_i].key.compare("Battery") == 0 )
-                        battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                       if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
+                       {
+                            battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                       }
+                       if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
+                       {
+                           if((battery > 95) && (msg->status[status_i].values[value_i].value.c_str().compare("Not Charging")))
+                           {
+                                battery_voltage = true;
+                           }
+                       }
                   }
              }
         }
@@ -292,19 +299,21 @@ public:
                 time_start = ros::Time::now();
 
                 ros::NodeHandle bat,bat_per,real_bat_per;
+                ros::Subscriber sub, sub2, sub3;
 
                 std::string env_var;
                 ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
 
-                if( env_var.compare("turtlebot")==0)
+                if( env_var.compare("turtlebot") == 0)
                 {
-                    ros::Subscriber sub = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
+                    sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
                     simulate = false;
                 }else
                 {
-                    ros::Subscriber sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
-                    ros::Subscriber sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
+                    sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
+                    sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
                     simulate = true;
+                    ROS_INFO("Environment variable: %s",env_var.c_str());
                 }
 
 		while (exploration_finished == false) 
@@ -737,29 +746,6 @@ public:
 
                             }else if(frontier_selection == 7)
                             {
-                            /*    if(cnt < 10)
-                                {
-                                    exploration->sort(2);
-                                    while(true)
-                                    {
-                                        goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                                        if(goal_determined == false)
-                                        {
-                                            break;
-                                        }
-                                        else
-                                        {
-                                            //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
-                                            negotiation = true;
-                                            if(negotiation == true)
-                                            {
-                                                break;
-                                            }
-                                            count++;
-                                        }
-                                    }
-
-                                }else{*/
                                     exploration->sort(2);
                                     exploration->sort_distance(energy_above_th);
                                     while(true)
@@ -768,7 +754,6 @@ public:
                                         ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
                                         if(goal_determined == false)
                                         {
-                                           // if(cnt>0)
                                             battery_voltage = false;
                                             break;
                                         }
@@ -782,7 +767,6 @@ public:
                                             }
                                             count++;
                                         }
-                                   // }
                                 }
 
                                 ROS_INFO("Battery state: %d, ",battery);
@@ -793,13 +777,6 @@ public:
                                     energy_above_th = true;
                                 }
                                 travel_distance();
-                              /*  if(available_distance > traveled_distance)
-                                {
-                                    battery_voltage = true;
-                                }else{
-                                    battery_voltage = false;
-                                }*/
-
                             }
 
 

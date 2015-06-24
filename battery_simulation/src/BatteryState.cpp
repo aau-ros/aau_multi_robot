@@ -11,7 +11,7 @@ of the battery with a simple linear model.
 #define VOLTAGE_MIN 11.0
 
 using namespace std;
-double battery_voltage;
+double battery_voltage = VOLTAGE_MAX;
 
 std_msgs::Int32 battery_state_per;
 
@@ -31,6 +31,8 @@ int main(int argc, char** argv) {
     ros::Subscriber voltage_sub = n.subscribe("battery_state", 1000, battery_state_callback);
 
 	ros::Rate loop_rate(0.5);
+
+    float diff = VOLTAGE_MAX - VOLTAGE_MIN;
 
 	while ( ros::ok() ) {
 
@@ -54,7 +56,7 @@ int main(int argc, char** argv) {
 
         // linear function for the battery_state calculation
 
-        battery_state_per.data = (int) ((battery_voltage - VOLTAGE_MIN)/ (VOLTAGE_MAX - VOLTAGE_MIN) *100);
+        battery_state_per.data = (int) ((battery_voltage - VOLTAGE_MIN)/ (diff) *100);
         battery_pub.publish(battery_state_per);
 		ros::spinOnce();
 		loop_rate.sleep();
