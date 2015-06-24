@@ -267,7 +267,7 @@ public:
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
                        {
-                           if((battery > 95) && (msg->status[status_i].values[value_i].value.c_str().compare("Not Charging")))
+                           if((battery > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
                            {
                                 battery_voltage = true;
                            }
@@ -1677,7 +1677,7 @@ public:
                 y_temp = robotPose.getOrigin().getY();
             }else{
                 //new_simulation_time = old_simulation_time - new_simulation_time;
-                if(temp>+battery)
+                if(temp>=battery)
                     new_battery = temp - battery;
                 temp = battery;
                 x_diff = robotPose.getOrigin().getX() - x_temp;
