@@ -805,23 +805,23 @@ bool isReachable(unsigned char mac[6])
                 //ROS_ERROR("d: %f",d);
                 if (d == -1)
                 {
-
                     return false;
                 }
 
                 double p_rx = p_tx - (l_0_model + 10 * n_model * log10(d));
-
 
                 if (p_thres <= p_rx)
                 {
                     //ROS_DEBUG("connected with %s %f %f",other_robot->robot_name_.c_str(),d,p_rx);
                     return true;
                 } else
+                {
+                    ROS_DEBUG("Dropping frame to from robot %s (p_rx = %f)", other_robot.robot_name_.c_str(),p_rx);
                     return false;
+                }
 
             }
         }
-
     } else if (sim_robot_macs.compare("") != 0)
     {
         boost::unique_lock<boost::mutex> lock(mtx_neighbors);

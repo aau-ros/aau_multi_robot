@@ -4,8 +4,11 @@
 #include <explorer/MissionFinished.h>
 #include <adhoc_communication/SendString.h>
 #include <adhoc_communication/RecvString.h>
-#include <adhoc_communication/SendRendezvous.h>
-#include <adhoc_communication/RzvPoint.h>
+//#include <adhoc_communication/SendRendezvous.h>
+//#include <adhoc_communication/RzvPoint.h>
+#include <adhoc_communication/SendMmPoint.h>
+#include <nav_msgs/GetPlan.h>
+#include <nav_msgs/GetPlanRequest.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include "rendezvous/RendezvousPoint.h"
@@ -40,11 +43,8 @@ public:
     int iAm;
     std::string myBuddy_prefix;
     ros::Publisher pub;
-    ros::Subscriber sub;
     ros::Subscriber sub_hallo;
     ros::Subscriber sub_rendezvous;
-    ros::Publisher pub_hallo;
-    ros::Publisher pub_rendezvous;
 
     navfn::NavfnROS nav;
 
@@ -69,7 +69,7 @@ public:
     void test_relay_base_station();
 
     void callback_hallo(const adhoc_communication::RecvString msg);
-    void callback_rendezvous(const adhoc_communication::RzvPoint msg);
+    void callback_rendezvous(const adhoc_communication::MmPoint msg);
 
 private:
 	double home_x, home_y;
@@ -78,6 +78,7 @@ private:
     ros::ServiceClient mission_client;
     ros::ServiceClient hallo_client;
     ros::ServiceClient rendezvous_client;
+    ros::ServiceClient plan_client;
 
     bool missionFinished;
     int numberMeetings;
@@ -89,12 +90,16 @@ private:
     RendezvousPoint possibleRendezvous;
     RendezvousPoint nextRendezvous;
 
+
+    costmap_2d::Costmap2DROS *costmap_ros_;
+    costmap_2d::Costmap2DROS *costmap_global_ros_;
+
     std::vector<RendezvousPoint> *rendezvousPoints;
     //RendezvousPoint currentRendezvous;
 
     geometry_msgs::PointStamped rendezvousPoint;
     int rendezvous_point_message;
-    //ros::Publisher pub_rendezvous;
+    ros::Publisher pub_rendezvous;
 
     geometry_msgs::PointStamped visited_rendezvousPoint;
     int visited_rendezvous_point_message;

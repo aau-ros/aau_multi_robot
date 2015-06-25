@@ -3,6 +3,7 @@
 Rendezvous::Rendezvous()
 {
     nh = new ros::NodeHandle("~");
+    rendezvousPoints = new std::vector<RendezvousPoint>;
 
     // parameters
     nh->param<std::string>("robot_prefix", robot_prefix, "");
@@ -12,9 +13,15 @@ Rendezvous::Rendezvous()
     nh->param<double>("explorationTime", explorationTime, 50.0);        // how long explorer explores before returning to rendezvous
     nh->param<double>("rendezvousTime", rendezvousTime, 10.0);          // how long robots stay at rendezvous to exchange information
 
-    this->rendezvousPoints = new std::vector<RendezvousPoint>;
+    nh->setParam("maxWaitTime", 40.0);
+    nh->setParam("explorationTime", 60.0);
+    nh->setParam("rendezvousTime", 20.0);
 
-    // create clients for explorer services
+    nh->getParam("maxWaitTime", maxWaitTime);
+    nh->getParam("explorationTime", explorationTime);
+    nh->getParam("rendezvousTime", rendezvousTime);
+
+    // service clients
     std::string service = robot_prefix + std::string("/explorer/switchExplRend");
     expl_client = nh->serviceClient<explorer::switchExplRend>(service.c_str());
 
@@ -24,12 +31,17 @@ Rendezvous::Rendezvous()
     service = robot_prefix + std::string("/explorer/MissionFinished");
     mission_client = nh->serviceClient<explorer::MissionFinished>(service.c_str());
 
-    // create clients for ad_hoc_communication services
     service = robot_prefix + std::string("/adhoc_communication/send_string");
     hallo_client = nh->serviceClient<adhoc_communication::SendString>(service.c_str());
 
-    service = robot_prefix + std::string("/adhoc_communication/send_rendezvous");
-    rendezvous_client = nh->serviceClient<adhoc_communication::SendRendezvous>(service.c_str());
+    //service = robot_prefix + std::string("/adhoc_communication/send_rendezvous");
+    //rendezvous_client = nh->serviceClient<adhoc_communication::SendRendezvous>(service.c_str());
+
+    service = robot_prefix + std::string("/adhoc_communication/send_point");
+    rendezvous_client = nh->serviceClient<adhoc_communication::SendMmPoint>(service.c_str());
+
+    service = robot_prefix + std::string("/move_base/make_plan");
+    plan_client = nh->serviceClient<nav_msgs::GetPlan>(service.c_str());
 
     // wait till information about home is available
     ros::Duration(20).sleep();
@@ -47,23 +59,14 @@ Rendezvous::Rendezvous()
         this->home_y = srv.response.y;
     }
 
-    // add home point as first element to vector of rendezvous points
+    // home is first rendezvous point
     addRendezvous(home_x, home_y);
 
     rendezvous_state = A;
-    nh->setParam("maxWaitTime", 40.0);
-    nh->setParam("explorationTime", 60.0);
-    nh->setParam("rendezvousTime", 10.0);
+
 }
 
 void Rendezvous::exploreRobot(){
-    // start explorer
-    // count number of rendezvous
-    // set exploration time accordingly
-    // explore for exploration time
-    // timeout -> callbackfunction, return to rendezvous
-
-    //double exploration_time = explorationTime;
 
     explorer::switchExplRend srv_msg;
     explorer::MissionFinished mission_srv;
@@ -87,8 +90,6 @@ void Rendezvous::exploreRobot(){
             ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
         }
 
-        //exploration_time = exploration_time + (10*numberMeetings);
-
         ROS_DEBUG("explore %f sec!", explorationTime);
 
         ros::Duration(explorationTime).sleep();
@@ -101,8 +102,6 @@ void Rendezvous::exploreRobot(){
             ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
         }
 
-        // start explorer again after rendezvous doesn't work without both sleeps and second service call!
-
         ros::Duration(15).sleep();   // sleep to allow explorer to set all paramters
 
         // in case robot was moving during first service call..
@@ -110,8 +109,6 @@ void Rendezvous::exploreRobot(){
         if(this->expl_client.call(srv_msg) == false)
         {
             ROS_ERROR("Failed to call explorer service 'switchExplRend'");
-        } else {
-            //ROS_DEBUG("stopped explorer!");
         }
 
         ros::Duration(15).sleep();   // sleep to allow explorer to set all paramters
@@ -147,12 +144,12 @@ void Rendezvous::exploreRobot(){
         // move robot to current rendezvous
         visualize_rendezvous(nextRendezvous.x, nextRendezvous.y);
         if(move_robot(nextRendezvous.x, nextRendezvous.y)){
-            ROS_DEBUG("explorer at Rendezvous, waiting sec for relay...");
+            ROS_DEBUG("explorer at Rendezvous, waiting %f sec for relay...", maxWaitTime);
             visualize_visited_rendezvous(nextRendezvous.x, nextRendezvous.y);
         }
         else
         {
-            ROS_WARN("explorer failed to move to rendezvous!");
+            ROS_WARN("failed to move to rendezvous!");
             visualize_unreachable_rendezvous(nextRendezvous.x, nextRendezvous.y);
 
             // get current robot position
@@ -178,17 +175,17 @@ void Rendezvous::exploreRobot(){
         // yes ... start to rendezvous
         // no ... rendezvous failed -> plan B
 
-        ROS_DEBUG("in explorer(): going to call hallo()");
-
         teamMemberInRange = hallo(maxWaitTime);
+        ros::Duration(2).sleep();
+
         if(teamMemberInRange == true)
         {
-            ROS_DEBUG("other robot is in communication range, start to rendezvous!");
+            //ROS_DEBUG("other robot is in communication range, start to rendezvous!");
             rendezvousSuccessful = rendezvous();
         }
         else
         {
-            ROS_DEBUG("Tried to reach other robot for %f seconds. But we never met.", maxWaitTime);
+            ROS_DEBUG("Tried to reach other robot for %f seconds. But rendezvous failed.", maxWaitTime);
             // TODO: strategy for rendezvous failed
         }
 
@@ -198,6 +195,8 @@ void Rendezvous::exploreRobot(){
             addRendezvous(possibleRendezvous.x, possibleRendezvous.y);
             //nextRendezvous.x = possibleRendezvous.x;
             //nextRendezvous.y = possibleRendezvous.y;
+        } else {
+            ROS_DEBUG("Rendezvous successful!");
         }
 
         // mark rendezvous as visited
@@ -211,6 +210,9 @@ void Rendezvous::exploreRobot(){
             }
         }
 
+        ROS_DEBUG("explorer: list of rendezvous points after rendezvous:");
+        printRendezvousPoints();
+
         explorer::MissionFinished mission_srv;
         if(this->mission_client.call(mission_srv) == false)
         {
@@ -221,7 +223,7 @@ void Rendezvous::exploreRobot(){
         }
     }
 
-    ROS_DEBUG("EXPLORER :  mission finished !!!!");
+    ROS_DEBUG("explorer:  mission finished !!!!");
     //ROS_DEBUG("will start explorer again, should return home");
     srv_msg.request.explore = true;
     if(expl_client.call(srv_msg) == false)
@@ -232,14 +234,6 @@ void Rendezvous::exploreRobot(){
 }
 
 void Rendezvous::relayRobot(){
-    // stop explorer
-    // wait at home till explorer returns for the first time
-    // while (mission is not finished)
-        // wait at home for ? sec
-        // move to rendezvous
-        // call hallo() to check if explorer in range
-        // rendezvous() with explorer   OR  wait at rendezvous till timeout
-        // move back home
 
     explorer::switchExplRend srv_msg;
     srv_msg.request.explore = false;
@@ -308,8 +302,9 @@ void Rendezvous::relayRobot(){
         // yes ... start to rendezvous
         // no ... rendezvous failed -> plan B
 
-        ROS_DEBUG("in relayRobot(): going to call hallo()");
-        teamMemberInRange = hallo(maxWaitTime);
+        teamMemberInRange = hallo(maxWaitTime*2);       // relay waits 2 times maxWaitTime -> rendezvous should not fail bc of wait time
+        ros::Duration(2).sleep();
+
         if(teamMemberInRange == true)
         {
             ROS_DEBUG("other robot is in communication range, start to rendezvous!");
@@ -318,9 +313,12 @@ void Rendezvous::relayRobot(){
         else
         {
             ROS_WARN("Rendezvous failed!!");
-            ROS_DEBUG("Tried to reach other robot for %f seconds. But we never met.", maxWaitTime);
+            //ROS_DEBUG("Tried to reach other robot for %f seconds. But we never met.", maxWaitTime);
             // TODO: strategy for rendezvous failed
         }
+
+        ROS_DEBUG("relay: list of rendezvous points after rendezvous:");
+        printRendezvousPoints();
 
         // after rendezvous or timeout: move home again
         if(move_robot(home_x, home_y))
@@ -390,41 +388,35 @@ void Rendezvous::base_station()
 
 void Rendezvous::callback_hallo(const adhoc_communication::RecvString msg)
 {
-    ROS_DEBUG("in callback_hallo()");
-
     ROS_DEBUG("received %s message from: %s", msg.data.c_str(), msg.src_robot.c_str());
 
     std::string temp2 = msg.src_robot.c_str();
     int n = temp2.size();
     std::string temp = myBuddy_prefix.substr(1,n);
 
-    //ROS_DEBUG("compare %s with %s", temp.c_str(), temp2.c_str());
-
     if(strcmp(temp.c_str(), temp2.c_str()) == 0)
     {
         teamMemberInRange = true;
-        //ROS_DEBUG("equal; teamMemberInRange = %d", teamMemberInRange);
     }
 }
 
 bool Rendezvous::hallo(double max_wait_time)
 {
-    ROS_DEBUG("in hallo()");
 
-    // broadcast a 'hallo' message on topic 'checkCommunicationRange' to check if any other robot is in communication range
-    // returns (true) if there was an answer from 'myBuddy' robot in maxWaitTime seconds
-    //         (false) if 'myBuddy' didn't answer in maxWaitTime seconds
+    /* broadcast a 'hallo' message on topic '/rendezvous/checkCommunicationRange' to check if any other robot is in communication range
+       returns (true) if there were 2 hallo from 'myBuddy' robot in maxWaitTime seconds
+               (false) if 'myBuddy' didn't answer in maxWaitTime seconds */
 
     double start = ros::Time::now().toSec();
-    timeoutAtRendezvous = false;
-    teamMemberInRange = false;      // private variable, changed in callback_hallo()
+    int hallo_received = 0;
+    timeoutAtRendezvous = false;   
 
     adhoc_communication::SendString hallo_msg;
-    hallo_msg.request.dst_robot = "";                         // broadcast
+    hallo_msg.request.dst_robot = "";
     hallo_msg.request.data = "hallo";
-    hallo_msg.request.topic = myBuddy_prefix + "/rendezvous/checkCommunicationRange";
+    hallo_msg.request.topic = "/rendezvous/checkCommunicationRange";
 
-    ros::Rate r(10);                                     // rate = 10 hz
+    ros::Rate r(0.5);
     while(ros::ok())
     {
         if(hallo_client.call(hallo_msg) == true)
@@ -436,17 +428,22 @@ bool Rendezvous::hallo(double max_wait_time)
             ROS_ERROR("Failed to call 'sendString' service of ad_hoc_communication node!");
         }
 
-        //ROS_DEBUG("in hallo() in while before spinOnce()");
+        teamMemberInRange = false;  // private variable, changed in callback_hallo()
+
         // get callback
         ros::spinOnce();
-        if(teamMemberInRange == true)
-        {
-            //ROS_DEBUG("second robot is in communication range!");
-            return true;
+        if(teamMemberInRange == true){
+            hallo_received++;
+            //ROS_DEBUG("received %d - th hallo", hallo_received);
         }
         else
         {
             //ROS_DEBUG("second robot is not in communication range!");
+        }
+
+        if(hallo_received == 2){
+            //ROS_DEBUG("second robot is in communication range!");
+            return true;
         }
 
         if((ros::Time::now().toSec() - start) == max_wait_time)
@@ -462,23 +459,28 @@ bool Rendezvous::hallo(double max_wait_time)
     return false;
 }
 
-void Rendezvous::callback_rendezvous(const adhoc_communication::RzvPoint msg)
+void Rendezvous::callback_rendezvous(const adhoc_communication::MmPoint msg)
 {
-    ROS_DEBUG("in callback_rendezvous()");
+    //ROS_DEBUG("in callback_rendezvous()");
 
-    ROS_DEBUG("received msg from %s with status %s", msg.src_robot.c_str(), msg.status.c_str());
+    //ROS_DEBUG("received msg from %s ", msg.src_robot.c_str());
 
-    if(iAm == RELAY && msg.status == "FIN" && msg.src_robot == myBuddy_prefix)
+    std::string src_id = "/" + msg.src_robot;
+
+    /*if(iAm == RELAY && msg.status == "FIN" && msg.src_robot == myBuddy_prefix)
     {
         ROS_DEBUG("received FIN from %s -> return home!", msg.src_robot.c_str());
         rendezvous_state = C;
     }
-    else if(rendezvous_state == B && msg.status == "ACK" && msg.src_robot == myBuddy_prefix)
+    else*/
+    //if(rendezvous_state == B && msg.status == "ACK" && msg.src_robot == myBuddy_prefix)
+        if(rendezvous_state == B && src_id == myBuddy_prefix && msg.x == possibleRendezvous.x && msg.y == possibleRendezvous.y)
     {
         ROS_DEBUG("received ACK for rendezvous (%f / %f) from %s", msg.x, msg.y, msg.src_robot.c_str());
         rendezvous_state = C;
     }
-    else if(rendezvous_state == B && msg.status == "REQ" && msg.src_robot == myBuddy_prefix)
+    //else if(rendezvous_state == B && msg.status == "REQ" && msg.src_robot == myBuddy_prefix)
+    else if(rendezvous_state == B && src_id == myBuddy_prefix)
     {
         ROS_DEBUG("received possible rendezvous (%f / %f) from %s", msg.x, msg.y, msg.src_robot.c_str());
 
@@ -487,7 +489,8 @@ void Rendezvous::callback_rendezvous(const adhoc_communication::RzvPoint msg)
 
         rendezvous_state = D;
     }
-    else if(rendezvous_state == A && msg.status == "REQ" && msg.src_robot == myBuddy_prefix)
+    //else if(rendezvous_state == A && msg.status == "REQ" && msg.src_robot == myBuddy_prefix)
+    else if(rendezvous_state == A && src_id == myBuddy_prefix)
     {
         ROS_DEBUG("received possible rendezvous (%f / %f) from %s", msg.x, msg.y, msg.src_robot.c_str());
 
@@ -519,124 +522,169 @@ bool Rendezvous::rendezvous()
 
     //ROS_DEBUG("In rendezvous(): i am %s, initial state is: %s", iAm, rendezvous_state);
 
-    adhoc_communication::RzvPoint point_msg;
-    adhoc_communication::SendRendezvous rzv_msg;
+    //adhoc_communication::RzvPoint point_msg;
+    //adhoc_communication::SendRendezvous rzv_msg;
 
-    if(iAm == EXPLORER && missionFinished == true){
+    adhoc_communication::MmPoint point_msg;
+    adhoc_communication::SendMmPoint rzv_msg;
+
+/*    if(iAm == EXPLORER && missionFinished == true){
         ROS_DEBUG("Exploration is finished, tell the relay and return home!");
 
-        point_msg.status = "FIN";
+        //point_msg.status = "FIN";
         point_msg.x = 0;
         point_msg.y = 0;
-        point_msg.z = 0;
+        //point_msg.z = 0;
         //point_msg.time = ros::Time.now().sec();
 
         rzv_msg.request.dst_robot = myBuddy_prefix;
         rzv_msg.request.msg = point_msg;
-        rzv_msg.request.topic = myBuddy_prefix + "/rendezvous/rendezvousAgreement";
+        rzv_msg.request.topic = "/rendezvous/rendezvousAgreement";
 
         rendezvous_state = C;
 
         //TODO: return home? wait for ACK of relay?
-    }
+    } */
 
+    while(true){
 
-    if(rendezvous_state == A)
-    {
-        if(iAm == EXPLORER)
+        if(rendezvous_state == A)
         {
-             ROS_DEBUG("STATE = A: Going to send possible rendezvous to relay");
-             rendezvous_state = B;
+            if(iAm == EXPLORER)
+            {
+                 ROS_DEBUG("STATE = A: Going to send possible rendezvous to relay");
+                 rendezvous_state = B;
+            }
+            else if(iAm == RELAY)
+            {
+                ROS_DEBUG("STATE = A: In communication range at rendezvous, waiting for messages!");
+                ros::Duration(1).sleep();
+                ros::spinOnce();
+            }
         }
-        else if(iAm == RELAY)
+        else if(rendezvous_state == B)
         {
-            ROS_DEBUG("STATE = A: In communication range at rendezvous, waiting for messages!");
-            ros::spin();
-        }
-    }
-    else if(rendezvous_state == B)
-    {
-        // send REQ for rendezvous to other robot
+            // send REQ for rendezvous to other robot
 
-        ROS_DEBUG("STATE = B: send possible point (%f / %f) to %s", possibleRendezvous.x, possibleRendezvous.y, myBuddy_prefix.c_str());
-
-        point_msg.src_robot = robot_prefix;
-        point_msg.status = "REQ";
-        point_msg.x = possibleRendezvous.x;
-        point_msg.y = possibleRendezvous.y;
-        point_msg.z = 0;
-        //point_msg.time = (ros::Time.now() + explorationTime);
-
-        rzv_msg.request.dst_robot = myBuddy_prefix;
-        rzv_msg.request.msg = point_msg;
-        rzv_msg.request.topic = myBuddy_prefix + "/rendezvous/rendezvousAgreement";
-
-         ros::spin();
-    }
-    else if(rendezvous_state == C)
-    {
-        // next rendezvous is fixed or mission is finished -> exchange maps and return
-        addRendezvous(possibleRendezvous.x, possibleRendezvous.y);
-
-        ROS_DEBUG("STATE = C: next rendezvous is (%f / %f)! Wait for %f sec to exchange maps then explore/relay further",
-                  possibleRendezvous.x, possibleRendezvous.y, rendezvousTime);
-
-        ros::Duration(rendezvousTime).sleep();
-        return true;
-    }
-    else if(rendezvous_state == D)
-    {
-        // received REQ for rendezvous from other robot -> check if possibleRendezvous reachable
-
-        if(reachable(possibleRendezvous.x, possibleRendezvous.y))
-        {
-            ROS_DEBUG("STATE = D: possible rendezvous is reachable -> send ACK!");
-            point_msg.status = "ACK";
+            ROS_DEBUG("STATE = B: send possible point (%f / %f) to %s", possibleRendezvous.x, possibleRendezvous.y, myBuddy_prefix.c_str());
 
             point_msg.src_robot = robot_prefix;
-
+            //point_msg.status = "REQ";
             point_msg.x = possibleRendezvous.x;
             point_msg.y = possibleRendezvous.y;
-            point_msg.z = 0;
+            //point_msg.z = 0;
             //point_msg.time = (ros::Time.now() + explorationTime);
 
-            rzv_msg.request.dst_robot = myBuddy_prefix;
-            rzv_msg.request.msg = point_msg;
-            rzv_msg.request.topic = myBuddy_prefix + "/rendezvous/rendezvousAgreement";
+            rzv_msg.request.dst_robot = "";
+            rzv_msg.request.point = point_msg;
+            rzv_msg.request.topic = "/rendezvous/rendezvousAgreement";
 
-            rendezvous_state = C;
+            if(rendezvous_client.call(rzv_msg) == true)
+            {
+                //ROS_DEBUG("Successfully called 'send_point' service");
+            }
+            else
+            {
+                ROS_ERROR("Failed to call 'send_point' service of ad_hoc_communication node!");
+            }
+
+            ros::Duration(5).sleep();
+            ros::spinOnce();
+        }
+        else if(rendezvous_state == C)
+        {
+            // next rendezvous is fixed or mission is finished -> exchange maps and return
+            addRendezvous(possibleRendezvous.x, possibleRendezvous.y);
+
+            ROS_DEBUG("STATE = C: next rendezvous is (%f / %f)!", possibleRendezvous.x, possibleRendezvous.y);
+
+            ros::Duration(rendezvousTime).sleep();
+            return true;
+        }
+        else if(rendezvous_state == D)
+        {
+            // received REQ for rendezvous from other robot -> check if possibleRendezvous reachable
+
+            if(reachable(possibleRendezvous.x, possibleRendezvous.y))
+            {
+                ROS_DEBUG("STATE = D: possible rendezvous is reachable -> send ACK!");
+                //point_msg.status = "ACK";
+
+                point_msg.src_robot = robot_prefix;
+
+                point_msg.x = possibleRendezvous.x;
+                point_msg.y = possibleRendezvous.y;
+                //point_msg.z = 0;
+                //point_msg.time = (ros::Time.now() + explorationTime);
+
+                rzv_msg.request.dst_robot = "";
+                rzv_msg.request.point = point_msg;
+                rzv_msg.request.topic = "/rendezvous/rendezvousAgreement";
+
+                if(rendezvous_client.call(rzv_msg) == true)
+                {
+                    //ROS_DEBUG("Successfully called 'send_point' service");
+                }
+                else
+                {
+                    ROS_ERROR("Failed to call 'send_point' service of ad_hoc_communication node!");
+                }
+
+                rendezvous_state = C;
+            }
+            else
+            {
+                ROS_DEBUG("STATE = D: possible rendezvous is not reachable!");
+
+                // determine another possible (reachable) rendezvous
+                // + overwrite possibleRendezvous variable
+                // -> done in reachable()
+
+                // now: other possible rendezvous is last visited rendezvous.. TODO: better solution
+                rendezvous_state = B;
+            }
+
+//            ROS_DEBUG("STATE = D: for now: do not check, only agree -> send ACK!");
+
+//            point_msg.src_robot = robot_prefix;
+
+//            point_msg.x = possibleRendezvous.x;
+//            point_msg.y = possibleRendezvous.y;
+
+//            rzv_msg.request.dst_robot = "";
+//            rzv_msg.request.point = point_msg;
+//            rzv_msg.request.topic = "/rendezvous/rendezvousAgreement";
+
+//            if(rendezvous_client.call(rzv_msg) == true)
+//            {
+//                //ROS_DEBUG("Successfully called 'send_point' service");
+//            }
+//            else
+//            {
+//                ROS_ERROR("Failed to call 'send_point' service of ad_hoc_communication node!");
+//            }
+//            rendezvous_state = C;
         }
         else
         {
-            ROS_DEBUG("STATE = D: possible rendezvous is not reachable!");
-
-            // determine another possible (reachable) rendezvous
-            // + overwrite possibleRendezvous variable
-            // -> done in reachable()
-
-            // now: other possible rendezvous is last visited rendezvous.. TODO: better solution
-            rendezvous_state = B;
+            ROS_ERROR("rendezvous failed!");
+            return false;
         }
 
-    }
-    else
-    {
-        ROS_ERROR("rendezvous failed!");
-        return false;
     }
 }
 
 bool Rendezvous::reachable(double x, double y)
 {
-    ROS_DEBUG("in reachable()");
+    //ROS_DEBUG("in reachable()");
 
     ROS_DEBUG("Determine if goal ( %f / %f) is reachable", x, y);
 
     double delta = 0.003;       // how much goal point is changed to avoid crushes
-    double tolerance = 0.005;   // tolerance for makePlan()
+    double tolerance = 0.005;
 
     geometry_msgs::PoseStamped startPosition, goalPoint;
-    std::vector<geometry_msgs::PoseStamped> global_plan;
+    //std::vector<geometry_msgs::PoseStamped> global_plan;
 
     if(iAm == RELAY)            // relay will start from home point to next rendezvous
     {
@@ -654,9 +702,20 @@ bool Rendezvous::reachable(double x, double y)
     goalPoint.pose.position.x = x + delta;
     goalPoint.pose.position.y = y + delta;
 
-    if(nav.makePlan(startPosition, goalPoint, tolerance, global_plan))
+    ROS_DEBUG("start position is (%f / %f), goal is (%f / %f) ",
+              startPosition.pose.position.x, startPosition.pose.position.y,  goalPoint.pose.position.x, goalPoint.pose.position.y);
+
+    nav_msgs::GetPlanRequest request;
+    request.start = startPosition;
+    request.goal = goalPoint;
+    request.tolerance = tolerance;
+
+    nav_msgs::GetPlan srv_msg;
+    srv_msg.request = request;
+
+    if(plan_client.call(srv_msg))
     {
-        geometry_msgs::PoseStamped new_goal = global_plan.back();
+        geometry_msgs::PoseStamped new_goal = srv_msg.response.plan.poses.back();
         ROS_DEBUG("goal (%f / %f) is reachable with %f toleranz!", tolerance, new_goal.pose.position.x, new_goal.pose.position.y);
         possibleRendezvous.x = new_goal.pose.position.x;
         possibleRendezvous.y = new_goal.pose.position.y;
@@ -674,6 +733,28 @@ bool Rendezvous::reachable(double x, double y)
 
         return false;
     }
+
+
+//    if(nav.makePlan(startPosition, goalPoint, tolerance, global_plan))
+//    {
+//        geometry_msgs::PoseStamped new_goal = global_plan.back();
+//        ROS_DEBUG("goal (%f / %f) is reachable with %f toleranz!", tolerance, new_goal.pose.position.x, new_goal.pose.position.y);
+//        possibleRendezvous.x = new_goal.pose.position.x;
+//        possibleRendezvous.y = new_goal.pose.position.y;
+
+//        return true;
+//    }
+//    else
+//    {
+//        ROS_DEBUG("goal is not reachable!");
+
+//        // suggest last (successfull) rendezvous as plan B
+//        // TODO: better solution
+//        possibleRendezvous.x = (rendezvousPoints->back()).x;
+//        possibleRendezvous.y = (rendezvousPoints->back()).y;
+
+//        return false;
+//    }
 
 }
 
