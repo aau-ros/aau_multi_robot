@@ -3055,7 +3055,7 @@ void publishPacket(Packet * p)
                         adhoc_communication::MmRobotPosition();
                 //pos.position = getPoseStampFromNetworkString(
                 //		(unsigned char*) payload.data(), payload.length());
-                desializeObject((unsigned char*) payload.data(), payload.length(), &pos.position);
+                desializeObject((unsigned char*) payload.data(), payload.length(), &pos);
                 pos.src_robot = p->hostname_source_;
                 publishMessage(pos, p->topic_);
             }
