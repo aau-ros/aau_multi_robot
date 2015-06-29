@@ -7,25 +7,22 @@
 //#include <adhoc_communication/SendRendezvous.h>
 //#include <adhoc_communication/RzvPoint.h>
 #include <adhoc_communication/SendMmPoint.h>
-#include <nav_msgs/GetPlan.h>
-#include <nav_msgs/GetPlanRequest.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
 #include "rendezvous/RendezvousPoint.h"
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PointStamped.h>
 #include <navfn/navfn_ros.h>
-//#include <navfn/navfn.h>
-//#include <navfn/MakeNavPlan.h>
 
 #define EXPLORER 1
 #define RELAY 2
 #define BASE 3
 
-#define A 0
-#define B 1
-#define C 2
-#define D 3
+#define A 65
+#define B 66
+#define C 67
+#define D 68
+#define E 69
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
@@ -38,15 +35,13 @@ struct RendezvousPoint{
 class Rendezvous
 {
 public:
-	Rendezvous();
+    Rendezvous();
     ros::NodeHandle *nh;
     int iAm;
     std::string myBuddy_prefix;
     ros::Publisher pub;
     ros::Subscriber sub_hallo;
     ros::Subscriber sub_rendezvous;
-
-    navfn::NavfnROS nav;
 
     // parameter
     std::string robot_prefix;
@@ -56,20 +51,19 @@ public:
     double explorationTime;
     double rendezvousTime;
 
-    bool move_robot(double x, double y);
     void relayRobot();
     void exploreRobot();
+    void base_station();
+    void callback_hallo(const adhoc_communication::RecvString msg);
+    void callback_rendezvous(const adhoc_communication::MmPoint msg);
 
+    // test functions
     void stopStartExplorer();
     void commute();
     void relayRobot_unlimited();
     void exploreRobot_unlimited();
     void test_hallo();
-    void base_station();
     void test_relay_base_station();
-
-    void callback_hallo(const adhoc_communication::RecvString msg);
-    void callback_rendezvous(const adhoc_communication::MmPoint msg);
 
 private:
 	double home_x, home_y;
@@ -79,6 +73,8 @@ private:
     ros::ServiceClient hallo_client;
     ros::ServiceClient rendezvous_client;
     ros::ServiceClient plan_client;
+
+    ros::Subscriber plan_sub;
 
     bool missionFinished;
     int numberMeetings;
@@ -111,17 +107,21 @@ private:
 
     bool hallo(double max_wait_time);
     bool rendezvous();
+    void planB();
+    bool move_robot(double x, double y);
+
+    bool reachable(double x, double y);
+
     void addRendezvous(double new_x, double new_y);
     void printRendezvousPoints();
+
     void visualize_rendezvous(double x, double y);
     void visualize_visited_rendezvous(double x, double y);
     void visualize_unreachable_rendezvous(double x, double y);
 
-    bool reachable(double x, double y);
+    // test functions
     void callbackMoveToRendezvous_unlimited();
     void new_Rendezvous_available(const rendezvous::RendezvousPointConstPtr& msg);
-
-
 };
 
 
