@@ -14,6 +14,8 @@
 #include <geometry_msgs/PointStamped.h>
 #include <navfn/navfn_ros.h>
 
+//boost::mutex rendezvousVector_mutex;
+
 #define EXPLORER 1
 #define RELAY 2
 #define BASE 3
