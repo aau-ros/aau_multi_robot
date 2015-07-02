@@ -15,7 +15,7 @@ parser.add_argument("-d", "--date", metavar="yy-mm-dd", default=[time.strftime("
 parser.add_argument("-i", "--sim-id", default=[1], nargs=1, metavar="ID",
                     help="The ID of the execution run", dest="sim_id")
 parser.add_argument("--exp-strategy",dest="exploration_strategy",type=int,nargs="?",default=1,
-		    help="The strategy to be used for exploration.",choices=range(0,7))
+		    help="The strategy to be used for exploration.",choices=range(0,8))
 parser.add_argument("--screen-output",dest="screen_output",default=False,help="Set ROS output to screen.",
 		    action="store_true")
 parser.add_argument("--interface",dest='interface',nargs='?',type=str,default='wlan0')
