@@ -250,7 +250,6 @@ public:
     void bat_callback(const std_msgs::Int32::ConstPtr& msg)
     {
         battery = msg->data;
-        ROS_INFO("Battery callback: %d",msg->data);
     }
 
     void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
@@ -303,6 +302,7 @@ public:
 
                 std::string env_var;
                 ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
+                ROS_INFO("Environment variable: %s",env_var.c_str());
 
                 if( env_var.compare("turtlebot") == 0)
                 {
@@ -313,7 +313,6 @@ public:
                     sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
                     sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
                     simulate = true;
-                    ROS_INFO("Environment variable: %s",env_var.c_str());
                 }
 
 		while (exploration_finished == false) 
