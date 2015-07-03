@@ -2,9 +2,13 @@
 Changelog for package adhoc_communication
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
+0.1.8
 -----------
-* Fixed CMakeLists error
+* Compatibility for ROS Indigo
+
+0.1.7 (2015-02-04)
+------------------
+* Deleted deprecated file
 * Added dynamic naming of robots
 * Contributors: Neuhold Daniel, Torsten Andre
 
