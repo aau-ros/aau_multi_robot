@@ -26,6 +26,7 @@
 #include <map_merger/LogMaps.h>
 #include "battery_simulation/Voltage.h"
 #include <std_msgs/Int32.h>
+#include <std_msgs/Empty.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 
 //#define PROFILE
@@ -58,13 +59,14 @@ public:
                 nh.param("frontier_selection",frontier_selection,1); 
                 nh.param("local_costmap/width",costmap_width,0); 
                 nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
+                nh.param<std::string>("demonstrate",demonstration,"");
                 
                 ROS_INFO("Costmap width: %d", costmap_width);
 //                frontier_selection = atoi(param.c_str());
                 ROS_INFO("Frontier selection is set to: %d", frontier_selection);
                 //frontier_selection = 3;
-                Simulation = false;      
-                
+                Simulation = false;
+
 //#ifdef PROFILE
 //const char  fname[3] = "TS";
 //ProfilerStart(fname);
@@ -296,13 +298,18 @@ public:
                  * START TAKING THE TIME DURING EXPLORATION     
                  */
                 time_start = ros::Time::now();
+                ros::NodeHandle nh_pub;
+                std_msgs::Empty msg;
+               // msg.data = "traveling home to recharge";
+                ros::Publisher publisher_re = nh_pub.advertise<std_msgs::Empty>("going_to_recharge",3);
 
                 ros::NodeHandle bat,bat_per,real_bat_per;
                 ros::Subscriber sub, sub2, sub3;
-
+                ROS_INFO("demonstrate: \"%s\"",demonstration.c_str());
                 std::string env_var;
                 ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
                 ROS_INFO("Environment variable: %s",env_var.c_str());
+
 
                 if( env_var.compare("turtlebot") == 0)
                 {
@@ -829,7 +836,10 @@ public:
                                         goal_determined = false;
                                     }
                                 }else{
-                                   navigate_to_goal = move_robot(0, home_point_x, home_point_y);
+                                    ROS_INFO("Traveling home for recharging");
+
+                                    navigate_to_goal = move_robot(0, home_point_x, home_point_y);
+                                    publisher_re.publish(msg);
                                 }
 
                                 if(navigate_to_goal == true && goal_determined == true)
@@ -1490,7 +1500,7 @@ public:
 		goalPoint.point.y = y;// - robotPose.getOrigin().getY();
 
 		ros::NodeHandle nh_Point("goalPoint");
-		pub_Point = nh_Point.advertise < geometry_msgs::PointStamped
+        pub_Point = nh_Point.advertise < geometry_msgs::PointStamped
 				> ("goalPoint", 100, true);
 		pub_Point.publish < geometry_msgs::PointStamped > (goalPoint);
 	}
@@ -1768,6 +1778,7 @@ public:
         int global_iterations_counter;
         int waitForResult;
         std::string move_base_frame;
+        std::string demonstration;
         std::string robot_prefix;               /// The prefix for the robot when used in simulation
         std::string robot_name;
         const unsigned char* occupancy_grid_global;
