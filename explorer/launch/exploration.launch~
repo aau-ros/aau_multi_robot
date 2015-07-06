@@ -50,7 +50,7 @@
     <!-- REAL HARDWARE -->
     <include unless="$(arg use_sim_time)" file="$(find explorer)/launch/simple_navigation_prerequisites_hydro_$(env ROBOT_PLATFORM).launch">
 	<arg name="log_path" value="$(arg log_path)" />
-        <arg name="demonstrate"  value="$(arg demonstrate)"/>
+        <arg name="demonstrate"  value="$(arg demonstrate)_val"/>
 	
 <!--Edit Peter: output is not used in Pioneer launch file <arg name="output" value="$(arg output)" /> -->
     </include>

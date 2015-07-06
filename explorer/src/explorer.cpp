@@ -53,13 +53,15 @@ public:
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
         counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100), energy_above_th(true),
-        cut_off_voltage(11), traveled_distance(0.01), energy_consumption(0),available_distance(1000),simulate(true), robot_id(0){
+        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),simulate(true), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
                 nh.param("local_costmap/width",costmap_width,0); 
                 nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
-                nh.param<std::string>("demonstrate",demonstration,"");
+                nh.param<std::string>("demonstrate",demonstration,"false");
+                nh.param("energy/max_distance",max_distance,10000);
+                available_distance = max_distance;
                 
                 ROS_INFO("Costmap width: %d", costmap_width);
 //                frontier_selection = atoi(param.c_str());
@@ -245,7 +247,8 @@ public:
     {
         if(msg->recharge == true)
         {
-            battery_voltage = true;          
+            battery_voltage = true;
+            one_time = true;
         }
 	}
 
@@ -309,6 +312,7 @@ public:
                 std::string env_var;
                 ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
                 ROS_INFO("Environment variable: %s",env_var.c_str());
+                ROS_INFO("max_distance: %d",max_distance);
 
 
                 if( env_var.compare("turtlebot") == 0)
@@ -317,7 +321,7 @@ public:
                     simulate = false;
                 }else
                 {
-                    sub = bat.subscribe<battery_simulation::Voltage>("battery_state",1000,&Explorer::callback,this);
+                    sub = bat.subscribe("battery_state",1000,&Explorer::callback,this);
                     sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
                     simulate = true;
                 }
@@ -759,7 +763,7 @@ public:
                                         goal_determined = exploration->determine_goal_staying_alive(available_distance, traveled_distance, &final_goal, count, &robot_str);
                                         ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
                                         if(goal_determined == false)
-                                        {
+                                        { 
                                             battery_voltage = false;
                                             break;
                                         }
@@ -836,10 +840,13 @@ public:
                                         goal_determined = false;
                                     }
                                 }else{
-                                    ROS_INFO("Traveling home for recharging");
 
                                     navigate_to_goal = move_robot(0, home_point_x, home_point_y);
-                                    publisher_re.publish(msg);
+                                    if(one_time){
+                                        ROS_INFO("Traveling home for recharging");
+                                        publisher_re.publish(msg);
+                                        one_time = false;
+                                    }
                                 }
 
                                 if(navigate_to_goal == true && goal_determined == true)
@@ -1703,15 +1710,18 @@ public:
                  , cnt, new_battery,energy_consumption, traveled_distance );
             cnt++;
 
-            if(cnt >= 7){
-                possible_traveling_distance();
-            }else
-            {
+            if(cnt<7){
+                if(first_run){
                 /* The available distance depends on the mean of the already traveled distance.
                 The first few iterations are very inaccurate. Therefore we want to make sure that the available
                 distance is higher than the distance that we already traveled to avoid that the robot returns to early
                 to the home point.*/
-                available_distance = 10000 * traveled_distance;
+                available_distance = max_distance;
+                }
+            }else
+            {
+                first_run = false;
+                possible_traveling_distance();
             }
         }else
         {
@@ -1720,9 +1730,7 @@ public:
             cnt = 0;
             temp = 0;
             new_battery = 0;
-            available_distance = 100000;
-            energy_consumption = 0;
-            traveled_distance = 0;
+            available_distance = max_distance;
         }
     }
     void possible_traveling_distance(){
@@ -1763,10 +1771,12 @@ public:
         int counter_waiting_for_clusters;
         
         double robot_home_position_x, robot_home_position_y;
-        bool Simulation, goal_determined;
+        bool Simulation, goal_determined, first_run;
         bool robot_prefix_empty;
+        bool one_time;
         bool battery_voltage, energy_above_th, simulate;
         int cut_off_voltage;
+        int max_distance;
         int battery, new_battery,temp, energy_consumption;
         double old_simulation_time, new_simulation_time;
         double traveled_distance, temp_distance;

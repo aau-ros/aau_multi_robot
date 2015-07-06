@@ -8,4 +8,5 @@
 		<arg name="frontier_selection" value="$(arg frontier_selection)" />
 		<arg name="log_path" value="$(arg log_path)" />
 	</include>
+        <rosparam file="$(find explorer)/param/pioneer3at_energy_params.yaml" command="load"/>
 </launch>

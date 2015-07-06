@@ -107,7 +107,7 @@
     <rosparam file="$(find turtlebot_navigation)/param/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find turtlebot_navigation)/param/global_costmap_params.yaml" command="load" />
     <rosparam file="$(find turtlebot_navigation)/param/base_local_planner_params.yaml" command="load" />
-    <rosparam file="$(find explorer)/param/turtlebot_energy_params.yaml" command="load"/>
+    <rosparam file="$(find explorer)/param/simulation_energy_params.yaml" command="load"/>
 
 <!--   
     <rosparam file="$(find explorer)/param/turtlebot_costmap_common_params.yaml" command="load" ns="global_costmap" />
