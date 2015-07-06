@@ -1,0 +1,3 @@
+energy:
+   max_distance: 9000 # distance a robot can travel with a fully charged battery (assumptions: avg speed 0.5 m/s, run time 5 h)
+   charge_time: 2.6 # hours needed for charging
