@@ -319,7 +319,13 @@ public:
                 {
                     sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
                     simulate = false;
-                }else
+                }
+				else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
+				{
+					// todo: read voltage and convert to percentage
+					simulate = false;
+				}
+				else
                 {
                     sub = bat.subscribe("battery_state",1000,&Explorer::callback,this);
                     sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
