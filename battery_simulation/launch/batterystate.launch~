@@ -1,6 +1,5 @@
 <?xml version="1.0"?> 
 <launch>
     <node pkg="battery_simulation" type="BatteryState" name="BatteryState" output="screen">
-	<rosparam file="$(find explorer)/param/simulation_energy_params.yaml" command="load"/>
     </node>
 </launch>

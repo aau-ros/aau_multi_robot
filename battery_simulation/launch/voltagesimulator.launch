@@ -1,5 +1,0 @@
-<?xml version="1.0"?> 
-<launch>
-    <node pkg="battery_simulation" type="VoltageSimulator" name="VoltageSimulator" output="screen">
-    </node>
-</launch>

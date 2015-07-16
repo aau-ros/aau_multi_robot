@@ -244,18 +244,14 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
                 
 	}
-    void callback(const battery_simulation::Voltage::ConstPtr& msg)
+    void bat_callback(const battery_simulation::Voltage::ConstPtr& msg)
     {
         if(msg->recharge == true)
         {
             battery_voltage = true;
             one_time = true;
         }
-	}
-
-    void bat_callback(const std_msgs::Int32::ConstPtr& msg)
-    {
-        battery = msg->data;
+        battery = (int) msg->percent;
     }
 
     void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
@@ -327,10 +323,9 @@ public:
 					// todo: read voltage and convert to percentage
 					simulate = false;
 				}
-				else
-                {
-                    sub = bat.subscribe("battery_state",1000,&Explorer::callback,this);
-                    sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
+                else{
+
+                    sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
                     simulate = true;
                 }
 

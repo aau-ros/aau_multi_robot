@@ -4,22 +4,30 @@ Calculates the percentage of the charging state
 of the battery with a simple linear model.
 */
 #include <ros/ros.h>
+#include <std_msgs/Empty.h>
 #include "battery_simulation/Voltage.h"
-#include <std_msgs/Int32.h>
+#include "geometry_msgs/Twist.h"
 
-#define VOLTAGE_MAX 13.5
-#define VOLTAGE_MIN 11.0
 
 using namespace std;
-double battery_voltage = VOLTAGE_MAX;
+int battery_charge;
+int moving_consumption;
+int standing_consumption;
+double actual_charge;
+double x_linear, z_angular;
 
-std_msgs::Int32 battery_state_per;
-
+battery_simulation::Voltage battery_state;
 
 // Callback message
-void battery_state_callback(const battery_simulation::Voltage::ConstPtr& msg)
-{
-    battery_voltage = msg->voltage;
+void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
+    ROS_INFO("charging done.");
+    battery_state.percent = 100;
+    battery_state.recharge = true;
+    actual_charge = battery_charge;
+}
+void cmd_callback(const geometry_msgs::Twist &msg){
+    x_linear = msg.linear.x;
+    z_angular = msg.angular.z;
 }
 
 int main(int argc, char** argv) {
@@ -27,19 +35,42 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "Battery_simulate");
 	ros::NodeHandle n;
 
-    ros::Publisher battery_pub = n.advertise<std_msgs::Int32>("battery_state_per", 1000);
-    ros::Subscriber voltage_sub = n.subscribe("battery_state", 1000, battery_state_callback);
+  //  costmap2d_local.getRobotPose(robotPose);
+    battery_state.recharge = false;
+    battery_state.percent = 100;
 
-	ros::Rate loop_rate(0.5);
+    double rate = 0.5;
+    double temp;
 
-    float diff = VOLTAGE_MAX - VOLTAGE_MIN;
+    ros::Publisher battery_pub = n.advertise<battery_simulation::Voltage>("battery_state", 1000);
+    ros::Subscriber charge_sub = n.subscribe("charge_complete", 1000, charge_complete_callback);
+    ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1000, cmd_callback);
+
+    n.getParam("ChargeSignal/energy/battery_charge",battery_charge);
+    n.getParam("ChargeSignal/energy/moving_consumption",moving_consumption);
+    n.getParam("ChargeSignal/energy/standing_consumption",standing_consumption);
+
+    actual_charge = battery_charge;
+    ros::Rate loop_rate(rate);
 
 	while ( ros::ok() ) {
 
-        // linear function for the battery_state calculation
+        battery_pub.publish(battery_state);
+        if(x_linear == 0 && z_angular == 0){
+            if (battery_state.percent > 0){
+                temp = actual_charge - standing_consumption / (rate * 3600 );
+                actual_charge = temp;
+                ROS_INFO("standing");
+            }
+            }else{
+            if (battery_state.percent > 0)
+                temp = actual_charge - moving_consumption / (rate * 3600 );
+                actual_charge = temp;
+                ROS_INFO("moving");
 
-        battery_state_per.data = (int) ((battery_voltage - VOLTAGE_MIN)/ (diff) *100);
-        battery_pub.publish(battery_state_per);
+        }
+        battery_state.percent = (actual_charge * 100) / battery_charge ;
+
 		ros::spinOnce();
 		loop_rate.sleep();
 	}
