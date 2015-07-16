@@ -52,14 +52,15 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100), energy_above_th(true),
-        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),simulate(true), robot_id(0){
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100),new_battery(0), energy_above_th(true),
+        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
                 nh.param("local_costmap/width",costmap_width,0); 
                 nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
                 nh.param<std::string>("demonstrate",demonstration,"false");
+                 ROS_INFO("demonstrate: \"%s\"", demonstration.c_str());
                 nh.param("energy/max_distance",max_distance,10000);
                 available_distance = max_distance;
                 
@@ -243,18 +244,14 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
                 
 	}
-    void callback(const battery_simulation::Voltage::ConstPtr& msg)
+    void bat_callback(const battery_simulation::Voltage::ConstPtr& msg)
     {
         if(msg->recharge == true)
         {
             battery_voltage = true;
             one_time = true;
         }
-	}
-
-    void bat_callback(const std_msgs::Int32::ConstPtr& msg)
-    {
-        battery = msg->data;
+        battery = (int) msg->percent;
     }
 
     void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
@@ -268,6 +265,7 @@ public:
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
                             battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                            ROS_INFO("Reading real battery state.");
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
                        {
@@ -319,10 +317,15 @@ public:
                 {
                     sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
                     simulate = false;
-                }else
-                {
-                    sub = bat.subscribe("battery_state",1000,&Explorer::callback,this);
-                    sub2 = bat_per.subscribe<std_msgs::Int32>("battery_state_per",1000,&Explorer::bat_callback,this);
+                }
+				else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
+				{
+					// todo: read voltage and convert to percentage
+					simulate = false;
+				}
+                else{
+
+                    sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
                     simulate = true;
                 }
 
@@ -757,6 +760,7 @@ public:
                             }else if(frontier_selection == 7)
                             {
                                     exploration->sort(2);
+                                    exploration->sort(3);
                                     exploration->sort_distance(energy_above_th);
                                     while(true)
                                     {
@@ -1690,8 +1694,14 @@ public:
         /* Calculate the energy consumption and the traveled distance so far. */
 
         //old_simulation_time = ros::Time::now().toSec();
+
         if(battery_voltage == true)
         {
+            if(demonstration == "true_val" && energy_consumption_demo > 5){
+                battery_voltage = false;
+                ROS_INFO("Traveling home for demonstration.");
+            }
+
             if(cnt == 0)
             {
                 //new_simulation_time = old_simulation_time - time_start.toSec();
@@ -1712,8 +1722,9 @@ public:
 
 
             energy_consumption += new_battery;
+            energy_consumption_demo += new_battery;
             traveled_distance += sqrt(temp_distance);
-            ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d (1,25) traveled_distance: %f"
+            ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d traveled_distance: %f"
                  , cnt, new_battery,energy_consumption, traveled_distance );
             cnt++;
 
@@ -1730,6 +1741,8 @@ public:
                 first_run = false;
                 possible_traveling_distance();
             }
+
+
         }else
         {
             ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d (1,25) traveled_distance: %f"
@@ -1738,7 +1751,9 @@ public:
             temp = 0;
             new_battery = 0;
             available_distance = max_distance;
+            energy_consumption_demo = 0;
         }
+
     }
     void possible_traveling_distance(){
 
@@ -1784,7 +1799,7 @@ public:
         bool battery_voltage, energy_above_th, simulate;
         int cut_off_voltage;
         int max_distance;
-        int battery, new_battery,temp, energy_consumption;
+        int battery, new_battery,temp, energy_consumption, energy_consumption_demo;
         double old_simulation_time, new_simulation_time;
         double traveled_distance, temp_distance;
         double x_temp, y_temp,x_diff, y_diff, available_distance;

@@ -4519,7 +4519,7 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
             double d_gbe, suc_fct;
             int w1 = 10, w2 = 15, w3 = 3, w4 = 9;
             for (int i = 4; i >= 0; i--) {
-                for (int j = 0; j < 5; j++) {
+                for (int j = 0; j < 4; j++) {
 
                     /*
                     Successor Function

@@ -36,13 +36,15 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 include_directories(include)
 include_directories(include ${catkin_INCLUDE_DIRS} )
 
+add_executable(VoltageSimulator src/VoltageSimulator.cpp)
 add_executable(ChargeSignal src/ChargeSignal.cpp)
 add_executable(BatteryState src/BatteryState.cpp)
 
+target_link_libraries(VoltageSimulator   ${catkin_LIBRARIES} )
 target_link_libraries(ChargeSignal    ${catkin_LIBRARIES} )
 target_link_libraries(BatteryState    ${catkin_LIBRARIES} )
 
-add_dependencies(BatteryState battery_simulator_generate_messages_cpp)
+add_dependencies(VoltageSimulator battery_simulator_generate_messages_cpp)
 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
