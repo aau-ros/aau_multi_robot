@@ -1028,13 +1028,19 @@ public:
 
             log_path = log_path.append("/explorer");
             log_path = log_path.append(robo_name);
-            log_path = log_path.append("/");
             ROS_INFO("Logging files to %s", log_path.c_str());
 
             boost::filesystem::path boost_log_path(log_path.c_str());
             if(!boost::filesystem::exists(boost_log_path))
-                if(!boost::filesystem::create_directories(boost_log_path))
-                    ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+                try{
+                    if(!boost::filesystem::create_directories(boost_log_path))
+                        ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+                }catch(const boost::filesystem::filesystem_error& e)
+                {
+                    ROS_ERROR("Cannot create path %s.", log_path.c_str());
+                }
+
+            log_path = log_path.append("/");
 
         }
         
