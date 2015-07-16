@@ -906,7 +906,7 @@ public:
         void map_info()
         {       
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << "#time,exploration_travel_path_global,exploration_travel_path_average,global_map_progress,local_map_progress,number_of_completed_auctions, number_of_uncompleted_auctions, frontier_selection_strategy, costmap_size, unreachable_frontiers" << std::endl;
+            fs_csv << "time,exploration_travel_path_global,global_map_progress,battery_state,recharge_cycles,frontier_selection_strategy" << std::endl;
             fs_csv.close();
             
             while(ros::ok() && exploration_finished != true)
@@ -936,7 +936,7 @@ public:
 
                 fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 
-                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << exploration_travel_path_average << "," << map_progress.global_freespace << "," << map_progress.local_freespace << "," << global_iterattions <<  "," << exploration->number_of_completed_auctions << "," << exploration->number_of_uncompleted_auctions << "," << frontier_selection << "," <<  costmap_width << "," << exploration->unreachable_frontiers.size() <<  std::endl;
+                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery << "," << 0 << "," << frontier_selection << std::endl;
 //                fs_csv << "travel_path_global   = " << exploration_travel_path_global << std::endl;
 //                fs_csv << "travel_path_average  = " << exploration_travel_path_average << std::endl;             
 //                fs_csv << "map_progress_global  = " << map_progress.global_freespace << std::endl;
@@ -1035,7 +1035,7 @@ public:
             if(!boost::filesystem::exists(boost_log_path))
                 if(!boost::filesystem::create_directories(boost_log_path))
                     ROS_ERROR("Cannot create directory %s.", log_path.c_str());
-             
+
         }
         
         void save_progress(bool final=false)
@@ -1074,15 +1074,16 @@ public:
             fs << "time_file_written    			= " << asctime(timeinfo); // << std::endl;
             fs << "start_time           			= " << time_start << std::endl;
             fs << "end_time             			= " << ros::Time::now() << std::endl;
-            fs << "exploration_time    			        = " << exploration_time << std::endl;
+            fs << "exploration_time    			= " << exploration_time << std::endl;
             fs << "required_goals       			= " << navigation_goals_required << std::endl;  
-            fs << "unreachable_goals                            = " << exploration->unreachable_frontiers.size() << std::endl;
+            fs << "unreachable_goals                       = " << exploration->unreachable_frontiers.size() << std::endl;
             fs << "travel_path_overall  			= " << exploration_travel_path << std::endl;
-            fs << "number_of_completed_auctions                 = " << exploration->number_of_completed_auctions << std::endl;
-            fs << "number_of_uncompleted_auctions               = " << exploration->number_of_uncompleted_auctions << std::endl;
-            fs << "frontier_selection_strategy                  = " << frontier_selection << std::endl;
-            fs << "costmap_size                                 = " << costmap_width << std::endl;
-            fs << "global costmap iterations                    = " << global_costmap_iteration << std::endl;
+            fs << "number_of_completed_auctions            = " << exploration->number_of_completed_auctions << std::endl;
+            fs << "number_of_uncompleted_auctions          = " << exploration->number_of_uncompleted_auctions << std::endl;
+            fs << "frontier_selection_strategy             = " << frontier_selection << std::endl;
+            fs << "costmap_size                            = " << costmap_width << std::endl;
+            fs << "global costmap iterations               = " << global_costmap_iteration << std::endl;
+            fs << "number of recharges                     = " << 0 << std::endl;
             
 	    double param_double;
         int param_int;
