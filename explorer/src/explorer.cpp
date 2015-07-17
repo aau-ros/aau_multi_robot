@@ -54,6 +54,7 @@ public:
         
                 nh.param("frontier_selection",frontier_selection,1); 
                 nh.param("local_costmap/width",costmap_width,0); 
+                nh.param<double>("local_costmap/resolution",costmap_resolution,0);
                 nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
                 
                 ROS_INFO("Costmap width: %d", costmap_width);
@@ -940,7 +941,7 @@ public:
             
             double exploration_time = ros_time.toSec();           
             int navigation_goals_required = counter;        
-            double exploration_travel_path = (double)exploration->exploration_travel_path_global * 0.02;
+            double exploration_travel_path = (double)exploration->exploration_travel_path_global * costmap_resolution;
             double size_global_map = map_progress_during_exploration.at(map_progress_during_exploration.size()-1).global_freespace;
                     
             double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
@@ -1595,13 +1596,13 @@ public:
         
         std::vector<int> clusters_available_in_pool;
         
-	int home_position_x, home_position_y;
+        int home_position_x, home_position_y;
         int robot_id, number_of_robots;
         int frontier_selection, costmap_width, global_costmap_iteration, number_unreachable_frontiers_for_cluster;
         int counter_waiting_for_clusters;
         
-        double robot_home_position_x, robot_home_position_y;
-	bool Simulation, goal_determined;
+        double robot_home_position_x, robot_home_position_y, costmap_resolution;
+        bool Simulation, goal_determined;
         bool robot_prefix_empty;
         int accessing_cluster, cluster_element_size, cluster_element;
         int global_iterattions;
