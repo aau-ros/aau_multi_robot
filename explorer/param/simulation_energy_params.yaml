@@ -3,4 +3,4 @@ energy:
    charge_time: 0.0055 # hours needed for charging
    moving_consumption: 30 # watt
    standing_consumption: 20 # watt
-   battery_charge: 252
+   battery_charge: 252 # Wh
