@@ -52,7 +52,7 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100),new_battery(0), energy_above_th(true),
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100),new_battery(0), recharge_cycles(0), energy_above_th(true),
         cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
 
         
@@ -280,6 +280,10 @@ public:
         }
     }
 
+    void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
+        recharge_cycles++;
+    }
+
 	void explore() 
         {
 		/*
@@ -327,6 +331,7 @@ public:
                 else{
 
                     sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+                    sub2 = bat.subscribe("charge_complete", 1000, &Explorer::charge_complete_callback,this);
                     simulate = true;
                 }
 
@@ -984,7 +989,7 @@ public:
 
                 fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 
-                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery << "," << 0 << "," << frontier_selection << std::endl;
+                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery << "," << recharge_cycles << "," << frontier_selection << std::endl;
 //                fs_csv << "travel_path_global   = " << exploration_travel_path_global << std::endl;
 //                fs_csv << "travel_path_average  = " << exploration_travel_path_average << std::endl;             
 //                fs_csv << "map_progress_global  = " << map_progress.global_freespace << std::endl;
@@ -1137,7 +1142,7 @@ public:
             fs << "frontier_selection_strategy             = " << frontier_selection << std::endl;
             fs << "costmap_size                            = " << costmap_width << std::endl;
             fs << "global costmap iterations               = " << global_costmap_iteration << std::endl;
-            fs << "number of recharges                     = " << 0 << std::endl;
+            fs << "number of recharges                     = " << recharge_cycles << std::endl;
             
 	    double param_double;
         int param_int;
@@ -1843,7 +1848,7 @@ public:
         bool battery_voltage, energy_above_th, simulate;
         int cut_off_voltage;
         int max_distance;
-        int battery, new_battery,temp, energy_consumption, energy_consumption_demo;
+        int battery, new_battery,temp, energy_consumption, energy_consumption_demo, recharge_cycles;
         double old_simulation_time, new_simulation_time;
         double traveled_distance, temp_distance;
         double x_temp, y_temp,x_diff, y_diff, available_distance;
