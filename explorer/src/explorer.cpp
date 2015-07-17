@@ -58,6 +58,7 @@ public:
         
                 nh.param("frontier_selection",frontier_selection,1); 
                 nh.param("local_costmap/width",costmap_width,0); 
+                nh.param<double>("local_costmap/resolution",costmap_resolution,0);
                 nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
                 nh.param<std::string>("demonstrate",demonstration,"false");
                  ROS_INFO("demonstrate: \"%s\"", demonstration.c_str());
@@ -969,7 +970,7 @@ public:
                 map_progress_during_exploration.push_back(map_progress);
 
 
-                double exploration_travel_path_global = (double)exploration->exploration_travel_path_global * 0.02;
+                double exploration_travel_path_global = (double)exploration->exploration_travel_path_global * costmap_resolution;
                 double exploration_travel_path_average = 0;
                 if(counter != 0)
                 {
@@ -1835,7 +1836,7 @@ public:
         int frontier_selection, costmap_width, global_costmap_iteration, number_unreachable_frontiers_for_cluster;
         int counter_waiting_for_clusters;
         
-        double robot_home_position_x, robot_home_position_y;
+        double robot_home_position_x, robot_home_position_y, costmap_resolution;
         bool Simulation, goal_determined, first_run;
         bool robot_prefix_empty;
         bool one_time;
