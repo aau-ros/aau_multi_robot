@@ -400,8 +400,10 @@ public:
                              *       negotiation)
                              * 6 ... Cluster frontiers, then navigate to random cluster
                              *       (with and without negotiation)
-                             * 7 ... Navigate to nearest frontier TRAVEL PATH and consider
-                             *       energy efficient staying-alive path planning
+                             * 7 ... Navigate to frontier that satisfies energy efficient
+                             *       cost function with staying-alive path planning
+                             * 8 ... Navigate to leftmost frontier (Mei et al. 2006)
+                             *       with staying-alive path planning
                              */
 
                             /******************** SORT *******************
@@ -411,6 +413,10 @@ public:
                             *       robots actual position (EUCLIDEAN DISTANCE)
                             * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
                             * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN DISTANCE)
+                            * 5 ...
+                            * 6 ...
+                            * 7 ... Sort frontiers in sensor range clock wise (starting from left of robot)
+                            *       and sort the remaining frontiers from nearest to furthest (EUCLIDEAN DISTANCE)
                             */
 
                             if(frontier_selection == 2)
@@ -791,6 +797,40 @@ public:
                                     energy_above_th = true;
                                 }
                                 travel_distance();
+                            }else if(frontier_selection == 8)
+                            {
+                                exploration->sort(2);
+                                exploration->sort(7);
+                                exploration->sort_distance(energy_above_th);
+                                while(true)
+                                {
+                                    goal_determined = exploration->determine_goal_staying_alive(available_distance, traveled_distance, &final_goal, count, &robot_str);
+                                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
+                                    if(goal_determined == false)
+                                    {
+                                        battery_voltage = false;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        //negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
+                                        negotiation = true;
+                                        if(negotiation == true)
+                                        {
+                                            break;
+                                        }
+                                        count++;
+                                    }
+                                }
+
+                                ROS_INFO("Battery state: %d, ",battery);
+                                  if(battery <= 50)
+                                {
+                                    energy_above_th = false;
+                                }else{
+                                    energy_above_th = true;
+                                }
+                                travel_distance();
                             }
 
 
@@ -915,6 +955,9 @@ public:
             
             while(ros::ok() && exploration_finished != true)
             {
+                double angle_robot = robotPose.getRotation().getAngle();
+                ROS_ERROR("angle of robot: %.2f\n", angle_robot);
+
                 costmap_mutex.lock();
 
                 ros::Duration time = ros::Time::now() - time_start;

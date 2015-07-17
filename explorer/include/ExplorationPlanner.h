@@ -126,6 +126,8 @@ namespace explorationPlanner
             std::vector<frontier_t> frontiers;
             std::vector<frontier_t> visited_frontiers;
             std::vector<frontier_t> unreachable_frontiers;
+            std::vector<frontier_t> close_frontiers;
+            std::vector<frontier_t> far_frontiers;
             
             std::vector<frontier_t> seen_frontier_list;
             std::vector<frontier_t> negotiation_list, my_negotiation_list;

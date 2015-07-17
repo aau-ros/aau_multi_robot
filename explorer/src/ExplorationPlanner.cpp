@@ -4890,6 +4890,93 @@ void ExplorationPlanner::sort(int strategy)
             std::sort(clusters.begin(), clusters.end(), sortCluster);  
 
         }
+        else if(strategy == 7)
+        {
+            tf::Stamped < tf::Pose > robotPose;
+            if (!costmap_ros_->getRobotPose(robotPose))
+            {
+                    ROS_ERROR("Failed to get RobotPose");
+            }
+
+            if (frontiers.size() > 0)
+            {
+                double x,y,x_next,y_next,angle_robot,angle_frontier,angle_next_frontier,angle,angle_next;
+                int costmap_width,costmap_height;
+
+                // get size of local costmap
+                nh.param<int>("local_costmap/width",costmap_width,-1);
+                nh.param<int>("local_costmap/height",costmap_height,-1);
+
+                // differentiate between frontiers inside (close frontiers) and outside (far frontiers) of local costmap
+                for (int i = 0; i < frontiers.size(); i++)
+                {
+                    x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
+                    y = frontiers.at(i).y_coordinate - robotPose.getOrigin().getY();
+                    if (fabs(x) <= costmap_width/2 && fabs(y) <= costmap_height/2){
+                        close_frontiers.push_back(frontiers.at(i));
+                    }
+                    else{
+                        far_frontiers.push_back(frontiers.at(i));
+                    }
+                }
+
+                // sort close frontiers clock wise
+                if (close_frontiers.size() > 0)
+                {
+                    for (int i = close_frontiers.size(); i>= 0; i--)
+                    {
+                        for (int j = 0; j < close_frontiers.size() - 1; j++)
+                        {
+                            angle_robot = robotPose.getRotation().getAngle();
+
+                            angle_frontier = atan2(robotPose.getOrigin().getX()-frontiers.at(j).x_coordinate, robotPose.getOrigin().getY()-frontiers.at(j).y_coordinate);
+                            angle_next_frontier = atan2(robotPose.getOrigin().getX()-frontiers.at(j+1).x_coordinate, robotPose.getOrigin().getY()-frontiers.at(j+1).y_coordinate);
+
+                            angle = angle_robot - angle_frontier;
+                            angle_next = angle_robot - angle_next_frontier;
+
+                            if (angle > angle_next)
+                            {
+                                frontier_t temp = close_frontiers.at(j+1);
+                                close_frontiers.at(j+1) = close_frontiers.at(j);
+                                close_frontiers.at(j) = temp;
+                            }
+                        }
+                    }
+                }
+
+                // sort far frontiers by distance
+                if (far_frontiers.size() > 0)
+                {
+                    for (int i = far_frontiers.size(); i>= 0; i--)
+                    {
+                        for (int j = 0; j < far_frontiers.size() - 1; j++)
+                        {
+                            x = far_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
+                            y = far_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
+                            x_next = far_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
+                            y_next = far_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
+
+                            if (x*x + y*y > x_next*x_next + y_next*y_next) {
+                                frontier_t temp = far_frontiers.at(j+1);
+                                far_frontiers.at(j + 1) = far_frontiers.at(j);
+                                far_frontiers.at(j) = temp;
+                            }
+                        }
+                    }
+                }
+
+                // put together close and far frontiers
+                frontiers.clear();
+                frontiers.reserve(close_frontiers.size() + far_frontiers.size());
+                frontiers.insert(frontiers.end(), close_frontiers.begin(), close_frontiers.end());
+                frontiers.insert(frontiers.end(), far_frontiers.begin(), far_frontiers.end());
+
+            }else
+            {
+                ROS_INFO("Sorting not possible, no frontiers available!!!");
+            }
+        }
         
         ROS_INFO("Done sorting");
     
