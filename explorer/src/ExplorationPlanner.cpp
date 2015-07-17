@@ -4148,12 +4148,12 @@ bool ExplorationPlanner::determine_goal_staying_alive(double available_distance,
             // distance to next frontier
             double x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
             double y = frontiers.at(i).y_coordinate -  robotPose.getOrigin().getY();
-            // distance to home base
-            double x_h = robot_home_x - robotPose.getOrigin().getX();
-            double y_h = robot_home_y -  robotPose.getOrigin().getY();
-            double distance_to_homepoint = sqrt(x * x + y * y) + sqrt(x_h * x_h + y_h * y_h);
-            ROS_INFO("distance to home base: %f",distance_to_homepoint);
-            if(available_distance > distance_to_homepoint)
+            // distance from frontier to home base
+            double x_h = robot_home_x - frontiers.at(i).x_coordinate;
+            double y_h = robot_home_y -  frontiers.at(i).y_coordinate;
+            double total_distance = sqrt(x * x + y * y) + sqrt(x_h * x_h + y_h * y_h);
+            ROS_INFO("distance to frontier and then home: %f",total_distance);
+            if(available_distance > total_distance)
             {
                 ROS_INFO("------------------------------------------------------------------");
                 ROS_INFO("Determined frontier with ID: %d   at x: %f     y: %f   detected by Robot %d", frontiers.at(i).id, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, frontiers.at(i).detected_by_robot);
