@@ -126,6 +126,8 @@ namespace explorationPlanner
             std::vector<frontier_t> frontiers;
             std::vector<frontier_t> visited_frontiers;
             std::vector<frontier_t> unreachable_frontiers;
+            std::vector<frontier_t> close_frontiers;
+            std::vector<frontier_t> far_frontiers;
             
             std::vector<frontier_t> seen_frontier_list;
             std::vector<frontier_t> negotiation_list, my_negotiation_list;
@@ -216,7 +218,7 @@ namespace explorationPlanner
             void clear_Visualized_Cluster_Cells(std::vector<int> ids);
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void findFrontiers();
-            bool determine_goal_staying_alive(double available_distance, double traveled_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name);
+            bool determine_goal_staying_alive(int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool check_efficiency_of_goal(double x, double y);
             void clearVisitedAndSeenFrontiersFromClusters();
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);

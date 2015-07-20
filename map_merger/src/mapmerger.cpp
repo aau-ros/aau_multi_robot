@@ -1073,7 +1073,7 @@ void MapMerger::start()
 
 
 
-    ROS_ERROR("Init Sub_other_maps");
+    ROS_INFO("Init Sub_other_maps");
     ros::Subscriber  sub_other_maps = nodeHandle->subscribe(robot_prefix+"/"+topic_over_network,1000,&MapMerger::callback_map_other,this);
     ros::Duration(0.1).sleep();
     ros::spinOnce();
