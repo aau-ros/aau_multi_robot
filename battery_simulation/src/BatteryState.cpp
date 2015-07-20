@@ -35,7 +35,6 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "Battery_simulate");
 	ros::NodeHandle n;
 
-  //  costmap2d_local.getRobotPose(robotPose);
     battery_state.recharge = false;
     battery_state.percent = 100;
 
@@ -60,14 +59,11 @@ int main(int argc, char** argv) {
             if (battery_state.percent > 0){
                 temp = actual_charge - standing_consumption / (rate * 3600 );
                 actual_charge = temp;
-                ROS_INFO("standing");
             }
             }else{
             if (battery_state.percent > 0)
                 temp = actual_charge - moving_consumption / (rate * 3600 );
                 actual_charge = temp;
-                ROS_INFO("moving");
-
         }
         battery_state.percent = (actual_charge * 100) / battery_charge ;
 

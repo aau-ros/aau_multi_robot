@@ -273,6 +273,10 @@ public:
                            {
                                 battery_voltage = true;
                            }
+                           if(demonstration == "true_val" && battery == (old_battery + energy_consumption_demo))
+                           {
+                                battery_voltage = true;
+                           }
                        }
                   }
              }
@@ -317,12 +321,14 @@ public:
                 {
                     sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
                     simulate = false;
+                    one_time = false;
                 }
 				else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
 				{
 					// todo: read voltage and convert to percentage
-					simulate = false;
-				}
+                    simulate = false;
+                    one_time = false;
+                }
                 else{
 
                     sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
@@ -850,6 +856,27 @@ public:
                                         ROS_INFO("Traveling home for recharging");
                                         publisher_re.publish(msg);
                                         one_time = false;
+                                    }
+                                    if(demonstration == "true_val")
+                                    {
+/*                                      actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("AutoDockingAction", true);
+                                               ac.waitForServer();
+                                               kobuki_msgs::AutoDockingActionGoal goal;
+                                               ac.sendGoal(goal);
+
+
+                                               //wait for the action to return
+                                               bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+
+                                               if (finished_before_timeout)
+                                               {
+                                                   actionlib::SimpleClientGoalState state = ac.getState();
+                                                   ROS_INFO("Action finished: %s",state.toString().c_str());
+                                               }
+                                               else
+                                                   ROS_INFO("Action did not finish before the time out.");
+                                                   */
+                                        ROS_INFO("Auto docking now!!");
                                     }
                                 }
 
@@ -1692,17 +1719,18 @@ public:
         {
             if(demonstration == "true_val" && energy_consumption_demo > 5){
                 battery_voltage = false;
+                temp_battery = energy_consumption_demo;
                 ROS_INFO("Traveling home for demonstration.");
             }
 
             if(cnt == 0)
             {
-                //new_simulation_time = old_simulation_time - time_start.toSec();
+                old_battery = battery;
                 temp = battery;
                 x_temp = robotPose.getOrigin().getX();
                 y_temp = robotPose.getOrigin().getY();
             }else{
-                //new_simulation_time = old_simulation_time - new_simulation_time;
+
                 if(temp>=battery)
                     new_battery = temp - battery;
                 temp = battery;
@@ -1791,7 +1819,7 @@ public:
         bool one_time;
         bool battery_voltage, energy_above_th, simulate;
         int cut_off_voltage;
-        int max_distance;
+        int max_distance,temp_battery, old_battery;
         int battery, new_battery,temp, energy_consumption, energy_consumption_demo;
         double old_simulation_time, new_simulation_time;
         double traveled_distance, temp_distance;
