@@ -1,4 +1,6 @@
 /*
+When the robot arrives the home base for recharging we starting the recharge process.
+The recharge time is a parameter from the parameter file.
 When the charge is complete a message would be published.
 */
 #include <ros/ros.h>

@@ -20,12 +20,14 @@ battery_simulation::Voltage battery_state;
 
 // Callback message
 void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
+    //When the charging is done we reset the battery state to 100%.
     ROS_INFO("charging done.");
     battery_state.percent = 100;
     battery_state.recharge = true;
     actual_charge = battery_charge;
 }
 void cmd_callback(const geometry_msgs::Twist &msg){
+    //get the velocity and rotation values
     x_linear = msg.linear.x;
     z_angular = msg.angular.z;
 }
@@ -35,7 +37,6 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "Battery_simulate");
 	ros::NodeHandle n;
 
-  //  costmap2d_local.getRobotPose(robotPose);
     battery_state.recharge = false;
     battery_state.percent = 100;
 
@@ -56,18 +57,21 @@ int main(int argc, char** argv) {
 	while ( ros::ok() ) {
 
         battery_pub.publish(battery_state);
+        /*
+        In the cmd_vel message there are only two important parameters, the x-linear value and the z-angular value.
+        When they are zero the robots stands still. If the x-value is unequal to zero then the robot moves forward or
+        backward and if the z-value is unequal to zero the robot rotates.
+        When the robot stands still it consumes less energy but when it moves it consumes more energy.
+        */
         if(x_linear == 0 && z_angular == 0){
             if (battery_state.percent > 0){
                 temp = actual_charge - standing_consumption / (rate * 3600 );
                 actual_charge = temp;
-                ROS_DEBUG("standing");
             }
             }else{
             if (battery_state.percent > 0)
                 temp = actual_charge - moving_consumption / (rate * 3600 );
                 actual_charge = temp;
-                ROS_DEBUG("moving");
-
         }
         battery_state.percent = (actual_charge * 100) / battery_charge ;
 

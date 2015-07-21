@@ -6,6 +6,8 @@
 #include <move_base/MoveBaseConfig.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <move_base_msgs/MoveBaseActionFeedback.h>
+#include <kobuki_msgs/AutoDockingAction.h>
+#include <kobuki_msgs/AutoDockingGoal.h>
 #include <costmap_2d/costmap_2d_ros.h>
 //#include <costmap_2d/cell_data.h>
 #include <costmap_2d/costmap_2d.h>
@@ -52,7 +54,7 @@ public:
 	Explorer(tf::TransformListener& tf) :
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
-        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),battery_voltage(true),battery(100),new_battery(0), recharge_cycles(0), energy_above_th(true),
+        counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),active_exploration(true),battery_charge_percent(100),battery_charge_diff(0), recharge_cycles(0), energy_above_th(true),
         cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
 
         
@@ -247,16 +249,19 @@ public:
 	}
     void bat_callback(const battery_simulation::Voltage::ConstPtr& msg)
     {
+        // check if the robot got recharged
         if(msg->recharge == true)
         {
-            battery_voltage = true;
+            active_exploration = true;
             one_time = true;
         }
-        battery = (int) msg->percent;
+        battery_charge_percent = (int) msg->percent;
     }
 
     void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
     {
+        //reading the actual battery charge in percent and the charging state from the diagnostic array
+        //which is sended from the diagnostic aggregator
         for( size_t status_i = 0; status_i < msg->status.size(); ++status_i )
            {
              if( msg->status[status_i].name.compare("/Power System/Battery") == 0)
@@ -265,14 +270,17 @@ public:
                   {
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
-                            battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
-                            ROS_INFO("Reading real battery state.");
+                            battery_charge_percent = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
                        {
-                           if((battery > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
+                           if((battery_charge_percent > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
                            {
-                                battery_voltage = true;
+                                active_exploration = true;
+                           }
+                           if(demonstration == "true_val" && battery_charge_percent == (old_battery + consumed_energy + 2))
+                           {
+                                active_exploration = true;
                            }
                        }
                   }
@@ -317,17 +325,20 @@ public:
                 ROS_INFO("Environment variable: %s",env_var.c_str());
                 ROS_INFO("max_distance: %d",max_distance);
 
-
+                // check if we are on a real robot or if we are in simulation
+                // if we are in simulation, we start the battery simulator
                 if( env_var.compare("turtlebot") == 0)
                 {
                     sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
                     simulate = false;
+                    one_time = false;
                 }
 				else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
 				{
 					// todo: read voltage and convert to percentage
-					simulate = false;
-				}
+                    simulate = false;
+                    one_time = false;
+                }
                 else{
 
                     sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
@@ -772,6 +783,7 @@ public:
                             }
                             else if(frontier_selection == 7)
                             {
+                                    //first sort the frontiers from near to far and then they get sorted by efficiency
                                     exploration->sort(2);
                                     exploration->sort(3);
                                     exploration->sort_distance(energy_above_th);
@@ -781,7 +793,7 @@ public:
                                         ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
                                         if(goal_determined == false)
                                         { 
-                                            battery_voltage = false;
+                                            active_exploration = false;
                                             break;
                                         }
                                         else
@@ -796,13 +808,14 @@ public:
                                         }
                                 }
 
-                                ROS_INFO("Battery state: %d, ",battery);
-                                  if(battery <= 50)
+                                ROS_INFO("battery_charge_percent state: %d, ",battery_charge_percent);
+                                  if(battery_charge_percent <= 50)
                                 {
                                     energy_above_th = false;
                                 }else{
                                     energy_above_th = true;
                                 }
+                                //in function travel_distance we calculate the available travel distance and the energy consumption
                                 travel_distance();
                             }
                             else if(frontier_selection == 8)
@@ -842,7 +855,7 @@ public:
 
                                     if(goal_determined == false)
                                     {
-                                        battery_voltage = false; // indicate requirement for recharging
+                                        active_exploration = false; // indicate requirement for recharging
                                         break;
                                     }
                                     else
@@ -923,8 +936,8 @@ public:
                                         backoff_sucessfull = true;
                                     }
                                 }
-                                ROS_INFO("Battery voltage %d", battery_voltage);
-                                if(battery_voltage == true)
+                                ROS_INFO("Battery voltage %d", active_exploration);
+                                if(active_exploration == true)
                                 {
                                     if(backoff_sucessfull == true )
                                     {
@@ -950,6 +963,29 @@ public:
                                         ROS_INFO("Traveling home for recharging");
                                         publisher_re.publish(msg);
                                         one_time = false;
+                                    }
+                                    if(demonstration == "true_val")
+                                    {
+/*              uncomment when using for demonstration
+                                        actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("AutoDockingAction", true);
+                                               ac.waitForServer();
+                                               kobuki_msgs::AutoDockingGoal goal;
+                                               ROS_INFO("Sending auto docking signal.");
+                                               ac.sendGoal(goal);
+                                                ROS_INFO("Wait 30 seconds for result.");
+
+                                               //wait for the action to return
+                                               bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+
+                                               if (finished_before_timeout)
+                                               {
+                                                   actionlib::SimpleClientGoalState state = ac.getState();
+                                                   ROS_INFO("Action finished: %s",state.toString().c_str());
+                                               }
+                                               else
+                                                   ROS_INFO("Action did not finish before the time out.");
+*/
+                                        ROS_INFO("Auto docking now!!");
                                     }
                                 }
 
@@ -1043,7 +1079,7 @@ public:
 
                 fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 
-                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery << "," << recharge_cycles << "," << frontier_selection << std::endl;
+                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery_charge_percent << "," << recharge_cycles << "," << frontier_selection << std::endl;
 //                fs_csv << "travel_path_global   = " << exploration_travel_path_global << std::endl;
 //                fs_csv << "travel_path_average  = " << exploration_travel_path_average << std::endl;             
 //                fs_csv << "map_progress_global  = " << map_progress.global_freespace << std::endl;
@@ -1657,7 +1693,7 @@ public:
 			ROS_ERROR("Failed to get RobotPose");
 		}
                 
-		actionlib::SimpleActionClient < move_base_msgs::MoveBaseAction
+        actionlib::SimpleActionClient < move_base_msgs::MoveBaseAction
 				> ac("move_base", true);
 
                 while (!ac.waitForServer(ros::Duration(10.0)))
@@ -1798,24 +1834,27 @@ public:
 
         //old_simulation_time = ros::Time::now().toSec();
 
-        if(battery_voltage == true)
+        if(active_exploration == true)
         {
-            if(demonstration == "true_val" && energy_consumption_demo > 5){
-                battery_voltage = false;
+            //only for demonstration purposes
+            if(demonstration == "true_val" && energy_consumption_demo > 2){
+                active_exploration = false;
+                consumed_energy = energy_consumption_demo;
                 ROS_INFO("Traveling home for demonstration.");
             }
 
             if(cnt == 0)
             {
-                //new_simulation_time = old_simulation_time - time_start.toSec();
-                temp = battery;
+                old_battery = battery_charge_percent;
+                battery_charge_temp = battery_charge_percent;
                 x_temp = robotPose.getOrigin().getX();
                 y_temp = robotPose.getOrigin().getY();
             }else{
-                //new_simulation_time = old_simulation_time - new_simulation_time;
-                if(temp>=battery)
-                    new_battery = temp - battery;
-                temp = battery;
+
+                if(battery_charge_temp>=battery_charge_percent)
+                    battery_charge_diff = battery_charge_temp - battery_charge_percent;
+                //calculate the distance, that we are already traveled
+                battery_charge_temp = battery_charge_percent;
                 x_diff = robotPose.getOrigin().getX() - x_temp;
                 y_diff = robotPose.getOrigin().getY() - y_temp;
                 temp_distance = x_diff*x_diff + y_diff*y_diff;
@@ -1824,11 +1863,11 @@ public:
             }
 
 
-            energy_consumption += new_battery;
-            energy_consumption_demo += new_battery;
+            energy_consumption += battery_charge_diff;
+            energy_consumption_demo += battery_charge_diff;
             traveled_distance += sqrt(temp_distance);
             ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d traveled_distance: %f"
-                 , cnt, new_battery,energy_consumption, traveled_distance );
+                 , cnt, battery_charge_diff,energy_consumption, traveled_distance );
             cnt++;
 
             if(cnt<7){
@@ -1849,10 +1888,10 @@ public:
         }else
         {
             ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d (1,25) traveled_distance: %f"
-                     , cnt, new_battery,energy_consumption, traveled_distance );
+                     , cnt, battery_charge_diff,energy_consumption, traveled_distance );
             cnt = 0;
-            temp = 0;
-            new_battery = 0;
+            battery_charge_temp = 0;
+            battery_charge_diff = 0;
             available_distance = max_distance;
             energy_consumption_demo = 0;
         }
@@ -1862,9 +1901,7 @@ public:
 
         /*Calculate how many distance per unit we can travel before we are running out of energy. */
 
-//        double available_battery_per = 0.0;
-//        available_battery_per = 100 - battery;
-        available_distance = (traveled_distance * battery)/energy_consumption;
+        available_distance = (traveled_distance * battery_charge_percent)/energy_consumption;
         ROS_INFO("count: %d simulation available distance: %f"
                  , cnt, available_distance);
     }
@@ -1899,10 +1936,10 @@ public:
         bool Simulation, goal_determined, first_run;
         bool robot_prefix_empty;
         bool one_time;
-        bool battery_voltage, energy_above_th, simulate;
+        bool active_exploration, energy_above_th, simulate;
         int cut_off_voltage;
-        int max_distance;
-        int battery, new_battery,temp, energy_consumption, energy_consumption_demo, recharge_cycles;
+        int max_distance,consumed_energy, old_battery;
+        int battery_charge_percent, battery_charge_diff,battery_charge_temp, energy_consumption, energy_consumption_demo, recharge_cycles;
         double old_simulation_time, new_simulation_time;
         double traveled_distance, temp_distance;
         double x_temp, y_temp,x_diff, y_diff, available_distance;
@@ -1935,7 +1972,7 @@ private:
         ros::NodeHandle nh;
         ros::Time time_start;
 
-	//Create a move_base_msgs to define a goal to steer the robot to
+    //Create a move_base_msgs to define a goal to steer the robot to
 	move_base_msgs::MoveBaseActionGoal action_goal_msg;
 	move_base_msgs::MoveBaseActionFeedback feedback_msgs;
 
