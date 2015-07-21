@@ -6,6 +6,8 @@
 #include <move_base/MoveBaseConfig.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <move_base_msgs/MoveBaseActionFeedback.h>
+#include <kobuki_msgs/AutoDockingAction.h>
+#include <kobuki_msgs/AutoDockingGoal.h>
 #include <costmap_2d/costmap_2d_ros.h>
 //#include <costmap_2d/cell_data.h>
 #include <costmap_2d/costmap_2d.h>
@@ -266,7 +268,6 @@ public:
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
                             battery = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
-                            ROS_INFO("Reading real battery state.");
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
                        {
@@ -959,9 +960,10 @@ public:
                                     }
                                     if(demonstration == "true_val")
                                     {
-/*                                      actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("AutoDockingAction", true);
+/*              uncomment when using for demonstration
+                                        actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("AutoDockingAction", true);
                                                ac.waitForServer();
-                                               kobuki_msgs::AutoDockingActionGoal goal;
+                                               kobuki_msgs::AutoDockingGoal goal;
                                                ac.sendGoal(goal);
 
 
@@ -975,7 +977,7 @@ public:
                                                }
                                                else
                                                    ROS_INFO("Action did not finish before the time out.");
-                                                   */
+*/
                                         ROS_INFO("Auto docking now!!");
                                     }
                                 }
@@ -1684,7 +1686,7 @@ public:
 			ROS_ERROR("Failed to get RobotPose");
 		}
                 
-		actionlib::SimpleActionClient < move_base_msgs::MoveBaseAction
+        actionlib::SimpleActionClient < move_base_msgs::MoveBaseAction
 				> ac("move_base", true);
 
                 while (!ac.waitForServer(ros::Duration(10.0)))
@@ -1963,7 +1965,7 @@ private:
         ros::NodeHandle nh;
         ros::Time time_start;
 
-	//Create a move_base_msgs to define a goal to steer the robot to
+    //Create a move_base_msgs to define a goal to steer the robot to
 	move_base_msgs::MoveBaseActionGoal action_goal_msg;
 	move_base_msgs::MoveBaseActionFeedback feedback_msgs;
 
