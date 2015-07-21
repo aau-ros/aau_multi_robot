@@ -4143,6 +4143,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int strategy, double avail
     {
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
+            //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
             if(i>8)
                 return false;
 

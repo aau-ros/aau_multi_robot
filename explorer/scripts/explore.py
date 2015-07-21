@@ -19,7 +19,7 @@ parser.add_argument("--exp-strategy",dest="exploration_strategy",type=int,nargs=
 parser.add_argument("--screen-output",dest="screen_output",default=False,help="Set ROS output to screen.",
 		    action="store_true")
 parser.add_argument("--interface",dest='interface',nargs='?',type=str,default='wlan0')
-parser.add_argument("--test",dest="test", type=str, default="false",
+parser.add_argument("--test",dest="test",  default="False",action="store_true",
                     help="Travel back erlier on real system")
 
 args, unknown = parser.parse_known_args()
@@ -30,6 +30,11 @@ if args.screen_output:
     output_type = "screen"
 else:
     output_type = "log"
+
+if args.test:
+    simu_type = "true"
+else:
+    simu_type = "false"
 
 rospack = rospkg.RosPack()
 sim_id = args.sim_id[0]
@@ -54,7 +59,7 @@ fh_launch_file.write("\t</include>\n\n")
 fh_launch_file.write("\t<include file=\"$(find explorer)/launch/simple_navigation_$(env ROBOT_PLATFORM).launch\">\n")
 fh_launch_file.write("\t\t<arg name=\"frontier_selection\" value=\"%s\" />" %args.exploration_strategy)
 fh_launch_file.write("\t\t<arg name=\"log_path\" value=\"%s\" />\n" % log_path)
-fh_launch_file.write("\t\t\t<arg name=\"demonstrate\" value=\"%s\" />\n" %args.test)
+fh_launch_file.write("\t\t\t<arg name=\"demonstrate\" value=\"%s\" />\n" %simu_type)
 fh_launch_file.write("\t</include>\n\n")
 
 fh_launch_file.write("\t<include file=\"$(find adhoc_communication)/launch/adhoc_communication.launch\">\n")

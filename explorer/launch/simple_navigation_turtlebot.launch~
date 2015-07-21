@@ -12,7 +12,9 @@
     <rosparam file="$(find explorer)/param/turtlebot_local_costmap_params.yaml" command="load" />
     <rosparam file="$(find explorer)/param/turtlebot_global_costmap_params.yaml" command="load" />
     <rosparam file="$(find turtlebot_navigation)/param/move_base_params.yaml" command="load" />
+    <rosparam file="$(find explorer)/param/turtlebot_energy_params.yaml" command="load"/>
     <param name="log_path" value="$(arg log_path)" />
+    <param name="demonstrate" value="$(arg demonstrate)" />
   </node>
 </launch>
 
