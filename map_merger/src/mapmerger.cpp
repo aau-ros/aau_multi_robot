@@ -1007,9 +1007,9 @@ void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
     else
     {
         local_map->data = toInsert->data;
-        local_map->header.seq = toInsert->header.seq;
-        //may not necessary
-        local_map->header.frame_id = toInsert->header.frame_id;
+        local_map->info = toInsert->info;
+        local_map->header = toInsert->header;
+
         if(seconds_publish_timer < 2)
         {
             ROS_DEBUG("Updating is Expensive");
@@ -1181,39 +1181,34 @@ void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int mi
 
 cv::Mat MapMerger::mapToMat(const nav_msgs::OccupancyGrid *map)
 {
-  uint8_t *data = (uint8_t*) map->data.data(),
-           testpoint = data[0];
-  bool mapHasPoints = true;
+    Mat im(map->info.height, map->info.width, CV_8UC1);
 
-  Mat im(map->info.height, map->info.width, CV_8UC1);
-  // transform the map in the same way the map_saver component does
-  for (size_t i=0; i<map->data.size(); i++)
-  {
-    if (data[i] == 0)
+    if (map->info.height*map->info.width != map->data.size())
     {
-        im.data[i] = 254;
+        ROS_ERROR("Data size doesn't match width*height: width = %d, height = %d, data size = %zu", map->info.width, map->info.height, map->data.size());
     }
-    else
-        if(data[i] == 100)
+
+    // transform the map in the same way the map_saver component does
+    for (size_t i=0; i < map->info.height*map->info.width; i++)
+    {
+        if (map->data.at(i) == 0)
         {
-            im.data[i] = 0;
+            im.data[i] = 254;
         }
-    else im.data[i] = 205;
-    // just check if there is actually something in the map
-    /*if (i!=0) mapHasPoints = mapHasPoints || (data[i] != testpoint);
-    testpoint = data[i];*/
-  }
-  /*
-  for(int i = 0; i < map->data.size();i++)
-      im.data[i] = (unsigned int)map->data.at(i);*/
-  // sanity check
-  if (!mapHasPoints)
-  {
-      std::string name = map->header.frame_id;
-      ROS_WARN("map [%s] is empty, ignoring update. ",name.c_str());
-      ROS_ERROR("If appilcation die uncomment the mapHasPoints if");
-  }
-  return im;
+        else
+        {
+            if(map->data.at(i) == 100)
+            {
+                im.data[i] = 0;
+            }
+            else
+            {
+                im.data[i] = 205;
+            }
+        }
+    }
+
+    return im;
 }
 
 nav_msgs::OccupancyGrid* MapMerger::matToMap(const Mat mat, nav_msgs::OccupancyGrid *forInfo)
