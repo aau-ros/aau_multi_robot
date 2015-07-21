@@ -54,7 +54,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 				0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(
 				0), num_map_cells_(0), initialized_(false), last_mode_(
 				FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(
-				0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), p_plan_in_unknown_(
+        0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), cnt(0), p_plan_in_unknown_(
 				true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(
 				0), inflated(0), lethal(0), free(0), threshold_free(127) 
 				, threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), 
@@ -4143,7 +4143,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int strategy, double avail
     {
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
-            if(i>4)
+            if(i>8)
                 return false;
 
             if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
@@ -4605,9 +4605,14 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
         {
             double d_gbe, suc_fct;
             int w1 = 10, w2 = 15, w3 = 3, w4 = 9;
-            for (int i = 4; i >= 0; i--) {
-                for (int j = 0; j < 4; j++) {
-
+            for (int i = frontiers.size(); i >= 0; i--) {
+                if(cnt>8)
+                    break;
+                cnt++;
+                for (int j = 0; j < frontiers.size()-1; j++) {
+                    if(j>8)
+                        break;
+                    ROS_INFO("i:%d j:%d",i,j);
                     /*
                     Successor Function
                         f = w1 · d_g + w2 · theta + w3 · d_gb + w4 · d_gbe
@@ -4663,9 +4668,7 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
                             frontiers.at(j + 1) = frontiers.at(j);
                             frontiers.at(j) = temp;
                     }
-
                 }
-                ROS_INFO("successor function: %f",suc_fct);
             }
             x_last = robotPose.getOrigin().getX();
             y_last = robotPose.getOrigin().getY();
