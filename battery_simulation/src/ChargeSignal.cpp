@@ -5,7 +5,7 @@ When the charge is complete a message would be published.
 */
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
-#include "battery_simulation/Voltage.h"
+#include "battery_simulation/Battery.h"
 using namespace std;
 bool home = false;
 int battery = 0;
@@ -15,7 +15,7 @@ void callback(const std_msgs::Empty::ConstPtr &msg) {
     home = true;
 }
 
-void battery_callback(const battery_simulation::Voltage &msg) {
+void battery_callback(const battery_simulation::Battery &msg) {
     battery = msg.percent;
 }
 
@@ -35,10 +35,9 @@ int main(int argc, char** argv) {
 
         if(home){
             charge_time = full_charge_time * (100-battery)/100 * 60*60;
-            ROS_INFO("Chargeing Time: %f ",charge_time);
+            ROS_INFO("Charging Time: %f ",charge_time);
             ros::Duration(charge_time).sleep();
             charge.publish(charge_msg);
-            ROS_INFO("Sending recharge signal");
             home = false;
         }
 

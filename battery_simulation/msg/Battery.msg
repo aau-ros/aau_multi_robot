@@ -1,0 +1,2 @@
+float32 percent
+float32 remaining_distance

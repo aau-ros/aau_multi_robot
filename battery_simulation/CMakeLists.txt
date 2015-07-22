@@ -17,7 +17,7 @@ message_generation)
 
 add_message_files(
   FILES
-  Voltage.msg
+  Battery.msg
 )
 generate_messages(
   DEPENDENCIES
