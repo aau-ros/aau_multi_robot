@@ -852,7 +852,17 @@ public:
                 }
             }
 
-            if(active_exploration == true)
+            // robot is out of energy, do nothing
+            if(available_distance <= 0)
+            {
+                ROS_ERROR("Robot has run out of energy!");
+                ros::spinOnce();
+                ROS_ERROR("Shutting down...");
+                ros::shutdown();
+            }
+
+            // robot has enough energy, explore
+            else if(active_exploration == true)
             {
                 if(backoff_sucessfull == true )
                 {
@@ -872,12 +882,16 @@ public:
                     goal_determined = false;
                 }
             }
-            else{ // go recharging
+
+            // robot has low energy, go recharging
+            else{
 
                 ROS_INFO("Traveling home for recharging");
                 navigate_to_goal = move_robot(0, home_point_x, home_point_y);
                 go_charging = true;
             }
+
+            // robot reached home point, start recharging
             if(navigate_to_goal == true && go_charging == true)
             {
                 exploration->calculate_travel_path(home_point_x, home_point_y);
@@ -886,6 +900,7 @@ public:
                 go_charging = false;
             }
 
+            // robot reached frontier
             else if(navigate_to_goal == true && goal_determined == true)
             {
 
@@ -896,6 +911,8 @@ public:
                 ROS_DEBUG("Stored Visited frontier");
 
             }
+
+            // robot could not reach frontier
             else if(navigate_to_goal == false && goal_determined == true)
             {
                 ROS_DEBUG("Storeing unreachable...");
