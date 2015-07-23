@@ -933,7 +933,7 @@ public:
         void map_info()
         {       
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << "time,exploration_travel_path_global,global_map_progress,battery_state,recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
+            fs_csv << "time,exploration_travel_path_global,available_distance,global_map_progress,battery_state,recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
             fs_csv.close();
             
             while(ros::ok() && exploration_finished != true)
@@ -957,7 +957,7 @@ public:
                 battery_charge_temp = battery_charge;
 
                 fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << map_progress.global_freespace << "," << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
+                fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << available_distance << "," << map_progress.global_freespace << "," << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
                 fs_csv.close();
 
                 costmap_mutex.unlock();    
@@ -1105,6 +1105,7 @@ public:
             fs << "global costmap iterations               = " << global_costmap_iteration << std::endl;
             fs << "number of recharges                     = " << recharge_cycles << std::endl;
             fs << "energy_consumption                      = " << energy_consumption << std::endl;
+            fs << "available_distance                      = " << available_distance << std::endl;
             
 	    double param_double;
         int param_int;
