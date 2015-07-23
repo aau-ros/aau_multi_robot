@@ -55,7 +55,7 @@ public:
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
         counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),active_exploration(true),battery_charge_percent(100),battery_charge_diff(0), recharge_cycles(0), energy_above_th(true),
-        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
+        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true),travel_home(false), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -254,6 +254,7 @@ public:
         {
             active_exploration = true;
             one_time = true;
+            travel_home = false;
         }
         battery_charge_percent = (int) msg->percent;
     }
@@ -277,10 +278,13 @@ public:
                            if((battery_charge_percent > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
                            {
                                 active_exploration = true;
+                                travel_home = false;
+
                            }
                            if(demonstration == "true_val" && battery_charge_percent == (old_battery + consumed_energy + 2))
                            {
                                 active_exploration = true;
+                                travel_home = false;
                            }
                        }
                   }
@@ -957,7 +961,8 @@ public:
                                         goal_determined = false;
                                     }
                                 }else{
-
+                                    if(travel_home == false){
+                                        travel_home = true;
                                     navigate_to_goal = move_robot(0, home_point_x, home_point_y);
                                     if(one_time){
                                         ROS_INFO("Traveling home for recharging");
@@ -986,6 +991,7 @@ public:
                                                    ROS_INFO("Action did not finish before the time out.");
 */
                                         ROS_INFO("Auto docking now!!");
+                                    }
                                     }
                                 }
 
@@ -1935,7 +1941,7 @@ public:
         double robot_home_position_x, robot_home_position_y, costmap_resolution;
         bool Simulation, goal_determined, first_run;
         bool robot_prefix_empty;
-        bool one_time;
+        bool one_time,travel_home;
         bool active_exploration, energy_above_th, simulate;
         int cut_off_voltage;
         int max_distance,consumed_energy, old_battery;
