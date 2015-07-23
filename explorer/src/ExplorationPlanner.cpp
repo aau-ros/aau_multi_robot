@@ -4143,9 +4143,6 @@ bool ExplorationPlanner::determine_goal_staying_alive(int strategy, double avail
     {
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
-            //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
-            if(i>8)
-                return false;
 
             if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
             {
@@ -4606,13 +4603,23 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
         {
             double d_gbe, suc_fct;
             int w1 = 10, w2 = 15, w3 = 3, w4 = 9;
-            for (int i = frontiers.size(); i >= 0; i--) {
-                if(cnt>8)
+            for (int i = frontiers.size(); i >= frontiers.size()-10; i--)
+            {
+
+
+                if(frontiers.size()-i >= frontiers.size())
+                {
                     break;
-                cnt++;
-                for (int j = 0; j < frontiers.size()-1; j++) {
-                    if(j>8)
-                        break;
+                }
+                else
+                {
+                    for (int j = 0; j < 10-1; j++)
+                    {
+                        if(j >= frontiers.size())
+                        {
+                            break;
+                        }else
+                        {
                     /*
                     Successor Function
                         f = w1 · d_g + w2 · theta + w3 · d_gb + w4 · d_gbe
@@ -4670,6 +4677,9 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
                     }
                 }
             }
+                }
+            }
+            ROS_INFO("counter variable: %d",cnt);
             cnt = 0;
             x_last = robotPose.getOrigin().getX();
             y_last = robotPose.getOrigin().getY();
