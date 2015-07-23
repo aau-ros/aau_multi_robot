@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
          * to avoid that the robot returns too early to the home point for recharging.
          */
         if(moving_time < 30){
-            moving_percentage = 1;
+            moving_percentage = 0.25;
         }
         else{
             moving_percentage = moving_time / (standing_time+moving_time);
