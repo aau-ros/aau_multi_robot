@@ -272,6 +272,11 @@ public:
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
                             battery_charge_percent = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                            if(demonstration == "true_val" && battery_charge_percent == (old_battery + 3))
+                            {
+                                 active_exploration = true;
+                                 travel_home = false;
+                            }
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
                        {
@@ -280,11 +285,6 @@ public:
                                 active_exploration = true;
                                 travel_home = false;
 
-                           }
-                           if(demonstration == "true_val" && battery_charge_percent == (old_battery + consumed_energy + 2))
-                           {
-                                active_exploration = true;
-                                travel_home = false;
                            }
                        }
                   }
@@ -963,7 +963,8 @@ public:
                                 }else{
                                     if(travel_home == false){
                                         travel_home = true;
-                                    navigate_to_goal = move_robot(0, home_point_x, home_point_y);
+                                    navigate_to_goal = move_robot(0, home_point_x, home_point_y);               
+                                    old_battery = battery_charge_percent;
                                     if(one_time){
                                         ROS_INFO("Traveling home for recharging");
                                         publisher_re.publish(msg);
@@ -1851,7 +1852,6 @@ public:
 
             if(cnt == 0)
             {
-                old_battery = battery_charge_percent;
                 battery_charge_temp = battery_charge_percent;
                 x_temp = robotPose.getOrigin().getX();
                 y_temp = robotPose.getOrigin().getY();

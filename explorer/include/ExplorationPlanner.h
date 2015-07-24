@@ -162,7 +162,6 @@ namespace explorationPlanner
             std::string trajectory_strategy;
             bool first_run, first_negotiation_run;
             bool start_thr_auction;
-	    int cnt;
 
             int number_of_auction_runs;
             int cluster_id, cluster_cells_seq_number;

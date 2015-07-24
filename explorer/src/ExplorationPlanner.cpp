@@ -54,7 +54,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 				0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(
 				0), num_map_cells_(0), initialized_(false), last_mode_(
 				FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(
-        0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), cnt(0), p_plan_in_unknown_(
+        0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), p_plan_in_unknown_(
 				true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(
 				0), inflated(0), lethal(0), free(0), threshold_free(127) 
 				, threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), 
@@ -4679,8 +4679,6 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
             }
                 }
             }
-            ROS_INFO("counter variable: %d",cnt);
-            cnt = 0;
             x_last = robotPose.getOrigin().getX();
             y_last = robotPose.getOrigin().getY();
         } else
