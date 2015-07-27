@@ -720,7 +720,7 @@ public:
                 exploration->sort_distance(energy_above_th);
                 while(true)
                 {
-                    goal_determined = exploration->determine_goal_staying_alive(1, available_distance, &final_goal, count, &robot_str, -1);
+                    goal_determined = exploration->determine_goal_staying_alive(1, 1, available_distance, &final_goal, count, &robot_str, -1);
                     ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
                     if(goal_determined == false)
                     {
@@ -769,7 +769,7 @@ public:
                     final_goal.clear();
 
                     // look for a goal cluster that satisfies the staying alive criterea
-                    goal_determined = exploration->determine_goal_staying_alive(2, available_distance, &final_goal, count, &robot_str, cluster_element);
+                    goal_determined = exploration->determine_goal_staying_alive(2, 1, available_distance, &final_goal, count, &robot_str, cluster_element);
 
                     if(goal_determined == false)
                     {
@@ -1554,15 +1554,14 @@ public:
 
 		homePoint.header.seq = home_point_message++;
 		homePoint.header.stamp = ros::Time::now();
-                homePoint.header.frame_id = move_base_frame; //"map";
+        homePoint.header.frame_id = move_base_frame; //"map";
 		home_point_x = robotPose.getOrigin().getX();
 		home_point_y = robotPose.getOrigin().getY();
 		homePoint.point.x = home_point_x;
 		homePoint.point.y = home_point_y;
 
 		ros::NodeHandle nh("homePoint");
-		pub_home_Point = nh.advertise < geometry_msgs::PointStamped
-				> ("homePoint", 100, true);
+		pub_home_Point = nh.advertise < geometry_msgs::PointStamped > ("homePoint", 100, true);
 		pub_home_Point.publish < geometry_msgs::PointStamped > (homePoint);
 
 	}

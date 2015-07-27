@@ -213,7 +213,7 @@ namespace explorationPlanner
             void clear_Visualized_Cluster_Cells(std::vector<int> ids);
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void findFrontiers();
-            bool determine_goal_staying_alive(int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
+            bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool check_efficiency_of_goal(double x, double y);
             void clearVisitedAndSeenFrontiersFromClusters();
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);
