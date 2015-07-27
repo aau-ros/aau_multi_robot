@@ -272,10 +272,15 @@ public:
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
                             battery_charge_percent = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
-                            if(demonstration == "true_val" && battery_charge_percent == (old_battery + 3))
+                            if(demonstration == "true_val" && battery_charge_percent >= (old_battery + consumed_energy + 3))
                             {
                                  active_exploration = true;
                                  travel_home = false;
+                                 geometry_msgs::Twist twi;
+                                 ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/Rosaria/cmd_vel",3);
+                                 twi.angular.x = -0.75;
+                                 twi_publisher.publish(twi);
+
                             }
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
@@ -326,7 +331,6 @@ public:
                 ROS_INFO("demonstrate: \"%s\"",demonstration.c_str());
                 std::string env_var;
                 ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
-                ROS_INFO("Environment variable: %s",env_var.c_str());
                 ROS_INFO("max_distance: %d",max_distance);
 
                 // check if we are on a real robot or if we are in simulation
@@ -964,7 +968,7 @@ public:
                                     if(travel_home == false){
                                         travel_home = true;
                                     navigate_to_goal = move_robot(0, home_point_x, home_point_y);               
-                                    old_battery = battery_charge_percent;
+
                                     if(one_time){
                                         ROS_INFO("Traveling home for recharging");
                                         publisher_re.publish(msg);
@@ -972,16 +976,18 @@ public:
                                     }
                                     if(demonstration == "true_val")
                                     {
-/*              uncomment when using for demonstration
-                                        actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("AutoDockingAction", true);
-                                               ac.waitForServer();
-                                               kobuki_msgs::AutoDockingGoal goal;
-                                               ROS_INFO("Sending auto docking signal.");
-                                               ac.sendGoal(goal);
-                                                ROS_INFO("Wait 30 seconds for result.");
+/*                                      uncomment when using for demonstration
+
+                                        ros::Duration(20).sleep();
+                                        actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("dock_drive_action", true);
+                                        ac.waitForServer();
+                                        kobuki_msgs::AutoDockingGoal goal;
+                                        ROS_INFO("Sending auto docking signal.");
+                                        ac.sendGoal(goal);
+                                        ROS_INFO("Wait 100 seconds for result.");
 
                                                //wait for the action to return
-                                               bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+                                               bool finished_before_timeout = ac.waitForResult(ros::Duration(100.0));
 
                                                if (finished_before_timeout)
                                                {
@@ -1846,17 +1852,18 @@ public:
             //only for demonstration purposes
             if(demonstration == "true_val" && energy_consumption_demo > 2){
                 active_exploration = false;
-                consumed_energy = energy_consumption_demo;
+
                 ROS_INFO("Traveling home for demonstration.");
             }
 
             if(cnt == 0)
             {
+                old_battery = battery_charge_percent;
                 battery_charge_temp = battery_charge_percent;
                 x_temp = robotPose.getOrigin().getX();
                 y_temp = robotPose.getOrigin().getY();
             }else{
-
+                consumed_energy = energy_consumption_demo;
                 if(battery_charge_temp>=battery_charge_percent)
                     battery_charge_diff = battery_charge_temp - battery_charge_percent;
                 //calculate the distance, that we are already traveled
@@ -1870,7 +1877,8 @@ public:
 
 
             energy_consumption += battery_charge_diff;
-            energy_consumption_demo += battery_charge_diff;
+            if(battery_charge_diff < 5)
+                energy_consumption_demo += battery_charge_diff;
             traveled_distance += sqrt(temp_distance);
             ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d traveled_distance: %f"
                  , cnt, battery_charge_diff,energy_consumption, traveled_distance );
