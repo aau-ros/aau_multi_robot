@@ -12,7 +12,7 @@
 //#define DEA_OPT_PARTIAL_MERGE
 //#define DEBUG
 MapMerger::MapMerger()
-{    
+{
     pos_seq_my = 0;
     pos_pub_other = new std::vector<ros::Publisher>();
     pos_array_other = new std::vector<visualization_msgs::MarkerArray>();
@@ -1095,7 +1095,7 @@ void MapMerger::start()
             send_position = nodeHandle->createTimer(ros::Duration(seconds_send_position),&MapMerger::callback_send_position,this);
         list_of_positions_publisher = nodeHandle->advertise<adhoc_communication::MmListOfPoints>(robot_prefix+"/"+"all_positions",3);
     }
-  
+
     ROS_INFO("Init Subscriber");
     pub = nodeHandle->advertise<nav_msgs::OccupancyGrid>("global_map",3);
     my_pos_pub = nodeHandle->advertise<visualization_msgs::MarkerArray>("position_"+robot_name,3);
@@ -1191,6 +1191,17 @@ cv::Mat MapMerger::mapToMat(const nav_msgs::OccupancyGrid *map)
     // transform the map in the same way the map_saver component does
     for (size_t i=0; i < map->info.height*map->info.width; i++)
     {
+        // this is just a backup, it should not actually occur
+        if (i > map->data.size())
+        {
+            ROS_ERROR("Tried to access map->data(%zu) but map->data.size() is %zu", i, map->data.size());
+            break;
+        }
+        if (i > im.cols*im.rows)
+        {
+            ROS_ERROR("Tried to access im.data(%zu) but im.data.size() is %d", i, im.cols*im.rows);
+            break;
+        }
         if (map->data.at(i) == 0)
         {
             im.data[i] = 254;
@@ -1699,7 +1710,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
             ROS_WARN("No global map. Skipping save global map.");
         else
         {
-            // log the global map 
+            // log the global map
             ROS_DEBUG("Storing global file...");
             file = full_log_path + std::string("/global.pgm");
             cv::Mat glo = mapToMat(global_map);
@@ -1758,7 +1769,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         }
     }
 
-    
+
     if(req.log & LOG_GLOBAL_MAP_PROGRESS || req.log & LOG_LOCAL_MAP_PROGRESS)
     {
         // save progress to file
