@@ -1,6 +1,8 @@
-<?xml version="1.0"?> 
+<?xml version="1.0"?>
 <launch>
-    <node pkg="battery_simulation" type="ChargeSignal" name="ChargeSignal" output="screen">
+    <arg name="output" default="log"/>
+    
+    <node pkg="battery_simulation" type="ChargeSignal" name="ChargeSignal" output="$(arg output)">
 	<rosparam file="$(find explorer)/param/simulation_energy_params.yaml" command="load" />
     </node>
 </launch>
