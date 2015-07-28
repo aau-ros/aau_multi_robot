@@ -865,7 +865,7 @@ int ExplorationPlanner::trajectory_plan(double target_x, double target_y)
 }
 
 /**
- * Compute the length of the trajectory from a given start to a given target
+ * Compute the length of the trajectory from a given start to a given target in number of grid cells
  */
 int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double target_x, double target_y)
 {
@@ -3852,7 +3852,8 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
 
             if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
             {
-                double total_distance = 0;
+                double distance;
+                double total_distance;
                 if(strategy == 1){
                     // distance to next frontier
                     double x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
@@ -3864,19 +3865,30 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                 }
                 else if(strategy == 2){
                     // distance to next frontier
-                    total_distance += trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+                    total_distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+                    if(total_distance < 0){
+                        ROS_ERROR("Failed to compute distance!");
+                        continue;
+                    }
                     // distance from frontier to home base
-                    total_distance += trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, robot_home_x, robot_home_y);
+                    distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, robot_home_x, robot_home_y);
+                    if(distance < 0){
+                        ROS_ERROR("Failed to compute distance!");
+                        continue;
+                    }
+                    total_distance += distance;
+                    // convert from cells to meters
+                    total_distance *= costmap_ros_->getCostmap()->getResolution();
                 }
                 else{
                     ROS_ERROR("Wrong strategy, cannot compute distance to goal!");
                     return false;
                 }
-                ROS_INFO("distance to frontier and then home: %f",total_distance);
+                ROS_INFO("Distance to frontier and then home: %.2f",total_distance);
                 if(available_distance > total_distance)
                 {
                     ROS_INFO("------------------------------------------------------------------");
-                    ROS_INFO("Determined frontier with ID: %d   at x: %f     y: %f   detected by Robot %d", frontiers.at(i).id, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, frontiers.at(i).detected_by_robot);
+                    ROS_INFO("Determined frontier with ID: %d   at x: %.2f     y: %.2f   detected by Robot %d", frontiers.at(i).id, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, frontiers.at(i).detected_by_robot);
 
                     final_goal->push_back(frontiers.at(i).x_coordinate);
                     final_goal->push_back(frontiers.at(i).y_coordinate);
@@ -3886,6 +3898,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
+                    ROS_ERROR("No frontier in energetic range %.2f, going home for recharging", available_distance);
                     return false;
                 }
             }
@@ -3931,6 +3944,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
             {
                 if (check_efficiency_of_goal(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate) == true)
                 {
+                    double distance;
                     double total_distance;
                     if(strategy == 1){
                         // distance to cluster
@@ -3944,9 +3958,20 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     }
                     else if(strategy == 2){
                         // distance to cluster
-                        total_distance += trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate);
+                        total_distance = trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate);
+                        if(total_distance < 0){
+                            ROS_ERROR("Failed to compute distance!");
+                            continue;
+                        }
                         // distance from cluster to home base
-                        total_distance += trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate, robot_home_x, robot_home_y);
+                        distance = trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate, robot_home_x, robot_home_y);
+                        if(distance < 0){
+                            ROS_ERROR("Failed to compute distance!");
+                            continue;
+                        }
+                        total_distance += distance;
+                        // convert from cells to meters
+                        total_distance *= costmap_ros_->getCostmap()->getResolution();
                     }
                     else{
                         ROS_ERROR("Wrong strategy, cannot compute distance to goal!");
