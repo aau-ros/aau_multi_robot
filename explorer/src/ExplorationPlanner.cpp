@@ -4167,10 +4167,10 @@ bool ExplorationPlanner::determine_goal_staying_alive(int strategy, double avail
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
-                    return false;
                 }
             }
         }
+         return false;
     }
 
     // look for a CLUSTER as goal
@@ -4603,7 +4603,7 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
         {
             double d_gbe, suc_fct;
             int w1 = 10, w2 = 15, w3 = 3, w4 = 9;
-            for (int i = frontiers.size(); i >= frontiers.size()-10; i--)
+            for (int i = frontiers.size(); i >= frontiers.size()-4; i--)
             {
 
 
@@ -4613,7 +4613,7 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
                 }
                 else
                 {
-                    for (int j = 0; j < 10-1; j++)
+                    for (int j = 0; j < 4-1; j++)
                     {
                         if(j >= frontiers.size())
                         {

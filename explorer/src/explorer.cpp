@@ -55,7 +55,7 @@ public:
         counter(0),cnt(0), rotation_counter(0), nh("~"), exploration_finished(false), number_of_robots(1), accessing_cluster(0), cluster_element_size(0),
         cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterattions(0), global_iterations_counter(0), 
         counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false),active_exploration(true),battery_charge_percent(100),battery_charge_diff(0), recharge_cycles(0), energy_above_th(true),
-        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true),travel_home(false), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
+        cut_off_voltage(11), traveled_distance(0.01),first_run(true),one_time(true),travel_home(false),old_battery(100),consumed_energy(0), energy_consumption(0),energy_consumption_demo(0), simulate(true), robot_id(0){
 
         
                 nh.param("frontier_selection",frontier_selection,1); 
@@ -254,7 +254,6 @@ public:
         {
             active_exploration = true;
             one_time = true;
-            travel_home = false;
         }
         battery_charge_percent = (int) msg->percent;
     }
@@ -272,15 +271,16 @@ public:
                        if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
                        {
                             battery_charge_percent = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
-                            if(demonstration == "true_val" && battery_charge_percent >= (old_battery + consumed_energy + 3))
+                            if(demonstration == "true_val" && battery_charge_percent >= (old_battery + consumed_energy + 22))
                             {
+                                geometry_msgs::Twist twi;
+                                ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/cmd_vel",3);
+                                twi.linear.x = -0.75;
+                                twi_publisher.publish(twi);
+                                ros::Duration(1).sleep();
+                                twi_publisher.publish(twi);
                                  active_exploration = true;
-                                 travel_home = false;
-                                 geometry_msgs::Twist twi;
-                                 ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/Rosaria/cmd_vel",3);
-                                 twi.angular.x = -0.75;
-                                 twi_publisher.publish(twi);
-
+                                 energy_consumption_demo = 0;
                             }
                        }
                        if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
@@ -288,7 +288,6 @@ public:
                            if((battery_charge_percent > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
                            {
                                 active_exploration = true;
-                                travel_home = false;
 
                            }
                        }
@@ -947,6 +946,10 @@ public:
                                 ROS_INFO("Battery voltage %d", active_exploration);
                                 if(active_exploration == true)
                                 {
+                                    if(one_time){
+                                     navigate_to_goal = move_robot(0, home_point_x, home_point_y);
+                                        one_time = false;
+                                    }
                                     if(backoff_sucessfull == true )
                                     {
                                         if(OPERATE_WITH_GOAL_BACKOFF == true)
@@ -957,6 +960,7 @@ public:
                                         {
                                             ROS_INFO("Doing navigation to goal");
                                             navigate_to_goal = navigate(final_goal);
+                                            travel_home = false;
                                         }
                                     }
                                     else if(backoff_sucessfull == false && goal_determined == false)
@@ -964,6 +968,7 @@ public:
                                         navigate_to_goal = navigate(final_goal);
                                         goal_determined = false;
                                     }
+
                                 }else{
                                     if(travel_home == false){
                                         travel_home = true;
@@ -978,7 +983,7 @@ public:
                                     {
 /*                                      uncomment when using for demonstration
 
-                                        ros::Duration(20).sleep();
+                                        ros::Duration(10).sleep();
                                         actionlib::SimpleActionClient<kobuki_msgs::AutoDockingAction> ac("dock_drive_action", true);
                                         ac.waitForServer();
                                         kobuki_msgs::AutoDockingGoal goal;
@@ -994,10 +999,9 @@ public:
                                                    actionlib::SimpleClientGoalState state = ac.getState();
                                                    ROS_INFO("Action finished: %s",state.toString().c_str());
                                                }
-                                               else
+                                               else5)
                                                    ROS_INFO("Action did not finish before the time out.");
-*/
-                                        ROS_INFO("Auto docking now!!");
+*/                                  
                                     }
                                     }
                                 }
@@ -1849,12 +1853,7 @@ public:
 
         if(active_exploration == true)
         {
-            //only for demonstration purposes
-            if(demonstration == "true_val" && energy_consumption_demo > 2){
-                active_exploration = false;
 
-                ROS_INFO("Traveling home for demonstration.");
-            }
 
             if(cnt == 0)
             {
@@ -1863,7 +1862,7 @@ public:
                 x_temp = robotPose.getOrigin().getX();
                 y_temp = robotPose.getOrigin().getY();
             }else{
-                consumed_energy = energy_consumption_demo;
+
                 if(battery_charge_temp>=battery_charge_percent)
                     battery_charge_diff = battery_charge_temp - battery_charge_percent;
                 //calculate the distance, that we are already traveled
@@ -1883,6 +1882,13 @@ public:
             ROS_INFO("count: %d energy consumption for 1 iteration: %d energy consumption: %d traveled_distance: %f"
                  , cnt, battery_charge_diff,energy_consumption, traveled_distance );
             cnt++;
+            consumed_energy = energy_consumption_demo;
+            //only for demonstration purposes
+            if(demonstration == "true_val" && energy_consumption_demo > 2){
+                active_exploration = false;
+
+                ROS_INFO("Traveling home for demonstration.");
+            }
 
             if(cnt<7){
                 if(first_run){
