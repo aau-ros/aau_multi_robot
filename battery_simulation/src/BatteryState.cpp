@@ -6,6 +6,7 @@ of the battery with a simple linear model.
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include "battery_simulation/Battery.h"
+#include "battery_simulation/Charge.h"
 #include "geometry_msgs/Twist.h"
 
 
@@ -17,6 +18,7 @@ double actual_charge;
 double x_linear, z_angular;
 double moving_percentage;
 double avg_speed;
+double full_charge_time;
 bool charging;
 
 battery_simulation::Battery battery_state;
@@ -25,13 +27,15 @@ void charge_starting_callback(const std_msgs::Empty::ConstPtr &msg) {
     charging = true;
 }
 
-void charge_complete_callback(const std_msgs::Empty::ConstPtr &msg) {
-    //When the charging is done we reset the battery state to 100%.
-    ROS_INFO("charging done.");
-    battery_state.percent = 100;
-    battery_state.remaining_distance = avg_speed * moving_percentage * battery_charge/moving_consumption*3600;
-    actual_charge = battery_charge;
-    charging = false;
+void charging_callback(const battery_simulation::Charge::ConstPtr &msg) {
+    if(msg->remaining_time <= 0)
+    {
+        ROS_INFO("Charging done");
+        battery_state.percent = 100;
+        battery_state.remaining_distance = avg_speed * moving_percentage * (float)battery_charge/moving_consumption*3600;
+        actual_charge = battery_charge;
+        charging = false;
+    }
 }
 
 void cmd_callback(const geometry_msgs::Twist &msg){
@@ -46,7 +50,7 @@ int main(int argc, char** argv) {
     ROS_INFO("Battery simulator launching...");
 
     battery_state.percent = 100;
-    battery_state.remaining_distance = avg_speed * battery_charge/moving_consumption*3600;
+    battery_state.remaining_distance = avg_speed * (float)battery_charge/moving_consumption*3600;
 
     double rate = 0.5; // Hz
     double temp;
@@ -59,13 +63,14 @@ int main(int argc, char** argv) {
 
     ros::Publisher battery_pub = n.advertise<battery_simulation::Battery>("battery_state", 1000);
     ros::Subscriber charge1_sub = n.subscribe("going_to_recharge", 1, charge_starting_callback);
-    ros::Subscriber charge2_sub = n.subscribe("charge_complete", 1000, charge_complete_callback);
+    ros::Subscriber charge2_sub = n.subscribe("charging", 1000, charging_callback);
     ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1000, cmd_callback);
 
-    n.getParam("ChargeSignal/energy/battery_charge",avg_speed);
-    n.getParam("ChargeSignal/energy/battery_charge",battery_charge);
-    n.getParam("ChargeSignal/energy/moving_consumption",moving_consumption);
-    n.getParam("ChargeSignal/energy/standing_consumption",standing_consumption);
+    n.getParam("BatteryState/energy/battery_charge",avg_speed);
+    n.getParam("BatteryState/energy/battery_charge",battery_charge);
+    n.getParam("BatteryState/energy/moving_consumption",moving_consumption);
+    n.getParam("BatteryState/energy/standing_consumption",standing_consumption);
+    n.getParam("BatteryState/energy/charge_time",full_charge_time);
 
     actual_charge = battery_charge;
     ros::Rate loop_rate(rate);
@@ -113,6 +118,12 @@ int main(int argc, char** argv) {
             // remaining distance the robot can still travel
             //                                                                                               max time the robot can travel with full battery
             battery_state.remaining_distance = battery_state.percent/100.0 * avg_speed * moving_percentage * (float)battery_charge/moving_consumption*3600;
+
+            int bs = battery_state.percent;
+            if((bs % 10) == 0)
+            {
+                ROS_ERROR("Battery: %d%%  ---  remaining distance: %.2fm", bs, battery_state.remaining_distance);
+            }
         }
 
 		ros::spinOnce();

@@ -3841,6 +3841,22 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
             ROS_ERROR("Failed to get RobotPose");
     }
 
+    // check if robot needs to go home right away
+    int battery_reserve;
+    double battery_reserve_norm;
+    nh.getParam("explorer/energy/battery_reserve",battery_reserve);
+    battery_reserve_norm = (double)battery_reserve / 100 + 1; // reserve distance, just in case
+    if(strategy == 1){
+        double xh = robot_home_x - robotPose.getOrigin().getX();
+        double yh = robot_home_y - robotPose.getOrigin().getY();
+        if(sqrt(xh * xh + yh * yh) * battery_reserve_norm >= available_distance)
+            return false;
+    }
+    else if(strategy == 2){
+        if(trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution() * battery_reserve_norm >= available_distance)
+            return false;
+    }
+
     // look for a FRONTIER as goal
     if (mode == 1)
     {
@@ -3856,12 +3872,12 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                 double total_distance;
                 if(strategy == 1){
                     // distance to next frontier
-                    double x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
-                    double y = frontiers.at(i).y_coordinate -  robotPose.getOrigin().getY();
+                    double x1 = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
+                    double y1 = frontiers.at(i).y_coordinate -  robotPose.getOrigin().getY();
                     // distance from frontier to home base
-                    double x_h = robot_home_x - frontiers.at(i).x_coordinate;
-                    double y_h = robot_home_y -  frontiers.at(i).y_coordinate;
-                    total_distance = sqrt(x * x + y * y) + sqrt(x_h * x_h + y_h * y_h);
+                    double x2 = robot_home_x - frontiers.at(i).x_coordinate;
+                    double y2 = robot_home_y -  frontiers.at(i).y_coordinate;
+                    total_distance = sqrt(x1 * x1 + y1 * y1) + sqrt(x2 * x2 + y2 * y2);
                 }
                 else if(strategy == 2){
                     // distance to next frontier
@@ -3884,6 +3900,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     ROS_ERROR("Wrong strategy, cannot compute distance to goal!");
                     return false;
                 }
+
                 ROS_INFO("Distance to frontier and then home: %.2f",total_distance);
                 if(available_distance > total_distance)
                 {
@@ -3898,7 +3915,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
-                    ROS_ERROR("No frontier in energetic range %.2f, going home for recharging", available_distance);
+                    ROS_ERROR("No frontier in energetic range %.2f, going home (d = %.2f) for recharging", available_distance, trajectory_plan(robot_home_x, robot_home_y)*costmap_ros_->getCostmap()->getResolution());
                     return false;
                 }
             }
@@ -3937,7 +3954,6 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
         int visited_clusters = 0;
         for (int i = 0 + count; i < clusters.size(); i++)
         {
-//                    ROS_INFO("Cluster vector: %d  i: %d ", cluster_vector_position, i);
             i = i+ cluster_vector_position;
             i = i % (clusters.size());
             for (int j = 0; j < clusters.at(i).cluster_element.size(); j++)
@@ -3948,13 +3964,12 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     double total_distance;
                     if(strategy == 1){
                         // distance to cluster
-                        double x = clusters.at(i).cluster_element.at(j).x_coordinate - robotPose.getOrigin().getX();
-                        double y = clusters.at(i).cluster_element.at(j).y_coordinate - robotPose.getOrigin().getY();
+                        double x1 = clusters.at(i).cluster_element.at(j).x_coordinate - robotPose.getOrigin().getX();
+                        double y1 = clusters.at(i).cluster_element.at(j).y_coordinate - robotPose.getOrigin().getY();
                         // distance from cluster to home base
-                        double x_h = robot_home_x - clusters.at(i).cluster_element.at(j).x_coordinate;
-                        double y_h = robot_home_y -  clusters.at(i).cluster_element.at(j).y_coordinate;
-                        total_distance = sqrt(x * x + y * y) + sqrt(x_h * x_h + y_h * y_h);
-                        ROS_INFO("distance to frontier and then home: %f",total_distance);
+                        double x2 = robot_home_x - clusters.at(i).cluster_element.at(j).x_coordinate;
+                        double y2 = robot_home_y -  clusters.at(i).cluster_element.at(j).y_coordinate;
+                        total_distance = sqrt(x1 * x1 + y1 * y1) + sqrt(x2 * x2 + y2 * y2);
                     }
                     else if(strategy == 2){
                         // distance to cluster
@@ -3978,6 +3993,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                         return false;
                     }
 
+                    ROS_INFO("distance to cluster and then home: %f",total_distance);
                     if(available_distance > total_distance)
                     {
                         ROS_INFO("------------------------------------------------------------------");
@@ -4008,7 +4024,8 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
 
             if(visited_clusters == clusters.size())
             {
-                break;
+                ROS_ERROR("No frontier in energetic range %.2f, going home for recharging", available_distance);
+                return false;
             }
         }
     }

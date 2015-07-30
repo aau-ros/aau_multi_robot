@@ -9,15 +9,16 @@ project(battery_simulation)
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
-find_package(catkin REQUIRED COMPONENTS 
-roscpp 
-rospy 
+find_package(catkin REQUIRED COMPONENTS
+roscpp
+rospy
 std_msgs
-message_generation) 
+message_generation)
 
 add_message_files(
   FILES
   Battery.msg
+  Charge.msg
 )
 generate_messages(
   DEPENDENCIES
