@@ -10,7 +10,7 @@
     <param name="use_sim_time"  value="$(arg use_sim_time)"/>
 
     <!-- SIMULATION -->
-    <node if="$(arg use_sim_time)" pkg="explorer" type="explorer" name="explorer" output="$(arg output)">
+    <node if="$(arg use_sim_time)" pkg="explorer" type="explorer" name="explorer" output="$(arg output)" >
         <!-- costmaps -->
         <param name="local_costmap/robot_base_frame" value="$(arg robot_prefix)/base_footprint" />
         <param name="local_costmap/global_frame" value="$(arg robot_prefix)/odom" />
