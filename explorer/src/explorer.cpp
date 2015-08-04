@@ -41,7 +41,7 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer {
 
 public:
-    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(exploring), charge_time(0)
+    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(exploring), charge_time(0), fully_charged(false)
     {
 
         nh.param("frontier_selection",frontier_selection,1);
@@ -209,8 +209,10 @@ public:
         available_distance = msg->remaining_distance;
 
         // set the robot state correctly (in case it is not done by charging_callback)
-        if(available_distance > 0 && charge_time <= 0 && robot_state == charging)
+        if(available_distance > 0 && charge_time <= 0 && robot_state == charging) {
             robot_state = exploring;
+            fully_charged = true;
+        }
 
         // robot is out of energy, exit
         if(available_distance <= 0 && robot_state != charging)
@@ -252,8 +254,10 @@ public:
         {
             ROS_ERROR("Charging done");
             recharge_cycles++;
-            if (available_distance > 0 && robot_state == charging)
+            if (available_distance > 0 && robot_state == charging) {
                 robot_state = exploring;
+                fully_charged = true;
+            }
         }
     }
 
@@ -759,11 +763,12 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
+                        fully_charged = false;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(battery_charge > 95)
+                    else if(fully_charged)
                     {
                         finalize_exploration();
                     }
@@ -794,11 +799,12 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
+                        fully_charged = false;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(battery_charge > 95)
+                    else if(fully_charged)
                     {
                         finalize_exploration();
                     }
@@ -1705,6 +1711,7 @@ public:
         double robot_home_position_x, robot_home_position_y, costmap_resolution;
         bool goal_determined;
         bool robot_prefix_empty;
+        bool fully_charged;
         int battery_charge, battery_charge_temp, energy_consumption, recharge_cycles;
         double old_simulation_time, new_simulation_time;
         double available_distance, charge_time;

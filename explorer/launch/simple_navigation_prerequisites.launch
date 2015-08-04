@@ -3,23 +3,23 @@
 <launch>
 
   <arg name="turtlebot" default="true"/>
-  <arg name="pioneer" default="false"/> 
+  <arg name="pioneer" default="false"/>
   <arg name="simulation" default="false"/>
 
   <param name="/use_sim_time" value="$(arg simulation)"/>
 
   <include file="$(find sound_play)/soundplay_node.launch"/>
-  
-  <!-- ******************************************************************************* --> 
+
+  <!-- ******************************************************************************* -->
   <!-- ********** START THE MINIMAL LAUNCH FILE TO LOAD AL NECESSARY TOPICS ********** -->
   <!-- ******************************************************************************* -->
 
 <group if="$(arg turtlebot)">
   <arg name="base"       value="$(optenv TURTLEBOT_BASE kobuki)"/>  <!-- create, rhoomba -->
-  <arg name="battery"    value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/> 
+  <arg name="battery"    value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/>
   <arg name="stacks"     value="$(optenv TURTLEBOT_STACKS hexagons)"/>  <!-- circles, hexagons -->
   <arg name="3d_sensor"  value="$(optenv TURTLEBOT_3D_SENSOR kinect)"/>  <!-- kinect, asus_xtion_pro -->
-  
+
   <include file="$(find turtlebot_bringup)/launch/includes/_zeroconf.launch"/>
   <include file="$(find turtlebot_bringup)/launch/includes/_robot.launch">
     <arg name="base" value="$(arg base)" />
@@ -41,7 +41,7 @@
 </group>
 
 
-  <!-- ******************************************************************************* --> 
+  <!-- ******************************************************************************* -->
   <!-- ********** START THE 3D SENSOR TO ESTABLISH MAPPING ********** -->
   <!-- ******************************************************************************* -->
 
@@ -52,7 +52,7 @@
     <arg name="depth_processing" value="false" />
   </include>
 </group>
- 
+
   <!-- ******************************************************************************* -->
   <!-- ********** START THE GMAPPING NODE ********** -->
   <!-- ******************************************************************************* -->
@@ -84,7 +84,7 @@
     <param name="temporalUpdate" value="-1.0"/>
     <param name="resampleThreshold" value="0.5"/>
     <param name="particles" value="10"/>
-  
+
     <param name="xmin" value="-8.0"/>
     <param name="ymin" value="-8.0"/>
     <param name="xmax" value="8.0"/>
@@ -130,4 +130,4 @@
 </group>
 
 </launch>
- 
+
