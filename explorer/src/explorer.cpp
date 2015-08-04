@@ -297,14 +297,18 @@ public:
         // if we are in simulation, we start the battery simulator
         if( env_var.compare("turtlebot") == 0)
         {
-            sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
+            //sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
+            sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+            sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
         else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
         {
             // todo: read voltage and convert to percentage
+            sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+            sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
-        else{
-
+        else
+        {
             sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
             sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
