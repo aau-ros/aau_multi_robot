@@ -3858,13 +3858,19 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     }
 
     // look for a FRONTIER as goal
+    int errors = 0;
     if (mode == 1)
     {
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
             //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
-            if(i>8)
+            if(i>8){
+                // if the distances could not be computed, try again using euclidean distances instead
+                if(errors == i && strategy == 2){
+                    return this->determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1);
+                }
                 return false;
+            }
 
             if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
             {
@@ -3884,12 +3890,14 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     total_distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
                     if(total_distance < 0){
                         ROS_ERROR("Failed to compute distance!");
+                        errors++;
                         continue;
                     }
                     // distance from frontier to home base
                     distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, robot_home_x, robot_home_y);
                     if(distance < 0){
                         ROS_ERROR("Failed to compute distance!");
+                        errors++;
                         continue;
                     }
                     total_distance += distance;
@@ -3976,12 +3984,14 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                         total_distance = trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate);
                         if(total_distance < 0){
                             ROS_ERROR("Failed to compute distance!");
+                            errors++;
                             continue;
                         }
                         // distance from cluster to home base
                         distance = trajectory_plan(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate, robot_home_x, robot_home_y);
                         if(distance < 0){
                             ROS_ERROR("Failed to compute distance!");
+                            errors++;
                             continue;
                         }
                         total_distance += distance;
