@@ -27,10 +27,17 @@
 #include <std_msgs/Empty.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 
-boost::mutex costmap_mutex;
+//#define PROFILE
+
+#ifdef PROFILE
+    #include "google/profiler.h"
+    #include "google/heap-profiler.h"
+#endif
 
 #define OPERATE_ON_GLOBAL_MAP true
 #define OPERATE_WITH_GOAL_BACKOFF false
+
+boost::mutex costmap_mutex;
 
 void sleepok(int t, ros::NodeHandle &nh)
 {
@@ -315,6 +322,7 @@ public:
 
 		while (robot_state != finished)
         {
+            ROS_INFO("EXPLORING");
             // do nothing while recharging
             if(robot_state == charging)
             {
@@ -346,6 +354,7 @@ public:
             * Use mutex to lock the critical section (access to the costmap)
             * since rosspin tries to update the costmap continuously
             */
+            ROS_INFO("COSTMAP STUFF");
             costmap_mutex.lock();
 
             exploration->transformToOwnCoordinates_frontiers();
@@ -359,13 +368,14 @@ public:
             exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
+            ROS_INFO("PUBLISHING FRONTIERS");
 
-            exploration->publish_frontier_list();
+            /*exploration->publish_frontier_list();
             exploration->publish_visited_frontier_list();
 
             ros::Duration(1).sleep();
             exploration->publish_frontier_list();
-            exploration->publish_visited_frontier_list();
+            exploration->publish_visited_frontier_list();*/
 
             /*
             * Sleep to ensure that frontiers are exchanged
@@ -755,13 +765,16 @@ public:
                 else if(frontier_selection == 7)
                 {
                     // first sort the frontiers from near to far and then by efficiency
+                    ROS_INFO("SORTING FRONTIERS...");
                     exploration->sort(2);
                     exploration->sort(3);
                     exploration->sort_distance(battery_charge > 50);
+                    ROS_INFO("DONE");
 
                     // look for a frontier as goal
+                    ROS_INFO("DETERMINE GOAL...");
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                    ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
+                    ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
 
                     // found a frontier, go there
                     if(goal_determined == true)
@@ -882,6 +895,7 @@ public:
                 // robot reached frontier
                 else if(robot_state == exploring)
                 {
+                    ROS_INFO("STORING PATH");
                     // compute path length
                     exploration->trajectory_plan_store(exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).x_coordinate, exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).y_coordinate);
 
@@ -900,7 +914,7 @@ public:
                 }
                 else if(robot_state == exploring)
                 {
-                    ROS_DEBUG("Storeing unreachable...");
+                    ROS_INFO("Storing unreachable...");
                     exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
                     ROS_DEBUG("Stored unreachable frontier");
                 }
@@ -908,6 +922,8 @@ public:
 
 			ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
+
+            ROS_INFO("DONE EXPLORING");
 		}
 	}
 
@@ -936,7 +952,7 @@ public:
         void map_info()
         {
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << "time,exploration_travel_path_global,available_distance,global_map_progress,locbal_map_progress,battery_state,recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
+            fs_csv << "#time,exploration_travel_path_global,available_distance,global_map_progress,locbal_map_progress,battery_state,recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
             fs_csv.close();
 
             while(ros::ok() && robot_state != finished)
@@ -1769,7 +1785,14 @@ public:
         bool pioneer;
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
+#ifdef PROFILE
+    const char  fname[3] = "TS";
+    ProfilerStart(fname);
+    HeapProfilerStart(fname);
+#endif
+
 	/*
 	 * ROS::init() function needs argc and argv to perform
 	 * any argument and remapping that is provided by the
@@ -1814,6 +1837,11 @@ int main(int argc, char **argv) {
     thr_map.interrupt();
     thr_explore.join();
     thr_map.join();
+
+#ifdef PROFILE
+    HeapProfilerStop();
+    ProfilerStop();
+#endif
 
     return 0;
 }
