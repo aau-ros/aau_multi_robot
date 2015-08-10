@@ -31,13 +31,12 @@
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
 
-#define STRAIGHT_COST 100
-#define MAX_DISTANCE 2000
-#define MAX_GOAL_RANGE 0.2 //0.8
-#define MINIMAL_FRONTIER_RANGE 0.2
-#define INNER_DISTANCE 5
-#define MAX_NEIGHBOR_DIST 1
-#define CLUSTER_MERGING_DIST 0.8 //3
+#define MAX_DISTANCE 2000           // max distance to starting point
+#define MAX_GOAL_RANGE 0.7          // min distance between frontiers during search [meters]
+#define MINIMAL_FRONTIER_RANGE 0.7  // min distance between frontiers during selection [meters]
+#define INNER_DISTANCE 8            // radius around backoff goal point without obstacles [cells]
+#define MAX_NEIGHBOR_DIST 1         // max distance between frontiers within a cluster
+#define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 
 using namespace explorationPlanner;
 
@@ -2041,6 +2040,7 @@ int ExplorationPlanner::checkClustersID(adhoc_communication::ExpCluster cluster_
 
 void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
+    // TODO: Allow only frontiers that are not too close to walls
 
 //    ROS_ERROR("FRONTIER RECEIVED!!!!!!!!!!!!!!!!!!!!!!!!");
     adhoc_communication::ExpFrontierElement frontier_element;
@@ -2195,7 +2195,7 @@ bool ExplorationPlanner::publish_visited_frontier_list()
     publish_subscribe_mutex.unlock();
 }
 
-/*
+/**
  * Check if the next goal is efficient enough to steer the robot to it.
  * If it is a goal, which has previously be seen, it is not required
  * to visit this goal again.
@@ -2204,16 +2204,15 @@ bool ExplorationPlanner::publish_visited_frontier_list()
  * are valid. (Calculation of coordinates in the costmap often
  * produce very big values which are miss-interpretations)
  */
-bool ExplorationPlanner::check_efficiency_of_goal(double x, double y) {
+bool ExplorationPlanner::check_efficiency_of_goal(double x, double y)
+{
+    double diff_home_x = visited_frontiers.at(0).x_coordinate - x;
+    double diff_home_y = visited_frontiers.at(0).y_coordinate - y;
 
-//    ROS_INFO("Check efficiency");
-	double diff_home_x = visited_frontiers.at(0).x_coordinate - x;
-	double diff_home_y = visited_frontiers.at(0).y_coordinate - y;
-
-	if (fabs(diff_home_x) <= MAX_DISTANCE && fabs(diff_home_y) <= MAX_DISTANCE)
+    if (fabs(diff_home_x) <= MAX_DISTANCE && fabs(diff_home_y) <= MAX_DISTANCE)
     {
-		for (int i = 0; i < visited_frontiers.size(); i++)
-		{
+        for (int i = 1; i < visited_frontiers.size(); i++)
+        {
             /*
              * Calculate the distance between all previously seen goals and the new
              * found frontier!!
@@ -2225,9 +2224,9 @@ bool ExplorationPlanner::check_efficiency_of_goal(double x, double y) {
                 ROS_DEBUG("x: %f  y: %f too close to visited at x: %f   y: %f   dif_x: %f   dif_y: %f", x, y, visited_frontiers.at(i).x_coordinate, visited_frontiers.at(i).y_coordinate, diff_x, diff_y);
                 return false;
             }
-		}
+        }
         for (int i = 0; i < unreachable_frontiers.size(); i++)
-		{
+        {
             /*
              * Calculate the distance between all previously seen goals and the new
              * found frontier!!
@@ -2239,14 +2238,14 @@ bool ExplorationPlanner::check_efficiency_of_goal(double x, double y) {
                 ROS_DEBUG("x: %f  y: %f too close to unreachable at x: %f   y: %f   dif_x: %f   dif_y: %f", x, y, unreachable_frontiers.at(i).x_coordinate, unreachable_frontiers.at(i).y_coordinate, diff_x, diff_y);
                 return false;
             }
-		}
-		return true;
-	}
-	else
-	{
+        }
+        return true;
+    }
+    else
+    {
         ROS_WARN("OUT OF HOME RANGE");
         return false;
-	}
+    }
 }
 
 void ExplorationPlanner::clearVisitedAndSeenFrontiersFromClusters()
@@ -2543,37 +2542,32 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
 
             }
         }
-
-//        ROS_INFO("Clearing %lu frontiers", goals_to_clear.size());
-//        for(int i= 0; i< goals_to_clear.size(); i++)
-//        {
-//    //        ROS_DEBUG("Frontier with ID: %d already seen and therefore deleted", goals_to_clear.at(i));
-//            removeStoredFrontier(goals_to_clear.at(i));
-//        }
     }
 }
 
+/**
+ * Find a backoff point in the neighborhood of (x,y) that is surrounded by only free space cells.
+ * The backoff point must be clear of obstacles up to a distance of INNER_DISTANCE.
+ * The neighborhood of (x,y) consists of 40 points surrounding (x,y).
+ */
 bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costmap2DROS *global_costmap, std::vector<double> *new_goal)
 {
     unsigned int mx, my, new_mx, new_my, inner_mx, inner_my;
     double wx, wy;
     std::vector<int> neighbours, inner_neighbours;
 
-//    this->costmap_global_ros_ = global_costmap;
-//    costmap_global_ros_->getCostmapCopy(costmap_global_);
-//    costmap_global_ = costmap_global_ros_;
-
     if(!global_costmap->getCostmap()->worldToMap(x,y,mx,my))
     {
         ROS_ERROR("Cannot convert coordinates successfully.");
     }
-//    ROS_DEBUG("Map coordinates mx: %d  my: %d",mx,my);
+    ROS_DEBUG("Map coordinates mx: %d  my: %d",mx,my);
+
 
     neighbours = getMapNeighbours(mx, my, 40);
-//    ROS_DEBUG("Got neighbours");
+    ROS_DEBUG("Got neighbours");
     for (int j = 0; j< neighbours.size()/2; j++)
     {
-//        ROS_DEBUG("Get neighbours %d and %d",j*2,j*2+1);
+        ROS_DEBUG("Get neighbours %d and %d",j*2,j*2+1);
         new_mx = neighbours.at(j*2);
         new_my = neighbours.at(j*2+1);
 
@@ -2586,7 +2580,7 @@ bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costma
             inner_neighbours = getMapNeighbours(new_mx, new_my, INNER_DISTANCE);
             for (int i = 0; i< inner_neighbours.size()/2; i++)
             {
-//                ROS_DEBUG("Get inner neighbours %d and %d",i*2,i*2+1);
+                ROS_DEBUG("Get inner neighbours %d and %d",i*2,i*2+1);
                 inner_mx = inner_neighbours.at(i*2);
                 inner_my = inner_neighbours.at(i*2+1);
 
@@ -2635,134 +2629,136 @@ std::vector<int> ExplorationPlanner::getMapNeighbours(unsigned int point_x, unsi
  * searches the occupancy grid for frontier cells and merges them into one target point per frontier.
  * The returned frontiers are in world coordinates.
  */
-void ExplorationPlanner::findFrontiers() {
+void ExplorationPlanner::findFrontiers()
+{
 
-        ROS_INFO("Find Frontiers");
-        allFrontiers.clear();
-	int select_frontier = 1;
-	std::vector<double> final_goal,start_points;
-	// list of all frontiers in the occupancy grid
+    ROS_INFO("Find Frontiers");
+    allFrontiers.clear();
+    int select_frontier = 1;
+    std::vector<double> final_goal,start_points;
 
-//	// get latest costmap
-//	clearFrontiers();
+    /*
+     * check for all cells in the occupancy grid whether
+     * or not they are frontier cells. If a possible frontier is found, true is
+     * returned
+     */
+    int new_frontier_point = 0;
+    for (unsigned int i = 0; i < num_map_cells_; i++)
+    {
+        int new_frontier_point = isFrontier(i);
+        if (new_frontier_point != 0)
+        {
+            /*
+             * If isFrontier() returns true, the point which is checked to be a frontier
+             * is indeed a frontier.
+             */
 
-	/*
-	 * check for all cells in the occupancy grid whether
-	 * or not they are frontier cells. If a possible frontier is found, true is
-	 * returned
-	 */
-	int new_frontier_point = 0;
-	for (unsigned int i = 0; i < num_map_cells_; i++) {
+            /*
+             * Push back adds data x to a vector.
+             * If a frontier was found, the position of the frontier is stored
+             * in the allFrontiers vector.
+             */
+            allFrontiers.push_back(new_frontier_point);
+        }
+    }
+    ROS_INFO("Found %lu frontier cells which are transformed into frontiers points. Starting transformation...", allFrontiers.size());
 
-		int new_frontier_point = isFrontier(i);
-		if (new_frontier_point != 0) {
-			/*
-			 * If isFrontier() returns true, the point which is checked to be a frontier
-			 * is indeed a frontier.
-			 *
-			 * Push back adds data x to a vector.
-			 * If a frontier was found, the position of the frontier is stored
-			 * in the allFrontiers vector.
-			 */
-			allFrontiers.push_back(new_frontier_point);
-		}
-	}
-        ROS_INFO("Found %lu frontier cells which are transformed into frontiers points. Starting transformation...", allFrontiers.size());
-
-	/*
-	 * Iterate over all frontiers. The frontiers stored in allFrontiers are
-	 * already REAL frontiers and can be approached by the robot to get new
-	 * informations of the environment.
-	 * To limit the amount of frontiers and only pick those which are valuable to
-	 * drive there, check neighboring frontiers and only remember them if they are
-	 * further then a distance of 40cm away from each other, discard otherwise.
-	 * The rest of the frontiers are stored in a goal buffer which contain all
-	 * frontiers within the map. Additionally check whether or not a newly found
-	 * frontier has already been added to the list. If it is already in the list, do
-	 * not make a new entry with the coordinates of the frontier!
-	 */
-	for (unsigned int i = 0; i < allFrontiers.size(); ++i) {
-
-		geometry_msgs::PoseStamped finalFrontier;
-		double wx, wy, wx2, wy2, wx3, wy3;
-		unsigned int mx, my, mx2, my2, mx3, my3;
-		bool result;
+    /*
+     * Iterate over all frontiers. The frontiers stored in allFrontiers are
+     * already REAL frontiers and can be approached by the robot to get new
+     * informations of the environment.
+     * To limit the amount of frontiers and only pick those which are valuable to
+     * drive there. The rest of the frontiers are stored in a goal buffer which contain all
+     * frontiers within the map. Additionally check whether or not a newly found
+     * frontier has already been added to the list. If it is already in the list, do
+     * not make a new entry with the coordinates of the frontier!
+     */
+    for (unsigned int i = 0; i < allFrontiers.size(); ++i)
+    {
+        geometry_msgs::PoseStamped finalFrontier;
+        double wx, wy, wx2, wy2, wx3, wy3;
+        unsigned int mx, my, mx2, my2, mx3, my3;
+        bool result;
 
 
-		costmap_ros_->getCostmap()->indexToCells(allFrontiers.at(i), mx, my);
-		costmap_ros_->getCostmap()->mapToWorld(mx, my, wx, wy);
+        costmap_ros_->getCostmap()->indexToCells(allFrontiers.at(i), mx, my);
+        costmap_ros_->getCostmap()->mapToWorld(mx, my, wx, wy);
 
-//                ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
+        // ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
 
-		if(select_frontier == 1)
-		{
-			result = true;
-			for (unsigned int j = 0; j < frontiers.size(); j++)
-			{
-                                if (fabs(wx - frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
-                                {
-					result = false;
+        /*
+         * Check neighboring frontiers and only remember them if they are further
+         * then a distance of MAX_GOAL_RANGE away from each other, discard otherwise.
+         */
+        if(select_frontier == 1)
+        {
+            result = true;
+            for (unsigned int j = 0; j < frontiers.size(); j++)
+            {
+                if (fabs(wx - frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
+                {
+                    result = false;
                     break;
-				}
-			}
-			if (result == true)
-			{
-				storeFrontier(wx,wy,robot_name,robot_str,-1);
-			}
-		}
-		else if(select_frontier == 2)
-		{
-			std::vector<int> neighbour_index;
+                }
+            }
+            if (result == true)
+            {
+                storeFrontier(wx,wy,robot_name,robot_str,-1);
+            }
+        }
+        else if(select_frontier == 2)
+        {
+            std::vector<int> neighbour_index;
 
-			for (unsigned int j = 0; j < allFrontiers.size(); ++j)
-			{
-				costmap_ros_->getCostmap()->indexToCells(allFrontiers[j], mx2, my2);
-				costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
+            for (unsigned int j = 0; j < allFrontiers.size(); ++j)
+            {
+                costmap_ros_->getCostmap()->indexToCells(allFrontiers[j], mx2, my2);
+                costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
 
-				if (fabs(wx - wx2) <= MINIMAL_FRONTIER_RANGE && fabs(wy - wy2) <= MINIMAL_FRONTIER_RANGE && fabs(wx - wx2) != 0 && fabs(wy - wy2) != 0)
-				{
-					neighbour_index.push_back(allFrontiers[j]);
-				}
-			}
+                if (fabs(wx - wx2) <= MINIMAL_FRONTIER_RANGE && fabs(wy - wy2) <= MINIMAL_FRONTIER_RANGE && fabs(wx - wx2) != 0 && fabs(wy - wy2) != 0)
+                {
+                    neighbour_index.push_back(allFrontiers[j]);
+                }
+            }
 
 
-			for (unsigned int n = 0; n < neighbour_index.size(); ++n)
-			{
-				costmap_ros_->getCostmap()->indexToCells(neighbour_index[n], mx2, my2);
-				costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
+            for (unsigned int n = 0; n < neighbour_index.size(); ++n)
+            {
+                costmap_ros_->getCostmap()->indexToCells(neighbour_index[n], mx2, my2);
+                costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
 
-				while(true)
-				{
-					bool end_point_found = true;
-					for (unsigned int k = 0; k < allFrontiers.size(); ++k)
-					{
-						costmap_ros_->getCostmap()->indexToCells(allFrontiers[k], mx3, my3);
-						costmap_ros_->getCostmap()->mapToWorld(mx3, my3, wx3, wy3);
+                while(true)
+                {
+                    bool end_point_found = true;
+                    for (unsigned int k = 0; k < allFrontiers.size(); ++k)
+                    {
+                        costmap_ros_->getCostmap()->indexToCells(allFrontiers[k], mx3, my3);
+                        costmap_ros_->getCostmap()->mapToWorld(mx3, my3, wx3, wy3);
 
-						if (fabs(wx2 - wx3) <= MINIMAL_FRONTIER_RANGE && fabs(wy2 - wy3) <= MINIMAL_FRONTIER_RANGE && wx2 != wx3 && wy2 != wy3 && wx != wx3 && wy != wy3)
-						{
-							wx  = wx2;
-							wy  = wy2;
-							wx2 = wx3;
-							wy2 = wy3;
-							end_point_found = false;
-						}
-					}
-					if(end_point_found == true)
-					{
-						start_points.push_back(wx2);
-						start_points.push_back(wy2);
+                        if (fabs(wx2 - wx3) <= MINIMAL_FRONTIER_RANGE && fabs(wy2 - wy3) <= MINIMAL_FRONTIER_RANGE && wx2 != wx3 && wy2 != wy3 && wx != wx3 && wy != wy3)
+                        {
+                            wx  = wx2;
+                            wy  = wy2;
+                            wx2 = wx3;
+                            wy2 = wy3;
+                            end_point_found = false;
+                        }
+                    }
+                    if(end_point_found == true)
+                    {
+                        start_points.push_back(wx2);
+                        start_points.push_back(wy2);
 
-						break;
-					}
-				}
-			}
-			goal_buffer_x.push_back(start_points.at(0)+(start_points.at(2)-start_points.at(0))/2);
-			goal_buffer_y.push_back(start_points.at(1)+(start_points.at(3)-start_points.at(1))/2);
-		}
-	}
+                        break;
+                    }
+                }
+            }
+            goal_buffer_x.push_back(start_points.at(0)+(start_points.at(2)-start_points.at(0))/2);
+            goal_buffer_y.push_back(start_points.at(1)+(start_points.at(3)-start_points.at(1))/2);
+        }
+    }
 
-	ROS_INFO("Size of all frontiers in the list: %lu", frontiers.size());
+    ROS_INFO("Size of all frontiers in the list: %lu", frontiers.size());
 }
 
 bool ExplorationPlanner::auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool, std::vector<std::string> *robot_str_name)
@@ -3843,19 +3839,21 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
 
     // check if robot needs to go home right away
     int battery_reserve;
-    double battery_reserve_norm;
+    double dist_home;
+    double dist_front;
+    double closest = 9999;
     nh.getParam("explorer/energy/battery_reserve",battery_reserve);
-    battery_reserve_norm = (double)battery_reserve / 100 + 1; // reserve distance, just in case
     if(strategy == 1){
         double xh = robot_home_x - robotPose.getOrigin().getX();
         double yh = robot_home_y - robotPose.getOrigin().getY();
-        if(sqrt(xh * xh + yh * yh) * battery_reserve_norm >= available_distance)
-            return false;
+        double battery_reserve_norm = (double)battery_reserve / 100 + 1; // reserve distance, just in case
+        dist_home = sqrt(xh * xh + yh * yh) * battery_reserve_norm;
     }
     else if(strategy == 2){
-        if(trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution() * battery_reserve_norm >= available_distance)
-            return false;
+        dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
     }
+    if(dist_home >= available_distance)
+        return false;
 
     // look for a FRONTIER as goal
     int errors = 0;
@@ -3867,6 +3865,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
             if(i>8){
                 // if the distances could not be computed, try again using euclidean distances instead
                 if(errors == i && strategy == 2){
+                    ROS_ERROR("Fallback to euclidean distance.");
                     return this->determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1);
                 }
                 return false;
@@ -3901,6 +3900,13 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                         continue;
                     }
                     total_distance += distance;
+
+                    if(total_distance < closest){
+                        closest = total_distance;
+                        dist_front = total_distance - distance;
+                        dist_home = distance;
+                    }
+
                     // convert from cells to meters
                     total_distance *= costmap_ros_->getCostmap()->getResolution();
                 }
@@ -3923,7 +3929,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
-                    ROS_ERROR("No frontier in energetic range %.2f, going home (d = %.2f) for recharging", available_distance, trajectory_plan(robot_home_x, robot_home_y)*costmap_ros_->getCostmap()->getResolution());
+                    ROS_ERROR("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     return false;
                 }
             }
@@ -5387,7 +5393,10 @@ int ExplorationPlanner::isFrontier(int point) {
 			getAdjacentPoints(point, adjacent_points);
 			for (int i = 0; i < 16; i++) // length of adjacent_points array
 			{
-
+                if (adjacent_points[i] < 0)
+                {
+                    continue;
+                }
 				if (occupancy_grid_array_[adjacent_points[i]] == costmap_2d::NO_INFORMATION) {
 					no_inf_count++;
 //                                        ROS_DEBUG("No information found!");

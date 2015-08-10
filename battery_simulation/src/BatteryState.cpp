@@ -8,6 +8,7 @@ of the battery with a simple linear model.
 #include "battery_simulation/Battery.h"
 #include "battery_simulation/Charge.h"
 #include "geometry_msgs/Twist.h"
+#include "explorer/Speed.h"
 
 
 using namespace std;
@@ -44,6 +45,10 @@ void cmd_callback(const geometry_msgs::Twist &msg){
     z_angular = msg.angular.z;
 }
 
+void speed_callback(const explorer::Speed &msg){
+    avg_speed = msg.avg_speed;
+}
+
 int main(int argc, char** argv) {
     ros::init(argc, argv, "Battery_simulate");
 	ros::NodeHandle n;
@@ -53,20 +58,21 @@ int main(int argc, char** argv) {
     battery_state.remaining_distance = avg_speed * (float)battery_charge/moving_consumption*3600;
 
     double rate = 0.5; // Hz
-    double temp;
     double moving_time;
     double standing_time;
+
+    bool debugShown = false;
 
     standing_time = 0;
     moving_time = 0;
     charging = false;
 
-    ros::Publisher battery_pub = n.advertise<battery_simulation::Battery>("battery_state", 1000);
+    ros::Publisher battery_pub = n.advertise<battery_simulation::Battery>("battery_state", 1);
     ros::Subscriber charge1_sub = n.subscribe("going_to_recharge", 1, charge_starting_callback);
     ros::Subscriber charge2_sub = n.subscribe("charging", 1000, charging_callback);
     ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1000, cmd_callback);
+    ros::Subscriber speed_sub = n.subscribe("avg_speed", 1000, speed_callback);
 
-    n.getParam("BatteryState/energy/battery_charge",avg_speed);
     n.getParam("BatteryState/energy/battery_charge",battery_charge);
     n.getParam("BatteryState/energy/moving_consumption",moving_consumption);
     n.getParam("BatteryState/energy/standing_consumption",standing_consumption);
@@ -90,14 +96,12 @@ int main(int argc, char** argv) {
             */
             if(x_linear == 0 && z_angular == 0){
                 if (battery_state.percent > 0){
-                    temp = actual_charge - standing_consumption / (rate * 3600 );
-                    actual_charge = temp;
+                    actual_charge -= standing_consumption / (rate * 3600 );
                 }
                 standing_time += 1/rate;
             }else{
                 if (battery_state.percent > 0){
-                    temp = actual_charge - moving_consumption / (rate * 3600 );
-                    actual_charge = temp;
+                    actual_charge -= moving_consumption / (rate * 3600 );
                 }
                 moving_time += 1/rate;
             }
@@ -106,24 +110,35 @@ int main(int argc, char** argv) {
             battery_state.percent = (actual_charge * 100) / battery_charge;
 
             /* The remaining distance depends on the percentage of time the robot is moving.
-            * In the beginning this calculation is very inaccurate. We set the remaining distance to a high value
-            * to avoid that the robot returns too early to the home point for recharging.
-            */
+             * In the beginning this calculation is very inaccurate. We set the remaining distance to a high value
+             * to avoid that the robot returns too early to the home point for recharging.
+             */
+            if(avg_speed <= 0.25){
+                avg_speed = 0.25;
+            }
             if(moving_time < 30){
                 moving_percentage = 0.25;
             }
             else{
                 moving_percentage = moving_time / (standing_time+moving_time);
             }
-            // remaining distance the robot can still travel
-            //                                                                                               max time the robot can travel with full battery
-            battery_state.remaining_distance = battery_state.percent/100.0 * avg_speed * moving_percentage * (float)battery_charge/moving_consumption*3600;
+
+            //ROS_ERROR("remaining_distance = %.2f/100 * %.2f * %d/%d*3600", battery_state.percent, avg_speed, battery_charge, moving_consumption);
+            // remaining distance the robot can still travel in meters
+            //                                                                            max time the robot can travel with full battery
+            battery_state.remaining_distance = battery_state.percent/100.0 * avg_speed * (float)battery_charge/moving_consumption*3600;
 
             int bs = battery_state.percent;
             if((bs % 10) == 0)
             {
-                ROS_ERROR("Battery: %d%%  ---  remaining distance: %.2fm", bs, battery_state.remaining_distance);
+                if (debugShown == false)
+                {
+                    ROS_ERROR("Battery: %d%%  ---  remaining distance: %.2fm", bs, battery_state.remaining_distance);
+                    debugShown = true;
+                }
             }
+            else
+                debugShown = false;
         }
 
 		ros::spinOnce();

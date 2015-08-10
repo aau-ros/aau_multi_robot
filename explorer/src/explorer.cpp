@@ -23,6 +23,7 @@
 #include <map_merger/LogMaps.h>
 #include "battery_simulation/Battery.h"
 #include "battery_simulation/Charge.h"
+#include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
@@ -35,7 +36,7 @@
 #endif
 
 #define OPERATE_ON_GLOBAL_MAP true
-#define OPERATE_WITH_GOAL_BACKOFF false
+#define OPERATE_WITH_GOAL_BACKOFF true
 
 boost::mutex costmap_mutex;
 
@@ -48,7 +49,7 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer {
 
 public:
-    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(exploring), charge_time(0), fully_charged(false)
+    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0)
     {
 
         nh.param("frontier_selection",frontier_selection,1);
@@ -215,10 +216,10 @@ public:
         battery_charge = (int) msg->percent;
         available_distance = msg->remaining_distance;
 
-        // set the robot state correctly (in case it is not done by charging_callback)
-        if(available_distance > 0 && charge_time <= 0 && robot_state == charging) {
-            robot_state = exploring;
-            fully_charged = true;
+        // set the robot state correctly once the available distance is correctly computed
+        if(available_distance > 0 && charge_time == -100 && robot_state == charging) {
+            charge_time = 0; // reset end-of-charge indication
+            robot_state = fully_charged;
         }
 
         // robot is out of energy, exit
@@ -257,14 +258,13 @@ public:
 
     void charging_callback(const battery_simulation::Charge::ConstPtr &msg) {
         charge_time = msg->remaining_time;
-        if(charge_time <= 0)
+        if(charge_time > 0)
+            ROS_INFO("Charging... still %.2f s.", charge_time);
+        else
         {
             ROS_ERROR("Charging done");
+            charge_time = -100; // indicate end of charge for bat_callback
             recharge_cycles++;
-            if (available_distance > 0 && robot_state == charging) {
-                robot_state = exploring;
-                fully_charged = true;
-            }
         }
     }
 
@@ -284,6 +284,9 @@ public:
         twi_publisher.publish(twi);
         ros::Duration(5.0).sleep();
         twi_publisher.publish(twi);
+
+        int exit_countdown = 5;
+
         /*
          * START TAKING THE TIME DURING EXPLORATION
          */
@@ -382,7 +385,7 @@ public:
             */
             ros::Duration(1).sleep();
 
-            if(robot_state == exploring)
+            if(robot_state == exploring || robot_state == fully_charged)
             {
 
                 /*
@@ -780,14 +783,18 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
-                        fully_charged = false;
+                        exit_countdown = 5;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(fully_charged)
+                    else if(robot_state == fully_charged)
                     {
-                        finalize_exploration();
+                        exit_countdown--;
+                        ROS_ERROR("Shutdown in: %d", exit_countdown);
+                        if(exit_countdown <= 0)
+                            finalize_exploration();
+                        continue;
                     }
 
                     // robot cannot reach any frontier
@@ -812,16 +819,16 @@ public:
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                     ROS_DEBUG("Goal_determined: %d   counter: %d",goal_determined, count);
 
-                    // found a frontier, go there
+                    // found a frontier
+                    // go there
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
-                        fully_charged = false;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(fully_charged)
+                    else if(robot_state == fully_charged)
                     {
                         finalize_exploration();
                     }
@@ -853,19 +860,19 @@ public:
             {
                 if(OPERATE_WITH_GOAL_BACKOFF == true)
                 {
-                    ROS_DEBUG("Doing smartGoalBackoff");
+                    ROS_INFO("Doing smartGoalBackoff");
                     if(exploration->smartGoalBackoff(final_goal.at(0),final_goal.at(1), costmap2d_global, &backoffGoal))
                     {
-                        ROS_INFO("Doing navigation to backoff goal");
+                        ROS_INFO("Navigate to backoff goal (%.2f,%.2f) --> (%.2f,%.2f)", final_goal.at(0), final_goal.at(1), backoffGoal.at(0), backoffGoal.at(1));
                         navigate_to_goal = navigate(backoffGoal);
                     }else
                     {
-                        ROS_INFO("Navigation to backoff goal failed, going to original goal");
-                        navigate_to_goal = navigate(final_goal);
+                        ROS_ERROR("Failed to find backoff goal, mark original goal (%.2f,%.2f) as unreachable", final_goal.at(0), final_goal.at(1));
+                        navigate_to_goal = false; // navigate(final_goal);
                     }
                 }else
                 {
-                    ROS_INFO("Doing navigation to goal");
+                    ROS_INFO("Navigate to goal");
                     navigate_to_goal = navigate(final_goal);
                 }
             }
@@ -951,6 +958,12 @@ public:
 
         void map_info()
         {
+            /*
+            * Publish average speed of robot
+            */
+            ros::NodeHandle nh_pub_speed;
+            ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed",1);
+
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << "#time,exploration_travel_path_global,available_distance,global_map_progress,locbal_map_progress,battery_state,recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
             fs_csv.close();
@@ -990,6 +1003,11 @@ public:
                 ROS_DEBUG("Finished service call.");
 
                 save_progress();
+
+                // publish average speed
+                explorer::Speed speed_msg;
+                speed_msg.avg_speed = exploration_travel_path_global / map_progress.time;
+                publisher_speed.publish(speed_msg);
 
                 ros::Duration(10.0).sleep();
             }
@@ -1731,7 +1749,6 @@ public:
         double robot_home_position_x, robot_home_position_y, costmap_resolution;
         bool goal_determined;
         bool robot_prefix_empty;
-        bool fully_charged;
         int battery_charge, battery_charge_temp, energy_consumption, recharge_cycles;
         double old_simulation_time, new_simulation_time;
         double available_distance, charge_time;
@@ -1754,7 +1771,7 @@ public:
 
     private:
 
-        enum state_t {exploring, going_charging, charging, finished};
+        enum state_t {exploring, going_charging, charging, finished, fully_charged};
         state_t robot_state;
 
         ros::Publisher pub_move_base;

@@ -4,15 +4,15 @@ project(explorer)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS 
-roscpp 
-rospy 
-std_msgs 
-message_generation 
-tf 
-costmap_2d 
-navfn 
-adhoc_communication 
+find_package(catkin REQUIRED COMPONENTS
+roscpp
+rospy
+std_msgs
+message_generation
+tf
+costmap_2d
+navfn
+adhoc_communication
 map_merger)
 
 ## System dependencies are found with CMake's conventions
@@ -49,9 +49,10 @@ map_merger)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-#add_message_files(
-#  FILES
-#)
+add_message_files(
+  FILES
+  Speed.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -68,10 +69,10 @@ map_merger)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-#generate_messages(
-#  DEPENDENCIES
-#  std_msgs
-#)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -85,7 +86,7 @@ map_merger)
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES explorer
-  CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime adhoc_communication map_merger 
+  CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime adhoc_communication map_merger
 #  DEPENDS system_lib
 )
 

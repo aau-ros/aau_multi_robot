@@ -37,10 +37,10 @@ int main(int argc, char** argv) {
         if(home){
             ROS_INFO("Charging time: %f ",charge_time);
             charge_msg.remaining_time = charge_time;
-            charge.publish(charge_msg);
             if(charge_time <= 0)
                 home = false;
             charge_time -= 1;
+            charge.publish(charge_msg);
         }
 
         ros::spinOnce();
