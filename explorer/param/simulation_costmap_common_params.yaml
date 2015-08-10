@@ -2,8 +2,8 @@ max_obstacle_height: 0.60  # assume something like an arm is mounted on top of t
 obstacle_range: 11.9
 raytrace_range: 11.9
 
-inflation_radius: 0.60
+inflation_radius: 0.80
 
-footprint: [[-0.2, -0.2], [-0.2, 0.2], [0.2, 0.2],[0.2, -0.2]]
+footprint: [[-0.4, -0.4], [-0.4, 0.4], [0.4, 0.4],[0.4, -0.4]]
 
 
