@@ -286,6 +286,7 @@ public:
         twi_publisher.publish(twi);
 
         int exit_countdown = 5;
+        int charge_countdown = 5;
 
         /*
          * START TAKING THE TIME DURING EXPLORATION
@@ -784,6 +785,7 @@ public:
                     {
                         robot_state = exploring;
                         exit_countdown = 5;
+                        charge_countdown = 5;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
@@ -801,8 +803,12 @@ public:
                     // go charging
                     else
                     {
-                        ROS_INFO("could not determine goal, need to recharge!");
-                        robot_state = going_charging;
+                        charge_countdown--;
+                        if(charge_countdown <= 0){
+                            ROS_INFO("Could not determine goal, need to recharge!");
+                            robot_state = going_charging;
+                        }
+                        continue;
                     }
                 }
                 else if(frontier_selection == 8)
