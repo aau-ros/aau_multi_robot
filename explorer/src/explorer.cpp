@@ -830,21 +830,31 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
+                        exit_countdown = 5;
+                        charge_countdown = 5;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
                     else if(robot_state == fully_charged)
                     {
-                        finalize_exploration();
+                        exit_countdown--;
+                        ROS_ERROR("Shutdown in: %d", exit_countdown);
+                        if(exit_countdown <= 0)
+                            finalize_exploration();
+                        continue;
                     }
 
                     // robot cannot reach any frontier
                     // go charging
                     else
                     {
-                        ROS_INFO("could not determine goal, need to recharge!");
-                        robot_state = going_charging;
+                        charge_countdown--;
+                        if(charge_countdown <= 0){
+                            ROS_INFO("Could not determine goal, need to recharge!");
+                            robot_state = going_charging;
+                        }
+                        continue;
                     }
                 }
             }
