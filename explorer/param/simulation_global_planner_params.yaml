@@ -1,0 +1,3 @@
+navigation_path:
+   allow_unknown: false
+   default_tolerance: 5
