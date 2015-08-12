@@ -808,7 +808,8 @@ public:
                             ROS_INFO("Could not determine goal, need to recharge!");
                             robot_state = going_charging;
                         }
-                        continue;
+                        else
+                            continue;
                     }
                 }
                 else if(frontier_selection == 8)
@@ -817,9 +818,8 @@ public:
                 }
                 else if(frontier_selection == 9)
                 {
-                    // sort the frontiers from near to far
-                    exploration->sort(2);
-                    exploration->sort(3);
+                    // sort the frontiers clock wise
+                    exploration->sort(7);
 
                     // look for a frontier as goal
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
@@ -854,7 +854,8 @@ public:
                             ROS_INFO("Could not determine goal, need to recharge!");
                             robot_state = going_charging;
                         }
-                        continue;
+                        else
+                            continue;
                     }
                 }
             }
