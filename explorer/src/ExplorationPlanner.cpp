@@ -37,6 +37,7 @@
 #define INNER_DISTANCE 8            // radius around backoff goal point without obstacles [cells]
 #define MAX_NEIGHBOR_DIST 1         // max distance between frontiers within a cluster
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
+#define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
 using namespace explorationPlanner;
 
@@ -67,6 +68,25 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
     {
         return lhs.cluster_element.front().dist_to_robot < rhs.cluster_element.front().dist_to_robot;
     }
+}
+
+/**
+ * Compare function for sorting frontiers clock wise
+ */
+bool ExplorationPlanner::operator()(const frontier_t &a, const frontier_t &b)
+{
+    tf::Stamped < tf::Pose > robotPose;
+    if (!costmap_ros_->getRobotPose(robotPose))
+    {
+        ROS_ERROR("Failed to get RobotPose");
+        return false;
+    }
+
+    double angle_robot = robotPose.getRotation().getAngle();
+    double angle_frontier_a = atan2(robotPose.getOrigin().getX()-a.x_coordinate, robotPose.getOrigin().getY()-a.y_coordinate);
+    double angle_frontier_b = atan2(robotPose.getOrigin().getX()-b.x_coordinate, robotPose.getOrigin().getY()-b.y_coordinate);
+
+    return angle_frontier_a < angle_frontier_b;
 }
 
 ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), cnt(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
@@ -4660,6 +4680,8 @@ void ExplorationPlanner::sort(int strategy)
     {
         double x,y,x_next,y_next,angle_robot,angle_frontier,angle_next_frontier,angle,angle_next;
         int costmap_width,costmap_height;
+        close_frontiers.clear();
+        far_frontiers.clear();
 
         // get size of local costmap
         nh.param<int>("local_costmap/width",costmap_width,-1);
@@ -4670,30 +4692,29 @@ void ExplorationPlanner::sort(int strategy)
         {
             x = frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
             y = frontiers.at(i).y_coordinate - robotPose.getOrigin().getY();
-            if (fabs(x) <= costmap_width/2 && fabs(y) <= costmap_height/2){
+            if (fabs(x) <= CLOSE_FRONTIER_RANGE && fabs(y) <= CLOSE_FRONTIER_RANGE){
                 close_frontiers.push_back(frontiers.at(i));
             }
             else{
                 far_frontiers.push_back(frontiers.at(i));
+                ROS_INFO("distance: (%.2f, %.2f) (far)", fabs(x), fabs(y));
             }
         }
 
         // sort close frontiers clock wise
         if (close_frontiers.size() > 0)
         {
-            for (int i = close_frontiers.size(); i>= 0; i--)
+            //std::sort(close_frontiers.begin(), close_frontiers.end(), *this);
+            for (int i = 0; i< close_frontiers.size(); i++)
             {
                 for (int j = 0; j < close_frontiers.size() - 1; j++)
                 {
                     angle_robot = robotPose.getRotation().getAngle();
 
-                    angle_frontier = atan2(robotPose.getOrigin().getX()-frontiers.at(j).x_coordinate, robotPose.getOrigin().getY()-frontiers.at(j).y_coordinate);
-                    angle_next_frontier = atan2(robotPose.getOrigin().getX()-frontiers.at(j+1).x_coordinate, robotPose.getOrigin().getY()-frontiers.at(j+1).y_coordinate);
+                    angle_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j).y_coordinate);
+                    angle_next_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j+1).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j+1).y_coordinate);
 
-                    angle = angle_robot - angle_frontier;
-                    angle_next = angle_robot - angle_next_frontier;
-
-                    if (angle > angle_next)
+                    if (angle_frontier > angle_next_frontier)
                     {
                         frontier_t temp = close_frontiers.at(j+1);
                         close_frontiers.at(j+1) = close_frontiers.at(j);
@@ -4706,7 +4727,7 @@ void ExplorationPlanner::sort(int strategy)
         // sort far frontiers by distance
         if (far_frontiers.size() > 0)
         {
-            for (int i = far_frontiers.size(); i>= 0; i--)
+            for (int i = 0; i < far_frontiers.size(); i++)
             {
                 for (int j = 0; j < far_frontiers.size() - 1; j++)
                 {

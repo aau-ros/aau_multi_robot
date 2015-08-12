@@ -773,7 +773,6 @@ public:
                     exploration->sort(2);
                     exploration->sort(3);
                     exploration->sort_distance(battery_charge > 50);
-                    ROS_INFO("DONE");
 
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
@@ -814,12 +813,51 @@ public:
                 }
                 else if(frontier_selection == 8)
                 {
+                    // sort frontiers clock wise starting from left
+                    exploration->sort(7);
 
+                    // look for a frontier as goal
+                    ROS_INFO("DETERMINE GOAL...");
+                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                    ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
+
+                    // found a frontier, go there
+                    if(goal_determined == true)
+                    {
+                        robot_state = exploring;
+                        exit_countdown = 5;
+                        charge_countdown = 5;
+                    }
+
+                    // robot cannot reach any frontier, even if fully charged
+                    // simulation is over
+                    else if(robot_state == fully_charged)
+                    {
+                        exit_countdown--;
+                        ROS_ERROR("Shutdown in: %d", exit_countdown);
+                        if(exit_countdown <= 0)
+                            finalize_exploration();
+                        continue;
+                    }
+
+                    // robot cannot reach any frontier
+                    // go charging
+                    else
+                    {
+                        charge_countdown--;
+                        if(charge_countdown <= 0){
+                            ROS_INFO("Could not determine goal, need to recharge!");
+                            robot_state = going_charging;
+                        }
+                        else
+                            continue;
+                    }
                 }
                 else if(frontier_selection == 9)
                 {
-                    // sort the frontiers clock wise
-                    exploration->sort(7);
+                    // sort the frontiers from near to far
+                    exploration->sort(2);
+                    exploration->sort(3);
 
                     // look for a frontier as goal
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
