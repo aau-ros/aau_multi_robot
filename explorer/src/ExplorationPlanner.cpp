@@ -70,25 +70,6 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
     }
 }
 
-/**
- * Compare function for sorting frontiers clock wise
- */
-bool ExplorationPlanner::operator()(const frontier_t &a, const frontier_t &b)
-{
-    tf::Stamped < tf::Pose > robotPose;
-    if (!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        return false;
-    }
-
-    double angle_robot = robotPose.getRotation().getAngle();
-    double angle_frontier_a = atan2(robotPose.getOrigin().getX()-a.x_coordinate, robotPose.getOrigin().getY()-a.y_coordinate);
-    double angle_frontier_b = atan2(robotPose.getOrigin().getX()-b.x_coordinate, robotPose.getOrigin().getY()-b.y_coordinate);
-
-    return angle_frontier_a < angle_frontier_b;
-}
-
 ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), cnt(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
 
     trajectory_strategy = "euclidean";
