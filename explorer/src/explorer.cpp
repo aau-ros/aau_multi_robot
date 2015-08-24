@@ -789,7 +789,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(robot_state == fully_charged)
+                    else// if(robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -800,7 +800,7 @@ public:
 
                     // robot cannot reach any frontier
                     // go charging
-                    else
+                    /*else
                     {
                         charge_countdown--;
                         if(charge_countdown <= 0){
@@ -809,7 +809,7 @@ public:
                         }
                         else
                             continue;
-                    }
+                    }*/
                 }
                 else if(frontier_selection == 8)
                 {
@@ -831,7 +831,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(robot_state == fully_charged)
+                    else// if(robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -842,7 +842,7 @@ public:
 
                     // robot cannot reach any frontier
                     // go charging
-                    else
+                    /*else
                     {
                         charge_countdown--;
                         if(charge_countdown <= 0){
@@ -851,7 +851,7 @@ public:
                         }
                         else
                             continue;
-                    }
+                    }*/
                 }
                 else if(frontier_selection == 9)
                 {
@@ -874,7 +874,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(robot_state == fully_charged)
+                    else //if(robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -885,7 +885,7 @@ public:
 
                     // robot cannot reach any frontier
                     // go charging
-                    else
+                    /*else
                     {
                         charge_countdown--;
                         if(charge_countdown <= 0){
@@ -894,7 +894,7 @@ public:
                         }
                         else
                             continue;
-                    }
+                    }*/
                 }
             }
 

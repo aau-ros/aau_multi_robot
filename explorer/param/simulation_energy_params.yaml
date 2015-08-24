@@ -1,7 +1,7 @@
 energy:
-   avg_speed: 0.5 # m/s
-   charge_time: 0.01 # hours needed for charging, 2.4h for P3DX
-   moving_consumption: 30 # watt
-   standing_consumption: 20 # watt
-   battery_charge: 252 # Wh
-   battery_reserve: 20 # percent of battery charge to keep as reserve when traveling home to charging station
+    avg_speed: 0.5 # m/s
+    charge_time: 0.01 # hours needed for charging, 2.4h for P3DX
+    moving_consumption: 30 # watt
+    standing_consumption: 20 # watt
+    battery_charge: 50000 # Wh
+    battery_reserve: 20 # percent of battery charge to keep as reserve when traveling home to charging station
