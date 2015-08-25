@@ -1723,7 +1723,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
     if(req.log & LOG_LOCAL_MAP)
     {
         if(!local_map)
-            ROS_WARN("No global map. Skipping save local map.");
+            ROS_WARN("No local map. Skipping save local map.");
         else
         {
             // log the local map
