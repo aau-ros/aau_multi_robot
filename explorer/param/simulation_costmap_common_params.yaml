@@ -1,7 +1,7 @@
 transform_tolerance: 10
 obstacle_range: 2.5
 raytrace_range: 4.0
-inflation_radius: 0.6
+inflation_radius: 1
 footprint: [[-0.2, -0.2], [-0.2, 0.2], [0.2, 0.2],[0.2, -0.2]]
 track_unknown_space: true
 resolution: 0.05
