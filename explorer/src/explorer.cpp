@@ -26,6 +26,7 @@
 #include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
+#include "nav_msgs/GetMap.h"
 #include <diagnostic_msgs/DiagnosticArray.h>
 
 //#define PROFILE
@@ -72,6 +73,7 @@ public:
         // create map_merger service
         //std::string service = robot_prefix + std::string("/map_merger/logOutput");
         //mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
+        fake_mapping_save = nh.serviceClient<nav_msgs::GetMap>("/fake_mapping/save_map");
 
         if(robot_prefix.empty())
         {
@@ -1266,13 +1268,7 @@ public:
             // finished exploration
             robot_state = finished;
 
-            /*
-             * If the robot should drive to the home position
-             * exploration_has_finished() has to be uncommented.
-             * It creates a file which is the immediate trigger to
-             * shut down the ros_node. Therefore the navigation process
-             * is canceled .
-             */
+            // finish log files
             exploration_has_finished();
 
             visualize_goal_point(home_point_x, home_point_y);
@@ -1289,6 +1285,10 @@ public:
                     break;
                 }
             }
+
+            // Indicte end of simulation for this robot
+            // When the multi_robot_simulation/multiple_exploration_runs.sh script is run, this kills all processes and starts a new run
+            this->indicateSimulationEnd();
 
             ROS_ERROR("Shutting down...");
             ros::shutdown();
@@ -1322,8 +1322,14 @@ public:
              *  WRITE LOG FILE
              * Write all the output to the log file
              */
-           save_progress(true);
+            save_progress(true);
             ROS_INFO("Wrote file %s\n", log_file.c_str());
+
+            /*
+             * Inform fake_mapping to save map
+             */
+            nav_msgs::GetMap srv;
+            fake_mapping_save.call(srv);
 
 
             /*
@@ -1335,9 +1341,6 @@ public:
             //if(!mm_log_client.call(log))
             //    ROS_WARN("Could not call map_merger service to store log.");
 
-
-            // Indicte end of simulation for this robot
-            this->indicateSimulationEnd();
 
 //#ifdef PROFILE
 //HeapProfilerStop();
@@ -1835,6 +1838,7 @@ public:
         ros::Publisher pub_frontiers;
 
         ros::ServiceClient mm_log_client;
+        ros::ServiceClient fake_mapping_save;
 
         ros::NodeHandle nh;
         ros::Time time_start;
