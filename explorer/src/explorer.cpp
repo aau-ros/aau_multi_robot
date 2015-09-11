@@ -1695,7 +1695,9 @@ public:
             if(prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)
             {
                 stuck_countdown--;
-                ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                if(stuck_countdown <= 5){
+                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                }
                 if(stuck_countdown <= 0) {
                     exit(0);
                 }
