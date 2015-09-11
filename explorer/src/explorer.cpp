@@ -28,6 +28,7 @@
 #include <std_msgs/Empty.h>
 #include "nav_msgs/GetMap.h"
 #include <diagnostic_msgs/DiagnosticArray.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 //#define PROFILE
 
@@ -38,6 +39,8 @@
 
 #define OPERATE_ON_GLOBAL_MAP true
 #define OPERATE_WITH_GOAL_BACKOFF true
+#define EXIT_COUNTDOWN 5
+#define STUCK_COUNTDOWN 10
 
 boost::mutex costmap_mutex;
 
@@ -50,7 +53,7 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer {
 
 public:
-    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0)
+    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
     {
 
         nh.param("frontier_selection",frontier_selection,1);
@@ -270,6 +273,17 @@ public:
         }
     }
 
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose)
+    {
+      // Get rotation of robot relative to starting position
+      tf::Quaternion orientation = tf::Quaternion(pose->pose.pose.orientation.x, pose->pose.pose.orientation.y, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
+      pose_angle = orientation.getAngle();
+
+      // Robot position
+      pose_x = pose->pose.pose.position.x;
+      pose_y = pose->pose.pose.position.y;
+    }
+
 	void explore()
     {
 		/*
@@ -287,20 +301,18 @@ public:
         ros::Duration(5.0).sleep();
         twi_publisher.publish(twi);
 
-        int exit_countdown = 5;
-        int charge_countdown = 5;
+        int exit_countdown = EXIT_COUNTDOWN;
+        int charge_countdown = EXIT_COUNTDOWN;
 
         /*
          * START TAKING THE TIME DURING EXPLORATION
          */
         time_start = ros::Time::now();
-        ros::NodeHandle nh_pub;
+        ros::NodeHandle nh;
         std_msgs::Empty msg;
        // msg.data = "traveling home to recharge";
-        ros::Publisher publisher_re = nh_pub.advertise<std_msgs::Empty>("going_to_recharge",3);
-
-        ros::NodeHandle bat,bat_per,real_bat_per;
-        ros::Subscriber sub, sub2, sub3;
+        ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",3);
+        ros::Subscriber sub, sub2, sub3, pose_sub;
         ROS_INFO("demonstrate: \"%s\"",demonstration.c_str());
         std::string env_var;
         ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
@@ -310,21 +322,24 @@ public:
         // if we are in simulation, we start the battery simulator
         if( env_var.compare("turtlebot") == 0)
         {
-            //sub3 = real_bat_per.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
-            sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
+            //sub3 = nh.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
+            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
         else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
         {
             // todo: read voltage and convert to percentage
-            sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
+            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
         else
         {
-            sub = bat_per.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = bat.subscribe("charging", 1000, &Explorer::charging_callback,this);
+            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
         }
+
+        // Subscribe to robot pose to check if robot is stuck
+        pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);
 
 		while (robot_state != finished)
         {
@@ -785,8 +800,8 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
-                        exit_countdown = 5;
-                        charge_countdown = 5;
+                        exit_countdown = EXIT_COUNTDOWN;
+                        charge_countdown = EXIT_COUNTDOWN;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
@@ -827,8 +842,8 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
-                        exit_countdown = 5;
-                        charge_countdown = 5;
+                        exit_countdown = EXIT_COUNTDOWN;
+                        charge_countdown = EXIT_COUNTDOWN;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
@@ -870,8 +885,8 @@ public:
                     if(goal_determined == true)
                     {
                         robot_state = exploring;
-                        exit_countdown = 5;
-                        charge_countdown = 5;
+                        exit_countdown = EXIT_COUNTDOWN;
+                        charge_countdown = EXIT_COUNTDOWN;
                     }
 
                     // robot cannot reach any frontier, even if fully charged
@@ -1276,6 +1291,7 @@ public:
             exploration_has_finished();
 
             visualize_goal_point(home_point_x, home_point_y);
+
             bool completed_navigation = false;
             for(int i = 0; i< 5; i++)
             {
@@ -1632,83 +1648,85 @@ public:
 
 	}
 
-	bool move_robot(int seq, double position_x, double position_y) {
+    bool move_robot(int seq, double position_x, double position_y)
+    {
+        exploration->next_auction_position_x = position_x;
+        exploration->next_auction_position_y = position_y;
+        int stuck_countdown = EXIT_COUNTDOWN;
 
-            exploration->next_auction_position_x = position_x;
-            exploration->next_auction_position_y = position_y;
+        /*
+         * Move the robot with the help of an action client. Goal positions are
+         * transmitted to the robot and feedback is given about the actual
+         * driving state of the robot.
+         */
+        if (!costmap2d_local->getRobotPose(robotPose)) {
+            ROS_ERROR("Failed to get RobotPose");
+        }
 
-		/*
-		 * Move the robot with the help of an action client. Goal positions are
-		 * transmitted to the robot and feedback is given about the actual
-		 * driving state of the robot.
-		 */
-                if (!costmap2d_local->getRobotPose(robotPose)) {
-			ROS_ERROR("Failed to get RobotPose");
-		}
+        actionlib::SimpleActionClient <move_base_msgs::MoveBaseAction> ac("move_base", true);
 
-        actionlib::SimpleActionClient < move_base_msgs::MoveBaseAction
-				> ac("move_base", true);
+        while (!ac.waitForServer(ros::Duration(10.0)))
+        ;
 
-                while (!ac.waitForServer(ros::Duration(10.0)))
-			;
+        move_base_msgs::MoveBaseGoal goal_msgs;
 
-		move_base_msgs::MoveBaseGoal goal_msgs;
+        goal_msgs.target_pose.header.seq = seq;	// increase the sequence number
+        goal_msgs.target_pose.header.frame_id = move_base_frame; //"map";
+        goal_msgs.target_pose.pose.position.x = position_x;
+        goal_msgs.target_pose.pose.position.y = position_y;
+        goal_msgs.target_pose.pose.position.z = 0;
+        goal_msgs.target_pose.pose.orientation.x = 0;
+        goal_msgs.target_pose.pose.orientation.y = 0;
+        goal_msgs.target_pose.pose.orientation.z = 0;
+        goal_msgs.target_pose.pose.orientation.w = 1;
 
-		goal_msgs.target_pose.header.seq = seq;	// increase the sequence number
-//		goal_msgs.target_pose.header.stamp = ros::Time::now();
-                goal_msgs.target_pose.header.frame_id = move_base_frame; //"map";
-		goal_msgs.target_pose.pose.position.x = position_x;// - robotPose.getOrigin().getX(); //goals[0].pose.position.x;
-		goal_msgs.target_pose.pose.position.y = position_y;// - robotPose.getOrigin().getY();
-		goal_msgs.target_pose.pose.position.z = 0;
-		goal_msgs.target_pose.pose.orientation.x = 0; //sin(angle/2); // goals[0].pose.orientation.x;
-		goal_msgs.target_pose.pose.orientation.y = 0;
-		goal_msgs.target_pose.pose.orientation.z = 0;
-		goal_msgs.target_pose.pose.orientation.w = 1;
+        ac.sendGoal(goal_msgs);
 
-		ac.sendGoal(goal_msgs);
-
-        //ac.waitForResult(ros::Duration(20)); EDIT Peter: Test if it also works with smaller value!
-        ac.waitForResult(ros::Duration(waitForResult)); //here Parameter!
+        ac.waitForResult(ros::Duration(waitForResult));
         while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
         {
             ros::Duration(0.5).sleep();
         }
-		ROS_INFO("Not longer PENDING");
+        ROS_INFO("Not longer PENDING");
 
-	while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
+            // robot seems to be stuck
+            if(prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)
+            {
+                stuck_countdown--;
+                ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                if(stuck_countdown <= 0) {
+                    exit(0);
+                }
+            }
+            else
+            {
+                stuck_countdown = STUCK_COUNTDOWN; // robot is moving again
+                prev_pose_x = pose_x;
+                prev_pose_y = pose_y;
+                prev_pose_angle = pose_angle;
+            }
+
             ros::Duration(0.5).sleep();
         }
-		ROS_INFO("Not longer ACTIVE");
+        ROS_INFO("Not longer ACTIVE");
 
-		while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
-			if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED) {
-				ROS_INFO("ABORTED");
-
-                                exploration->next_auction_position_x = robotPose.getOrigin().getX();
-                                exploration->next_auction_position_y = robotPose.getOrigin().getY();
-				return false;
-			}
-			/*
-			 double my_time = ros::Time::now().toSec();
-			 //ROS_ERROR("my_time: %f     timeout: %f",my_time,timeout);
-			 if(my_time >= timeout)
-			 {
-			 ROS_ERROR("Timeout exceeded");
-			 break;
-			 }
-			 if(ac.getState() == actionlib::SimpleClientGoalState::PREEMPTED){ROS_ERROR("PREEMPTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::ABORTED){ROS_ERROR("ABORTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::REJECTED){ROS_ERROR("REJECTED");}
-			 if(ac.getState() == actionlib::SimpleClientGoalState::RECALLED){ROS_ERROR("RECALLED");}
-			 */
-		}
-                ROS_INFO("TARGET REACHED");
+        while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
+            if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED) {
+                ROS_INFO("ABORTED");
 
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
-		return true;
-	}
+                return false;
+            }
+        }
+        ROS_INFO("TARGET REACHED");
+
+        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+        return true;
+    }
 
 	bool turn_robot(int seq) {
 
@@ -1833,7 +1851,7 @@ public:
 
     private:
 
-        enum state_t {exploring, going_charging, charging, finished, fully_charged};
+        enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck};
         state_t robot_state;
 
         ros::Publisher pub_move_base;
@@ -1858,6 +1876,8 @@ public:
         tf::Stamped<tf::Pose> robotPose;
 
         explorationPlanner::ExplorationPlanner *exploration;
+
+        double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle;
 
         double x_val, y_val, home_point_x, home_point_y;
         int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
