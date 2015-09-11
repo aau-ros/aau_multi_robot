@@ -975,6 +975,10 @@ public:
                 if(robot_state == going_charging)
                 {
                     ROS_ERROR("Robot cannot reach home for recharging!");
+                    exit_countdown--;
+                    ROS_ERROR("Shutdown in: %d", exit_countdown);
+                    if(exit_countdown <= 0)
+                        finalize_exploration();
                 }
                 else if(robot_state == exploring)
                 {
