@@ -41,7 +41,6 @@
 #define OPERATE_WITH_GOAL_BACKOFF true
 #define EXIT_COUNTDOWN 5
 #define STUCK_COUNTDOWN 10
-#define LIMITED_ENERGY true
 
 boost::mutex costmap_mutex;
 
@@ -61,6 +60,7 @@ public:
         nh.param("local_costmap/width",costmap_width,0);
         nh.param<double>("local_costmap/resolution",costmap_resolution,0);
         nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
+        nh.param("/explorer/energy/limited_energy", limited_energy, 1);
 
         ROS_INFO("Costmap width: %d", costmap_width);
         ROS_INFO("Frontier selection is set to: %d", frontier_selection);
@@ -807,7 +807,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(LIMITED_ENERGY == false || robot_state == fully_charged)
+                    else if(limited_energy == 0 || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -849,7 +849,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(LIMITED_ENERGY == false || robot_state == fully_charged)
+                    else if(limited_energy == 0 || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -892,7 +892,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(LIMITED_ENERGY == false || robot_state == fully_charged)
+                    else if(limited_energy == 0 || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -1885,6 +1885,7 @@ public:
         double x_val, y_val, home_point_x, home_point_y;
         int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
         int counter,cnt;
+        int limited_energy;
         bool pioneer;
 };
 
