@@ -89,11 +89,11 @@ int main(int argc, char** argv) {
         if(charging == false)
         {
             /*
-            In the cmd_vel message there are only two important parameters, the x-linear value and the z-angular value.
-            When they are zero the robots stands still. If the x-value is unequal to zero then the robot moves forward or
-            backward and if the z-value is unequal to zero the robot rotates.
-            When the robot stands still it consumes less energy and when it moves it consumes more energy.
-            */
+             * In the cmd_vel message there are only two important parameters, the x-linear value and the z-angular value.
+             * When they are zero the robots stands still. If the x-value is unequal to zero then the robot moves forward or
+             * backward and if the z-value is unequal to zero the robot rotates.
+             * When the robot stands still it consumes less energy and when it moves it consumes more energy.
+             */
             if(x_linear == 0 && z_angular == 0){
                 if (battery_state.percent > 0){
                     actual_charge -= standing_consumption / (rate * 3600 );
@@ -109,7 +109,8 @@ int main(int argc, char** argv) {
             // percentage of battery charge remaining
             battery_state.percent = (actual_charge * 100) / battery_charge;
 
-            /* The remaining distance depends on the percentage of time the robot is moving.
+            /*
+             * The remaining distance depends on the percentage of time the robot is moving.
              * In the beginning this calculation is very inaccurate. We set the remaining distance to a high value
              * to avoid that the robot returns too early to the home point for recharging.
              */
@@ -123,7 +124,6 @@ int main(int argc, char** argv) {
                 moving_percentage = moving_time / (standing_time+moving_time);
             }
 
-            //ROS_ERROR("remaining_distance = %.2f/100 * %.2f * %d/%d*3600", battery_state.percent, avg_speed, battery_charge, moving_consumption);
             // remaining distance the robot can still travel in meters
             //                                                                            max time the robot can travel with full battery
             battery_state.remaining_distance = battery_state.percent/100.0 * avg_speed * (float)battery_charge/moving_consumption*3600;
