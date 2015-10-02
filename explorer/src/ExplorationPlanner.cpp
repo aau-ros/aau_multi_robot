@@ -4394,7 +4394,6 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
             for (int j = 0; j < frontiers.size()-1; j++) {
                 if(j>8)
                     break;
-                ROS_INFO("i:%d j:%d",i,j);
                 /*
                 Successor Function
                     f = w1 · d_g + w2 · theta + w3 · d_gb + w4 · d_gbe
