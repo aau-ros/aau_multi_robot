@@ -24,8 +24,7 @@
         <param name="local_costmap/scan/data_type" value="LaserScan" />
         <param name="local_costmap/scan/marking" value="true" />
         <param name="local_costmap/scan/clearing" value="true" />
-        <param name="observation_persistence" value="0.1" />
-        <param name="local_costmap/base_scan/marking" value="true" />
+        <param name="local_costmap/scan/observation_persistence" value="0.1" />
 
         <!-- simulation parameters -->
         <param name="log_path" value="$(arg log_path)" />

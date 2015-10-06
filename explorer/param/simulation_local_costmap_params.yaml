@@ -5,3 +5,4 @@ local_costmap:
     rolling_window: true
     width: 8.0
     height: 8.0
+    track_unknown_space: false
