@@ -27,7 +27,7 @@
 //#include <explorer/Frontier.h> //<simple_navigation/Frontier.h>>
 //#include <map_merger/pointFromOtherRobot.h>
 //#include <adhoc_communication/MmListOfPoints.h>
-//#include <map_merger/TransformPoint.h>
+#include <map_merger/TransformPoint.h>
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
 
@@ -690,7 +690,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
 
 
 
-                /*std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
+                std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
 
 //              ROS_INFO("Robo name: %s   Service to subscribe to: %s", robo_name.c_str(), service_topic.c_str());
 
@@ -717,7 +717,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
                     }
                     transformedPointsFromOtherRobot_frontiers.push_back(transform_point);
                     ROS_DEBUG("New x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
-                }*/
+                }
             }
         }
     }
