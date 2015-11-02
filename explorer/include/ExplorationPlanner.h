@@ -14,8 +14,8 @@
 #include <adhoc_communication/ExpCluster.h>
 #include <adhoc_communication/ExpAuction.h>
 #include <adhoc_communication/MmPoint.h>
-#include <adhoc_communication/MmListOfPoints.h>*/
-#include <map_merger/TransformPoint.h>
+#include <adhoc_communication/MmListOfPoints.h>
+#include <map_merger/TransformPoint.h>*/
 
 namespace explorationPlanner
 {
@@ -148,7 +148,7 @@ namespace explorationPlanner
             tf::StampedTransform transform;
             tf::Stamped < tf::Pose > robotPose;
 
-            map_merger::TransformPoint service_message;
+            //map_merger::TransformPoint service_message;
 
             navfn::NavfnROS nav;
 

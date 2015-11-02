@@ -20,7 +20,7 @@
 #include <iostream>
 #include <navfn/navfn_ros.h>
 #include <boost/filesystem.hpp>
-#include <map_merger/LogMaps.h>
+//#include <map_merger/LogMaps.h>
 #include "battery_simulation/Battery.h"
 #include "battery_simulation/Charge.h"
 #include "explorer/Speed.h"
@@ -75,8 +75,8 @@ public:
         ROS_INFO("robot prefix: \"%s\"", robot_prefix.c_str());
 
         // create map_merger service
-        std::string service = robot_prefix + std::string("/map_merger/logOutput");
-        mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
+        //std::string service = robot_prefix + std::string("/map_merger/logOutput");
+        //mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
         fake_mapping_save = nh.serviceClient<nav_msgs::GetMap>("/fake_mapping/save_map");
 
         if(robot_prefix.empty())
@@ -1072,12 +1072,12 @@ public:
                 costmap_mutex.unlock();
 
                 // call map_merger to log data
-                map_merger::LogMaps log;
-                log.request.log = 12;    /// request local and global map progress
-                ROS_DEBUG("Calling map_merger service logOutput");
-                if(!mm_log_client.call(log))
-                    ROS_WARN("Could not call map_merger service to store log.");
-                ROS_DEBUG("Finished service call.");
+                //map_merger::LogMaps log;
+                //log.request.log = 12;    /// request local and global map progress
+                //ROS_DEBUG("Calling map_merger service logOutput");
+                //if(!mm_log_client.call(log))
+                //    ROS_WARN("Could not call map_merger service to store log.");
+                //ROS_DEBUG("Finished service call.");
 
                 save_progress();
 
@@ -1275,10 +1275,10 @@ public:
 
            if(final)
 	    {
-		    map_merger::LogMaps log;
-		    log.request.log = 3;    /// request local and global map
-		    if(!mm_log_client.call(log))
-			ROS_WARN("Could not call map_merger service to store log.");
+		    //map_merger::LogMaps log;
+		    //log.request.log = 3;    /// request local and global map
+		    //if(!mm_log_client.call(log))
+			//ROS_WARN("Could not call map_merger service to store log.");
 	    }
 
         }
@@ -1357,10 +1357,10 @@ public:
              * Inform map_merger to save maps
              */
 
-            map_merger::LogMaps log;
-            log.request.log = 3;    /// request local and global map
-            if(!mm_log_client.call(log))
-                ROS_WARN("Could not call map_merger service to store log.");
+            //map_merger::LogMaps log;
+            //log.request.log = 3;    /// request local and global map
+            //if(!mm_log_client.call(log))
+            //    ROS_WARN("Could not call map_merger service to store log.");
 
 
 //#ifdef PROFILE
