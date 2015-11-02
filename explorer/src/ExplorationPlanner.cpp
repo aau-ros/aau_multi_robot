@@ -14,19 +14,19 @@
 #include <stdlib.h>
 #include <geometry_msgs/PolygonStamped.h>
 #include <nav_msgs/GridCells.h>
-/*#include <adhoc_communication/ExpCluster.h>
+#include <adhoc_communication/ExpCluster.h>
 #include <adhoc_communication/ExpClusterElement.h>
 #include <adhoc_communication/ExpAuction.h>
 #include <adhoc_communication/ExpFrontier.h>
 #include <adhoc_communication/ExpFrontierElement.h>
 #include <adhoc_communication/SendExpFrontier.h>
 #include <adhoc_communication/SendExpAuction.h>
-#include <adhoc_communication/SendExpCluster.h>*/
+#include <adhoc_communication/SendExpCluster.h>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/io.hpp>
 //#include <explorer/Frontier.h> //<simple_navigation/Frontier.h>>
 //#include <map_merger/pointFromOtherRobot.h>
-//#include <adhoc_communication/MmListOfPoints.h>
+#include <adhoc_communication/MmListOfPoints.h>
 #include <map_merger/TransformPoint.h>
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
@@ -96,16 +96,16 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
         robo_name = "";
         robot_str = robot_name_parameter;
     }
-//     std::string sendFrontier_msgs = robo_name +"/adhoc_communication/send_frontier";
-//     std::string sendAuction_msgs  = robo_name +"/adhoc_communication/send_auction";
+    std::string sendFrontier_msgs = robo_name +"/adhoc_communication/send_frontier";
+    std::string sendAuction_msgs  = robo_name +"/adhoc_communication/send_auction";
 
     ros::NodeHandle tmp;
     nh_service = &tmp;
 
-    //ROS_DEBUG("Sending frontier: '%s'     SendAuction: '%s'", sendFrontier_msgs.c_str(), sendAuction_msgs.c_str());
+    ROS_DEBUG("Sending frontier: '%s'     SendAuction: '%s'", sendFrontier_msgs.c_str(), sendAuction_msgs.c_str());
 
-//     ssendFrontier = nh_service->serviceClient<adhoc_communication::SendExpFrontier>(sendFrontier_msgs);
-//     ssendAuction = nh_service->serviceClient<adhoc_communication::SendExpAuction>(sendAuction_msgs);
+    ssendFrontier = nh_service->serviceClient<adhoc_communication::SendExpFrontier>(sendFrontier_msgs);
+    ssendAuction = nh_service->serviceClient<adhoc_communication::SendExpAuction>(sendAuction_msgs);
 
 
 //    pub_negotion_first = nh_negotiation_first.advertise <adhoc_communication::Frontier> ("negotiation_list_first", 10000);
@@ -158,11 +158,11 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 
 
 //    sub_control = nh_control.subscribe("/control", 10000, &ExplorationPlanner::controlCallback, this);
-    //sub_frontiers = nh_frontier.subscribe(robo_name+"/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-    //sub_visited_frontiers = nh_visited_frontier.subscribe(robo_name+"/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-    //sub_negotioation = nh_negotiation.subscribe(robo_name+"/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-    //sub_auctioning = nh_auction.subscribe(robo_name+"/auction", 1000, &ExplorationPlanner::auctionCallback, this);
-    //sub_position = nh_position.subscribe(robo_name+"/all_positions", 1000, &ExplorationPlanner::positionCallback, this);
+    sub_frontiers = nh_frontier.subscribe(robo_name+"/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+    sub_visited_frontiers = nh_visited_frontier.subscribe(robo_name+"/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+    sub_negotioation = nh_negotiation.subscribe(robo_name+"/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+    sub_auctioning = nh_auction.subscribe(robo_name+"/auction", 1000, &ExplorationPlanner::auctionCallback, this);
+    sub_position = nh_position.subscribe(robo_name+"/all_positions", 1000, &ExplorationPlanner::positionCallback, this);
 
     // TODO
 //    sub_robot = nh_robot.subscribe(robo_name+"/adhoc_communication/new_robot", 1000, &ExplorationPlanner::new_robot_callback, this);
@@ -203,50 +203,50 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     srand((unsigned)time(0));
 }
 
-// void ExplorationPlanner::Callbacks()
-// {
-//     ros::Rate r(10);
-//     while(ros::ok())
-//     {
-// //        publish_subscribe_mutex.lock();
+void ExplorationPlanner::Callbacks()
+{
+    ros::Rate r(10);
+    while(ros::ok())
+    {
+//        publish_subscribe_mutex.lock();
+
+        if(robot_name == 1)
+        {
+                sub_frontiers = nh_frontier.subscribe("/robot_0/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_0/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+                sub_negotioation = nh_negotiation.subscribe("/robot_0/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+                sub_auctioning = nh_auction.subscribe("/robot_1/auction", 1000, &ExplorationPlanner::auctionCallback, this);
+
+//                sub_frontiers = nh_frontier.subscribe("/robot_2/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+//                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_2/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+//                sub_negotioation = nh_negotiation.subscribe("/robot_2/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
 //
-// //         if(robot_name == 1)
-// //         {
-// //                 sub_frontiers = nh_frontier.subscribe("/robot_0/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// //                 sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_0/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// //                 sub_negotioation = nh_negotiation.subscribe("/robot_0/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-// //                 sub_auctioning = nh_auction.subscribe("/robot_1/auction", 1000, &ExplorationPlanner::auctionCallback, this);
-// //
-// // //                sub_frontiers = nh_frontier.subscribe("/robot_2/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// // //                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_2/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// // //                sub_negotioation = nh_negotiation.subscribe("/robot_2/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-// // //
-// // //                sub_frontiers = nh_frontier.subscribe("/robot_3/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// // //                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_3/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// // //                sub_negotioation = nh_negotiation.subscribe("/robot_3/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-// //
-// //         }
-// //         else if(robot_name == 0)
-// //         {
-// //                 sub_frontiers = nh_frontier.subscribe("/robot_1/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// //                 sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_1/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// //                 sub_negotioation = nh_negotiation.subscribe("/robot_1/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-// //                 sub_auctioning = nh_auction.subscribe("/robot_0/auction", 1000, &ExplorationPlanner::auctionCallback, this);
-// //                sub_frontiers = nh_frontier.subscribe("/robot_2/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// //                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_2/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// //                sub_negotioation = nh_negotiation.subscribe("/robot_2/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
-// //
-// //                sub_frontiers = nh_frontier.subscribe("/robot_3/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
-// //                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_3/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
-// //                sub_negotioation = nh_negotiation.subscribe("/robot_3/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+//                sub_frontiers = nh_frontier.subscribe("/robot_3/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+//                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_3/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+//                sub_negotioation = nh_negotiation.subscribe("/robot_3/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+
+        }
+        else if(robot_name == 0)
+        {
+                sub_frontiers = nh_frontier.subscribe("/robot_1/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_1/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+                sub_negotioation = nh_negotiation.subscribe("/robot_1/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+                sub_auctioning = nh_auction.subscribe("/robot_0/auction", 1000, &ExplorationPlanner::auctionCallback, this);
+//                sub_frontiers = nh_frontier.subscribe("/robot_2/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+//                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_2/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+//                sub_negotioation = nh_negotiation.subscribe("/robot_2/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
 //
-// //         }
-// //        publish_subscribe_mutex.unlock();
-//
-//         r.sleep();
-// //        ros::spinOnce();
-//     }
-// }
+//                sub_frontiers = nh_frontier.subscribe("/robot_3/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
+//                sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_3/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
+//                sub_negotioation = nh_negotiation.subscribe("/robot_3/negotiation_list", 10000, &ExplorationPlanner::negotiationCallback, this);
+
+        }
+//        publish_subscribe_mutex.unlock();
+
+        r.sleep();
+//        ros::spinOnce();
+    }
+}
 
 void ExplorationPlanner::initialize_planner(std::string name,
 		costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global) {
@@ -795,31 +795,31 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
                 }
 
 
-//                 std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_ might not be used here
-//
-// //                 client = nh_transform.serviceClient<map_merger::TransformPoint>(service_topic);
-//
-//                 service_message.request.point.x = visited_frontiers.at(i).x_coordinate;
-//                 service_message.request.point.y = visited_frontiers.at(i).y_coordinate;
-//                 service_message.request.point.src_robot = robo_name;
+                std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_ might not be used here
+
+                client = nh_transform.serviceClient<map_merger::TransformPoint>(service_topic);
+
+                service_message.request.point.x = visited_frontiers.at(i).x_coordinate;
+                service_message.request.point.y = visited_frontiers.at(i).y_coordinate;
+                service_message.request.point.src_robot = robo_name;
 
                 ROS_DEBUG("Old visited x: %f   y: %f", visited_frontiers.at(i).x_coordinate, visited_frontiers.at(i).y_coordinate);
 
-//                 if(client.call(service_message))
-//                 {
-//                     visited_frontiers.at(i).x_coordinate = service_message.response.point.x;
-//                     visited_frontiers.at(i).y_coordinate = service_message.response.point.y;
-//
-//                     transform_point_t transform_point;
-//                     transform_point.id = visited_frontiers.at(i).id;
-//
-//                     if(robot_prefix_empty_param == true)
-//                     {
-//                         transform_point.robot_str = visited_frontiers.at(i).detected_by_robot_str;
-//                     }
-//                     transformedPointsFromOtherRobot_visited_frontiers.push_back(transform_point);
-//                     ROS_DEBUG("New visited x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
-//                 }
+                if(client.call(service_message))
+                {
+                    visited_frontiers.at(i).x_coordinate = service_message.response.point.x;
+                    visited_frontiers.at(i).y_coordinate = service_message.response.point.y;
+
+                    transform_point_t transform_point;
+                    transform_point.id = visited_frontiers.at(i).id;
+
+                    if(robot_prefix_empty_param == true)
+                    {
+                        transform_point.robot_str = visited_frontiers.at(i).detected_by_robot_str;
+                    }
+                    transformedPointsFromOtherRobot_visited_frontiers.push_back(transform_point);
+                    ROS_DEBUG("New visited x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
+                }
             }
         }
     }
@@ -1230,10 +1230,10 @@ bool ExplorationPlanner::removeUnreachableFrontier(int id, std::string detected_
     return true;
 }
 
-//bool ExplorationPlanner::publish_negotiation_list(frontier_t negotiation_frontier, int cluster_number)
-//{
+bool ExplorationPlanner::publish_negotiation_list(frontier_t negotiation_frontier, int cluster_number)
+{
 //    ROS_ERROR("Publish negotiation list!!!!!!!!!!!!!!!!");
-    /*adhoc_communication::ExpFrontier negotiation_msg;
+    adhoc_communication::ExpFrontier negotiation_msg;
 
 //    for(int i = 0; i<negotiation_list.size(); i++)
 //    {
@@ -1292,909 +1292,909 @@ bool ExplorationPlanner::removeUnreachableFrontier(int id, std::string detected_
 
     sendToMulticast("mc_",negotiation_msg, "negotiation_list");
 
-    first_negotiation_run = false;*/
-//}
+    first_negotiation_run = false;
+}
 
-// bool ExplorationPlanner::sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_to_send, std::string topic)
-// {
-// //    ROS_INFO("SENDING frontier id: %ld    detected_by: %ld", frontier_to_send.id ,frontier_to_send.detected_by_robot);
-//     adhoc_communication::SendExpFrontier service_frontier; // create request of type any+
-//
-//     std::stringstream robot_number;
-//     robot_number << robot_name;
-//     std::string prefix = "robot_";
-//     std::string robo_name = prefix.append(robot_number.str());
-//
-//     if(robot_prefix_empty_param == true)
-//     {
-//         robo_name = robot_str;
-// //        robo_name = lookupRobotName(robot_name);
-//     }
-//     std::string destination_name = multi_cast_group + robo_name; //for multicast
-// //    std::string destination_name = robo_name; // unicast
-//
-//     ROS_INFO("sending to multicast group '%s' on topic: '%s'",destination_name.c_str(), topic.c_str());
-//     service_frontier.request.dst_robot = destination_name;
-//     service_frontier.request.frontier = frontier_to_send;
-//     service_frontier.request.topic = topic;
-//
-//     if (ssendFrontier.call(service_frontier))
-//     {
-//             ROS_DEBUG("Successfully called service  sendToMulticast");
-//
-//             if(service_frontier.response.status)
-//             {
-//                     ROS_DEBUG("adhoc comm returned successful transmission");
-//                     return true;
-//             }
-//             else
-//             {
-//                 ROS_DEBUG("Failed to send to multicast group %s!",destination_name.c_str());
-//                 return false;
-//             }
-//     }
-//     else
-//     {
-//      ROS_WARN("Failed to call service sendToMulticast [%s]",ssendFrontier.getService().c_str());
-//      return false;
-//     }
-// }
-//
-// bool ExplorationPlanner::sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic)
-// {
-//     adhoc_communication::SendExpAuction service_auction; // create request of type any+
-//
-//     std::stringstream robot_number;
-//     robot_number << robot_name;
-//     std::string prefix = "robot_";
-//     std::string robo_name = prefix.append(robot_number.str());
-//
-//     if(robot_prefix_empty_param == true)
-//     {
-// //        robo_name = lookupRobotName(robot_name);
-//         robo_name = robot_str;
-//     }
-//
-//     std::string destination_name = multi_cast_group + robo_name; //for multicast
-// //    std::string destination_name = robo_name; // unicast
-//
-//     ROS_INFO("sending auction to multicast group '%s' on topic '%s'",destination_name.c_str(), topic.c_str());
-//     service_auction.request.dst_robot = destination_name;
-//     service_auction.request.auction = auction_to_send;
-//     service_auction.request.topic = topic;
-//
-//     if (ssendAuction.call(service_auction))
-//     {
-//             ROS_DEBUG("Successfully called service sendToMulticast");
-//
-//             if(service_auction.response.status)
-//             {
-//                     ROS_DEBUG("Auction was multicasted successfully.");
-//                     return true;
-//             }
-//             else
-//             {
-//                 ROS_WARN("Failed to send auction to mutlicast group %s!",destination_name.c_str());
-//                 return false;
-//             }
-//     }
-//     else
-//     {
-//      ROS_WARN("Failed to call service sendToMulticastAuction [%s]",ssendAuction.getService().c_str());
-//      return false;
-//     }
-// }
-//
-// void ExplorationPlanner::negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
-// {
-// //        ROS_ERROR("Negotiation List!!!");
-//
-//         bool entry_found = false;
-//
-//         adhoc_communication::ExpFrontierElement frontier_element;
-//         for(int j = 0; j < msg.get()->frontier_element.size(); j++)
-//         {
-//             frontier_element = msg.get()->frontier_element.at(j);
-//             for(int i = 0; i < negotiation_list.size(); i++)
-//             {
-//                 if(robot_prefix_empty_param == true)
-//                 {
-//                     if(negotiation_list.at(i).id == frontier_element.id && negotiation_list.at(i).detected_by_robot_str.compare(frontier_element.detected_by_robot_str) == 0)
-//                     {
-//                         entry_found = true;
-//                     }
-//                 }else
-//                 {
-//                     if(negotiation_list.at(i).id == frontier_element.id)
-//                     {
-//                         entry_found = true;
-//                     }
-//                 }
-//
-//             }
-//             if(entry_found == false)
-//             {
-//                 ROS_DEBUG("Negotiation frontier with ID: %ld", frontier_element.id);
-//                 frontier_t negotiation_frontier;
-//                 negotiation_frontier.detected_by_robot = frontier_element.detected_by_robot;
-//                 negotiation_frontier.id = frontier_element.id;
-//                 negotiation_frontier.x_coordinate = frontier_element.x_coordinate;
-//                 negotiation_frontier.y_coordinate = frontier_element.y_coordinate;
-//
-//                 store_negotiation_mutex.lock();
-//                 negotiation_list.push_back(negotiation_frontier);
-//                 store_negotiation_mutex.unlock();
-//             }
-//         }
-// }
-//
-// bool ExplorationPlanner::respondToAuction(std::vector<requested_cluster_t> requested_cluster_ids, int auction_id_number)
-// {
-// //    ros::Rate r(1);
-// //    while(ros::ok())
-// //    {
-// //        r.sleep();
-// ////        while(start_thr_auction == false);
-// //        if(start_thr_auction == true)
-// //        {
-//             ROS_INFO("Respond to auction");
-//             adhoc_communication::ExpAuction auction_msgs;
-//
-//             for(int i = 0; i < requested_cluster_ids.size(); i++)
-//             {
-//                 ROS_INFO("Responding to cluster ids: %d", requested_cluster_ids.at(i).own_cluster_id);
-//             }
-//
-//             for(int n = 0; n < requested_cluster_ids.size(); n++)
-//             {
-//                 cluster_mutex.lock();
-//                 for(int i = 0; i < clusters.size(); i++)
-//                 {
-//                     if(clusters.at(i).id == requested_cluster_ids.at(n).own_cluster_id)
-//                     {
-//                         adhoc_communication::ExpCluster cluster_msg;
-//                         adhoc_communication::ExpClusterElement cluster_element_msg;
-//                         for(int j = 0; j < requested_cluster_ids.at(n).requested_ids.size(); j++)
-//                         {
-//                             if(robot_prefix_empty_param == true)
-//                             {
-//                                 cluster_element_msg.id = requested_cluster_ids.at(n).requested_ids.at(j).id;
-//                                 cluster_element_msg.detected_by_robot_str = requested_cluster_ids.at(n).requested_ids.at(j).robot_str;
-//                             }else
-//                             {
-//                                 cluster_element_msg.id = requested_cluster_ids.at(n).requested_ids.at(j).id;
-//                             }
-//                             cluster_msg.ids_contained.push_back(cluster_element_msg);
-//                         }
-// //                        ROS_INFO("Calculate the auction BID");
-//                         cluster_msg.bid = calculateAuctionBID(clusters.at(i).id, trajectory_strategy);
-//                         auction_msgs.available_clusters.push_back(cluster_msg);
-//                         break;
-//                     }
-//                 }
-//                 cluster_mutex.unlock();
-//             }
-//
-//             /*
-//              * Visualize the auction message to send
-//              */
-// //            for(int i = 0; i < auction_msgs.available_clusters.size(); i++)
-// //            {
-// //                adhoc_communication::Cluster cluster_msg_check;
-// //                cluster_msg_check = auction_msgs.available_clusters.at(i);
-// //                ROS_INFO("Robot %d sending BID: %f cluster elements: %lu", robot_name, cluster_msg_check.bid, cluster_msg_check.ids_contained.size());
-// //            }
-//
-//             ROS_INFO("Robot %d publishes auction bids for all clusters", robot_name);
-//
-// //            /* FIXME */
-// //            if(auction_msgs.available_clusters.size() == 0)
-// //            {
-// //                adhoc_communication::Cluster cluster_msg;
-// //                cluster_msg.bid = -1;
-// //                auction_msgs.available_clusters.push_back(cluster_msg);
-// //            }
-// //
-//
-//             auction_msgs.auction_status_message = false;
-//             auction_msgs.auction_id = auction_id_number;
-//
-//             std::stringstream ss;
-//             ss << robot_name;
-//             std::string prefix = "";
-//             std::string robo_name = prefix.append(ss.str());
-//
-//             auction_msgs.robot_name = robo_name;
-//
-// //            if(first_run == true)
-// //            {
-// //                pub_auctioning_first.publish(auction_msgs);
-// //            }else
-// //            {
-//                 sendToMulticastAuction("mc_", auction_msgs, "auction");
-// //            }
-//
-//             start_thr_auction = false;
-// //        }
-// //    }
-// }
-//
-// int ExplorationPlanner::calculateAuctionBID(int cluster_number, std::string strategy)
-// {
-// //    ROS_INFO("Robot %d  calculates bid for cluster_number %d", robot_name, cluster_number);
-//     int auction_bid = 0;
-//     int cluster_vector_position = -1;
-//     bool cluster_could_be_found = false;
-//
-//     if(clusters.size() > 0)
-//     {
-//         for (int i = 0; i < clusters.size(); i++)
-//         {
-//             if(clusters.at(i).id == cluster_number)
-//             {
-// //                if(clusters.at(i).cluster_element.size() > 0)
-// //                {
-//                     cluster_vector_position = i;
-//                     cluster_could_be_found = true;
-//                     break;
-// //                }else
-// //                {
-// //                    ROS_ERROR("Cluster found but empty, therefore do not calculate LOCAL BID");
-// //                    return(-1);
-// //                }
-//             }
-//         }
-//     }
-//     if(cluster_could_be_found == false)
-//     {
-//         /*
-//          * Cluster could not be found, set it to a high value like 100
-//          */
-//         ROS_WARN("Cluster could not be found");
-//         return(-1);
-//     }
-//
-//     if (!costmap_global_ros_->getRobotPose(robotPose))
-//     {
-//             ROS_ERROR("Failed to get RobotPose");
-//     }
-//
-//     int distance = -1;
-//     for(int i = 0; i < clusters.at(cluster_vector_position).cluster_element.size(); i++)
-//     {
-//
-//         if(strategy == "trajectory")
-//         {
-//             distance = trajectory_plan(clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate, clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate);
-//
-//         }else if(strategy == "euclidean")
-//         {
-//             double x = clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate - robotPose.getOrigin().getX();
-//             double y = clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate - robotPose.getOrigin().getY();
-//             distance = x * x + y * y;
-//             return distance;
-//         }
-//
-//         if(distance > 0)
-//         {
-//             double x = clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate - robotPose.getOrigin().getX();
-//             double y = clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate - robotPose.getOrigin().getY();
-//             double euclidean_distance = x * x + y * y;
-//
-//             /*
-//              * Check if the distance calculation is plausible.
-//              * The euclidean distance to this point need to be smaller then
-//              * the simulated trajectory path. If this stattement is not valid
-//              * the trajectory calculation has failed.
-//              */
-// //            ROS_INFO("Euclidean distance: %f   trajectory_path: %f", sqrt(euclidean_distance), distance* costmap_ros_->getCostmap()->getResolution());
-//             if (distance * costmap_ros_->getCostmap()->getResolution() <= sqrt(euclidean_distance)*0.95)
-//             {
-//                 ROS_WARN("Euclidean distance smaller then trajectory distance to LOCAL CLUSTER!!!");
-// //                return(-1);
-//             }else
-//             {
-//                 return distance;
-//             }
-//         }
-//     }
-//     if(distance == -1)
-//     {
-// //        ROS_ERROR("Unable to calculate LOCAL BID at position %d  --> BID: %d", cluster_vector_position, distance);
-//     }
-// //    ROS_INFO("Cluster at position %d  --> BID: %d", cluster_vector_position, distance);
-//     return(-1);
-// }
-//
-// void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoints::ConstPtr& msg)
-// {
-//     ROS_DEBUG("Position Callback !!!!!");
-//     position_mutex.lock();
-//
-//     other_robots_positions.positions.clear();
-//     ROS_INFO("positions size: %lu", msg.get()->positions.size());
-//     for(int i = 0; i < msg.get()->positions.size(); i++)
-//     {
-//         other_robots_positions.positions.push_back(msg.get()->positions.at(i));
-//     }
-//     position_mutex.unlock();
-// }
-//
-// void ExplorationPlanner::auctionCallback(const adhoc_communication::ExpAuction::ConstPtr& msg)
-// {
-//     auction_running = true;
-//     //ROS_ERROR("CALLING AUCTION CALLBACK!!!!!!!!!!!!");
-//     int robots_int_name;
-//
-//     bool same_robot = false;
-//     if(robot_prefix_empty_param == true)
-//     {
-//         if(robot_str.compare(msg.get()->robot_name.c_str()) == 0)
-//         {
-//             same_robot = true;
-//         }
-//     }else
-//     {
-//         robots_int_name = atoi(msg.get()->robot_name.c_str());
-//         ROS_INFO("Robot name: %d      int_name: %d",robot_name, robots_int_name);
-//         if(robots_int_name == robot_name)
-//         {
-//             same_robot = true;
-//         }
-//     }
-//
-//     if(same_robot == false)
-//     {
-//         /*
-//         * Cluster all available frontiers to be able to compare clusters
-//         * with other robots
-//         */
-//
-//         /*
-//          * TODO
-//          * Check if following code is necessary or if simple navigation needs to
-//          * periodically update the frontiers in the frontier thread.
-//          */
-//         transformToOwnCoordinates_frontiers();
-//         transformToOwnCoordinates_visited_frontiers();
-//
-//         clearVisitedFrontiers();
-//         clearUnreachableFrontiers();
-//         clearSeenFrontiers(costmap_global_ros_);
-//
-//         clearVisitedAndSeenFrontiersFromClusters();
-//         clusterFrontiers();
-//
-//
-// //        visualize_Cluster_Cells();
-//
-//         if(msg.get()->auction_status_message == true)
-//         {
-//             ROS_INFO("Calling Auction Status");
-//
-//             /*
-//              * Visualize requested ids
-//              */
-//
-//             for(int i = 0; i < msg.get()->requested_clusters.size(); i++)
-//             {
-//                 adhoc_communication::ExpCluster cluster_req;
-//                 cluster_req = msg.get()->requested_clusters.at(i);
-//                 std::string requested_clusters;
-//                 for(int j = 0; j < cluster_req.ids_contained.size(); j++)
-//                 {
-//                     if(j >= 6)
-//                     {
-//                         break;
-//                     }
-//                     requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j).id));
-//                     requested_clusters.append(", ");
-//                 }
-//                 ROS_INFO("Requested ids: %s from robot: %s", requested_clusters.c_str(), msg.get()->robot_name.c_str());
-//             }
-//
-//
-//
-//             auction_start = msg.get()->start_auction;
-//             auction_finished = msg.get()->auction_finished;
-//             adhoc_communication::ExpCluster occupied_ids;
-//             std::vector<requested_cluster_t> requested_cluster_ids;
-//
-//
-//             /*
-//              * Grep all occupied ids and try to convert them into clusters in own
-//              * coordinate system. This ensures that all robots in the system know
-//              * which clusters had been occupied by others and do not select them
-//              * twice.
-//              */
-//             if(msg.get()->occupied_ids.size() > 0 || msg.get()->requested_clusters.size() > 0)
-//             {
-//                 for(int i = 0; i < msg.get()->occupied_ids.size(); i++)
-//                 {
-//                     adhoc_communication::ExpClusterElement cluster_element;
-//
-//                     cluster_element.id = msg.get()->occupied_ids.at(i).id;
-//                     cluster_element.detected_by_robot_str = msg.get()->occupied_ids.at(i).detected_by_robot_str;
-//
-//                     occupied_ids.ids_contained.push_back(cluster_element);
-//                 }
-//                 int occupied_cluster_id = checkClustersID(occupied_ids);
-//                 ROS_INFO("Check occupied cluster to be the same. %d", occupied_cluster_id);
-//
-//                 if(occupied_cluster_id >=0)
-//                 {
-//                     ROS_INFO("Adding occupied cluster: %d", occupied_cluster_id);
-//                     already_used_ids.push_back(occupied_cluster_id);
-//                 }else
-//                 {
-//                     /* Store undetected Clusters in a struct for later processing */
-//                     ROS_INFO("Adding occupied cluster as unrecognized!");
-//                     unrecognized_occupied_clusters.push_back(occupied_ids);
-//                 }
-//                 /*
-//                  * Now read from unrecognized cluster vector and try to convert
-//                  * these ids to a valid cluster to know which had already been
-//                  * occupied.
-//                  */
-//                 for(int i = 0; i < unrecognized_occupied_clusters.size(); i++)
-//                 {
-//                     int unrecognized_occupied_cluster_id = checkClustersID(unrecognized_occupied_clusters.at(i));
-//                     if(unrecognized_occupied_cluster_id >=0)
-//                     {
-//                         ROS_INFO("Unrecognized cluster: %d converted", unrecognized_occupied_cluster_id);
-//                         already_used_ids.push_back(unrecognized_occupied_cluster_id);
-//                         unrecognized_occupied_clusters.erase(unrecognized_occupied_clusters.begin() + i);
-//
-//                         if(i > 0)
-//                             i--;
-//                     }
-//                 }
-//
-//
-//                 /*
-//                  * Grep the requested clusters to know which ones to answer to.
-//                  */
-//                 for(int i = 0; i < msg.get()->requested_clusters.size(); i++)
-//                 {
-//                     adhoc_communication::ExpCluster requested_cluster;
-//                     requested_cluster = msg.get()->requested_clusters.at(i);
-//
-//                     int check_cluster_id = checkClustersID(requested_cluster);
-//                     if(check_cluster_id >= 0)
-//                     {
-//                         requested_cluster_t new_cluster_request;
-//                         for(int j = 0; j < requested_cluster.ids_contained.size(); j++)
-//                         {
-//                             transform_point_t cluster_element_point;
-//                             if(robot_prefix_empty_param == true)
-//                             {
-//                                 cluster_element_point.id = requested_cluster.ids_contained.at(j).id;
-//                                 cluster_element_point.robot_str = requested_cluster.ids_contained.at(j).detected_by_robot_str;
-//                             }else
-//                             {
-//                                 cluster_element_point.id = requested_cluster.ids_contained.at(j).id;
-//                             }
-//
-//                             new_cluster_request.requested_ids.push_back(cluster_element_point);
-//                         }
-//                         new_cluster_request.own_cluster_id = check_cluster_id;
-//
-//                         requested_cluster_ids.push_back(new_cluster_request);
-//                     }else
-//                     {
-//                         ROS_WARN("No Matching Cluster Detected");
-//                     }
-//                 }
-//             }
-//
-//
-//             if(auction_start == true)
-//             {
-//                 start_thr_auction = true;
-//                 thr_auction_status = boost::thread(&ExplorationPlanner::respondToAuction, this, requested_cluster_ids, msg.get()->auction_id);
-//             }
-//
-//         }else if(msg.get()->auction_status_message == false)
-//         {
-//             bool continue_auction = false;
-//             if(robot_prefix_empty_param == true)
-//             {
-//                 if(msg.get()->auction_id == auction_id_number)
-//                 {
-//                     continue_auction = true;
-//                 }
-//             }else
-//             {
-//                 if(msg.get()->auction_id == 10000*robot_name + auction_id_number)
-//                 {
-//                     continue_auction = true;
-//                 }
-//             }
-//
-//
-//             if(continue_auction == true)
-//             {
-//     //            ROS_INFO("auction_id: %d       local_id: %d", msg.get()->auction_id, 10000*robot_name + auction_id_number);
-//                 bool robot_already_answered = false;
-//
-//                 for(int i = 0; i < robots_already_responded.size(); i++)
-//                 {
-//                     if(robot_prefix_empty_param == true)
-//                     {
-//                         if(msg.get()->robot_name.compare(robots_already_responded.at(i).robot_str) == 0 && msg.get()->auction_id == robots_already_responded.at(i).auction_number)
-//                         {
-//                             ROS_WARN("Same msg already received!!!");
-//                             robot_already_answered = true;
-//                             break;
-//                         }
-//                     }else
-//                     {
-//                         ROS_INFO("Compare msg name: %d  responded: %d       msg auction: %d   responded: %d", robots_int_name, robots_already_responded.at(i).robot_number, msg.get()->auction_id, robots_already_responded.at(i).auction_number);
-//                         if(robots_int_name == robots_already_responded.at(i).robot_number && msg.get()->auction_id == robots_already_responded.at(i).auction_number)
-//                         {
-//                             ROS_WARN("Same msg already received!!!");
-//                             robot_already_answered = true;
-//                             break;
-//                         }
-//                     }
-//                 }
-//
-//                 /*
-//                  * Only proceed if the robot has not answered before.
-//                  */
-//                 if(robot_already_answered == false)
-//                 {
-//                     if(robot_prefix_empty_param == true)
-//                     {
-//                         ROS_INFO("Auction from robot %s received", msg.get()->robot_name.c_str());
-//                     }else
-//                     {
-//                         ROS_INFO("Auction from robot %d received", robot_name);
-//                     }
-//                     auction_pair_t auction_pair;
-//                     auction_element_t auction_elements;
-//
-//                     int has_cluster_id = -1;
-//
-//                     /*
-//                      * Visualize the received message
-//                      */
-//                     for(int i = 0; i < msg.get()->available_clusters.size(); i++)
-//                     {
-//                         adhoc_communication::ExpCluster cluster_req;
-//                         cluster_req = msg.get()->available_clusters.at(i);
-//                         ROS_INFO("---------------------- %d ----------------------------", i);
-//                         std::string requested_clusters;
-//                         for(int j = 0; j < cluster_req.ids_contained.size(); j++)
-//                         {
-//                             if(j >= 6)
-//                             {
-//                                 break;
-//                             }
-//                             requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j).id));
-//                             requested_clusters.append(", ");
-//                         }
-//                         ROS_INFO("Received ids: %s", requested_clusters.c_str());
-//                     }
-//
-//
-//
-//                     for(int i = 0; i < msg.get()->available_clusters.size(); i++)
-//                     {
-//                         adhoc_communication::ExpCluster current_cluster;
-//                         current_cluster = msg.get()->available_clusters.at(i);
-//                 //        ROS_INFO("------------------------------------------------------------------");
-//                 //        for(int k = 0; k < current_cluster.ids_contained.size(); k++)
-//                 //        {
-//                 //            ROS_INFO("FRONTIER ID: %d", current_cluster.ids_contained.at(k));
-//                 //        }
-//                         int current_cluster_id = checkClustersID(current_cluster);
-//
-//                         ROS_INFO("Received ID converted to cluster ID: %d", current_cluster_id);
-//                         if(current_cluster_id >= 0)
-//                         {
-//                             auction_pair.cluster_id = current_cluster_id;
-//                             auction_pair.bid_value = current_cluster.bid;
-//                             auction_elements.auction_element.push_back(auction_pair);
-//                             ROS_INFO("BID: %f",current_cluster.bid);
-//                         }
-//                     }
-//                 //    ROS_INFO("Robot %d received all bids for all clusters", robot_name);
-//                     auction_elements.robot_id = robots_int_name;
-//                     auction_elements.detected_by_robot_str = msg.get()->robot_name;
-//
-//                     auction_mutex.lock();
-//                     auction.push_back(auction_elements);
-//                     auction_mutex.unlock();
-//
-//                     /*
-//                      * A BID is received from one robot. Remember the robot who send the
-//                      * bid for a special auction id!
-//                      */
-//     //                if(msg.get()->auction_id == 10000*robot_name + auction_id_number)
-//     //                {
-//                         number_of_auction_bids_received++;
-//                         responded_t auction_response;
-//                         auction_response.auction_number = msg.get()->auction_id;
-//                         auction_response.robot_number = robots_int_name;
-//                         if(robot_prefix_empty_param == true)
-//                         {
-//                             auction_response.robot_str = msg.get()->robot_name;
-//                         }
-//                         robots_already_responded.push_back(auction_response);
-//     //                }
-//                 }else
-//                 {
-//                     ROS_WARN("Robot already answered on this auction");
-//                 }
-//             }
-//         }
-//     }
-//     auction_running = false;
-// }
-//
-// int ExplorationPlanner::checkClustersID(adhoc_communication::ExpCluster cluster_to_check)
-// {
-// //    ROS_INFO("Check for cluster id");
-//       std::vector<compare_pair_t> compare_clusters;
-//
-// //        ROS_INFO("------------------- Checking ----------------------");
-//         std::string requested_clusters;
-//
-// //        for(int j = 0; j < cluster_to_check.ids_contained.size(); j++)
-// //        {
-// //            requested_clusters.append(NumberToString((int)cluster_to_check.ids_contained.at(j)));
-// //            requested_clusters.append(", ");
-// //        }
-// //        ROS_INFO("%s", requested_clusters.c_str());
-//
-//
-//
-//
-//     for(int j = 0; j < clusters.size(); j++)
-//     {
-//         double same_id_found = 0;
-// //        ROS_INFO("--------------------------------------------------------------");
-//         for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
-//         {
-// //            for(int m= 0; m < clusters.at(j).cluster_element.size(); m++)
-// //            {
-// //                ROS_INFO("Ids in cluster to check with: %d",clusters.at(j).cluster_element.at(m).id);
-// //            }
-// //            ROS_INFO("Ids in cluster to check with: %d",clusters.at(j).cluster_element.at(n).id);
-//             for(int i = 0; i < cluster_to_check.ids_contained.size(); i++)
-//             {
-//                 if(robot_prefix_empty_param == true)
-//                 {
-// //                    ROS_INFO("Cluster id: %d  robot: %s     msg id: %d  robot: %s",clusters.at(j).cluster_element.at(n).id, clusters.at(j).cluster_element.at(n).detected_by_robot_str, cluster_to_check.ids_contained.at(i).id, cluster_to_check.ids_contained.at(i).detected_by_robot_str);
-//                     if(clusters.at(j).cluster_element.at(n).id == cluster_to_check.ids_contained.at(i).id && clusters.at(j).cluster_element.at(n).detected_by_robot_str.compare(cluster_to_check.ids_contained.at(i).detected_by_robot_str) == 0)
-//                     {
-//                         same_id_found++;
-//                     }
-//                 }else
-//                 {
-//                     if(clusters.at(j).cluster_element.at(n).id == cluster_to_check.ids_contained.at(i).id)
-//                     {
-//                         same_id_found++;
-//                     }
-//                 }
-//             }
-//         }
-//         if(same_id_found > clusters.at(j).cluster_element.size() * 0.4)
-//         {
-// //            ROS_INFO("CLUSTER ID FOUND: %d", clusters.at(j).id);
-//             return (clusters.at(j).id);
-//         }
-//         else
-//         {
-// //            ROS_ERROR("NO MATCHING CLUSTER FOUND!!!");
-//         }
-// //        ROS_INFO("---------------------------------------------------");
-//
-// //        ROS_INFO("j: %d   cluster_id: %d", j, clusters.at(j).id);
-// //        compare_pair_t compare_pair;
-// //        compare_pair.identical_ids = same_id_found;
-// //        compare_pair.cluster_id = clusters.at(j).id;
-// //        compare_clusters.push_back(compare_pair);
-// //        ROS_INFO("Same IDs found: %f   elements*0.7: %f", same_id_found,clusters.at(j).cluster_element.size() * 0.7);
-//
-//
-// //            if(same_id_found > clusters.at(j).cluster_element.size() * 0.8)
-// //            {
-// //                bool previously_detected = false;
-// //                for(int m = 0; m < id_previously_detected.size(); m++)
-// //                {
-// //                    if(clusters.at(j).id == id_previously_detected.at(m))
-// //                    {
-// //                        previously_detected = true;
-// //                        break;
-// //                    }
-// //                }
-// //                if(previously_detected == false)
-// //                {
-// //                    id_previously_detected.push_back(clusters.at(j).id);
-// //                    return (clusters.at(j).id);
-// //                }
-// //            }
-//     }
-//
-//     /*
-//      * Sort compare_pairs and select the one with the highest similarity
-//      */
-// //    if(compare_clusters.size() > 0)
-// //    {
-// //
-// //        std::sort(compare_clusters.begin(), compare_clusters.end(), sortCompareElements);
-// ////        for(int i = 0; i < compare_clusters.size(); i++)
-// ////        {
-// ////            ROS_INFO("identical: %d    cluster id: %d", compare_clusters.at(i).identical_ids, compare_clusters.at(i).cluster_id);
-// ////        }
-// ////        ROS_INFO("Selected identical: %d    cluster id: %d", compare_clusters.front().identical_ids, compare_clusters.front().cluster_id);
-// //        return(compare_clusters.front().cluster_id);
-// //    }else
-// //    {
-// //        ROS_INFO("Compare Cluster empty");
-// //        return (-1);
-// //    }
-//     return (-1);
-// }
-//
-// void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
-// {
-//     // TODO: Allow only frontiers that are not too close to walls
-//
-// //    ROS_ERROR("FRONTIER RECEIVED!!!!!!!!!!!!!!!!!!!!!!!!");
-//     adhoc_communication::ExpFrontierElement frontier_element;
-//     for(int i = 0; i < msg.get()->frontier_element.size(); i++)
-//     {
-//         frontier_element = msg.get()->frontier_element.at(i);
-//         bool result = true;
-//         for (unsigned int j = 0; j < frontiers.size(); j++)
-//         {
-//             if(robot_prefix_empty_param == true)
-//             {
-// //                ROS_ERROR("FrontierCallback ... ");
-//                 if(frontiers.at(j).detected_by_robot_str.compare(frontier_element.detected_by_robot_str) == 0 && frontier_element.id == frontiers.at(j).id)
-//                 {
-// //                    ROS_ERROR("Same Detected ...");
-//                     result = false;
-//                     break;
-//                 }
-//             }
-//             else
-//             {
-//                 if(frontier_element.detected_by_robot == robot_name)
-//                 {
-//                     result = false;
-//                     break;
-//                 }
-//                 else
-//                 {
-//                     if (frontier_element.id == frontiers.at(j).id)
-//                     {
-//                         result = false;
-//                         break;
-//                     }
-//                 }
-//             }
-//         }
-//         if (result == true)
-//         {
-//
-//             if(robot_prefix_empty_param == true)
-//             {
-//                 ROS_DEBUG("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
-//                 storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
-//             }else
-//             {
-//                 ROS_DEBUG("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
-//                 if(frontier_element.detected_by_robot != robot_name)
-//                 {
-//                     storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
-//                 }
-//             }
-//         }
-//     }
-//
-// }
-//
-// void ExplorationPlanner::visited_frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
-// {
-//     adhoc_communication::ExpFrontierElement frontier_element;
-//     for(int i = 0; i < msg.get()->frontier_element.size(); i++)
-//     {
-//         frontier_element = msg.get()->frontier_element.at(i);
-//
-//         bool result = true;
-//         for (unsigned int j = 0; j < visited_frontiers.size(); j++)
-//         {
-//             if(frontier_element.detected_by_robot == robot_name)
-//             {
-//                 result = false;
-//                 break;
-//             }
-//             else
-//             {
-//                 if (frontier_element.id == visited_frontiers.at(j).id)
-//                 {
-//                     result = false;
-//                     break;
-//                 }
-//             }
-//         }
-//         if (result == true)
-//         {
-//             ROS_DEBUG("Received New Visited Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
-//             if(robot_prefix_empty_param == true)
-//             {
-//                 ROS_DEBUG("Storing Visited Frontier ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
-//                 storeVisitedFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
-//             }else
-//             {
-//                 if(frontier_element.detected_by_robot != robot_name)
-//                 {
-//                     storeVisitedFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
-//                 }
-//             }
-//         }
-//     }
-// }
+bool ExplorationPlanner::sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_to_send, std::string topic)
+{
+//    ROS_INFO("SENDING frontier id: %ld    detected_by: %ld", frontier_to_send.id ,frontier_to_send.detected_by_robot);
+    adhoc_communication::SendExpFrontier service_frontier; // create request of type any+
 
-// bool ExplorationPlanner::publish_frontier_list()
-// {
-// //    ROS_INFO("PUBLISHING FRONTIER LIST");
+    std::stringstream robot_number;
+    robot_number << robot_name;
+    std::string prefix = "robot_";
+    std::string robo_name = prefix.append(robot_number.str());
+
+    if(robot_prefix_empty_param == true)
+    {
+        robo_name = robot_str;
+//        robo_name = lookupRobotName(robot_name);
+    }
+    std::string destination_name = multi_cast_group + robo_name; //for multicast
+//    std::string destination_name = robo_name; // unicast
+
+    ROS_INFO("sending to multicast group '%s' on topic: '%s'",destination_name.c_str(), topic.c_str());
+    service_frontier.request.dst_robot = destination_name;
+    service_frontier.request.frontier = frontier_to_send;
+    service_frontier.request.topic = topic;
+
+    if (ssendFrontier.call(service_frontier))
+    {
+            ROS_DEBUG("Successfully called service  sendToMulticast");
+
+            if(service_frontier.response.status)
+            {
+                    ROS_DEBUG("adhoc comm returned successful transmission");
+                    return true;
+            }
+            else
+            {
+                ROS_DEBUG("Failed to send to multicast group %s!",destination_name.c_str());
+                return false;
+            }
+    }
+    else
+    {
+     ROS_WARN("Failed to call service sendToMulticast [%s]",ssendFrontier.getService().c_str());
+     return false;
+    }
+}
+
+bool ExplorationPlanner::sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic)
+{
+    adhoc_communication::SendExpAuction service_auction; // create request of type any+
+
+    std::stringstream robot_number;
+    robot_number << robot_name;
+    std::string prefix = "robot_";
+    std::string robo_name = prefix.append(robot_number.str());
+
+    if(robot_prefix_empty_param == true)
+    {
+//        robo_name = lookupRobotName(robot_name);
+        robo_name = robot_str;
+    }
+
+    std::string destination_name = multi_cast_group + robo_name; //for multicast
+//    std::string destination_name = robo_name; // unicast
+
+    ROS_INFO("sending auction to multicast group '%s' on topic '%s'",destination_name.c_str(), topic.c_str());
+    service_auction.request.dst_robot = destination_name;
+    service_auction.request.auction = auction_to_send;
+    service_auction.request.topic = topic;
+
+    if (ssendAuction.call(service_auction))
+    {
+            ROS_DEBUG("Successfully called service sendToMulticast");
+
+            if(service_auction.response.status)
+            {
+                    ROS_DEBUG("Auction was multicasted successfully.");
+                    return true;
+            }
+            else
+            {
+                ROS_WARN("Failed to send auction to mutlicast group %s!",destination_name.c_str());
+                return false;
+            }
+    }
+    else
+    {
+     ROS_WARN("Failed to call service sendToMulticastAuction [%s]",ssendAuction.getService().c_str());
+     return false;
+    }
+}
+
+void ExplorationPlanner::negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
+{
+//        ROS_ERROR("Negotiation List!!!");
+
+        bool entry_found = false;
+
+        adhoc_communication::ExpFrontierElement frontier_element;
+        for(int j = 0; j < msg.get()->frontier_element.size(); j++)
+        {
+            frontier_element = msg.get()->frontier_element.at(j);
+            for(int i = 0; i < negotiation_list.size(); i++)
+            {
+                if(robot_prefix_empty_param == true)
+                {
+                    if(negotiation_list.at(i).id == frontier_element.id && negotiation_list.at(i).detected_by_robot_str.compare(frontier_element.detected_by_robot_str) == 0)
+                    {
+                        entry_found = true;
+                    }
+                }else
+                {
+                    if(negotiation_list.at(i).id == frontier_element.id)
+                    {
+                        entry_found = true;
+                    }
+                }
+
+            }
+            if(entry_found == false)
+            {
+                ROS_DEBUG("Negotiation frontier with ID: %ld", frontier_element.id);
+                frontier_t negotiation_frontier;
+                negotiation_frontier.detected_by_robot = frontier_element.detected_by_robot;
+                negotiation_frontier.id = frontier_element.id;
+                negotiation_frontier.x_coordinate = frontier_element.x_coordinate;
+                negotiation_frontier.y_coordinate = frontier_element.y_coordinate;
+
+                store_negotiation_mutex.lock();
+                negotiation_list.push_back(negotiation_frontier);
+                store_negotiation_mutex.unlock();
+            }
+        }
+}
+
+bool ExplorationPlanner::respondToAuction(std::vector<requested_cluster_t> requested_cluster_ids, int auction_id_number)
+{
+//    ros::Rate r(1);
+//    while(ros::ok())
+//    {
+//        r.sleep();
+////        while(start_thr_auction == false);
+//        if(start_thr_auction == true)
+//        {
+            ROS_INFO("Respond to auction");
+            adhoc_communication::ExpAuction auction_msgs;
+
+            for(int i = 0; i < requested_cluster_ids.size(); i++)
+            {
+                ROS_INFO("Responding to cluster ids: %d", requested_cluster_ids.at(i).own_cluster_id);
+            }
+
+            for(int n = 0; n < requested_cluster_ids.size(); n++)
+            {
+                cluster_mutex.lock();
+                for(int i = 0; i < clusters.size(); i++)
+                {
+                    if(clusters.at(i).id == requested_cluster_ids.at(n).own_cluster_id)
+                    {
+                        adhoc_communication::ExpCluster cluster_msg;
+                        adhoc_communication::ExpClusterElement cluster_element_msg;
+                        for(int j = 0; j < requested_cluster_ids.at(n).requested_ids.size(); j++)
+                        {
+                            if(robot_prefix_empty_param == true)
+                            {
+                                cluster_element_msg.id = requested_cluster_ids.at(n).requested_ids.at(j).id;
+                                cluster_element_msg.detected_by_robot_str = requested_cluster_ids.at(n).requested_ids.at(j).robot_str;
+                            }else
+                            {
+                                cluster_element_msg.id = requested_cluster_ids.at(n).requested_ids.at(j).id;
+                            }
+                            cluster_msg.ids_contained.push_back(cluster_element_msg);
+                        }
+//                        ROS_INFO("Calculate the auction BID");
+                        cluster_msg.bid = calculateAuctionBID(clusters.at(i).id, trajectory_strategy);
+                        auction_msgs.available_clusters.push_back(cluster_msg);
+                        break;
+                    }
+                }
+                cluster_mutex.unlock();
+            }
+
+            /*
+             * Visualize the auction message to send
+             */
+//            for(int i = 0; i < auction_msgs.available_clusters.size(); i++)
+//            {
+//                adhoc_communication::Cluster cluster_msg_check;
+//                cluster_msg_check = auction_msgs.available_clusters.at(i);
+//                ROS_INFO("Robot %d sending BID: %f cluster elements: %lu", robot_name, cluster_msg_check.bid, cluster_msg_check.ids_contained.size());
+//            }
+
+            ROS_INFO("Robot %d publishes auction bids for all clusters", robot_name);
+
+//            /* FIXME */
+//            if(auction_msgs.available_clusters.size() == 0)
+//            {
+//                adhoc_communication::Cluster cluster_msg;
+//                cluster_msg.bid = -1;
+//                auction_msgs.available_clusters.push_back(cluster_msg);
+//            }
 //
-//     publish_subscribe_mutex.lock();
+
+            auction_msgs.auction_status_message = false;
+            auction_msgs.auction_id = auction_id_number;
+
+            std::stringstream ss;
+            ss << robot_name;
+            std::string prefix = "";
+            std::string robo_name = prefix.append(ss.str());
+
+            auction_msgs.robot_name = robo_name;
+
+//            if(first_run == true)
+//            {
+//                pub_auctioning_first.publish(auction_msgs);
+//            }else
+//            {
+                sendToMulticastAuction("mc_", auction_msgs, "auction");
+//            }
+
+            start_thr_auction = false;
+//        }
+//    }
+}
+
+int ExplorationPlanner::calculateAuctionBID(int cluster_number, std::string strategy)
+{
+//    ROS_INFO("Robot %d  calculates bid for cluster_number %d", robot_name, cluster_number);
+    int auction_bid = 0;
+    int cluster_vector_position = -1;
+    bool cluster_could_be_found = false;
+
+    if(clusters.size() > 0)
+    {
+        for (int i = 0; i < clusters.size(); i++)
+        {
+            if(clusters.at(i).id == cluster_number)
+            {
+//                if(clusters.at(i).cluster_element.size() > 0)
+//                {
+                    cluster_vector_position = i;
+                    cluster_could_be_found = true;
+                    break;
+//                }else
+//                {
+//                    ROS_ERROR("Cluster found but empty, therefore do not calculate LOCAL BID");
+//                    return(-1);
+//                }
+            }
+        }
+    }
+    if(cluster_could_be_found == false)
+    {
+        /*
+         * Cluster could not be found, set it to a high value like 100
+         */
+        ROS_WARN("Cluster could not be found");
+        return(-1);
+    }
+
+    if (!costmap_global_ros_->getRobotPose(robotPose))
+    {
+            ROS_ERROR("Failed to get RobotPose");
+    }
+
+    int distance = -1;
+    for(int i = 0; i < clusters.at(cluster_vector_position).cluster_element.size(); i++)
+    {
+
+        if(strategy == "trajectory")
+        {
+            distance = trajectory_plan(clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate, clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate);
+
+        }else if(strategy == "euclidean")
+        {
+            double x = clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate - robotPose.getOrigin().getX();
+            double y = clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate - robotPose.getOrigin().getY();
+            distance = x * x + y * y;
+            return distance;
+        }
+
+        if(distance > 0)
+        {
+            double x = clusters.at(cluster_vector_position).cluster_element.at(i).x_coordinate - robotPose.getOrigin().getX();
+            double y = clusters.at(cluster_vector_position).cluster_element.at(i).y_coordinate - robotPose.getOrigin().getY();
+            double euclidean_distance = x * x + y * y;
+
+            /*
+             * Check if the distance calculation is plausible.
+             * The euclidean distance to this point need to be smaller then
+             * the simulated trajectory path. If this stattement is not valid
+             * the trajectory calculation has failed.
+             */
+//            ROS_INFO("Euclidean distance: %f   trajectory_path: %f", sqrt(euclidean_distance), distance* costmap_ros_->getCostmap()->getResolution());
+            if (distance * costmap_ros_->getCostmap()->getResolution() <= sqrt(euclidean_distance)*0.95)
+            {
+                ROS_WARN("Euclidean distance smaller then trajectory distance to LOCAL CLUSTER!!!");
+//                return(-1);
+            }else
+            {
+                return distance;
+            }
+        }
+    }
+    if(distance == -1)
+    {
+//        ROS_ERROR("Unable to calculate LOCAL BID at position %d  --> BID: %d", cluster_vector_position, distance);
+    }
+//    ROS_INFO("Cluster at position %d  --> BID: %d", cluster_vector_position, distance);
+    return(-1);
+}
+
+void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoints::ConstPtr& msg)
+{
+    ROS_DEBUG("Position Callback !!!!!");
+    position_mutex.lock();
+
+    other_robots_positions.positions.clear();
+    ROS_INFO("positions size: %lu", msg.get()->positions.size());
+    for(int i = 0; i < msg.get()->positions.size(); i++)
+    {
+        other_robots_positions.positions.push_back(msg.get()->positions.at(i));
+    }
+    position_mutex.unlock();
+}
+
+void ExplorationPlanner::auctionCallback(const adhoc_communication::ExpAuction::ConstPtr& msg)
+{
+    auction_running = true;
+    //ROS_ERROR("CALLING AUCTION CALLBACK!!!!!!!!!!!!");
+    int robots_int_name;
+
+    bool same_robot = false;
+    if(robot_prefix_empty_param == true)
+    {
+        if(robot_str.compare(msg.get()->robot_name.c_str()) == 0)
+        {
+            same_robot = true;
+        }
+    }else
+    {
+        robots_int_name = atoi(msg.get()->robot_name.c_str());
+        ROS_INFO("Robot name: %d      int_name: %d",robot_name, robots_int_name);
+        if(robots_int_name == robot_name)
+        {
+            same_robot = true;
+        }
+    }
+
+    if(same_robot == false)
+    {
+        /*
+        * Cluster all available frontiers to be able to compare clusters
+        * with other robots
+        */
+
+        /*
+         * TODO
+         * Check if following code is necessary or if simple navigation needs to
+         * periodically update the frontiers in the frontier thread.
+         */
+        transformToOwnCoordinates_frontiers();
+        transformToOwnCoordinates_visited_frontiers();
+
+        clearVisitedFrontiers();
+        clearUnreachableFrontiers();
+        clearSeenFrontiers(costmap_global_ros_);
+
+        clearVisitedAndSeenFrontiersFromClusters();
+        clusterFrontiers();
+
+
+//        visualize_Cluster_Cells();
+
+        if(msg.get()->auction_status_message == true)
+        {
+            ROS_INFO("Calling Auction Status");
+
+            /*
+             * Visualize requested ids
+             */
+
+            for(int i = 0; i < msg.get()->requested_clusters.size(); i++)
+            {
+                adhoc_communication::ExpCluster cluster_req;
+                cluster_req = msg.get()->requested_clusters.at(i);
+                std::string requested_clusters;
+                for(int j = 0; j < cluster_req.ids_contained.size(); j++)
+                {
+                    if(j >= 6)
+                    {
+                        break;
+                    }
+                    requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j).id));
+                    requested_clusters.append(", ");
+                }
+                ROS_INFO("Requested ids: %s from robot: %s", requested_clusters.c_str(), msg.get()->robot_name.c_str());
+            }
+
+
+
+            auction_start = msg.get()->start_auction;
+            auction_finished = msg.get()->auction_finished;
+            adhoc_communication::ExpCluster occupied_ids;
+            std::vector<requested_cluster_t> requested_cluster_ids;
+
+
+            /*
+             * Grep all occupied ids and try to convert them into clusters in own
+             * coordinate system. This ensures that all robots in the system know
+             * which clusters had been occupied by others and do not select them
+             * twice.
+             */
+            if(msg.get()->occupied_ids.size() > 0 || msg.get()->requested_clusters.size() > 0)
+            {
+                for(int i = 0; i < msg.get()->occupied_ids.size(); i++)
+                {
+                    adhoc_communication::ExpClusterElement cluster_element;
+
+                    cluster_element.id = msg.get()->occupied_ids.at(i).id;
+                    cluster_element.detected_by_robot_str = msg.get()->occupied_ids.at(i).detected_by_robot_str;
+
+                    occupied_ids.ids_contained.push_back(cluster_element);
+                }
+                int occupied_cluster_id = checkClustersID(occupied_ids);
+                ROS_INFO("Check occupied cluster to be the same. %d", occupied_cluster_id);
+
+                if(occupied_cluster_id >=0)
+                {
+                    ROS_INFO("Adding occupied cluster: %d", occupied_cluster_id);
+                    already_used_ids.push_back(occupied_cluster_id);
+                }else
+                {
+                    /* Store undetected Clusters in a struct for later processing */
+                    ROS_INFO("Adding occupied cluster as unrecognized!");
+                    unrecognized_occupied_clusters.push_back(occupied_ids);
+                }
+                /*
+                 * Now read from unrecognized cluster vector and try to convert
+                 * these ids to a valid cluster to know which had already been
+                 * occupied.
+                 */
+                for(int i = 0; i < unrecognized_occupied_clusters.size(); i++)
+                {
+                    int unrecognized_occupied_cluster_id = checkClustersID(unrecognized_occupied_clusters.at(i));
+                    if(unrecognized_occupied_cluster_id >=0)
+                    {
+                        ROS_INFO("Unrecognized cluster: %d converted", unrecognized_occupied_cluster_id);
+                        already_used_ids.push_back(unrecognized_occupied_cluster_id);
+                        unrecognized_occupied_clusters.erase(unrecognized_occupied_clusters.begin() + i);
+
+                        if(i > 0)
+                            i--;
+                    }
+                }
+
+
+                /*
+                 * Grep the requested clusters to know which ones to answer to.
+                 */
+                for(int i = 0; i < msg.get()->requested_clusters.size(); i++)
+                {
+                    adhoc_communication::ExpCluster requested_cluster;
+                    requested_cluster = msg.get()->requested_clusters.at(i);
+
+                    int check_cluster_id = checkClustersID(requested_cluster);
+                    if(check_cluster_id >= 0)
+                    {
+                        requested_cluster_t new_cluster_request;
+                        for(int j = 0; j < requested_cluster.ids_contained.size(); j++)
+                        {
+                            transform_point_t cluster_element_point;
+                            if(robot_prefix_empty_param == true)
+                            {
+                                cluster_element_point.id = requested_cluster.ids_contained.at(j).id;
+                                cluster_element_point.robot_str = requested_cluster.ids_contained.at(j).detected_by_robot_str;
+                            }else
+                            {
+                                cluster_element_point.id = requested_cluster.ids_contained.at(j).id;
+                            }
+
+                            new_cluster_request.requested_ids.push_back(cluster_element_point);
+                        }
+                        new_cluster_request.own_cluster_id = check_cluster_id;
+
+                        requested_cluster_ids.push_back(new_cluster_request);
+                    }else
+                    {
+                        ROS_WARN("No Matching Cluster Detected");
+                    }
+                }
+            }
+
+
+            if(auction_start == true)
+            {
+                start_thr_auction = true;
+                thr_auction_status = boost::thread(&ExplorationPlanner::respondToAuction, this, requested_cluster_ids, msg.get()->auction_id);
+            }
+
+        }else if(msg.get()->auction_status_message == false)
+        {
+            bool continue_auction = false;
+            if(robot_prefix_empty_param == true)
+            {
+                if(msg.get()->auction_id == auction_id_number)
+                {
+                    continue_auction = true;
+                }
+            }else
+            {
+                if(msg.get()->auction_id == 10000*robot_name + auction_id_number)
+                {
+                    continue_auction = true;
+                }
+            }
+
+
+            if(continue_auction == true)
+            {
+    //            ROS_INFO("auction_id: %d       local_id: %d", msg.get()->auction_id, 10000*robot_name + auction_id_number);
+                bool robot_already_answered = false;
+
+                for(int i = 0; i < robots_already_responded.size(); i++)
+                {
+                    if(robot_prefix_empty_param == true)
+                    {
+                        if(msg.get()->robot_name.compare(robots_already_responded.at(i).robot_str) == 0 && msg.get()->auction_id == robots_already_responded.at(i).auction_number)
+                        {
+                            ROS_WARN("Same msg already received!!!");
+                            robot_already_answered = true;
+                            break;
+                        }
+                    }else
+                    {
+                        ROS_INFO("Compare msg name: %d  responded: %d       msg auction: %d   responded: %d", robots_int_name, robots_already_responded.at(i).robot_number, msg.get()->auction_id, robots_already_responded.at(i).auction_number);
+                        if(robots_int_name == robots_already_responded.at(i).robot_number && msg.get()->auction_id == robots_already_responded.at(i).auction_number)
+                        {
+                            ROS_WARN("Same msg already received!!!");
+                            robot_already_answered = true;
+                            break;
+                        }
+                    }
+                }
+
+                /*
+                 * Only proceed if the robot has not answered before.
+                 */
+                if(robot_already_answered == false)
+                {
+                    if(robot_prefix_empty_param == true)
+                    {
+                        ROS_INFO("Auction from robot %s received", msg.get()->robot_name.c_str());
+                    }else
+                    {
+                        ROS_INFO("Auction from robot %d received", robot_name);
+                    }
+                    auction_pair_t auction_pair;
+                    auction_element_t auction_elements;
+
+                    int has_cluster_id = -1;
+
+                    /*
+                     * Visualize the received message
+                     */
+                    for(int i = 0; i < msg.get()->available_clusters.size(); i++)
+                    {
+                        adhoc_communication::ExpCluster cluster_req;
+                        cluster_req = msg.get()->available_clusters.at(i);
+                        ROS_INFO("---------------------- %d ----------------------------", i);
+                        std::string requested_clusters;
+                        for(int j = 0; j < cluster_req.ids_contained.size(); j++)
+                        {
+                            if(j >= 6)
+                            {
+                                break;
+                            }
+                            requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j).id));
+                            requested_clusters.append(", ");
+                        }
+                        ROS_INFO("Received ids: %s", requested_clusters.c_str());
+                    }
+
+
+
+                    for(int i = 0; i < msg.get()->available_clusters.size(); i++)
+                    {
+                        adhoc_communication::ExpCluster current_cluster;
+                        current_cluster = msg.get()->available_clusters.at(i);
+                //        ROS_INFO("------------------------------------------------------------------");
+                //        for(int k = 0; k < current_cluster.ids_contained.size(); k++)
+                //        {
+                //            ROS_INFO("FRONTIER ID: %d", current_cluster.ids_contained.at(k));
+                //        }
+                        int current_cluster_id = checkClustersID(current_cluster);
+
+                        ROS_INFO("Received ID converted to cluster ID: %d", current_cluster_id);
+                        if(current_cluster_id >= 0)
+                        {
+                            auction_pair.cluster_id = current_cluster_id;
+                            auction_pair.bid_value = current_cluster.bid;
+                            auction_elements.auction_element.push_back(auction_pair);
+                            ROS_INFO("BID: %f",current_cluster.bid);
+                        }
+                    }
+                //    ROS_INFO("Robot %d received all bids for all clusters", robot_name);
+                    auction_elements.robot_id = robots_int_name;
+                    auction_elements.detected_by_robot_str = msg.get()->robot_name;
+
+                    auction_mutex.lock();
+                    auction.push_back(auction_elements);
+                    auction_mutex.unlock();
+
+                    /*
+                     * A BID is received from one robot. Remember the robot who send the
+                     * bid for a special auction id!
+                     */
+    //                if(msg.get()->auction_id == 10000*robot_name + auction_id_number)
+    //                {
+                        number_of_auction_bids_received++;
+                        responded_t auction_response;
+                        auction_response.auction_number = msg.get()->auction_id;
+                        auction_response.robot_number = robots_int_name;
+                        if(robot_prefix_empty_param == true)
+                        {
+                            auction_response.robot_str = msg.get()->robot_name;
+                        }
+                        robots_already_responded.push_back(auction_response);
+    //                }
+                }else
+                {
+                    ROS_WARN("Robot already answered on this auction");
+                }
+            }
+        }
+    }
+    auction_running = false;
+}
+
+int ExplorationPlanner::checkClustersID(adhoc_communication::ExpCluster cluster_to_check)
+{
+//    ROS_INFO("Check for cluster id");
+      std::vector<compare_pair_t> compare_clusters;
+
+//        ROS_INFO("------------------- Checking ----------------------");
+        std::string requested_clusters;
+
+//        for(int j = 0; j < cluster_to_check.ids_contained.size(); j++)
+//        {
+//            requested_clusters.append(NumberToString((int)cluster_to_check.ids_contained.at(j)));
+//            requested_clusters.append(", ");
+//        }
+//        ROS_INFO("%s", requested_clusters.c_str());
+
+
+
+
+    for(int j = 0; j < clusters.size(); j++)
+    {
+        double same_id_found = 0;
+//        ROS_INFO("--------------------------------------------------------------");
+        for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
+        {
+//            for(int m= 0; m < clusters.at(j).cluster_element.size(); m++)
+//            {
+//                ROS_INFO("Ids in cluster to check with: %d",clusters.at(j).cluster_element.at(m).id);
+//            }
+//            ROS_INFO("Ids in cluster to check with: %d",clusters.at(j).cluster_element.at(n).id);
+            for(int i = 0; i < cluster_to_check.ids_contained.size(); i++)
+            {
+                if(robot_prefix_empty_param == true)
+                {
+//                    ROS_INFO("Cluster id: %d  robot: %s     msg id: %d  robot: %s",clusters.at(j).cluster_element.at(n).id, clusters.at(j).cluster_element.at(n).detected_by_robot_str, cluster_to_check.ids_contained.at(i).id, cluster_to_check.ids_contained.at(i).detected_by_robot_str);
+                    if(clusters.at(j).cluster_element.at(n).id == cluster_to_check.ids_contained.at(i).id && clusters.at(j).cluster_element.at(n).detected_by_robot_str.compare(cluster_to_check.ids_contained.at(i).detected_by_robot_str) == 0)
+                    {
+                        same_id_found++;
+                    }
+                }else
+                {
+                    if(clusters.at(j).cluster_element.at(n).id == cluster_to_check.ids_contained.at(i).id)
+                    {
+                        same_id_found++;
+                    }
+                }
+            }
+        }
+        if(same_id_found > clusters.at(j).cluster_element.size() * 0.4)
+        {
+//            ROS_INFO("CLUSTER ID FOUND: %d", clusters.at(j).id);
+            return (clusters.at(j).id);
+        }
+        else
+        {
+//            ROS_ERROR("NO MATCHING CLUSTER FOUND!!!");
+        }
+//        ROS_INFO("---------------------------------------------------");
+
+//        ROS_INFO("j: %d   cluster_id: %d", j, clusters.at(j).id);
+//        compare_pair_t compare_pair;
+//        compare_pair.identical_ids = same_id_found;
+//        compare_pair.cluster_id = clusters.at(j).id;
+//        compare_clusters.push_back(compare_pair);
+//        ROS_INFO("Same IDs found: %f   elements*0.7: %f", same_id_found,clusters.at(j).cluster_element.size() * 0.7);
+
+
+//            if(same_id_found > clusters.at(j).cluster_element.size() * 0.8)
+//            {
+//                bool previously_detected = false;
+//                for(int m = 0; m < id_previously_detected.size(); m++)
+//                {
+//                    if(clusters.at(j).id == id_previously_detected.at(m))
+//                    {
+//                        previously_detected = true;
+//                        break;
+//                    }
+//                }
+//                if(previously_detected == false)
+//                {
+//                    id_previously_detected.push_back(clusters.at(j).id);
+//                    return (clusters.at(j).id);
+//                }
+//            }
+    }
+
+    /*
+     * Sort compare_pairs and select the one with the highest similarity
+     */
+//    if(compare_clusters.size() > 0)
+//    {
 //
-//     adhoc_communication::ExpFrontier frontier_msg;
-//     for(int i = 0; i<frontiers.size(); i++)
-//     {
-//         adhoc_communication::ExpFrontierElement frontier_element;
-//
-//         frontier_element.id = frontiers.at(i).id;
-//         frontier_element.detected_by_robot = frontiers.at(i).detected_by_robot;
-//         frontier_element.detected_by_robot_str = frontiers.at(i).detected_by_robot_str;
-//         frontier_element.robot_home_position_x = frontiers.at(i).robot_home_x;
-//         frontier_element.robot_home_position_y = frontiers.at(i).robot_home_y;
-//         frontier_element.x_coordinate = frontiers.at(i).x_coordinate;
-//         frontier_element.y_coordinate = frontiers.at(i).y_coordinate;
-//
-//         frontier_msg.frontier_element.push_back(frontier_element);
-//     }
-//
-// //    pub_frontiers.publish(frontier_msg);
-//     sendToMulticast("mc_",frontier_msg, "frontiers");
-//
-//     publish_subscribe_mutex.unlock();
-// }
-//
-// bool ExplorationPlanner::publish_visited_frontier_list()
-// {
-// //    ROS_INFO("PUBLISHING VISITED FRONTIER LIST");
-//
-//     publish_subscribe_mutex.lock();
-//
-//     adhoc_communication::ExpFrontier visited_frontier_msg;
-//
-//     for(int i = 0; i<visited_frontiers.size(); i++)
-//     {
-//         adhoc_communication::ExpFrontierElement visited_frontier_element;
-// //        visited_frontier_element.id = frontiers.at(i).id;
-//         visited_frontier_element.detected_by_robot = visited_frontiers.at(i).detected_by_robot;
-//         visited_frontier_element.detected_by_robot_str = visited_frontiers.at(i).detected_by_robot_str;
-//         visited_frontier_element.robot_home_position_x = visited_frontiers.at(i).robot_home_x;
-//         visited_frontier_element.robot_home_position_y = visited_frontiers.at(i).robot_home_y;
-//         visited_frontier_element.x_coordinate = visited_frontiers.at(i).x_coordinate;
-//         visited_frontier_element.y_coordinate = visited_frontiers.at(i).y_coordinate;
-//
-//         visited_frontier_msg.frontier_element.push_back(visited_frontier_element);
-//     }
-//
-// //    pub_visited_frontiers.publish(visited_frontier_msg);
-//     sendToMulticast("mc_",visited_frontier_msg, "visited_frontiers");
-//
-//     publish_subscribe_mutex.unlock();
-// }
+//        std::sort(compare_clusters.begin(), compare_clusters.end(), sortCompareElements);
+////        for(int i = 0; i < compare_clusters.size(); i++)
+////        {
+////            ROS_INFO("identical: %d    cluster id: %d", compare_clusters.at(i).identical_ids, compare_clusters.at(i).cluster_id);
+////        }
+////        ROS_INFO("Selected identical: %d    cluster id: %d", compare_clusters.front().identical_ids, compare_clusters.front().cluster_id);
+//        return(compare_clusters.front().cluster_id);
+//    }else
+//    {
+//        ROS_INFO("Compare Cluster empty");
+//        return (-1);
+//    }
+    return (-1);
+}
+
+void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
+{
+    // TODO: Allow only frontiers that are not too close to walls
+
+//    ROS_ERROR("FRONTIER RECEIVED!!!!!!!!!!!!!!!!!!!!!!!!");
+    adhoc_communication::ExpFrontierElement frontier_element;
+    for(int i = 0; i < msg.get()->frontier_element.size(); i++)
+    {
+        frontier_element = msg.get()->frontier_element.at(i);
+        bool result = true;
+        for (unsigned int j = 0; j < frontiers.size(); j++)
+        {
+            if(robot_prefix_empty_param == true)
+            {
+//                ROS_ERROR("FrontierCallback ... ");
+                if(frontiers.at(j).detected_by_robot_str.compare(frontier_element.detected_by_robot_str) == 0 && frontier_element.id == frontiers.at(j).id)
+                {
+//                    ROS_ERROR("Same Detected ...");
+                    result = false;
+                    break;
+                }
+            }
+            else
+            {
+                if(frontier_element.detected_by_robot == robot_name)
+                {
+                    result = false;
+                    break;
+                }
+                else
+                {
+                    if (frontier_element.id == frontiers.at(j).id)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (result == true)
+        {
+
+            if(robot_prefix_empty_param == true)
+            {
+                ROS_DEBUG("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
+                storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
+            }else
+            {
+                ROS_DEBUG("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
+                if(frontier_element.detected_by_robot != robot_name)
+                {
+                    storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
+                }
+            }
+        }
+    }
+
+}
+
+void ExplorationPlanner::visited_frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
+{
+    adhoc_communication::ExpFrontierElement frontier_element;
+    for(int i = 0; i < msg.get()->frontier_element.size(); i++)
+    {
+        frontier_element = msg.get()->frontier_element.at(i);
+
+        bool result = true;
+        for (unsigned int j = 0; j < visited_frontiers.size(); j++)
+        {
+            if(frontier_element.detected_by_robot == robot_name)
+            {
+                result = false;
+                break;
+            }
+            else
+            {
+                if (frontier_element.id == visited_frontiers.at(j).id)
+                {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        if (result == true)
+        {
+            ROS_DEBUG("Received New Visited Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
+            if(robot_prefix_empty_param == true)
+            {
+                ROS_DEBUG("Storing Visited Frontier ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
+                storeVisitedFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
+            }else
+            {
+                if(frontier_element.detected_by_robot != robot_name)
+                {
+                    storeVisitedFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
+                }
+            }
+        }
+    }
+}
+
+bool ExplorationPlanner::publish_frontier_list()
+{
+//    ROS_INFO("PUBLISHING FRONTIER LIST");
+
+    publish_subscribe_mutex.lock();
+
+    adhoc_communication::ExpFrontier frontier_msg;
+    for(int i = 0; i<frontiers.size(); i++)
+    {
+        adhoc_communication::ExpFrontierElement frontier_element;
+
+        frontier_element.id = frontiers.at(i).id;
+        frontier_element.detected_by_robot = frontiers.at(i).detected_by_robot;
+        frontier_element.detected_by_robot_str = frontiers.at(i).detected_by_robot_str;
+        frontier_element.robot_home_position_x = frontiers.at(i).robot_home_x;
+        frontier_element.robot_home_position_y = frontiers.at(i).robot_home_y;
+        frontier_element.x_coordinate = frontiers.at(i).x_coordinate;
+        frontier_element.y_coordinate = frontiers.at(i).y_coordinate;
+
+        frontier_msg.frontier_element.push_back(frontier_element);
+    }
+
+//    pub_frontiers.publish(frontier_msg);
+    sendToMulticast("mc_",frontier_msg, "frontiers");
+
+    publish_subscribe_mutex.unlock();
+}
+
+bool ExplorationPlanner::publish_visited_frontier_list()
+{
+//    ROS_INFO("PUBLISHING VISITED FRONTIER LIST");
+
+    publish_subscribe_mutex.lock();
+
+    adhoc_communication::ExpFrontier visited_frontier_msg;
+
+    for(int i = 0; i<visited_frontiers.size(); i++)
+    {
+        adhoc_communication::ExpFrontierElement visited_frontier_element;
+//        visited_frontier_element.id = frontiers.at(i).id;
+        visited_frontier_element.detected_by_robot = visited_frontiers.at(i).detected_by_robot;
+        visited_frontier_element.detected_by_robot_str = visited_frontiers.at(i).detected_by_robot_str;
+        visited_frontier_element.robot_home_position_x = visited_frontiers.at(i).robot_home_x;
+        visited_frontier_element.robot_home_position_y = visited_frontiers.at(i).robot_home_y;
+        visited_frontier_element.x_coordinate = visited_frontiers.at(i).x_coordinate;
+        visited_frontier_element.y_coordinate = visited_frontiers.at(i).y_coordinate;
+
+        visited_frontier_msg.frontier_element.push_back(visited_frontier_element);
+    }
+
+//    pub_visited_frontiers.publish(visited_frontier_msg);
+    sendToMulticast("mc_",visited_frontier_msg, "visited_frontiers");
+
+    publish_subscribe_mutex.unlock();
+}
 
 /**
  * Check if the next goal is efficient enough to steer the robot to it.
@@ -2762,276 +2762,276 @@ void ExplorationPlanner::findFrontiers()
     ROS_INFO("Size of all frontiers in the list: %lu", frontiers.size());
 }
 
-// bool ExplorationPlanner::auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool, std::vector<std::string> *robot_str_name)
-// {
-//
-//     ROS_INFO("Start Auctioning");
-//
-//    /*
-//     * Check if Auction is running and wait until it is finished
-//     */
-//     int timer_count = 0;
-//     number_of_auction_bids_received = 0;
-//     std::string robo_name;
-//
-//     float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-//     float wait_if_auction_runs = r * 2;
-// //    wait_if_auction_runs = wait_if_auction_runs - robot_name; // FIXME
-//     if(wait_if_auction_runs < 0)
-//         wait_if_auction_runs = wait_if_auction_runs * (-1);
-//
-//     ROS_INFO("Waiting %f second if a auction is running",wait_if_auction_runs);
-//     ros::Duration(wait_if_auction_runs).sleep();
-//
-//     while(auction_running)
-//     {
-//         ROS_INFO("Waiting %f second because an auction is currently running",wait_if_auction_runs);
-//         ros::Duration(wait_if_auction_runs).sleep();
-//         float wait_if_auction_runs = r * 2;
-//         wait_if_auction_runs = wait_if_auction_runs - robot_name;
-//         if(wait_if_auction_runs < 0)
-//             wait_if_auction_runs = wait_if_auction_runs * (-1);
-//
-//     }
-//
-//     //EDIT Peter : Removed this wait part to speed up the process!
-//
-//     /*
-//     if(robot_name != 0)
-//         auction_finished = false;
-//     //why here sleep so long ?
-//     while(auction_finished == false && timer_count <= 20)
-//     {
-//         timer_count++;
-//         ros::Duration(1).sleep();
-//     }*/
-//
-//     /*
-//      * If no auction is running ... clear the auction vector and
-//      * start a new auction.
-//      */
-//     //how do i know that no auction is running ??
-//     //EDIT Peter: New bool to check if auction is running!
-//
-//     if(auction_running)
-//     {
-//         ROS_INFO("Auction is running, leaving method");
-//         return false;
-//     }
-//     else
-//     {
-//         ROS_INFO("No auction is running, clearing");
-//         auction.clear();
-//     }
-//
-//
-// //    adhoc_communication::AuctionStatus auction_status;
-//     adhoc_communication::ExpAuction reqest_clusters, auction_msg;
-// //    auction_status.start_auction = true;
-// //    auction_status.auction_finished = false;
-//
-//     auction_msg.start_auction = true;
-//     auction_msg.auction_finished = false;
-//     auction_msg.auction_status_message = true;
-//
-//     if(robot_prefix_empty_param == false)
-//     {
-//     std::stringstream ss;
-//     ss << robot_name;
-//     std::string prefix = "";
-//     robo_name = prefix.append(ss.str());
-//
-//     auction_msg.robot_name = robo_name;
-//     }else
-//     {
-//         auction_msg.robot_name = robot_str;
-//         robo_name = robot_str;
-//     }
-//     /*
-//      * visualize all cluster elements
-//      */
-//
-// //    for(int i = 0; i < clusters.size(); i++)
-// //    {
-// //        ROS_INFO("---- Cluster %d ----", clusters.at(i).id);
-// //        std::string requested_clusters;
-// //        for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
-// //        {
-// //            requested_clusters.append(NumberToString((int)clusters.at(i).cluster_element.at(j).id));
-// //            requested_clusters.append(", ");
-// //        }
-// //        ROS_INFO("Cluster ids: %s", requested_clusters.c_str());
-// //    }
-//
-//
-//
-//     for(int i = 0; i < clusters.size(); i++)
-//     {
-//         adhoc_communication::ExpCluster cluster_request;
-//
-//
-//         for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
-//         {
-//             adhoc_communication::ExpClusterElement cluster_request_element;
-//             if(robot_prefix_empty_param == true)
-//             {
-//                 cluster_request_element.id = clusters.at(i).cluster_element.at(j).id;
-//                 cluster_request_element.detected_by_robot_str = clusters.at(i).cluster_element.at(j).detected_by_robot_str;
-//             }else
-//             {
-//                 cluster_request_element.id = clusters.at(i).cluster_element.at(j).id;
-//             }
-//             cluster_request.ids_contained.push_back(cluster_request_element);
-//         }
-// //        auction_status.requested_clusters.push_back(cluster_request);
-//         auction_msg.requested_clusters.push_back(cluster_request);
-//     }
-//
-//     if(robot_prefix_empty_param == true)
-//     {
-//         auction_msg.auction_id = auction_id_number;
-//     }else
-//     {
-//         auction_msg.auction_id = 10000*robot_name + auction_id_number;
-//     }
-//
-//     /*
-//      * Following code is to visualize the message being send to the other robots
-//      */
-// //    for(int i = 0; i< auction_msg.requested_clusters.size(); i++)
-// //    {
-// //        adhoc_communication::Cluster cluster_req;
-// //        cluster_req = auction_msg.requested_clusters.at(i);
-// //        ROS_INFO("----------------------- REQUEST %d ---------------------------", i);
-// //        std::string requested_clusters;
-// //        for(int j = 0; j < cluster_req.ids_contained.size(); j++)
-// //        {
-// //            requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j)));
-// //            requested_clusters.append(", ");
-// //        }
-// //        ROS_INFO("Auction with auction number: %d", auction_msg.auction_id);
-// //        ROS_INFO("Requested ids: %s", requested_clusters.c_str());
-// //    }
-//
-//
-//     std::string numbers_of_operating_robots;
-//
-//     ROS_INFO("Robot %d starting an auction", robot_name);
-//
-// //    if(first_run == true)
-// //    {
-// //        pub_auctioning_first.publish(auction_msg);
-// //    }else
-// //    {
-//         sendToMulticastAuction("mc_", auction_msg, "auction");
-// //    }
-//
-//
-//
-//     /*
-//      * Wait for results of others
-//      */
-//
-//
-//        //EDIT Peter: I do not know how many answers i get
-//         /*
-//     nh.param("/robots_in_simulation",number_of_robots, 1);
-//     number_of_robots = 2; // To test with two robots if parameter does not work
-//     ROS_INFO("++++++++++ number of robots: %d ++++++++++", number_of_robots);
-//     */
-//
-// //    ros::NodeHandle nh_robots;
-// //    nh_robots.param<std::string>("/robots_in_simulation",numbers_of_operating_robots, "1");
-// //    number_of_robots = atoi(numbers_of_operating_robots.c_str());
-// //    ROS_INFO("++++++++++ number of robots: %d ++++++++++", number_of_robots);
-//
-//     /*
-//      * Number of responding robots is one less since the robot itself does not
-//      * respond to its own request
-//      */
-//     //ROS_INFO("Waiting for results from %d robots", number_of_robots);
-//     //wait 4 seconds to receive bids
-//         ros::Duration(3).sleep();
-//         /*
-//     while(timer_count < 50 && number_of_auction_bids_received < number_of_robots -1)
-//     {
-//         ROS_INFO("Waiting for results from %d robots", number_of_robots);
-//         timer_count++;
-//         ros::Duration(0.2).sleep();
-//     }*/
-//     ROS_INFO("number of auction bids received: %d", number_of_auction_bids_received);
-//
-//
-//     if(number_of_auction_bids_received > 0)
-//         number_of_completed_auctions++;
-//     else
-//         number_of_uncompleted_auctions++;
-//     /*if(number_of_auction_bids_received < number_of_robots-1)
-//     {
-//         ROS_ERROR("Wait for other robots timer exceeded");
-//         number_of_uncompleted_auctions++;
-//     }else if(number_of_auction_bids_received >= number_of_robots - 1)
-//     {
-//         number_of_completed_auctions++;
-//     }*/
-//
-//
-//     /*
-//      * Select the best cluster for yourself
-//      */
-//     ROS_INFO("Selecting the most attractive cluster");
-//     bool cluster_selected_flag = selectClusterBasedOnAuction(final_goal, clusters_available_in_pool, robot_str_name);
-//
-//     /*
-//      * Stop the auction
-//      */
-//     ROS_INFO("Stop the auction");
-// //    auction_status.start_auction = false;
-// //    auction_status.auction_finished = true;
-//
-//     auction_msg.start_auction = false;
-//     auction_msg.auction_finished = true;
-//     auction_msg.auction_status_message = true;
-//     auction_msg.robot_name = robo_name;
-//     auction_msg.requested_clusters.clear();
-//
-//     if(cluster_selected_flag == true)// && final_goal->size() >= 4)
-//     {
-//         /*
-//          * Tell the others which cluster was selected
-//          */
-//         std::vector<transform_point_t> occupied_ids;
-//         clusterIdToElementIds(final_goal->at(4), &occupied_ids);
-//         for(int i = 0; i < occupied_ids.size(); i++)
-//         {
-// //            auction_status.occupied_ids.push_back(occupied_ids.at(i));
-//             adhoc_communication::ExpAuctionElement auction_element;
-//             auction_element.id = occupied_ids.at(i).id;
-//             auction_element.detected_by_robot_str = occupied_ids.at(i).robot_str;
-//             auction_msg.occupied_ids.push_back(auction_element);
-//         }
-//     }
-// //    else
-// //    {
-// //        ROS_ERROR("No Goal Selected from selectClusterBasedOnAuction");
-// //        cluster_selected_flag = false;
-// //    }
-//
-// //    if(first_run == true)
-// //    {
-// //    pub_auctioning_status.publish(auction_status);
-// //        pub_auctioning_first.publish(auction_msg);
-// //    }else
-// //    {
-//         sendToMulticastAuction("mc_", auction_msg, "auction");
-// //    }
-//
-//     first_run = false;
-//     auction_id_number++;
-//
-//     ROS_INFO("return %d", cluster_selected_flag);
-//     return (cluster_selected_flag);
-// }
+bool ExplorationPlanner::auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool, std::vector<std::string> *robot_str_name)
+{
+
+    ROS_INFO("Start Auctioning");
+
+   /*
+    * Check if Auction is running and wait until it is finished
+    */
+    int timer_count = 0;
+    number_of_auction_bids_received = 0;
+    std::string robo_name;
+
+    float r = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    float wait_if_auction_runs = r * 2;
+//    wait_if_auction_runs = wait_if_auction_runs - robot_name; // FIXME
+    if(wait_if_auction_runs < 0)
+        wait_if_auction_runs = wait_if_auction_runs * (-1);
+
+    ROS_INFO("Waiting %f second if a auction is running",wait_if_auction_runs);
+    ros::Duration(wait_if_auction_runs).sleep();
+
+    while(auction_running)
+    {
+        ROS_INFO("Waiting %f second because an auction is currently running",wait_if_auction_runs);
+        ros::Duration(wait_if_auction_runs).sleep();
+        float wait_if_auction_runs = r * 2;
+        wait_if_auction_runs = wait_if_auction_runs - robot_name;
+        if(wait_if_auction_runs < 0)
+            wait_if_auction_runs = wait_if_auction_runs * (-1);
+
+    }
+
+    //EDIT Peter : Removed this wait part to speed up the process!
+
+    /*
+    if(robot_name != 0)
+        auction_finished = false;
+    //why here sleep so long ?
+    while(auction_finished == false && timer_count <= 20)
+    {
+        timer_count++;
+        ros::Duration(1).sleep();
+    }*/
+
+    /*
+     * If no auction is running ... clear the auction vector and
+     * start a new auction.
+     */
+    //how do i know that no auction is running ??
+    //EDIT Peter: New bool to check if auction is running!
+
+    if(auction_running)
+    {
+        ROS_INFO("Auction is running, leaving method");
+        return false;
+    }
+    else
+    {
+        ROS_INFO("No auction is running, clearing");
+        auction.clear();
+    }
+
+
+//    adhoc_communication::AuctionStatus auction_status;
+    adhoc_communication::ExpAuction reqest_clusters, auction_msg;
+//    auction_status.start_auction = true;
+//    auction_status.auction_finished = false;
+
+    auction_msg.start_auction = true;
+    auction_msg.auction_finished = false;
+    auction_msg.auction_status_message = true;
+
+    if(robot_prefix_empty_param == false)
+    {
+    std::stringstream ss;
+    ss << robot_name;
+    std::string prefix = "";
+    robo_name = prefix.append(ss.str());
+
+    auction_msg.robot_name = robo_name;
+    }else
+    {
+        auction_msg.robot_name = robot_str;
+        robo_name = robot_str;
+    }
+    /*
+     * visualize all cluster elements
+     */
+
+//    for(int i = 0; i < clusters.size(); i++)
+//    {
+//        ROS_INFO("---- Cluster %d ----", clusters.at(i).id);
+//        std::string requested_clusters;
+//        for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+//        {
+//            requested_clusters.append(NumberToString((int)clusters.at(i).cluster_element.at(j).id));
+//            requested_clusters.append(", ");
+//        }
+//        ROS_INFO("Cluster ids: %s", requested_clusters.c_str());
+//    }
+
+
+
+    for(int i = 0; i < clusters.size(); i++)
+    {
+        adhoc_communication::ExpCluster cluster_request;
+
+
+        for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+        {
+            adhoc_communication::ExpClusterElement cluster_request_element;
+            if(robot_prefix_empty_param == true)
+            {
+                cluster_request_element.id = clusters.at(i).cluster_element.at(j).id;
+                cluster_request_element.detected_by_robot_str = clusters.at(i).cluster_element.at(j).detected_by_robot_str;
+            }else
+            {
+                cluster_request_element.id = clusters.at(i).cluster_element.at(j).id;
+            }
+            cluster_request.ids_contained.push_back(cluster_request_element);
+        }
+//        auction_status.requested_clusters.push_back(cluster_request);
+        auction_msg.requested_clusters.push_back(cluster_request);
+    }
+
+    if(robot_prefix_empty_param == true)
+    {
+        auction_msg.auction_id = auction_id_number;
+    }else
+    {
+        auction_msg.auction_id = 10000*robot_name + auction_id_number;
+    }
+
+    /*
+     * Following code is to visualize the message being send to the other robots
+     */
+//    for(int i = 0; i< auction_msg.requested_clusters.size(); i++)
+//    {
+//        adhoc_communication::Cluster cluster_req;
+//        cluster_req = auction_msg.requested_clusters.at(i);
+//        ROS_INFO("----------------------- REQUEST %d ---------------------------", i);
+//        std::string requested_clusters;
+//        for(int j = 0; j < cluster_req.ids_contained.size(); j++)
+//        {
+//            requested_clusters.append(NumberToString((int)cluster_req.ids_contained.at(j)));
+//            requested_clusters.append(", ");
+//        }
+//        ROS_INFO("Auction with auction number: %d", auction_msg.auction_id);
+//        ROS_INFO("Requested ids: %s", requested_clusters.c_str());
+//    }
+
+
+    std::string numbers_of_operating_robots;
+
+    ROS_INFO("Robot %d starting an auction", robot_name);
+
+//    if(first_run == true)
+//    {
+//        pub_auctioning_first.publish(auction_msg);
+//    }else
+//    {
+        sendToMulticastAuction("mc_", auction_msg, "auction");
+//    }
+
+
+
+    /*
+     * Wait for results of others
+     */
+
+
+       //EDIT Peter: I do not know how many answers i get
+        /*
+    nh.param("/robots_in_simulation",number_of_robots, 1);
+    number_of_robots = 2; // To test with two robots if parameter does not work
+    ROS_INFO("++++++++++ number of robots: %d ++++++++++", number_of_robots);
+    */
+
+//    ros::NodeHandle nh_robots;
+//    nh_robots.param<std::string>("/robots_in_simulation",numbers_of_operating_robots, "1");
+//    number_of_robots = atoi(numbers_of_operating_robots.c_str());
+//    ROS_INFO("++++++++++ number of robots: %d ++++++++++", number_of_robots);
+
+    /*
+     * Number of responding robots is one less since the robot itself does not
+     * respond to its own request
+     */
+    //ROS_INFO("Waiting for results from %d robots", number_of_robots);
+    //wait 4 seconds to receive bids
+        ros::Duration(3).sleep();
+        /*
+    while(timer_count < 50 && number_of_auction_bids_received < number_of_robots -1)
+    {
+        ROS_INFO("Waiting for results from %d robots", number_of_robots);
+        timer_count++;
+        ros::Duration(0.2).sleep();
+    }*/
+    ROS_INFO("number of auction bids received: %d", number_of_auction_bids_received);
+
+
+    if(number_of_auction_bids_received > 0)
+        number_of_completed_auctions++;
+    else
+        number_of_uncompleted_auctions++;
+    /*if(number_of_auction_bids_received < number_of_robots-1)
+    {
+        ROS_ERROR("Wait for other robots timer exceeded");
+        number_of_uncompleted_auctions++;
+    }else if(number_of_auction_bids_received >= number_of_robots - 1)
+    {
+        number_of_completed_auctions++;
+    }*/
+
+
+    /*
+     * Select the best cluster for yourself
+     */
+    ROS_INFO("Selecting the most attractive cluster");
+    bool cluster_selected_flag = selectClusterBasedOnAuction(final_goal, clusters_available_in_pool, robot_str_name);
+
+    /*
+     * Stop the auction
+     */
+    ROS_INFO("Stop the auction");
+//    auction_status.start_auction = false;
+//    auction_status.auction_finished = true;
+
+    auction_msg.start_auction = false;
+    auction_msg.auction_finished = true;
+    auction_msg.auction_status_message = true;
+    auction_msg.robot_name = robo_name;
+    auction_msg.requested_clusters.clear();
+
+    if(cluster_selected_flag == true)// && final_goal->size() >= 4)
+    {
+        /*
+         * Tell the others which cluster was selected
+         */
+        std::vector<transform_point_t> occupied_ids;
+        clusterIdToElementIds(final_goal->at(4), &occupied_ids);
+        for(int i = 0; i < occupied_ids.size(); i++)
+        {
+//            auction_status.occupied_ids.push_back(occupied_ids.at(i));
+            adhoc_communication::ExpAuctionElement auction_element;
+            auction_element.id = occupied_ids.at(i).id;
+            auction_element.detected_by_robot_str = occupied_ids.at(i).robot_str;
+            auction_msg.occupied_ids.push_back(auction_element);
+        }
+    }
+//    else
+//    {
+//        ROS_ERROR("No Goal Selected from selectClusterBasedOnAuction");
+//        cluster_selected_flag = false;
+//    }
+
+//    if(first_run == true)
+//    {
+//    pub_auctioning_status.publish(auction_status);
+//        pub_auctioning_first.publish(auction_msg);
+//    }else
+//    {
+        sendToMulticastAuction("mc_", auction_msg, "auction");
+//    }
+
+    first_run = false;
+    auction_id_number++;
+
+    ROS_INFO("return %d", cluster_selected_flag);
+    return (cluster_selected_flag);
+}
 
 bool ExplorationPlanner::clusterIdToElementIds(int cluster_id, std::vector<transform_point_t>* occupied_ids)
 {
@@ -3051,780 +3051,780 @@ bool ExplorationPlanner::clusterIdToElementIds(int cluster_id, std::vector<trans
     }
 }
 
-// bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, std::vector<int> *cluster_in_use_already_count, std::vector<std::string> *robot_str_name_to_return)
-// {
-//     ROS_INFO("Select the best cluster based on auction bids");
-//
-//     int own_row_to_select_cluster = 0;
-//     int own_column_to_select = 0;
-//
-//     /*
-//      * Select the method to select clusters from the matrix.
-//      * 0 ... select nearest cluster from OWN calculations
-//      * 1 ... gather information of others, estimate trajectory length based on
-//      *       distance information and select the optimal cluster using the
-//      */
-//     int method_used = 2;
-//
-//     int count = 0;
-//     int auction_cluster_element_id = -1;
-//
-//     auction_element_t auction_elements;
-//     auction_pair_t auction_pair;
-//
-//     /*
-//      * Calculate my own auction BIDs to all my clusters
-//      * and store them in the auction vector
-//      */
-//     ROS_INFO("Cluster Size: %lu", clusters.size());
-//     for(int i = 0; i < clusters.size(); i++)
-//     {
-//         ROS_INFO("Calculate cluster with ID: %d", clusters.at(i).id);
-//         int my_auction_bid = calculateAuctionBID(clusters.at(i).id, trajectory_strategy);
-//         if(my_auction_bid == -1)
-//         {
-//             ROS_WARN("Own BID calculation failed");
-//         }
-//         ROS_INFO("Own bid calculated for cluster '%d' is '%d'", clusters.at(i).id, my_auction_bid);
-//         auction_pair.cluster_id = clusters.at(i).id;
-//         auction_pair.bid_value = my_auction_bid;
-//         auction_elements.auction_element.push_back(auction_pair);
-//     }
-//     auction_elements.robot_id = robot_name;
-//     auction.push_back(auction_elements);
-//
-//
-//     /*
-//      * Remove all clusters which have previously been selected by other robots
-//      */
-//
-//     std::vector<int> clusters_to_erase;
-//     for(int j = 0; j < clusters.size(); j++)
-//     {
-//         for(int i = 0; i < already_used_ids.size(); i++)
-//         {
-//             if(already_used_ids.at(i) == clusters.at(j).id)
-//             {
-//                 /*Already used cluster found, therefore erase it*/
-//                 for(int m = 0; m < auction.size(); m++)
-//                 {
-//                     for(int n = 0; n < auction.at(m).auction_element.size(); n++)
-//                     {
-//                         if(auction.at(m).auction_element.at(n).cluster_id == already_used_ids.at(i))
-//                         {
-//                             ROS_INFO("Already used Cluster %d found .... unconsider it",auction.at(m).auction_element.at(n).cluster_id);
-// //                            auction.at(m).auction_element.erase(auction.at(m).auction_element.begin()+n);
-// //                            n--;
-//                               auction.at(m).auction_element.at(n).bid_value = 10000;
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//
-//
-//     ROS_INFO("Matrix");
-//
-//     /*
-//      * Calculate the matrix size
-//      */
-//     int col = 0, row = 0;
-//
-//     int robots_operating;
-//     nh.param<int>("robots_in_simulation",robots_operating, 1);
-//     ROS_INFO("robots operating: %d", robots_operating);
-//
-//     row = auction.size();
-//
-//
-//     /* FIXME */
-// //    if(auction.size() < robots_operating)
-// //    {
-// //        row = robots_operating;
-// //    }else
-// //    {
-// //        row = auction.size();
-// //    }
-//
-//
-// //    for(int i= 0; i < auction.size(); i++)
-// //    {
-// //        if(auction.at(i).auction_element.size() > col)
-// //        {
-// //            col = auction.at(i).auction_element.size();
-// //        }
-// //    }
-//     col = clusters.size();
-//     ROS_INFO("robots: %d     clusters: %d", row, col);
-//     /*
-//     * create a matrix with boost library
-//     */
-//
-//     int max_size = std::max(col,row);
-//     boost::numeric::ublas::matrix<double> m(max_size,max_size);
-//
-//     ROS_INFO("Empty the matrix");
-//     /*
-//      * initialize the matrix with all -1
-//      */
-//     for(int i = 0; i < m.size1(); i++)
-//     {
-//         for(int j = 0; j < m.size2(); j++)
-//         {
-//             m(i,j) = 0;
-//         }
-//     }
-//
-//
-//     ROS_INFO("Fill matrix");
-//     /*
-//      * Now fill the matrix with real auction values and use
-//      * a method for the traveling salesman problem
-//      *
-//      * i ... number of robots
-//      * j ... number of clusters
-//      */
-// //    ROS_INFO("robots: %d   clusters: %d", row, col);
-//     for(int i = 0; i < row; i++)
-//     {
-//         ROS_INFO("                 ");
-//         ROS_INFO("****** i: %d   auction size: %lu ******", i, auction.size());
-//         for(int j = 0; j < col; j++)
-//         {
-//             ROS_INFO("j: %d   cluster size: %lu", j, clusters.size());
-//             bool found_a_bid = false;
-//             bool cluster_valid_flag = false;
-//
-// //            if(i < auction.size())
-// //            {
-//                 for(int n = 0; n < auction.at(i).auction_element.size(); n++)
-//                 {
-//                     cluster_valid_flag = true;
-// //                    if(j < clusters.size())
-// //                    {
-// //                        ROS_INFO("j: %d    smaller then clusters.size(): %lu", j, clusters.size());
-//                         if(clusters.at(j).id == auction.at(i).auction_element.at(n).cluster_id && auction.at(i).auction_element.at(n).bid_value >= 0)
-//                         {
-//         //                    /*
-//         //                     * Check if duplicates exist, if so change them
-//         //                     */
-//         //                    bool duplicate_exist = false;
-//         //                    for(int k = 0; k < row; k++)
-//         //                    {
-//         //                        for(int l = 0; l < col; l++)
-//         //                        {
-//         //                            if(m(l,k) == auction.at(i).auction_element.at(n).bid_value)
-//         //                            {
-//         //                                ROS_INFO("Duplicate found");
-//         //                                duplicate_exist = true;
-//         //                            }
-//         //                        }
-//         //                    }
-//         //
-//         //                    if(duplicate_exist == false)
-//         //                    {
-//         //                        ROS_INFO("assign value");
-//                                 m(j,i) = auction.at(i).auction_element.at(n).bid_value;
-//         //                        ROS_INFO("done");
-//         //                    }else
-//         //                    {
-//         //                        m(j,i) = auction.at(i).auction_element.at(n).bid_value + 5;
-//         //                    }
-//                             found_a_bid = true;
-//                             break;
-//                         }
-// //                    }else if(j >= clusters.size())
-// //                    {
-// //                        ROS_ERROR("j >= clusters.size()");
-// //                        cluster_valid_flag = false;
-// //                        row = clusters.size();
-// //                        break;
-// //                    }
-//                 }
-// //            }else if(i >= auction.size())
-// //            {
-// //                ROS_ERROR("i >= auction.size()");
-// //                col = auction.size();
-// //                break;
-// //            }
-//
-//             ROS_INFO("Cluster elements checked, found BID: %d", found_a_bid);
-//
-//             /*
-//              * The auction does not contain a BID value for this cluster,
-//              * therefore try to estimate it, using the other robots position.
-//              */
-//             if(found_a_bid == false) // && cluster_valid_flag == true)
-//             {
-//                 ROS_INFO("No BID received ...");
-//                 int distance = -1;
-//                 other_robots_position_x = -1;
-//                 other_robots_position_y = -1;
-//
-//                 ROS_INFO("---- clusters: %lu element size: %lu  robots positions: %lu ----", clusters.size(), clusters.at(j).cluster_element.size(), other_robots_positions.positions.size());
-//                 for(int d = 0; d < clusters.at(j).cluster_element.size(); d++)
-//                 {
-//                     ROS_INFO("Access clusters.at(%d).cluster_element.at(%d)", j, d);
-//                     position_mutex.lock();
-//                     /*Check position of the current robot (i)*/
-//                     for(int u = 0; u < other_robots_positions.positions.size(); u++)
-//                     {
-//                         adhoc_communication::MmPoint position_of_robot;
-//                         position_of_robot = other_robots_positions.positions.at(u);
-//
-//                         if(robot_prefix_empty_param == true)
-//                         {
-//                             ROS_INFO("position of robot: %s   compare with auction robot: %s", position_of_robot.src_robot.c_str(), auction.at(i).detected_by_robot_str.c_str());
-//                             if(position_of_robot.src_robot.compare(auction.at(i).detected_by_robot_str) == 0)
-//                             {
-//                                 other_robots_position_x = position_of_robot.x;
-//                                 other_robots_position_y = position_of_robot.y;
-//
-//                                 break;
-//                             }
-//                             else
-//                             {
-//                                 ROS_ERROR("Unable to look up robots position!");
-//                             }
-//                         }else
-//                         {
-//                             int robots_int_id = atoi(position_of_robot.src_robot.substr(6,1).c_str());
-//                             ROS_INFO("Robots int id: %d", robots_int_id);
-//                             if(auction.at(i).robot_id == robots_int_id)
-//                             {
-//                                 other_robots_position_x = position_of_robot.x;
-//                                 other_robots_position_y = position_of_robot.y;
-//
-//                                 ROS_INFO("Robots %d     position_x: %f     position_y: %f", robots_int_id, other_robots_position_x, other_robots_position_y);
-//                                 break;
-//                             }else
-//                             {
-// //                                ROS_ERROR("robot id requested: %d      Current robots position id: %d", auction.at(i).robot_id, robots_int_id);
-//                                 ROS_ERROR("Unable to look up robots position!");
-//                             }
-//                         }
-//                     }
-//                     position_mutex.unlock();
-//
-// //                    ROS_INFO("Got robot position");
-//                     if(other_robots_position_x != -1 && other_robots_position_y != -1)
-//                     {
-//
-//                         if(trajectory_strategy == "trajectory")
-//                         {
-//                             distance = trajectory_plan(other_robots_position_x, other_robots_position_y, clusters.at(j).cluster_element.at(d).x_coordinate, clusters.at(j).cluster_element.at(d).y_coordinate);
-//                             ROS_INFO("estimated TRAJECTORY distance is: %d", distance);
-//
-//                         }else if(trajectory_strategy == "euclidean" && j < clusters.size() && d < clusters.at(j).cluster_element.size())
-//                         {
-//                             double x = clusters.at(j).cluster_element.at(d).x_coordinate - other_robots_position_x;
-//                             double y = clusters.at(j).cluster_element.at(d).y_coordinate - other_robots_position_y;
-//                             distance = x * x + y * y;
-//                             ROS_INFO("estimated EUCLIDEAN distance is: %d", distance);
-//
-//                             if(distance != -1)
-//                                 break;
-//                         }
-//                     }
-//                     /*
-//                      * Check if the distance calculation is plausible.
-//                      * The euclidean distance to this point need to be smaller then
-//                      * the simulated trajectory path. If this stattement is not valid
-//                      * the trajectory calculation has failed.
-//                      */
-//                     if(distance != -1)
-//                     {
-//                         double x = clusters.at(j).cluster_element.at(d).x_coordinate - other_robots_position_x;
-//                         double y = clusters.at(j).cluster_element.at(d).y_coordinate - other_robots_position_y;
-//                         double euclidean_distance = x * x + y * y;
-//
-// //                        ROS_INFO("Euclidean distance: %f   trajectory_path: %f", sqrt(euclidean_distance), distance * costmap_ros_->getCostmap()->getResolution());
-//                         if (distance * costmap_ros_->getCostmap()->getResolution() <= sqrt(euclidean_distance)*0.95)
-//                         {
-//                             ROS_ERROR("Euclidean distance is smaller then the trajectory path at recalculation");
-//                             distance = -1;
-//                         }else
-//                         {
-//                             break;
-//                         }
-//                     }
-//                 }
-//                 if(distance == -1)
-//                 {
-//                     /*
-//                      * Cluster is definitely unknown. Therefore assign a high value
-//                      * to ensure not to select this cluster
-//                      */
-//
-//                     ROS_ERROR("Unable to calculate the others BID at all");
-//                     m(j,i) = 10000;
-//                 }
-//                 else
-//                 {
-//                     ROS_INFO("Estimated trajectory length: %d", distance);
-//
-// //                    /*
-// //                     * Check if duplicates exist, if so change them
-// //                     */
-// //                    bool duplicate_exist = false;
-// //                    for(int k = 0; k < row; k++)
-// //                    {
-// //                        for(int l = 0; l < col; l++)
-// //                        {
-// //                            if(m(l,k) == distance)
-// //                            {
-// //                                ROS_INFO("Duplicate found");
-// //                                duplicate_exist = true;
-// //                            }
-// //                        }
-// //                    }
-// //
-// //                    if(duplicate_exist == false)
-// //                    {
-//                         m(j,i) = distance;
-// //                    }else
-// //                    {
-// //                        m(j,i) = distance +5;
-// //                    }
-//                 }
-//             }
-//             ROS_INFO("Column filled");
-//         }
-//         ROS_INFO("No columns left. Check next robot");
-//     }
-// //    std::cout << m << std::endl;
-//
-//     ROS_INFO("Completed");
-//
-//     /*
-//      * If the number of clusters is less the number of robots,
-//      * the assigning algorithmn would not come to a solution. Therefore
-//      * select the nearest cluster
-//      */
-//     if(col < row)
-//     {
-//         ROS_ERROR("Number of clusters is less the number of robots. Select the closest");
-//         if(col == 0)
-//         {
-//             ROS_ERROR("No cluster anymore available");
-//             /*No clusters are available at all*/
-//             return false;
-//         }
-//         method_used = 0;
-//     }
-//
-//     /*
-//      * Select the strategy how to select clusters from the matrix
-//      *
-//      * 0 ... select nearest cluster
-//      * 1 ...
-//      */
-//     if(method_used == 0)
-//     {
-//
-//         /*
-//          * Select the nearest cluster (lowest bid value)
-//          * THE ROBOTS OWN BIDS ARE IN THE LAST ROW
-//          * initialize the bid value as first column in the first row
-//          */
-// //        int smallest_bid_value = auction.back().auction_element.front().bid_value;
-//
-// //        ROS_INFO("smallest_bid_value at initialization: %d", smallest_bid_value);
-//         ROS_INFO("Columns left: %d", col);
-// //        for(int j = 0; j < col; j++)
-// //        {
-// //            ROS_INFO("col: %d", j);
-// //            if(auction.back().auction_element.at(j).bid_value <= smallest_bid_value && auction.back().auction_element.at(j).bid_value != -1)
-// //            {
-// //                smallest_bid_value = auction.back().auction_element.at(j).bid_value;
-// //                auction_cluster_element_id = auction.back().auction_element.at(j).cluster_id;
-// //            }
-// //        }
-//         if(auction.size() > 0)
-//         {
-//             if(auction.back().auction_element.size() > 0)
-//             {
-//                 auction_cluster_element_id = auction.back().auction_element.front().cluster_id;
-//             }else
-//             {
-//                  return false;
-//             }
-//         }
-//     }
-//     if(method_used == 1)
-//     {
-//        /*
-//         * Use the Ungarische method/ KuhnMunkresAlgorithm in order to figure out which
-//         * cluster the most promising one is for myself
-//         */
-//
-//         /* an example cost matrix */
-//         int mat[col*row];
-//         int counter = 0;
-//         for(int j = 0; j < col; j++)
-//         {
-//             for(int i = 0; i < row; i++)
-//             {
-//                 mat[counter] = m(j,i);
-//                 counter++;
-//             }
-//         }
-//
-//         std::vector< std::vector<int> > m2 = array_to_matrix(mat,col,row);
-//
-//         /*
-//          * Last row in the matrix contains BIDs of the robot itself
-//          * Remember the max row count before filling up with zeros.
-//          */
-//         own_row_to_select_cluster = row-1;
-//         ROS_INFO("Own row: %d", own_row_to_select_cluster);
-//
-//         /* an example cost matrix */
-//         int r[3*3] =  {14,15,15,30,1,95,22,14,12};
-//         std::vector< std::vector<int> > m3 = array_to_matrix(r,3,3);
-//
-//        /* initialize the gungarian_problem using the cost matrix*/
-//        Hungarian hungarian(m2, col, row, HUNGARIAN_MODE_MINIMIZE_COST);
-//
-// //        Hungarian hungarian(m3, 3, 3, HUNGARIAN_MODE_MINIMIZE_COST);
-//
-//        fprintf(stderr, "cost-matrix:");
-//        hungarian.print_cost();
-//
-//        /* solve the assignment problem */
-//        for(int i = 0; i < 5; i++)
+bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, std::vector<int> *cluster_in_use_already_count, std::vector<std::string> *robot_str_name_to_return)
+{
+    ROS_INFO("Select the best cluster based on auction bids");
+
+    int own_row_to_select_cluster = 0;
+    int own_column_to_select = 0;
+
+    /*
+     * Select the method to select clusters from the matrix.
+     * 0 ... select nearest cluster from OWN calculations
+     * 1 ... gather information of others, estimate trajectory length based on
+     *       distance information and select the optimal cluster using the
+     */
+    int method_used = 2;
+
+    int count = 0;
+    int auction_cluster_element_id = -1;
+
+    auction_element_t auction_elements;
+    auction_pair_t auction_pair;
+
+    /*
+     * Calculate my own auction BIDs to all my clusters
+     * and store them in the auction vector
+     */
+    ROS_INFO("Cluster Size: %lu", clusters.size());
+    for(int i = 0; i < clusters.size(); i++)
+    {
+        ROS_INFO("Calculate cluster with ID: %d", clusters.at(i).id);
+        int my_auction_bid = calculateAuctionBID(clusters.at(i).id, trajectory_strategy);
+        if(my_auction_bid == -1)
+        {
+            ROS_WARN("Own BID calculation failed");
+        }
+        ROS_INFO("Own bid calculated for cluster '%d' is '%d'", clusters.at(i).id, my_auction_bid);
+        auction_pair.cluster_id = clusters.at(i).id;
+        auction_pair.bid_value = my_auction_bid;
+        auction_elements.auction_element.push_back(auction_pair);
+    }
+    auction_elements.robot_id = robot_name;
+    auction.push_back(auction_elements);
+
+
+    /*
+     * Remove all clusters which have previously been selected by other robots
+     */
+
+    std::vector<int> clusters_to_erase;
+    for(int j = 0; j < clusters.size(); j++)
+    {
+        for(int i = 0; i < already_used_ids.size(); i++)
+        {
+            if(already_used_ids.at(i) == clusters.at(j).id)
+            {
+                /*Already used cluster found, therefore erase it*/
+                for(int m = 0; m < auction.size(); m++)
+                {
+                    for(int n = 0; n < auction.at(m).auction_element.size(); n++)
+                    {
+                        if(auction.at(m).auction_element.at(n).cluster_id == already_used_ids.at(i))
+                        {
+                            ROS_INFO("Already used Cluster %d found .... unconsider it",auction.at(m).auction_element.at(n).cluster_id);
+//                            auction.at(m).auction_element.erase(auction.at(m).auction_element.begin()+n);
+//                            n--;
+                              auction.at(m).auction_element.at(n).bid_value = 10000;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    ROS_INFO("Matrix");
+
+    /*
+     * Calculate the matrix size
+     */
+    int col = 0, row = 0;
+
+    int robots_operating;
+    nh.param<int>("robots_in_simulation",robots_operating, 1);
+    ROS_INFO("robots operating: %d", robots_operating);
+
+    row = auction.size();
+
+
+    /* FIXME */
+//    if(auction.size() < robots_operating)
+//    {
+//        row = robots_operating;
+//    }else
+//    {
+//        row = auction.size();
+//    }
+
+
+//    for(int i= 0; i < auction.size(); i++)
+//    {
+//        if(auction.at(i).auction_element.size() > col)
 //        {
-//            if(hungarian.solve() == true)
-//                break;
+//            col = auction.at(i).auction_element.size();
 //        }
-//
-//        const std::vector< std::vector<int> > assignment = hungarian.assignment();
-//
-//        /* some output */
-//        fprintf(stderr, "assignment:");
-//        hungarian.print_assignment();
-//
-// //       for(int i = 0; i < assignment.size(); i++)
-// //       {
-// //           ROS_ERROR("---- %d -----", i);
-// //           for(int j = 0; j < assignment.at(i).size(); j++)
-// //           {
-// //               ROS_INFO("%d", assignment.at(i).at(j));
-// //           }
-// //       }
-//
-//
-//        for(int i = 0; i < assignment.size(); i++)
-//        {
-//            if(assignment.at(i).at(own_row_to_select_cluster) == 1)
+//    }
+    col = clusters.size();
+    ROS_INFO("robots: %d     clusters: %d", row, col);
+    /*
+    * create a matrix with boost library
+    */
+
+    int max_size = std::max(col,row);
+    boost::numeric::ublas::matrix<double> m(max_size,max_size);
+
+    ROS_INFO("Empty the matrix");
+    /*
+     * initialize the matrix with all -1
+     */
+    for(int i = 0; i < m.size1(); i++)
+    {
+        for(int j = 0; j < m.size2(); j++)
+        {
+            m(i,j) = 0;
+        }
+    }
+
+
+    ROS_INFO("Fill matrix");
+    /*
+     * Now fill the matrix with real auction values and use
+     * a method for the traveling salesman problem
+     *
+     * i ... number of robots
+     * j ... number of clusters
+     */
+//    ROS_INFO("robots: %d   clusters: %d", row, col);
+    for(int i = 0; i < row; i++)
+    {
+        ROS_INFO("                 ");
+        ROS_INFO("****** i: %d   auction size: %lu ******", i, auction.size());
+        for(int j = 0; j < col; j++)
+        {
+            ROS_INFO("j: %d   cluster size: %lu", j, clusters.size());
+            bool found_a_bid = false;
+            bool cluster_valid_flag = false;
+
+//            if(i < auction.size())
 //            {
-//                auction_cluster_element_id = clusters.at(i).id;
-//                ROS_INFO("Selected Cluster at position : %d   %d",i ,own_row_to_select_cluster);
+                for(int n = 0; n < auction.at(i).auction_element.size(); n++)
+                {
+                    cluster_valid_flag = true;
+//                    if(j < clusters.size())
+//                    {
+//                        ROS_INFO("j: %d    smaller then clusters.size(): %lu", j, clusters.size());
+                        if(clusters.at(j).id == auction.at(i).auction_element.at(n).cluster_id && auction.at(i).auction_element.at(n).bid_value >= 0)
+                        {
+        //                    /*
+        //                     * Check if duplicates exist, if so change them
+        //                     */
+        //                    bool duplicate_exist = false;
+        //                    for(int k = 0; k < row; k++)
+        //                    {
+        //                        for(int l = 0; l < col; l++)
+        //                        {
+        //                            if(m(l,k) == auction.at(i).auction_element.at(n).bid_value)
+        //                            {
+        //                                ROS_INFO("Duplicate found");
+        //                                duplicate_exist = true;
+        //                            }
+        //                        }
+        //                    }
+        //
+        //                    if(duplicate_exist == false)
+        //                    {
+        //                        ROS_INFO("assign value");
+                                m(j,i) = auction.at(i).auction_element.at(n).bid_value;
+        //                        ROS_INFO("done");
+        //                    }else
+        //                    {
+        //                        m(j,i) = auction.at(i).auction_element.at(n).bid_value + 5;
+        //                    }
+                            found_a_bid = true;
+                            break;
+                        }
+//                    }else if(j >= clusters.size())
+//                    {
+//                        ROS_ERROR("j >= clusters.size()");
+//                        cluster_valid_flag = false;
+//                        row = clusters.size();
+//                        break;
+//                    }
+                }
+//            }else if(i >= auction.size())
+//            {
+//                ROS_ERROR("i >= auction.size()");
+//                col = auction.size();
 //                break;
 //            }
+
+            ROS_INFO("Cluster elements checked, found BID: %d", found_a_bid);
+
+            /*
+             * The auction does not contain a BID value for this cluster,
+             * therefore try to estimate it, using the other robots position.
+             */
+            if(found_a_bid == false) // && cluster_valid_flag == true)
+            {
+                ROS_INFO("No BID received ...");
+                int distance = -1;
+                other_robots_position_x = -1;
+                other_robots_position_y = -1;
+
+                ROS_INFO("---- clusters: %lu element size: %lu  robots positions: %lu ----", clusters.size(), clusters.at(j).cluster_element.size(), other_robots_positions.positions.size());
+                for(int d = 0; d < clusters.at(j).cluster_element.size(); d++)
+                {
+                    ROS_INFO("Access clusters.at(%d).cluster_element.at(%d)", j, d);
+                    position_mutex.lock();
+                    /*Check position of the current robot (i)*/
+                    for(int u = 0; u < other_robots_positions.positions.size(); u++)
+                    {
+                        adhoc_communication::MmPoint position_of_robot;
+                        position_of_robot = other_robots_positions.positions.at(u);
+
+                        if(robot_prefix_empty_param == true)
+                        {
+                            ROS_INFO("position of robot: %s   compare with auction robot: %s", position_of_robot.src_robot.c_str(), auction.at(i).detected_by_robot_str.c_str());
+                            if(position_of_robot.src_robot.compare(auction.at(i).detected_by_robot_str) == 0)
+                            {
+                                other_robots_position_x = position_of_robot.x;
+                                other_robots_position_y = position_of_robot.y;
+
+                                break;
+                            }
+                            else
+                            {
+                                ROS_ERROR("Unable to look up robots position!");
+                            }
+                        }else
+                        {
+                            int robots_int_id = atoi(position_of_robot.src_robot.substr(6,1).c_str());
+                            ROS_INFO("Robots int id: %d", robots_int_id);
+                            if(auction.at(i).robot_id == robots_int_id)
+                            {
+                                other_robots_position_x = position_of_robot.x;
+                                other_robots_position_y = position_of_robot.y;
+
+                                ROS_INFO("Robots %d     position_x: %f     position_y: %f", robots_int_id, other_robots_position_x, other_robots_position_y);
+                                break;
+                            }else
+                            {
+//                                ROS_ERROR("robot id requested: %d      Current robots position id: %d", auction.at(i).robot_id, robots_int_id);
+                                ROS_ERROR("Unable to look up robots position!");
+                            }
+                        }
+                    }
+                    position_mutex.unlock();
+
+//                    ROS_INFO("Got robot position");
+                    if(other_robots_position_x != -1 && other_robots_position_y != -1)
+                    {
+
+                        if(trajectory_strategy == "trajectory")
+                        {
+                            distance = trajectory_plan(other_robots_position_x, other_robots_position_y, clusters.at(j).cluster_element.at(d).x_coordinate, clusters.at(j).cluster_element.at(d).y_coordinate);
+                            ROS_INFO("estimated TRAJECTORY distance is: %d", distance);
+
+                        }else if(trajectory_strategy == "euclidean" && j < clusters.size() && d < clusters.at(j).cluster_element.size())
+                        {
+                            double x = clusters.at(j).cluster_element.at(d).x_coordinate - other_robots_position_x;
+                            double y = clusters.at(j).cluster_element.at(d).y_coordinate - other_robots_position_y;
+                            distance = x * x + y * y;
+                            ROS_INFO("estimated EUCLIDEAN distance is: %d", distance);
+
+                            if(distance != -1)
+                                break;
+                        }
+                    }
+                    /*
+                     * Check if the distance calculation is plausible.
+                     * The euclidean distance to this point need to be smaller then
+                     * the simulated trajectory path. If this stattement is not valid
+                     * the trajectory calculation has failed.
+                     */
+                    if(distance != -1)
+                    {
+                        double x = clusters.at(j).cluster_element.at(d).x_coordinate - other_robots_position_x;
+                        double y = clusters.at(j).cluster_element.at(d).y_coordinate - other_robots_position_y;
+                        double euclidean_distance = x * x + y * y;
+
+//                        ROS_INFO("Euclidean distance: %f   trajectory_path: %f", sqrt(euclidean_distance), distance * costmap_ros_->getCostmap()->getResolution());
+                        if (distance * costmap_ros_->getCostmap()->getResolution() <= sqrt(euclidean_distance)*0.95)
+                        {
+                            ROS_ERROR("Euclidean distance is smaller then the trajectory path at recalculation");
+                            distance = -1;
+                        }else
+                        {
+                            break;
+                        }
+                    }
+                }
+                if(distance == -1)
+                {
+                    /*
+                     * Cluster is definitely unknown. Therefore assign a high value
+                     * to ensure not to select this cluster
+                     */
+
+                    ROS_ERROR("Unable to calculate the others BID at all");
+                    m(j,i) = 10000;
+                }
+                else
+                {
+                    ROS_INFO("Estimated trajectory length: %d", distance);
+
+//                    /*
+//                     * Check if duplicates exist, if so change them
+//                     */
+//                    bool duplicate_exist = false;
+//                    for(int k = 0; k < row; k++)
+//                    {
+//                        for(int l = 0; l < col; l++)
+//                        {
+//                            if(m(l,k) == distance)
+//                            {
+//                                ROS_INFO("Duplicate found");
+//                                duplicate_exist = true;
+//                            }
+//                        }
+//                    }
+//
+//                    if(duplicate_exist == false)
+//                    {
+                        m(j,i) = distance;
+//                    }else
+//                    {
+//                        m(j,i) = distance +5;
+//                    }
+                }
+            }
+            ROS_INFO("Column filled");
+        }
+        ROS_INFO("No columns left. Check next robot");
+    }
+//    std::cout << m << std::endl;
+
+    ROS_INFO("Completed");
+
+    /*
+     * If the number of clusters is less the number of robots,
+     * the assigning algorithmn would not come to a solution. Therefore
+     * select the nearest cluster
+     */
+    if(col < row)
+    {
+        ROS_ERROR("Number of clusters is less the number of robots. Select the closest");
+        if(col == 0)
+        {
+            ROS_ERROR("No cluster anymore available");
+            /*No clusters are available at all*/
+            return false;
+        }
+        method_used = 0;
+    }
+
+    /*
+     * Select the strategy how to select clusters from the matrix
+     *
+     * 0 ... select nearest cluster
+     * 1 ...
+     */
+    if(method_used == 0)
+    {
+
+        /*
+         * Select the nearest cluster (lowest bid value)
+         * THE ROBOTS OWN BIDS ARE IN THE LAST ROW
+         * initialize the bid value as first column in the first row
+         */
+//        int smallest_bid_value = auction.back().auction_element.front().bid_value;
+
+//        ROS_INFO("smallest_bid_value at initialization: %d", smallest_bid_value);
+        ROS_INFO("Columns left: %d", col);
+//        for(int j = 0; j < col; j++)
+//        {
+//            ROS_INFO("col: %d", j);
+//            if(auction.back().auction_element.at(j).bid_value <= smallest_bid_value && auction.back().auction_element.at(j).bid_value != -1)
+//            {
+//                smallest_bid_value = auction.back().auction_element.at(j).bid_value;
+//                auction_cluster_element_id = auction.back().auction_element.at(j).cluster_id;
+//            }
 //        }
-//
-//     }
-//     if(method_used == 2)
-//     {
-//
-// 	Matrix<double> mat = convert_boost_matrix_to_munkres_matrix<double>(m);
-//         ROS_INFO("Matrix (%ux%u):",mat.rows(),mat.columns());
-//
-// 	// Display begin matrix state.
-// 	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
-//             if(new_row > 9)
-//             {
-//                 int rows_left = mat.rows() - new_row + 1;
-//                 std::cout << "... (" << rows_left << " more)";
-//                 break;
-//             }
-//             for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
-//                 if(new_col > 9)
-//                 {
-//                     int columns_left = mat.columns() - new_col + 1;
-//                     std::cout << "... (" << columns_left << " more)";
-//                     break;
-//                 }
-//                 std::cout.width(2);
-//                 std::cout << mat(new_row,new_col) << " ";
-//             }
-//             std::cout << std::endl;
-// 	}
-// 	std::cout << std::endl;
-//
-//
-//
-// //        for(int i = 0; i < mat.columns(); i++)
-// //        {
-// //            for(int j = 0; j < mat.rows(); j++)
-// //            {
-// //                /*Inner Matrix*/
-// ////                bool element_found = false;
-// //                for(int n = 0; n < mat.columns(); n++)
-// //                {
-// //                    for(int m = 0; m < mat.rows(); m++)
-// //                    {
-// //                        if(abs(mat(i,j) - mat(n,m)) <= 20 && abs(mat(i,j) - mat(n,m)) != 0 && (mat(i,j) != 0 && mat(n,m) != 0))
-// //                        {
-// //                            mat(i,j) = 0;
-// ////                            element_found = true;
-// ////                            break;
-// //                        }
-// //                    }
-// ////                    if(element_found = true)
-// ////                        break;
-// //                }
-// //            }
-// //        }
-// //
-// //        ROS_INFO("Matrix with threshold :");
-// //        // Display begin matrix state.
-// //	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
-// //		for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
-// //			std::cout.width(2);
-// //			std::cout << mat(new_row,new_col) << " ";
-// //		}
-// //		std::cout << std::endl;
-// //	}
-// //	std::cout << std::endl;
-//
-//
-// 	// Apply Munkres algorithm to matrix.
-// 	Munkres munk;
-// 	munk.solve(mat);
-//
-//         ROS_INFO("Solved :");
-// 	// Display solved matrix.
-// 	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
-//             if(new_row > 9)
-//             {
-//                 int rows_left = mat.rows() - new_row + 1;
-//                 std::cout << "... (" << rows_left << " more)";
-//                 break;
-//             }
-//             for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
-//                 if(new_col > 9)
-//                 {
-//                     int columns_left = mat.columns() - new_col + 1;
-//                     std::cout << "... (" << columns_left << " more)";
-//                     break;
-//                 }
-//                 std::cout.width(2);
-//                 std::cout << mat(new_row,new_col) << " ";
-//             }
-//             std::cout << std::endl;
-// 	}
-//
-// 	std::cout << std::endl;
-//
-//
-//        own_row_to_select_cluster = row-1;
+        if(auction.size() > 0)
+        {
+            if(auction.back().auction_element.size() > 0)
+            {
+                auction_cluster_element_id = auction.back().auction_element.front().cluster_id;
+            }else
+            {
+                 return false;
+            }
+        }
+    }
+    if(method_used == 1)
+    {
+       /*
+        * Use the Ungarische method/ KuhnMunkresAlgorithm in order to figure out which
+        * cluster the most promising one is for myself
+        */
+
+        /* an example cost matrix */
+        int mat[col*row];
+        int counter = 0;
+        for(int j = 0; j < col; j++)
+        {
+            for(int i = 0; i < row; i++)
+            {
+                mat[counter] = m(j,i);
+                counter++;
+            }
+        }
+
+        std::vector< std::vector<int> > m2 = array_to_matrix(mat,col,row);
+
+        /*
+         * Last row in the matrix contains BIDs of the robot itself
+         * Remember the max row count before filling up with zeros.
+         */
+        own_row_to_select_cluster = row-1;
+        ROS_INFO("Own row: %d", own_row_to_select_cluster);
+
+        /* an example cost matrix */
+        int r[3*3] =  {14,15,15,30,1,95,22,14,12};
+        std::vector< std::vector<int> > m3 = array_to_matrix(r,3,3);
+
+       /* initialize the gungarian_problem using the cost matrix*/
+       Hungarian hungarian(m2, col, row, HUNGARIAN_MODE_MINIMIZE_COST);
+
+//        Hungarian hungarian(m3, 3, 3, HUNGARIAN_MODE_MINIMIZE_COST);
+
+       fprintf(stderr, "cost-matrix:");
+       hungarian.print_cost();
+
+       /* solve the assignment problem */
+       for(int i = 0; i < 5; i++)
+       {
+           if(hungarian.solve() == true)
+               break;
+       }
+
+       const std::vector< std::vector<int> > assignment = hungarian.assignment();
+
+       /* some output */
+       fprintf(stderr, "assignment:");
+       hungarian.print_assignment();
+
+//       for(int i = 0; i < assignment.size(); i++)
+//       {
+//           ROS_ERROR("---- %d -----", i);
+//           for(int j = 0; j < assignment.at(i).size(); j++)
+//           {
+//               ROS_INFO("%d", assignment.at(i).at(j));
+//           }
+//       }
+
+
+       for(int i = 0; i < assignment.size(); i++)
+       {
+           if(assignment.at(i).at(own_row_to_select_cluster) == 1)
+           {
+               auction_cluster_element_id = clusters.at(i).id;
+               ROS_INFO("Selected Cluster at position : %d   %d",i ,own_row_to_select_cluster);
+               break;
+           }
+       }
+
+    }
+    if(method_used == 2)
+    {
+
+	Matrix<double> mat = convert_boost_matrix_to_munkres_matrix<double>(m);
+        ROS_INFO("Matrix (%ux%u):",mat.rows(),mat.columns());
+
+	// Display begin matrix state.
+	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
+            if(new_row > 9)
+            {
+                int rows_left = mat.rows() - new_row + 1;
+                std::cout << "... (" << rows_left << " more)";
+                break;
+            }
+            for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
+                if(new_col > 9)
+                {
+                    int columns_left = mat.columns() - new_col + 1;
+                    std::cout << "... (" << columns_left << " more)";
+                    break;
+                }
+                std::cout.width(2);
+                std::cout << mat(new_row,new_col) << " ";
+            }
+            std::cout << std::endl;
+	}
+	std::cout << std::endl;
+
+
+
 //        for(int i = 0; i < mat.columns(); i++)
 //        {
-//            if(mat(i,own_row_to_select_cluster) == 1)
+//            for(int j = 0; j < mat.rows(); j++)
 //            {
-//                auction_cluster_element_id = clusters.at(i).id;
-//                own_column_to_select = i;
-//                ROS_INFO("Selected Cluster at position : %d   %d  with BID: %f",i ,own_row_to_select_cluster, mat(i, own_row_to_select_cluster));
-//                break;
+//                /*Inner Matrix*/
+////                bool element_found = false;
+//                for(int n = 0; n < mat.columns(); n++)
+//                {
+//                    for(int m = 0; m < mat.rows(); m++)
+//                    {
+//                        if(abs(mat(i,j) - mat(n,m)) <= 20 && abs(mat(i,j) - mat(n,m)) != 0 && (mat(i,j) != 0 && mat(n,m) != 0))
+//                        {
+//                            mat(i,j) = 0;
+////                            element_found = true;
+////                            break;
+//                        }
+//                    }
+////                    if(element_found = true)
+////                        break;
+//                }
 //            }
 //        }
 //
-//
-//
-//
-//     }
-//
-//
-//
-//
-//
-//     /*
-//      * Try to navigate to the selected cluster. If it failes, take the next efficient
-//      * cluster and try again
-//      */
-//
-//
-//     if(auction_cluster_element_id != -1)
-//     {
-//
-//        /*
-//         * Select the above calculated goal. If this cluster is still in use,
-//         * set this cluster in the matrix to zero and restart the auction
-//         */
-//
-//
-//
-//
-//
-//         /*
-//          * Following should just be executed if the selection using auctioning
-//          * does fail
-//          */
-//         while(ros::ok())
-//         {
-//             ROS_INFO("Try to determining goal");
-//             std::vector<double> new_goal;
-//             std::vector<std::string> robot_str_name;
-//             bool goal_determined = determine_goal(6, &new_goal, count, auction_cluster_element_id, &robot_str_name);
-//
-//
-//
-//             if(goal_determined == true)
-//             {
-// //                if(new_goal.front() == -1)
-// //                {
-// //                    ROS_INFO("Unable to access goal points in the cluster");
-// //                    count++;
-// //                }else
-// //                {
-//                     double determined_goal_id = new_goal.at(4);
-//                     bool used_cluster = false;
-//                     for(int m = 0; m < already_used_ids.size(); m++)
-//                     {
-//                         if(determined_goal_id == already_used_ids.at(m))
-//                         {
-//                             ROS_INFO("Cluster in use already");
-//                             cluster_in_use_already_count->push_back(1);
-//                             used_cluster = true;
-//                             count++;
-//                             break;
-//                         }
-//                     }
-//                     if(used_cluster == false)
-//                     {
-//                         ROS_INFO("Cluster was not used by any robot before");
-//                         goal->push_back(new_goal.at(0));
-//                         goal->push_back(new_goal.at(1));
-//                         goal->push_back(new_goal.at(2));
-//                         goal->push_back(new_goal.at(3));
-//                         goal->push_back(new_goal.at(4));
-//
-//                         robot_str_name_to_return->push_back(robot_str_name.at(0));
-//                         return true;
-//                     }
-// //                }
-//             }else
-//             {
-//                 if(clusters.size() <= count)
-//                 {
-//                     ROS_INFO("Not possible to select any goal from the available clusters");
-//                     return false;
-//                 }else
-//                 {
-//                     ROS_INFO("Current cluster empty ... select next one");
-//                 }
-//                 count++;
-//             }
-//         }
-//         return false;
-//     }else
-//     {
-//         /*
-//          * No auction elements are available. Auctioning has failed
-//          */
-//
-//         ROS_INFO("Auction has failed, no auction elements are existent. Choosing nearest cluster");
-//         std::vector<double> new_goal;
-//         std::vector<std::string> robot_str_name;
-//         bool goal_determined = determine_goal(4, &new_goal, count, -1, &robot_str_name);
-//         if(goal_determined == true)
-//         {
-//             goal->push_back(new_goal.at(0));
-//             goal->push_back(new_goal.at(1));
-//             goal->push_back(new_goal.at(2));
-//             goal->push_back(new_goal.at(3));
-//             goal->push_back(new_goal.at(4));
-//             return true;
-//         }else
-//         {
-//             return false;
-//         }
-//     }
-//     return false;
-// }
+//        ROS_INFO("Matrix with threshold :");
+//        // Display begin matrix state.
+//	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
+//		for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
+//			std::cout.width(2);
+//			std::cout << mat(new_row,new_col) << " ";
+//		}
+//		std::cout << std::endl;
+//	}
+//	std::cout << std::endl;
 
-// bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by, int id, int cluster_id_number)
-// {
-//     ROS_INFO("Negotiating Frontier with id: %d  at Cluster: %d", id, cluster_id_number);
-//
-//     int cluster_vector_position = 0;
-//     for (int i = 0; i < clusters.size(); i++)
-//     {
-//         if(clusters.at(i).id == cluster_id_number)
-//         {
-//             cluster_vector_position = i;
-//             break;
-//         }
-//     }
-//
-//     ROS_DEBUG("cluster vector position: %d", cluster_vector_position);
-//
-//     bool entry_found = false;
-//     bool id_in_actual_cluster = false;
-//
-//     for(int i = 0; i< negotiation_list.size(); i++)
-//     {
-//         for(int k = 0; k < clusters.at(cluster_vector_position).cluster_element.size(); k++)
-//         {
-//             id_in_actual_cluster = false;
-//             if(negotiation_list.at(i).id == clusters.at(cluster_vector_position).cluster_element.at(k).id)
-//             {
-//                 ROS_INFO("         Same ID detected");
-//                 for(int j = 0; j < clusters.at(cluster_vector_position).cluster_element.size(); j++)
-//                 {
-//                     for(int m = 0; m < my_negotiation_list.size(); m++)
-//                     {
-//                         if(clusters.at(cluster_vector_position).cluster_element.at(j).id == my_negotiation_list.at(m).id)
-//                         {
-//                             ROS_INFO("         But is in the current working cluster! everything alright");
-//                             id_in_actual_cluster = true;
-//                             return true;
-//                         }
-//                     }
-//                 }
-//
-//                 double used_cluster_ids = 0;
-//                 if(id_in_actual_cluster == false)
-//                 {
-//                     ROS_INFO("Checking how many goals in the cluster are already occupied");
-//                     for(int n = 0; n < negotiation_list.size(); n++)
-//                     {
-//                         for(int m = 0; m < clusters.at(cluster_vector_position).cluster_element.size(); m++)
-//                         {
-//                             if(negotiation_list.at(n).id == clusters.at(cluster_vector_position).cluster_element.at(m).id)
-//                             {
-//                                 used_cluster_ids++;
-//                             }
-//                         }
-//                     }
-// //                    ROS_INFO("%f goals of %f in the cluster  -> %f",used_cluster_ids, (double)clusters.at(cluster_vector_position).cluster_element.size(), double(used_cluster_ids / (double)clusters.at(cluster_vector_position).cluster_element.size()));
-//                     if(double(used_cluster_ids / (double)clusters.at(cluster_vector_position).cluster_element.size()) >= 0.1)
-//                     {
-//                         ROS_INFO("Negotiation failed the other Robot got cluster %d already", cluster_id_number);
-//                         entry_found = true;
-//                         return false;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     if(entry_found == false)
-//     {
-//         frontier_t new_frontier;
-//         new_frontier.x_coordinate = x;
-//         new_frontier.y_coordinate = y;
-//         new_frontier.detected_by_robot = detected_by;
-//         new_frontier.id = id;
-//
-//         publish_negotiation_list(new_frontier, cluster_id_number);
-//
-//         return true;
-//     }
-//     return false;
-// }
+
+	// Apply Munkres algorithm to matrix.
+	Munkres munk;
+	munk.solve(mat);
+
+        ROS_INFO("Solved :");
+	// Display solved matrix.
+	for ( int new_row = 0 ; new_row < mat.rows(); new_row++ ) {
+            if(new_row > 9)
+            {
+                int rows_left = mat.rows() - new_row + 1;
+                std::cout << "... (" << rows_left << " more)";
+                break;
+            }
+            for ( int new_col = 0 ; new_col < mat.columns(); new_col++ ) {
+                if(new_col > 9)
+                {
+                    int columns_left = mat.columns() - new_col + 1;
+                    std::cout << "... (" << columns_left << " more)";
+                    break;
+                }
+                std::cout.width(2);
+                std::cout << mat(new_row,new_col) << " ";
+            }
+            std::cout << std::endl;
+	}
+
+	std::cout << std::endl;
+
+
+       own_row_to_select_cluster = row-1;
+       for(int i = 0; i < mat.columns(); i++)
+       {
+           if(mat(i,own_row_to_select_cluster) == 1)
+           {
+               auction_cluster_element_id = clusters.at(i).id;
+               own_column_to_select = i;
+               ROS_INFO("Selected Cluster at position : %d   %d  with BID: %f",i ,own_row_to_select_cluster, mat(i, own_row_to_select_cluster));
+               break;
+           }
+       }
+
+
+
+
+    }
+
+
+
+
+
+    /*
+     * Try to navigate to the selected cluster. If it failes, take the next efficient
+     * cluster and try again
+     */
+
+
+    if(auction_cluster_element_id != -1)
+    {
+
+       /*
+        * Select the above calculated goal. If this cluster is still in use,
+        * set this cluster in the matrix to zero and restart the auction
+        */
+
+
+
+
+
+        /*
+         * Following should just be executed if the selection using auctioning
+         * does fail
+         */
+        while(ros::ok())
+        {
+            ROS_INFO("Try to determining goal");
+            std::vector<double> new_goal;
+            std::vector<std::string> robot_str_name;
+            bool goal_determined = determine_goal(6, &new_goal, count, auction_cluster_element_id, &robot_str_name);
+
+
+
+            if(goal_determined == true)
+            {
+//                if(new_goal.front() == -1)
+//                {
+//                    ROS_INFO("Unable to access goal points in the cluster");
+//                    count++;
+//                }else
+//                {
+                    double determined_goal_id = new_goal.at(4);
+                    bool used_cluster = false;
+                    for(int m = 0; m < already_used_ids.size(); m++)
+                    {
+                        if(determined_goal_id == already_used_ids.at(m))
+                        {
+                            ROS_INFO("Cluster in use already");
+                            cluster_in_use_already_count->push_back(1);
+                            used_cluster = true;
+                            count++;
+                            break;
+                        }
+                    }
+                    if(used_cluster == false)
+                    {
+                        ROS_INFO("Cluster was not used by any robot before");
+                        goal->push_back(new_goal.at(0));
+                        goal->push_back(new_goal.at(1));
+                        goal->push_back(new_goal.at(2));
+                        goal->push_back(new_goal.at(3));
+                        goal->push_back(new_goal.at(4));
+
+                        robot_str_name_to_return->push_back(robot_str_name.at(0));
+                        return true;
+                    }
+//                }
+            }else
+            {
+                if(clusters.size() <= count)
+                {
+                    ROS_INFO("Not possible to select any goal from the available clusters");
+                    return false;
+                }else
+                {
+                    ROS_INFO("Current cluster empty ... select next one");
+                }
+                count++;
+            }
+        }
+        return false;
+    }else
+    {
+        /*
+         * No auction elements are available. Auctioning has failed
+         */
+
+        ROS_INFO("Auction has failed, no auction elements are existent. Choosing nearest cluster");
+        std::vector<double> new_goal;
+        std::vector<std::string> robot_str_name;
+        bool goal_determined = determine_goal(4, &new_goal, count, -1, &robot_str_name);
+        if(goal_determined == true)
+        {
+            goal->push_back(new_goal.at(0));
+            goal->push_back(new_goal.at(1));
+            goal->push_back(new_goal.at(2));
+            goal->push_back(new_goal.at(3));
+            goal->push_back(new_goal.at(4));
+            return true;
+        }else
+        {
+            return false;
+        }
+    }
+    return false;
+}
+
+bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by, int id, int cluster_id_number)
+{
+    ROS_INFO("Negotiating Frontier with id: %d  at Cluster: %d", id, cluster_id_number);
+
+    int cluster_vector_position = 0;
+    for (int i = 0; i < clusters.size(); i++)
+    {
+        if(clusters.at(i).id == cluster_id_number)
+        {
+            cluster_vector_position = i;
+            break;
+        }
+    }
+
+    ROS_DEBUG("cluster vector position: %d", cluster_vector_position);
+
+    bool entry_found = false;
+    bool id_in_actual_cluster = false;
+
+    for(int i = 0; i< negotiation_list.size(); i++)
+    {
+        for(int k = 0; k < clusters.at(cluster_vector_position).cluster_element.size(); k++)
+        {
+            id_in_actual_cluster = false;
+            if(negotiation_list.at(i).id == clusters.at(cluster_vector_position).cluster_element.at(k).id)
+            {
+                ROS_INFO("         Same ID detected");
+                for(int j = 0; j < clusters.at(cluster_vector_position).cluster_element.size(); j++)
+                {
+                    for(int m = 0; m < my_negotiation_list.size(); m++)
+                    {
+                        if(clusters.at(cluster_vector_position).cluster_element.at(j).id == my_negotiation_list.at(m).id)
+                        {
+                            ROS_INFO("         But is in the current working cluster! everything alright");
+                            id_in_actual_cluster = true;
+                            return true;
+                        }
+                    }
+                }
+
+                double used_cluster_ids = 0;
+                if(id_in_actual_cluster == false)
+                {
+                    ROS_INFO("Checking how many goals in the cluster are already occupied");
+                    for(int n = 0; n < negotiation_list.size(); n++)
+                    {
+                        for(int m = 0; m < clusters.at(cluster_vector_position).cluster_element.size(); m++)
+                        {
+                            if(negotiation_list.at(n).id == clusters.at(cluster_vector_position).cluster_element.at(m).id)
+                            {
+                                used_cluster_ids++;
+                            }
+                        }
+                    }
+//                    ROS_INFO("%f goals of %f in the cluster  -> %f",used_cluster_ids, (double)clusters.at(cluster_vector_position).cluster_element.size(), double(used_cluster_ids / (double)clusters.at(cluster_vector_position).cluster_element.size()));
+                    if(double(used_cluster_ids / (double)clusters.at(cluster_vector_position).cluster_element.size()) >= 0.1)
+                    {
+                        ROS_INFO("Negotiation failed the other Robot got cluster %d already", cluster_id_number);
+                        entry_found = true;
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    if(entry_found == false)
+    {
+        frontier_t new_frontier;
+        new_frontier.x_coordinate = x;
+        new_frontier.y_coordinate = y;
+        new_frontier.detected_by_robot = detected_by;
+        new_frontier.id = id;
+
+        publish_negotiation_list(new_frontier, cluster_id_number);
+
+        return true;
+    }
+    return false;
+}
 
 /**
  * Check a frontier (or a cluster) if it is within reach of the robot considering its available energy

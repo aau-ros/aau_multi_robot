@@ -545,7 +545,7 @@ public:
                             robot_str.clear();
                             clusters_available_in_pool.clear();
 
-                            bool auctioning = false;//exploration->auctioning(&final_goal, &clusters_available_in_pool, &robot_str);
+                            bool auctioning = exploration->auctioning(&final_goal, &clusters_available_in_pool, &robot_str);
                             if(auctioning == true)
                             {
                                 goal_determined = true;
@@ -711,7 +711,7 @@ public:
                             * If negotiation is not needed, simply uncomment
                             * and set the negotiation to TRUE.
                             */
-                            negotiation = false;//exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),final_goal.at(4));
+                            negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),final_goal.at(4));
                             if(negotiation == true)
                             {
                                 ROS_DEBUG("Negotiation was successful");
@@ -768,7 +768,7 @@ public:
                             * If negotiation is not needed, simply uncomment
                             * and set the negotiation to TRUE.
                             */
-                            negotiation = false;//exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),final_goal.at(4));
+                            negotiation = exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),final_goal.at(4));
 
                             if(negotiation == true)
                             {
@@ -1011,26 +1011,26 @@ public:
 		}
 	}
 
-//         void frontiers()
-//         {
-//             ros::Rate r(5);
-//             while(ros::ok())
-//             {
-//
-//                 costmap_mutex.lock();
-//
-//                 exploration->clearSeenFrontiers(costmap2d_global);
-//                 exploration->clearVisitedFrontiers();
-//                 exploration->clearUnreachableFrontiers();
-//
-//                 exploration->publish_frontier_list();
-//                 exploration->publish_visited_frontier_list();
-//
-//                 costmap_mutex.unlock();
-//
-//                 r.sleep();
-//             }
-//         }
+        void frontiers()
+        {
+            ros::Rate r(5);
+            while(ros::ok())
+            {
+
+                costmap_mutex.lock();
+
+                exploration->clearSeenFrontiers(costmap2d_global);
+                exploration->clearVisitedFrontiers();
+                exploration->clearUnreachableFrontiers();
+
+                exploration->publish_frontier_list();
+                exploration->publish_visited_frontier_list();
+
+                costmap_mutex.unlock();
+
+                r.sleep();
+            }
+        }
 
 
         void map_info()
@@ -1437,7 +1437,7 @@ public:
                 else
                 {
                     bool negotiation = true;
-//                     negotiation = exploration->negotiate_Frontier(global_goal->at(0),global_goal->at(1),global_goal->at(2),global_goal->at(3), -1);
+                    negotiation = exploration->negotiate_Frontier(global_goal->at(0),global_goal->at(1),global_goal->at(2),global_goal->at(3), -1);
 
                     if(negotiation == true)
                     {
@@ -1475,7 +1475,7 @@ public:
                     ROS_INFO("No goal was determined, cluster is empty. Bid for another one");
 
                     goal_vector.clear();
-                    bool auctioning = false;//exploration->auctioning(&goal_vector, &clusters_used_by_others, &robot_str_name);
+                    bool auctioning = exploration->auctioning(&goal_vector, &clusters_used_by_others, &robot_str_name);
                     if(auctioning == true)
                     {
                         goal_determined = true;
