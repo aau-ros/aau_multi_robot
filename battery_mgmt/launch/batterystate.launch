@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="output" default="log"/>
+
+    <node pkg="battery_mgmt" type="BatteryState" name="BatteryState" output="$(arg output)">
+	<rosparam file="$(find battery_mgmt)/param/simulation_energy_params.yaml" command="load"/>
+    </node>
+</launch>

@@ -5,6 +5,7 @@
     <arg name="log_path" />
     <arg name="output" default="log"/>
     <arg name="frontier_selection" default="7"/>
+    <arg name="recharging" />
     <arg name="use_sim_time" default="false" />
     <arg name="demonstrate" default="false"/>
     <param name="use_sim_time"  value="$(arg use_sim_time)"/>
@@ -37,12 +38,12 @@
         <!-- exploration parameters -->
         <param name="demonstrate" value="$(arg demonstrate)_val"/>
         <param name="frontier_selection" value="$(arg frontier_selection)" />
+        <param name="recharging" value="$(arg recharging)" />
         <rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="global_costmap" />
         <rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find explorer)/param/simulation_local_costmap_params.yaml" command="load" />
         <rosparam file="$(find explorer)/param/simulation_global_costmap_params.yaml" command="load" />
         <rosparam file="$(find explorer)/param/simulation_global_planner_params.yaml" command="load" />
-        <rosparam file="$(find explorer)/param/simulation_energy_params.yaml" command="load"/>
 
         <remap from="/$(arg robot_name)/$(arg robot_name)/map" to="/$(arg robot_name)/map" />
         <!-- <remap from="/$(arg robot_name)/$(arg robot_name)/base_scan" to="/$(arg robot_name)/base_scan" /> -->

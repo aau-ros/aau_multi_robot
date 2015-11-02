@@ -5,8 +5,9 @@ of the battery with a simple linear model.
 */
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
-#include "battery_simulation/Battery.h"
-#include "battery_simulation/Charge.h"
+#include <diagnostic_msgs/DiagnosticArray.h>
+#include "battery_mgmt/Battery.h"
+#include "battery_mgmt/Charge.h"
 #include "geometry_msgs/Twist.h"
 #include "explorer/Speed.h"
 
@@ -22,18 +23,39 @@ double avg_speed;
 double full_charge_time;
 bool charging;
 
-battery_simulation::Battery battery_state;
+battery_mgmt::Battery battery_state;
+
+/**
+ * Get the charging state for the turtlebot
+ * This information is read from the diagnostic array which is provided by the diagnostic aggregator
+ */
+void turtlebot_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
+{
+    for( size_t status_i = 0; status_i < msg->status.size(); ++status_i )
+    {
+        if( msg->status[status_i].name.compare("/Power System/Battery") == 0)
+        {
+            for (size_t value_i = 0; value_i < msg->status[status_i].values.size(); ++value_i)
+            {
+                if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
+                {
+                    battery_charge = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
+                }
+            }
+        }
+    }
+}
 
 void charge_starting_callback(const std_msgs::Empty::ConstPtr &msg) {
     charging = true;
 }
 
-void charging_callback(const battery_simulation::Charge::ConstPtr &msg) {
+void charging_callback(const battery_mgmt::Charge::ConstPtr &msg) {
     if(msg->remaining_time <= 0)
     {
         ROS_INFO("Charging done");
         battery_state.percent = 100;
-        battery_state.remaining_distance = avg_speed * moving_percentage * (float)battery_charge/moving_consumption*3600;
+        battery_state.remaining_distance = avg_speed * (float)battery_charge/moving_consumption*3600;
         actual_charge = battery_charge;
         charging = false;
     }
@@ -46,13 +68,27 @@ void cmd_callback(const geometry_msgs::Twist &msg){
 }
 
 void speed_callback(const explorer::Speed &msg){
-    avg_speed = msg.avg_speed;
+
+    // If the average speed is very low, there is probably something wrong
+    if(msg.avg_speed > 0.25){
+        avg_speed = msg.avg_speed;
+    }
+    else{
+        avg_speed = 0.25;
+    }
 }
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "Battery_simulate");
 	ros::NodeHandle n;
     ROS_INFO("Battery simulator launching...");
+
+    avg_speed = 0.25;
+
+    n.getParam("BatteryState/energy/battery_charge",battery_charge);
+    n.getParam("BatteryState/energy/moving_consumption",moving_consumption);
+    n.getParam("BatteryState/energy/standing_consumption",standing_consumption);
+    n.getParam("BatteryState/energy/charge_time",full_charge_time);
 
     battery_state.percent = 100;
     battery_state.remaining_distance = avg_speed * (float)battery_charge/moving_consumption*3600;
@@ -62,21 +98,36 @@ int main(int argc, char** argv) {
     double standing_time;
 
     bool debugShown = false;
+    bool simulation = false;
 
     standing_time = 0;
     moving_time = 0;
     charging = false;
 
-    ros::Publisher battery_pub = n.advertise<battery_simulation::Battery>("battery_state", 1);
+    ros::Publisher battery_pub = n.advertise<battery_mgmt::Battery>("battery_state", 1);
     ros::Subscriber charge1_sub = n.subscribe("going_to_recharge", 1, charge_starting_callback);
     ros::Subscriber charge2_sub = n.subscribe("charging", 1000, charging_callback);
     ros::Subscriber cmd_sub = n.subscribe("cmd_vel", 1000, cmd_callback);
     ros::Subscriber speed_sub = n.subscribe("avg_speed", 1000, speed_callback);
 
-    n.getParam("BatteryState/energy/battery_charge",battery_charge);
-    n.getParam("BatteryState/energy/moving_consumption",moving_consumption);
-    n.getParam("BatteryState/energy/standing_consumption",standing_consumption);
-    n.getParam("BatteryState/energy/charge_time",full_charge_time);
+    // get robot platform
+    std::string env_var;
+    ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
+    ROS_INFO("Environment variable: %s",env_var.c_str());
+
+    // check if we are on a real robot or if we are in simulation
+    if( env_var.compare("turtlebot") == 0)
+    {
+        //sub3 = nh.subscribe("diagnostics_agg",1000,&Explorer::turtlebot_callback,this);
+    }
+    else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
+    {
+        // todo: read voltage and convert to percentage
+    }
+    else
+    {
+        simulation = true;
+    }
 
     actual_charge = battery_charge;
     ros::Rate loop_rate(rate);
@@ -94,35 +145,17 @@ int main(int argc, char** argv) {
              * backward and if the z-value is unequal to zero the robot rotates.
              * When the robot stands still it consumes less energy and when it moves it consumes more energy.
              */
-            if(x_linear == 0 && z_angular == 0){
-                if (battery_state.percent > 0){
+            if(battery_state.percent > 0){
+                if(x_linear == 0 && z_angular == 0){
                     actual_charge -= standing_consumption / (rate * 3600 );
                 }
-                standing_time += 1/rate;
-            }else{
-                if (battery_state.percent > 0){
+                else{
                     actual_charge -= moving_consumption / (rate * 3600 );
                 }
-                moving_time += 1/rate;
             }
 
             // percentage of battery charge remaining
             battery_state.percent = (actual_charge * 100) / battery_charge;
-
-            /*
-             * The remaining distance depends on the percentage of time the robot is moving.
-             * In the beginning this calculation is very inaccurate. We set the remaining distance to a high value
-             * to avoid that the robot returns too early to the home point for recharging.
-             */
-            if(avg_speed <= 0.25){
-                avg_speed = 0.25;
-            }
-            if(moving_time < 30){
-                moving_percentage = 0.25;
-            }
-            else{
-                moving_percentage = moving_time / (standing_time+moving_time);
-            }
 
             // remaining distance the robot can still travel in meters
             //                                                                            max time the robot can travel with full battery

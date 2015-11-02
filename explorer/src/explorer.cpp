@@ -21,13 +21,12 @@
 #include <navfn/navfn_ros.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-#include "battery_simulation/Battery.h"
-#include "battery_simulation/Charge.h"
+#include "battery_mgmt/Battery.h"
+#include "battery_mgmt/Charge.h"
 #include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
 #include "nav_msgs/GetMap.h"
-#include <diagnostic_msgs/DiagnosticArray.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 //#define PROFILE
@@ -60,7 +59,7 @@ public:
         nh.param("local_costmap/width",costmap_width,0);
         nh.param<double>("local_costmap/resolution",costmap_resolution,0);
         nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
-        nh.param("/explorer/energy/limited_energy", limited_energy, 1);
+        nh.param("recharging", recharging, false);
 
         ROS_INFO("Costmap width: %d", costmap_width);
         ROS_INFO("Frontier selection is set to: %d", frontier_selection);
@@ -77,7 +76,6 @@ public:
         // create map_merger service
         std::string service = robot_prefix + std::string("/map_merger/logOutput");
         mm_log_client = nh.serviceClient<map_merger::LogMaps>(service.c_str());
-        fake_mapping_save = nh.serviceClient<nav_msgs::GetMap>("/fake_mapping/save_map");
 
         if(robot_prefix.empty())
         {
@@ -217,7 +215,7 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
 
 	}
-    void bat_callback(const battery_simulation::Battery::ConstPtr& msg)
+    void bat_callback(const battery_mgmt::Battery::ConstPtr& msg)
     {
         battery_charge = (int) msg->percent;
         available_distance = msg->remaining_distance;
@@ -236,33 +234,7 @@ public:
         }
     }
 
-    void real_bat_callback(const diagnostic_msgs::DiagnosticArray::ConstPtr& msg)
-    {
-        //reading the actual battery charge in percent and the charging state from the diagnostic array
-        //which is sended from the diagnostic aggregator
-        for( size_t status_i = 0; status_i < msg->status.size(); ++status_i )
-           {
-             if( msg->status[status_i].name.compare("/Power System/Battery") == 0)
-              {
-                  for (size_t value_i = 0; value_i < msg->status[status_i].values.size(); ++value_i)
-                  {
-                       if( msg->status[status_i].values[value_i].key.compare("Percent") == 0 )
-                       {
-                            battery_charge = (int) ::atof(msg->status[status_i].values[value_i].value.c_str());
-                       }
-                       if( msg->status[status_i].values[value_i].key.compare("Charging State") == 0 )
-                       {
-                           if((battery_charge > 95) && (msg->status[status_i].values[value_i].value.c_str() == "Not Charging"))
-                           {
-                                robot_state = exploring;
-                           }
-                       }
-                  }
-             }
-        }
-    }
-
-    void charging_callback(const battery_simulation::Charge::ConstPtr &msg) {
+    void charging_callback(const battery_mgmt::Charge::ConstPtr &msg) {
         charge_time = msg->remaining_time;
         if(charge_time > 0)
             ROS_INFO("Charging... still %.2f s.", charge_time);
@@ -314,30 +286,10 @@ public:
        // msg.data = "traveling home to recharge";
         ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",3);
         ros::Subscriber sub, sub2, sub3, pose_sub;
-        ROS_INFO("demonstrate: \"%s\"",demonstration.c_str());
-        std::string env_var;
-        ros::get_environment_variable(env_var, "ROBOT_PLATFORM");
-        ROS_INFO("Environment variable: %s",env_var.c_str());
 
-        // check if we are on a real robot or if we are in simulation
-        // if we are in simulation, we start the battery simulator
-        if( env_var.compare("turtlebot") == 0)
-        {
-            //sub3 = nh.subscribe("diagnostics_agg",1000,&Explorer::real_bat_callback,this);
-            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
-        }
-        else if(env_var.compare("pioneer3dx") == 0 || env_var.compare("pioneer3at") == 0)
-        {
-            // todo: read voltage and convert to percentage
-            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
-        }
-        else
-        {
-            sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-            sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
-        }
+        // subscribe to battery management topics
+        sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
+        sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
 
         // Subscribe to robot pose to check if robot is stuck
         pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);
@@ -415,20 +367,16 @@ public:
 
                 /*********** EXPLORATION STRATEGY ************
                 * 0 ... Navigate to nearest frontier TRAVEL PATH
-                * 1 ... Navigate using auctioning with cluster selection using
-                *       NEAREST selection (Kuhn-Munkres)
+                * 1 ... Navigate using auctioning with cluster selection using NEAREST selection (Kuhn-Munkres)
                 * 2 ... Navigate to furthest frontier
                 * 3 ... Navigate to nearest frontier EUCLIDEAN DISTANCE
                 * 4 ... Navigate to random Frontier
-                * 5 ... Cluster frontiers, then navigate to nearest cluster
-                *       using EUCLIDEAN DISTANCE (with and without
-                *       negotiation)
-                * 6 ... Cluster frontiers, then navigate to random cluster
-                *       (with and without negotiation)
-                * 7 ... Navigate to frontier that satisfies energy efficient
-                *       cost function with staying-alive path planning
-                * 8 ... Navigate to leftmost frontier (Mei et al. 2006)
-                *       with staying-alive path planning
+                * 5 ... Cluster frontiers, then navigate to nearest cluster using EUCLIDEAN DISTANCE (with and without negotiation)
+                * 6 ... Cluster frontiers, then navigate to random cluster (with and without negotiation)
+                *
+                * ENERGY AWARE STRATEGIES:
+                * 7 ... Navigate to frontier that satisfies energy efficient cost function with staying-alive path planning
+                * 8 ... Navigate to leftmost frontier (Mei et al. 2006) with staying-alive path planning
                 * 9 ... Just like strategy 0 but with staying-alive path planning
                 */
 
@@ -807,7 +755,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(limited_energy == 0 || robot_state == fully_charged)
+                    else if(recharging == false || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -849,7 +797,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(limited_energy == 0 || robot_state == fully_charged)
+                    else if(recharging == false || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -892,7 +840,7 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
-                    else if(limited_energy == 0 || robot_state == fully_charged)
+                    else if(recharging == false || robot_state == fully_charged)
                     {
                         exit_countdown--;
                         ROS_ERROR("Shutdown in: %d", exit_countdown);
@@ -1345,12 +1293,6 @@ public:
              */
             save_progress(true);
             ROS_INFO("Wrote file %s\n", log_file.c_str());
-
-            /*
-             * Inform fake_mapping to save map
-             */
-            nav_msgs::GetMap srv;
-            fake_mapping_save.call(srv);
 
 
             /*
@@ -1842,7 +1784,6 @@ public:
         int global_iterations_counter;
         int waitForResult;
         std::string move_base_frame;
-        std::string demonstration;
         std::string robot_prefix;               /// The prefix for the robot when used in simulation
         std::string robot_name;
         const unsigned char* occupancy_grid_global;
@@ -1863,7 +1804,6 @@ public:
         ros::Publisher pub_frontiers;
 
         ros::ServiceClient mm_log_client;
-        ros::ServiceClient fake_mapping_save;
 
         ros::NodeHandle nh;
         ros::Time time_start;
@@ -1885,7 +1825,7 @@ public:
         double x_val, y_val, home_point_x, home_point_y;
         int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
         int counter,cnt;
-        int limited_energy;
+        bool recharging;
         bool pioneer;
 };
 

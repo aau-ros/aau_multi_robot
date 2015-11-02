@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.4.6)
-project(battery_simulation)
+project(battery_mgmt)
 
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
@@ -27,7 +27,7 @@ generate_messages(
 
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES battery_simulation
+#  LIBRARIES battery_mgmt
   CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
