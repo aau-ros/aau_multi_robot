@@ -1,0 +1,4 @@
+w1: 0.25 # weight for likelihood l1
+w2: 0.25 # weight for likelihood l2
+w3: 0.25 # weight for likelihood l3
+w4: 0.25 # weight for likelihood l4
