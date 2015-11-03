@@ -235,6 +235,11 @@ public:
     }
 
     void charging_callback(const battery_mgmt::Charge::ConstPtr &msg) {
+        // charge time is increasing again
+        // robot has finished charging and is now exploring again
+        if(msg->remaining_time > charge_time){
+            return;
+        }
         charge_time = msg->remaining_time;
         if(charge_time > 0)
             ROS_INFO("Charging... still %.2f s.", charge_time);
@@ -268,7 +273,7 @@ public:
         ROS_DEBUG("Sleeping 5s for costmaps to be updated.");
         geometry_msgs::Twist twi;
         //should be a parameter!! only for testing on Wed/17/9/14
-        ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/Rosaria/cmd_vel",3);
+        ros::Publisher twi_publisher = nh.advertise<geometry_msgs::Twist>("/Rosaria/cmd_vel",1);
         twi.angular.z = 0.75;
         twi_publisher.publish(twi);
         ros::Duration(5.0).sleep();
@@ -284,12 +289,12 @@ public:
         ros::NodeHandle nh;
         std_msgs::Empty msg;
        // msg.data = "traveling home to recharge";
-        ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",3);
+        ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",1);
         ros::Subscriber sub, sub2, sub3, pose_sub;
 
         // subscribe to battery management topics
-        sub = nh.subscribe("battery_state",1000,&Explorer::bat_callback,this);
-        sub2 = nh.subscribe("charging", 1000, &Explorer::charging_callback,this);
+        sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
+        sub2 = nh.subscribe("charging", 1, &Explorer::charging_callback,this);
 
         // Subscribe to robot pose to check if robot is stuck
         pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);

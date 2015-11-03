@@ -1,15 +1,16 @@
 <?xml version="1.0"?>
 <package>
   <name>battery_mgmt</name>
-  <version>0.1.6</version>
+  <version>0.1.0</version>
   <description>
-      The explorer package utilizes frontier based exploration for multi-robot systems. Beside frontier detection, coordinated and uncoordinated exploration strategies are available to select goal points. Coordinated exploration enhances robot distribution and reduces redundancy in exploration reducing exploration time.
+      The battery_mgmt package provides an interface to get the battery state of charge (SOC) in percent as well as the remaining distance that can still be traveled.
+      Currently it is implemented for simulation based on the Pioneer 3DX platform. Implementations for physical platforms (Turtlebot, Pioneer) will follow.
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="dneuhold@edu.aau.at">Daniel Neuhold</maintainer>
+  <maintainer email="micha.rappaport@aau.at">Micha Rappaport</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -27,7 +28,8 @@
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
   <!-- Authors do not have to be maintianers, but could be -->
   <!-- Example: -->
-  <author email="sfillafe@edu.aau.at">Daniel Neuhold</author>
+  <author email="sfillafe@edu.aau.at">Stefan Fillafer</author>
+  <author email="micha.rappaport@aau.at">Micha Rappaport</author>
 
 
 

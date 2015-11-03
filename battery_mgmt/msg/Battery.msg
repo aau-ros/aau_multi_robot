@@ -1,2 +1,3 @@
 float32 percent
 float32 remaining_distance
+float32 remaining_time

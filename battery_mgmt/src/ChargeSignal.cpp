@@ -12,7 +12,7 @@ using namespace std;
 bool home = false;
 int battery = 0;
 double charge_time, full_charge_time;
-double rate = 1; // Hz
+double rate = 0.5; // Hz
 
 /**
  * Get the charging state for the turtlebot
@@ -54,21 +54,26 @@ int main(int argc, char** argv) {
     battery_mgmt::Charge charge_msg;
     ros::NodeHandle nh;
     ros::Rate loop_rate(rate);
-    ros::Publisher charge = nh.advertise<battery_mgmt::Charge>("charging", 1000);
+    ros::Publisher charge = nh.advertise<battery_mgmt::Charge>("charging", 1);
     ros::Subscriber sub = nh.subscribe("going_to_recharge", 1, callback);
     ros::Subscriber sub2 = nh.subscribe("battery_state", 1, battery_callback);
     nh.getParam("ChargeSignal/energy/charge_time",full_charge_time);
 
 	while ( ros::ok() ) {
-
-        if(home){
-            ROS_INFO("Charging time: %f ",charge_time);
-            charge_msg.remaining_time = charge_time;
+        // charging at docking station
+        if(home && charge_time > 0){
+            charge_time -= (1/rate);
             if(charge_time <= 0)
                 home = false;
-            charge_time -= (1/rate);
-            charge.publish(charge_msg);
+            ROS_INFO("Charging time: %f ",charge_time);
+            charge_msg.remaining_time = charge_time;
         }
+        // discharging
+        else{
+            charge_time = full_charge_time * (100-battery)/100 * 60*60;
+            charge_msg.remaining_time = charge_time;
+        }
+        charge.publish(charge_msg);
 
         ros::spinOnce();
         loop_rate.sleep();
