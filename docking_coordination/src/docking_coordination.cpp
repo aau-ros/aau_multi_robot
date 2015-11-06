@@ -81,7 +81,7 @@ void docking_coordination::update_l2()
         return;
     }
     if(time_run == 0 && time_charge == 0){
-        ROS_ERROR("Invalid run and charging times. Both are zero!");
+        //ROS_ERROR("Invalid run and charging times. Both are zero!");
         l2 = 1;
         return;
     }
@@ -148,9 +148,11 @@ void docking_coordination::update_l4()
 void docking_coordination::battery_callback(const battery_mgmt::Battery::ConstPtr& msg)
 {
     time_run = msg->remaining_time;
+    update_llh();
 }
 
 void docking_coordination::charging_callback(const battery_mgmt::Charge::ConstPtr &msg)
 {
     time_charge = msg->remaining_time;
+    update_llh();
 }
