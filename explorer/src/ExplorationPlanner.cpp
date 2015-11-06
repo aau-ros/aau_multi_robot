@@ -3839,16 +3839,13 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     }
 
     // check if robot needs to go home right away
-    int battery_reserve;
     double dist_home;
     double dist_front;
     double closest = 9999;
-    nh.getParam("explorer/energy/battery_reserve",battery_reserve);
     if(strategy == 1){
         double xh = robot_home_x - robotPose.getOrigin().getX();
         double yh = robot_home_y - robotPose.getOrigin().getY();
-        double battery_reserve_norm = (double)battery_reserve / 100 + 1; // reserve distance, just in case
-        dist_home = sqrt(xh * xh + yh * yh) * battery_reserve_norm;
+        dist_home = sqrt(xh * xh + yh * yh) * 1.2; // 1.2 is extra reserve, just in case
     }
     else if(strategy == 2){
         dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
