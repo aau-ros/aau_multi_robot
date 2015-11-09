@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(battery_mgmt)
+project(energy_mgmt)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -47,7 +47,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  battery.msg
+  battery_state.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -101,7 +101,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES battery_mgmt
+ LIBRARIES battery docking
  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
@@ -119,9 +119,8 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(battery_mgmt
-  src/battery_mgmt.cpp
-)
+add_library(battery src/battery.cpp)
+add_library(docking src/docking.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -129,15 +128,16 @@ add_library(battery_mgmt
 # add_dependencies(docking_coordination ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
-add_executable(main src/main.cpp)
+add_executable(energy_mgmt src/main.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(battery_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(main
-  battery_mgmt
+target_link_libraries(energy_mgmt
+  battery
+  docking
   ${catkin_LIBRARIES}
 )
 

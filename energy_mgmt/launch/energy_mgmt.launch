@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="output" default="log"/>
+
+    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
+        <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/docking_common.yaml" command="load"/>
+    </node>
+</launch>

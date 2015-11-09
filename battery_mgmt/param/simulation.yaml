@@ -1,5 +1,0 @@
-avg_speed: 0.5 # m/s, needed in the beginning when the average cannot be computed because its very inacurate
-charge_time: 0.1 # hours needed for charging, 2.4h for P3DX
-moving_consumption: 22.3775 # watt
-standing_consumption: 13.2075 # watt
-battery_charge: 0.75 # Wh

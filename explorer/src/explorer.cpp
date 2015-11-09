@@ -21,8 +21,7 @@
 #include <navfn/navfn_ros.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-#include "battery_mgmt/Battery.h"
-#include "battery_mgmt/Charge.h"
+#include "energy_mgmt/battery_state.h"
 #include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
@@ -215,15 +214,15 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
 
 	}
-    void bat_callback(const battery_mgmt::Battery::ConstPtr& msg)
+    void bat_callback(const energy_mgmt::battery_state::ConstPtr& msg)
     {
-        battery_charge = (int) msg->percent;
+        battery_charge = (int) msg->soc;
+        charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
 
-        // set the robot state correctly once the available distance is correctly computed
-        if(available_distance > 0 && charge_time == -100 && robot_state == charging) {
-            charge_time = 0; // reset end-of-charge indication
+        if(msg->charging == false && battery_charge == 100 && charge_time == 0){
             robot_state = fully_charged;
+            recharge_cycles++;
         }
 
         // robot is out of energy, exit
@@ -231,23 +230,6 @@ public:
         {
             ROS_ERROR("Robot has run out of energy!");
             finalize_exploration();
-        }
-    }
-
-    void charging_callback(const battery_mgmt::Charge::ConstPtr &msg) {
-        // charge time is increasing again
-        // robot has finished charging and is now exploring again
-        if(msg->remaining_time > charge_time){
-            return;
-        }
-        charge_time = msg->remaining_time;
-        if(charge_time > 0)
-            ROS_INFO("Charging... still %.2f s.", charge_time);
-        else
-        {
-            ROS_ERROR("Charging done");
-            charge_time = -100; // indicate end of charge for bat_callback
-            recharge_cycles++;
         }
     }
 
@@ -294,7 +276,6 @@ public:
 
         // subscribe to battery management topics
         sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
-        sub2 = nh.subscribe("charging", 1, &Explorer::charging_callback,this);
 
         // Subscribe to robot pose to check if robot is stuck
         pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);
@@ -917,7 +898,7 @@ public:
                 // robot reached home point, start recharging
                 if(robot_state == going_charging)
                 {
-                    ROS_ERROR("At home for recharging");
+                    ROS_INFO("At home for recharging");
                     // compute path length
                     exploration->trajectory_plan_store(home_point_x, home_point_y);
 

@@ -1,21 +1,21 @@
-#ifndef DOCKING_COORDINATION_H
-#define DOCKING_COORDINATION_H
+#ifndef DOCKING_H
+#define DOCKING_H
 
-#include "battery_mgmt/Battery.h"
-#include "battery_mgmt/Charge.h"
+#include <energy_mgmt/battery_state.h>
 
-class docking_coordination
+class docking
 {
 public:
     /**
-     * Constructor
+     * Constructor.
      */
-    docking_coordination();
+    docking();
 
     /**
      * Update the likelihood value.
+     * @param energy_mgmt::battery_state battery_state: The current state of the battery.
      */
-    void update_llh();
+    void update_llh(energy_mgmt::battery_state battery_state);
 
 private:
     /**
@@ -54,7 +54,7 @@ private:
     double dist_ds, dist_job;
 
     /**
-     * The likelihood value for going recharging. This value is used in the auctions.
+     * Likelihood values for going recharging. The llh value is used in the auctions.
      */
     double llh, l1, l2, l3, l4;
 
@@ -82,16 +82,6 @@ private:
      * Update the likelihood value l4.
      */
     void update_l4();
-
-    /**
-     * Battery state of charge (SOC) callback.
-     */
-    void battery_callback(const battery_mgmt::Battery::ConstPtr& msg);
-
-    /**
-     * Battery charging callback.
-     */
-    void charging_callback(const battery_mgmt::Charge::ConstPtr &msg);
 };
 
-#endif  /* DOCKING_COORDINATION_H */
+#endif  /* DOCKING_H */

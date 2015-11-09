@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <arg name="output" default="log"/>
-
-    <node pkg="docking_coordination" type="main" name="docking_coordination" output="$(arg output)">
-        <rosparam file="$(find docking_coordination)/param/common.yaml" command="load"/>
-    </node>
-</launch>

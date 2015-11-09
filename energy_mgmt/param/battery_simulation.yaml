@@ -1,0 +1,5 @@
+speed_avg: 0.5 # m/s, needed in the beginning when the average cannot be computed because its very inacurate
+power_charging: 150 # watt, power that the power supply provides, e.g. 36 for P3DX
+power_moving: 22.3775 # watt
+power_standing: 13.2075 # watt
+charge_max: 5 # Wh, charge of battery if fully charged
