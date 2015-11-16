@@ -31,6 +31,9 @@ int main(int argc, char** argv)
         // publish battery state
         bat.publish();
 
+        // send broadcast message with positions of all (known) docking stations
+
+
         // sleep for 1/rate seconds
         loop_rate.sleep();
     }

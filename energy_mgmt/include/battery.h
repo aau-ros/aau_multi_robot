@@ -103,7 +103,7 @@ private:
     /**
      * Callback that is triggered when the robot should start recharging.
      */
-    void charge_callback(const std_msgs::Empty::ConstPtr &msg);
+    void cb_charge(const std_msgs::Empty::ConstPtr &msg);
 
     /**
      * Callback that is used to determine if robot is standing or moving.
@@ -112,12 +112,12 @@ private:
      * backward and if the z-value is unequal to zero the robot rotates.
      * When the robot stands still it consumes less energy and when it moves it consumes more energy.
      */
-    void cmd_vel_callback(const geometry_msgs::Twist &msg);
+    void cb_cmd_vel(const geometry_msgs::Twist &msg);
 
     /**
      * Callback that is used to get the average speed of the robot.
      */
-    void speed_callback(const explorer::Speed &msg);
+    void cb_speed(const explorer::Speed &msg);
 };
 
 #endif  /* BATTERY_H */

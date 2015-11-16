@@ -53,9 +53,9 @@ battery::battery()
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
 
     // subscribe to topics
-    sub_charge = nh.subscribe("going_to_recharge", 1, &battery::charge_callback, this);
-    sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery::cmd_vel_callback, this);
-    sub_speed = nh.subscribe("avg_speed", 1, &battery::speed_callback, this);
+    sub_charge = nh.subscribe("going_to_recharge", 1, &battery::cb_charge, this);
+    sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery::cb_cmd_vel, this);
+    sub_speed = nh.subscribe("avg_speed", 1, &battery::cb_speed, this);
 }
 
 void battery::compute()
@@ -141,19 +141,19 @@ void battery::publish()
     pub_battery.publish(state);
 }
 
-void battery::charge_callback(const std_msgs::Empty::ConstPtr &msg)
+void battery::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
     ROS_ERROR("Starting to recharge");
     state.charging = true;
 }
 
-void battery::cmd_vel_callback(const geometry_msgs::Twist &msg)
+void battery::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
 }
 
-void battery::speed_callback(const explorer::Speed &msg){
+void battery::cb_speed(const explorer::Speed &msg){
 
     // If the average speed is very low, there is probably something wrong
     if(msg.avg_speed > 0.25){
