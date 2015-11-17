@@ -1,6 +1,7 @@
 #ifndef BATTERY_H
 #define BATTERY_H
 
+#include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Twist.h>
 #include <diagnostic_msgs/DiagnosticArray.h>

@@ -1,4 +1,3 @@
-#include <ros/ros.h>
 #include <battery.h>
 
 using namespace std;
@@ -53,7 +52,7 @@ battery::battery()
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
 
     // subscribe to topics
-    sub_charge = nh.subscribe("going_to_recharge", 1, &battery::cb_charge, this);
+    sub_charge = nh.subscribe("going_to_recharge", 10, &battery::cb_charge, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery::cb_cmd_vel, this);
     sub_speed = nh.subscribe("avg_speed", 1, &battery::cb_speed, this);
 }

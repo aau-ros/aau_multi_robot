@@ -22,9 +22,6 @@ int main(int argc, char** argv)
         // compute new battery state
         bat.compute();
 
-        // update the likelihood value for recharging
-        doc.update_llh(bat.state);
-
         // output battery state to console
         bat.output();
 

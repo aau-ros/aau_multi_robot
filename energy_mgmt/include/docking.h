@@ -1,8 +1,8 @@
 #ifndef DOCKING_H
 #define DOCKING_H
 
+#include <ros/ros.h>
 #include <navfn/navfn_ros.h>
-#include <boost/thread/mutex.hpp>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/ExpFrontier.h>
 #include <energy_mgmt/battery_state.h>
@@ -17,12 +17,6 @@ public:
      */
     docking();
 
-    /**
-     * Update the likelihood value.
-     * @param energy_mgmt::battery_state battery_state: The current state of the battery.
-     */
-    void update_llh(energy_mgmt::battery_state battery_state);
-
 private:
     /**
      * The node handle.
@@ -32,20 +26,27 @@ private:
     /**
      * Service client for sending an auction.
      */
-    ros::ServiceClient sc_send_auction;
+    ros::ServiceClient sc_send_auction, sc_send_robot, sc_send_ds;
 
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_robot_positions, sub_frontiers_positions, sub_docking_positions, sub_auction;
+    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction;
 
     /**
      * Callbacks for the subscribed topics.
      */
-    void cb_position_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
-    void cb_position_frontiers(const adhoc_communication::ExpFrontier::ConstPtr& msg);
-    void cb_position_docking_stations(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
+    void cb_battery(const energy_mgmt::battery_state::ConstPtr& msg);
+    void cb_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
+    void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg);
+    void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg);
     void cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg);
+
+    /**
+     * Get the likelihood value as a linear combination of the values l1 to l4.
+     * @return double: The likelihood value.
+     */
+    double get_llh();
 
     /**
      * Update the likelihood value l1.
@@ -84,36 +85,48 @@ private:
      */
     bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic);
 
-    /**
-     * Navigation function object for calculating paths.
-     */
-    navfn::NavfnROS nav;
 
     /**
-     * Name and id of the robot.
+     * Compute the length of the trajectory from the robots current position to a given goal.
+     * @param double goal_x: The x-coordinate of the goal (in meters).
+     * @param double goal_y: The y-coordinate of the goal (in meters).
+     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the acutal path is calculated using Dijkstra's algorithm.
+     * @return double: The distance between the robots current position and the goal (in meters).
+     */
+    double distance(double goal_x, double goal_y, bool euclidean=false);
+
+    /**
+     * Compute the length of the trajectory from a given start to a given goal.
+     * @param double start_x: The x-coordinate of the start (in meters).
+     * @param double start_y: The y-coordinate of the start (in meters).
+     * @param double goal_x: The x-coordinate of the goal (in meters).
+     * @param double goal_y: The y-coordinate of the goal (in meters).
+     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the acutal path is calculated using Dijkstra's algorithm.
+     * @return double: The distance between the robots current position and the goal (in meters).
+     */
+    double distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean=false);
+
+    /**
+     * Navigation function and costmap for calculating paths.
+     */
+    navfn::NavfnROS nav;
+    costmap_2d::Costmap2DROS *costmap;
+
+    /**
+     * Distance until which jobs are still considered close by (in meters).
+     */
+    double distance_close;
+
+    /**
+     * The coordinate frame used for calculating path lengths.
+     */
+    string move_base_frame;
+
+    /**
+     * Name and ID of the robot.
      */
     string robot_name, robot_prefix;
     int robot_id;
-
-    /**
-     * Positions of robots.
-     */
-    adhoc_communication::MmListOfPoints position_robots;
-
-    /**
-     * Positions of frontiers.
-     */
-    adhoc_communication::MmListOfPoints position_frontiers;
-
-    /**
-     * Positions of docking stations.
-     */
-    adhoc_communication::MmListOfPoints position_docking_stations;
-
-    /**
-     * Mutexes for locking lists.
-     */
-    boost::mutex mutex_position_robots;
 
     /**
      * ID of the last auction.
@@ -121,34 +134,45 @@ private:
     int auction_id;
 
     /**
-     * Total number of robots and number of active robots (i.e. robots that are neither charging nor idle).
+     * A vector of all robots with their current state.
      */
-    int robots, robots_active;
+    enum state_t {active, going_charging, charging, idle};
+    struct robot_t{
+        int id;
+        state_t state;
+    };
+    vector<robot_t> robots;
 
     /**
-     * Total number of docking stations and number of free docking stations.
+     * A vector of all docking stations with coordinates and vacancy.
      */
-    int ds, ds_vacant;
+    struct ds_t{
+        int id;
+        double x;
+        double y;
+        bool vacant;
+    };
+    vector<ds_t> ds;
 
     /**
-     * Time needed to fully charge the battery and time left until battery depletion.
+     * The battery state containing time needed to fully charge the battery and time left until battery depletion.
      */
-    double time_charge, time_run;
+    energy_mgmt::battery_state battery;
 
     /**
-     * Total number of currently available jobs (e.g. frontiers for exploration) and number of jobs in close proximity (e.g. in local costmap).
+     * A vector of all currently available jobs (e.g. frontiers for exploration).
      */
-    int jobs, jobs_close;
+    struct job_t{
+        int id;
+        double x;
+        double y;
+    };
+    vector<job_t> jobs;
 
     /**
-     * Distance to docking station with highest likelihood and distance to closest job.
+     * Likelihood values for going recharging. A linear combination of the values is used in the auctions.
      */
-    double dist_ds, dist_job;
-
-    /**
-     * Likelihood values for going recharging. The llh value is used in the auctions.
-     */
-    double llh, l1, l2, l3, l4;
+    double l1, l2, l3, l4;
 
     /**
      * The weights for the weighted sum of the likelihood values l1,...,l4.
