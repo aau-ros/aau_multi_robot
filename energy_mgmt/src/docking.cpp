@@ -14,9 +14,9 @@ docking::docking()
     auction_id = 0;
 
     // initialize navigation function
-    nh.param("distance_close", distance_close, 8);
+    nh.param("distance_close", distance_close, 8.0);
     nh.param<string>("move_base_frame", move_base_frame, "map");
-    nav.initialize("navigation_path", costmap);
+    //nav.initialize("navigation_path", costmap);
 
     // initialize robot name
     nh.param<string>("robot_prefix", robot_prefix, "");
@@ -42,13 +42,13 @@ docking::docking()
     robots.push_back(robot);
 
     // initialize service clients
-    sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_auction");
-    sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name+"adhoc_communication/send_robot");
-    sc_send_ds = nh.serviceClient<adhoc_communication::SendEmDs>(robot_name+"adhoc_communication/send_ds");
+    sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_em_auction");
+    sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(robot_name+"adhoc_communication/send_em_docking_station");
+    sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name+"adhoc_communication/send_em_robot");
 
     // subscribe to topics
-    sub_battery = nh.subscribe(robot_name+"", 1, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(robot_name+"/all_positions", 100, &docking::cb_robots, this);
+    sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
+    sub_robots = nh.subscribe(robot_name+"/robots", 100, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(robot_name+"/frontiers", 10000, &docking::cb_jobs, this);
     sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
@@ -255,7 +255,7 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
         }
     }
     else{
-        ROS_WARN("Failed to call service %s/adhoc_communication/send_auction [%s]", robot_name, sc_send_auction.getService().c_str());
+        ROS_WARN("Failed to call service %s/adhoc_communication/send_auction [%s]", robot_name.c_str(), sc_send_auction.getService().c_str());
         return false;
     }
 }
@@ -263,8 +263,7 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
 double docking::distance(double goal_x, double goal_y, bool euclidean)
 {
     tf::Stamped<tf::Pose> robotPose;
-    if (!costmap->getRobotPose(robotPose))
-    {
+    if (!costmap->getRobotPose(robotPose)){
         ROS_ERROR("Failed to get RobotPose");
         return -1;
     }
@@ -279,7 +278,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     if(euclidean){
         double dx = goal_x - start_x;
         double dy = goal_y - start_y;
-        distance = sqrt(dx*dx + dy*dy)
+        distance = sqrt(dx*dx + dy*dy);
     }
 
     // calculate actual path length
@@ -298,9 +297,9 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
         vector<geometry_msgs::PoseStamped> plan;
 
-        if(nav.makePlan(start, goal, plan))
-            distance =  plan.size() * costmap->getCostmap()->getResolution();
-        else
+        //if(nav.makePlan(start, goal, plan))
+        //    distance =  plan.size() * costmap->getCostmap()->getResolution();
+        //else
             distance = -1;
     }
 
@@ -309,13 +308,17 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr& msg)
 {
-    battery = msg.get();
+    battery.charging = msg.get()->charging;
+    battery.soc = msg.get()->soc;
+    battery.remaining_time_charge = msg.get()->remaining_time_charge;
+    battery.remaining_time_run = msg.get()->remaining_time_run;
+    battery.remaining_distance = msg.get()->remaining_distance;
 
     // update charging likelihood
     update_l2();
 }
 
-void docking::cb_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg)
+void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr& msg)
 {
     // check if robot is in list already
     bool new_robot = true;
@@ -323,7 +326,7 @@ void docking::cb_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg
         // robot is in list, update
         if(robots[i].id == msg.get()->id){
             // update state
-            robots[i].state = msg.get()->state;
+            robots[i].state = (state_t)msg.get()->state;
 
             new_robot = false;
             break;
@@ -334,7 +337,7 @@ void docking::cb_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg
     if(new_robot){
         robot_t robot;
         robot.id = msg.get()->id;
-        robot.state = msg.get()->state;
+        robot.state = (state_t)msg.get()->state;
         robots.push_back(robot);
     }
 
@@ -372,30 +375,35 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg)
     // remove completed jobs / frontiers
     for(int i=0; i<jobs.size(); ++i){
         // convert coordinates to cell indices
-        int mx = 0;
-        int my = 0;
-        if(costmap->getCostmap()->worldToMap(jobs[i].x, jobs[i].y, mx, my) == false){
+        unsigned int mx = 0;
+        unsigned int my = 0;
+        if(false){
+        //if(costmap->getCostmap()->worldToMap(jobs[i].x, jobs[i].y, mx, my) == false){
             ROS_ERROR("Could not convert job coordinates: %.2f, %.2f.", jobs[i].x, jobs[i].y);
             continue;
         }
 
         // get the 4-cell neighborhood with range 6
-        vector<array<int, 2>> neighbors;
+        vector<int> neighbors_x;
+        vector<int> neighbors_y;
         for(int j=0; j<6; ++j){
-            neighbors.push_back({mx+i+1, my});
-            neighbors.push_back({mx-i-1, my});
-            neighbors.push_back({mx, my+i+1});
-            neighbors.push_back({mx, my-i-1});
+            neighbors_x.push_back(mx+i+1);
+            neighbors_y.push_back(my);
+            neighbors_x.push_back(mx-i-1);
+            neighbors_y.push_back(my);
+            neighbors_x.push_back(mx);
+            neighbors_y.push_back(my+i+1);
+            neighbors_x.push_back(mx);
+            neighbors_y.push_back(my-i-1);
         }
 
         // check the cost of each neighbor
         bool unknown_found = false;
         bool obstacle_found = false;
         bool freespace_found = false;
-        for(int j=0; j<neighbors.size(); ++j){
-            int new_mx = neighbors[j][0];
-            int new_my = neighbors[j][1];
-            unsigned char cost = costmap->getCostmap()->getCost(new_mx, new_my);
+        for(int j=0; j<neighbors_x.size(); ++j){
+            int cost = 0;
+            //unsigned char cost = costmap->getCostmap()->getCost(neighbors_x[j], neighbors_y[j]);
             if(cost == costmap_2d::NO_INFORMATION){
                 unknown_found = true;
             }
@@ -412,7 +420,7 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg)
         //  * at least one neighbor is an obstacle
         //  * no neighbor is free space
         if(unknown_found == false || obstacle_found == true || freespace_found == false){
-            jobs.erase(i);
+            jobs.erase(jobs.begin()+i);
             --i;
         }
     }
@@ -457,7 +465,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
     // only process callback if auction is not initiated by this robot
-    if(robot_name.compare(msg.get()->robot_name.c_str()) == 0)
+    if(msg.get()->robot == robot_id)
         return;
 
     // respond to auction

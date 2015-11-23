@@ -2,9 +2,17 @@
 #define DOCKING_H
 
 #include <ros/ros.h>
-#include <navfn/navfn_ros.h>
+//#include <navfn/navfn_ros.h>
+#include <costmap_2d/costmap_2d_ros.h>
+#include <costmap_2d/costmap_2d.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/ExpFrontier.h>
+#include <adhoc_communication/EmAuction.h>
+#include <adhoc_communication/EmDockingStation.h>
+#include <adhoc_communication/EmRobot.h>
+#include <adhoc_communication/SendEmAuction.h>
+#include <adhoc_communication/SendEmDockingStation.h>
+#include <adhoc_communication/SendEmRobot.h>
 #include <energy_mgmt/battery_state.h>
 
 using namespace std;
@@ -26,7 +34,7 @@ private:
     /**
      * Service client for sending an auction.
      */
-    ros::ServiceClient sc_send_auction, sc_send_robot, sc_send_ds;
+    ros::ServiceClient sc_send_auction, sc_send_docking_station, sc_send_robot;
 
     /**
      * Subscribers for the required topics.
@@ -37,7 +45,7 @@ private:
      * Callbacks for the subscribed topics.
      */
     void cb_battery(const energy_mgmt::battery_state::ConstPtr& msg);
-    void cb_robots(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
+    void cb_robots(const adhoc_communication::EmRobot::ConstPtr& msg);
     void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg);
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg);
     void cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg);
@@ -65,8 +73,9 @@ private:
 
     /**
      * Update the likelihood value l4.
+     * @param int docking_station: The docking station to which the distance shall be computed.
      */
-    void update_l4();
+    void update_l4(int docking_station);
 
     /**
      * Start or respond to an auction for a docking station.
@@ -83,7 +92,7 @@ private:
      * @param string topic: The topic name which the auction will be published in.
      * @return bool: Success of transmission.
      */
-    bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic);
+    bool auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic);
 
 
     /**
@@ -109,7 +118,7 @@ private:
     /**
      * Navigation function and costmap for calculating paths.
      */
-    navfn::NavfnROS nav;
+    //navfn::NavfnROS nav;
     costmap_2d::Costmap2DROS *costmap;
 
     /**
