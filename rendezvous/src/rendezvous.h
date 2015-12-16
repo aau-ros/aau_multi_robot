@@ -5,12 +5,9 @@
 #include <explorer/MissionFinished.h>
 #include <adhoc_communication/SendString.h>
 #include <adhoc_communication/RecvString.h>
-//#include <adhoc_communication/SendRendezvous.h>
-//#include <adhoc_communication/RzvPoint.h>
 #include <adhoc_communication/SendMmPoint.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-#include "rendezvous/RendezvousPoint.h"
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PointStamped.h>
 #include <navfn/navfn_ros.h>
@@ -69,14 +66,6 @@ public:
     void callback_hallo(const adhoc_communication::RecvString msg);
     void callback_rendezvous(const adhoc_communication::MmPoint msg);
 
-    // test functions
-    void stopStartExplorer();
-    void commute();
-    void relayRobot_unlimited();
-    void exploreRobot_unlimited();
-    void test_hallo();
-    void test_relay_base_station();
-
 private:
 	double home_x, home_y;
 	ros::ServiceClient expl_client;
@@ -133,10 +122,4 @@ private:
 
     void indicateSimulationEnd();
     void initLogPath();
-
-    // test functions
-    void callbackMoveToRendezvous_unlimited();
-    void new_Rendezvous_available(const rendezvous::RendezvousPointConstPtr& msg);
 };
-
-
