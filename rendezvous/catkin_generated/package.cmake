@@ -1,7 +1,0 @@
-set(_CATKIN_CURRENT_PACKAGE "rendezvous")
-set(rendezvous_MAINTAINER "Laura Schreier <lschreie@edu.aau.at>")
-set(rendezvous_DEPRECATED "")
-set(rendezvous_VERSION "0.0.0")
-set(rendezvous_BUILD_DEPENDS "roscpp" "rospy" "move_base")
-set(rendezvous_RUN_DEPENDS "roscpp" "rospy" "move_base")
-set(rendezvous_BUILDTOOL_DEPENDS "catkin")

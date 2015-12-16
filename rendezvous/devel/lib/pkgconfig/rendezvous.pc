@@ -1,8 +1,0 @@
-prefix=/home/lschreie/ros_hydro_external/src/aau_multi_robot/rendezvous/devel
-
-Name: rendezvous
-Description: Description of rendezvous
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/lschreie/ros_hydro_external/src/aau_multi_robot/rendezvous/devel/lib 
-Requires: roscpp

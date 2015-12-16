@@ -1,9 +1,0 @@
-<?xml version ="1.0"?>
-<launch>
-	<arg name="robot_name" default="robot_0" />
-    	<arg name="robot_prefix" />
-
-	<node pkg="rendezvous" type="rendezvous" name="rendezvous" >
-
-	<param name="waitForResult" value="3">
-</launch>
