@@ -1,4 +1,5 @@
 #include "ros/ros.h"
+#include <boost/thread.hpp>
 #include <explorer/switchExplRend.h>
 #include <explorer/getPosition.h>
 #include <explorer/MissionFinished.h>
@@ -44,6 +45,7 @@ public:
     ros::Publisher pub;
     ros::Subscriber sub_hallo;
     ros::Subscriber sub_rendezvous;
+    ros::Time time_start;
 
     // parameter
     std::string robot_prefix;
@@ -52,6 +54,14 @@ public:
     double maxWaitTime;
     double explorationTime;
     double rendezvousTime;
+
+    // logging
+    std::string csv_file, log_file;
+    std::string log_path;
+    std::fstream fs_csv, fs;
+    int num_successfulRend, num_failedRend, num_planB;
+    void log_info();
+    void save_info();
 
     void relayRobot();
     void exploreRobot();
@@ -120,6 +130,9 @@ private:
     void visualize_rendezvous(double x, double y);
     void visualize_visited_rendezvous(double x, double y);
     void visualize_unreachable_rendezvous(double x, double y);
+
+    void indicateSimulationEnd();
+    void initLogPath();
 
     // test functions
     void callbackMoveToRendezvous_unlimited();

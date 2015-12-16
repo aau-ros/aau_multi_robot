@@ -5,6 +5,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "rendezvous");
     Rendezvous *rendzv = new Rendezvous();
 
+    boost::thread thr_log(boost::bind(&Rendezvous::log_info, rendzv));
+
     std::string robot0 = "/robot_0";
     std::string robot1 = "/robot_1";
     std::string robot2 = "/robot_2";
@@ -44,41 +46,6 @@ int main(int argc, char **argv)
         rendzv->base_station();
     }
 
-
-
-// --------------------------------------   for unlimited communication ------------------------------------
-//    if(rendzv->iAm == EXPLORER)
-//    {
-//        std::string topic = rendzv->robot_prefix + "/rendezvous/RendezvousPoints";
-//        rendzv->pub = rendzv->nh->advertise<rendezvous::RendezvousPoint>(topic, 10);
-//        rendzv->exploreRobot_unlimited();
-//    }
-//    else if(rendzv->iAm == RELAY)
-//    {
-//        // subscribe to rendezvous points topic of my explore robot
-//        std::string topic_name = rendzv->myBuddy_prefix + std::string("/rendezvous/RendezvousPoints");
-//        rendzv->sub = rendzv->nh->subscribe(topic_name, 10, &Rendezvous::new_Rendezvous_available, rendzv);
-//        rendzv->relayRobot_unlimited();
-//    }
-// -----------------------------------------------------------------------------------------------------------
-
-// --------------------------------------  using ad_hoc_communication node -----------------------------------
-
-    //std::string topic = rendzv->robot_prefix + std::string("/rendezvous/checkCommunicationRange");
-    //rendzv->sub_hallo = rendzv->nh->subscribe(topic, 1, &Rendezvous::callback_hallo, rendzv);
-
-//    if(rendzv->iAm == EXPLORER)
-//    {
-//        // join_mc_group of relay
-//        rendzv->exploreRobot();
-//    }
-//    else if(rendzv->iAm == RELAY)
-//    {
-//        rendzv->relayRobot();
-//    }
-
-    //rendzv->test_hallo();
-
-// -----------------------------------------------------------------------------------------------------------
-
+    thr_log.interrupt();
+    thr_log.join();
 }

@@ -69,6 +69,21 @@ Rendezvous::Rendezvous()
     visualize_rendezvous(home_x, home_y);
 
     rendezvous_state = A;
+    num_successfulRend = 0;
+    num_failedRend = 0;
+    num_planB = 0;
+
+    /*
+     *  CREATE LOG PATH
+     * Following code enables to write the output to a file
+     * which is localized at the log_path
+     */
+     initLogPath();
+     csv_file = log_path + std::string("periodical.log");
+     log_file = log_path + std::string("rendezvous.log");
+
+     // start taking time
+     time_start = ros::Time::now();
 
 }
 
@@ -198,11 +213,13 @@ void Rendezvous::exploreRobot(){
 
         if(rendezvousSuccessful == false)
         {
+            num_failedRend++;
             ROS_DEBUG("Going to call plan B!");
             planB();
         }
         else
         {
+            num_successfulRend++;
             ROS_DEBUG("Rendezvous successful!");
             ROS_DEBUG("explorer: list of rendezvous points after rendezvous:");
             printRendezvousPoints();
@@ -220,12 +237,14 @@ void Rendezvous::exploreRobot(){
 
     ROS_DEBUG("explorer:  mission finished !!!!");
     //ROS_DEBUG("will start explorer again, should return home");
-    srv_msg.request.explore = true;
-    if(expl_client.call(srv_msg) == false)
-    {
-        ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
-    }
+//    srv_msg.request.explore = true;
+//    if(expl_client.call(srv_msg) == false)
+//    {
+//        ROS_ERROR("Failed to call explorer service 'switchExplRend'!");
+//    }
 
+    move_robot(home_x, home_y);
+    indicateSimulationEnd();
 }
 
 void Rendezvous::relayRobot(){
@@ -294,31 +313,33 @@ void Rendezvous::relayRobot(){
         }
         else
         {
-            ROS_INFO("... robot failed to move to rendezvous!!");
+            ROS_WARN("Rendezvous failed!!");
+            ROS_INFO("... because robot failed to move to rendezvous!!");
+            rendezvousSuccessful = false;
 
-            // get current robot position
-            explorer::getPosition srv;
-            srv.request.name = "currentPos";
-            if(this->position_client.call(srv) == false)
-            {
-                ROS_ERROR("Failed to call explorer service 'getPosition'");
-            }
-            else
-            {
-                if((srv.response.x == home_x) && (srv.response.y == home_y))
-                {
-                    ROS_WARN("Rendezvous failed!!");
-                    ROS_DEBUG("... because failed to move robot to rendezvous");
-                    rendezvousSuccessful = false;
-                }
-                else
-                {
-                    ROS_DEBUG("stay here and try to rendezvous, maybe in communication range anyway");
-                    visualize_unreachable_rendezvous(nextRendezvous.x, nextRendezvous.y);
-                    teamMemberInRange = hallo(maxWaitTime*2);       // relay waits 2 times maxWaitTime -> rendezvous should not fail bc of wait time
-                    ros::Duration(5).sleep();
-                }
-            }
+//            // get current robot position
+//            explorer::getPosition srv;
+//            srv.request.name = "currentPos";
+//            if(this->position_client.call(srv) == false)
+//            {
+//                ROS_ERROR("Failed to call explorer service 'getPosition'");
+//            }
+//            else
+//            {
+//                if((srv.response.x == home_x) && (srv.response.y == home_y))
+//                {
+//                    ROS_WARN("Rendezvous failed!!");
+//                    ROS_DEBUG("... because failed to move robot to rendezvous");
+//                    rendezvousSuccessful = false;
+//                }
+//                else
+//                {
+//                    ROS_DEBUG("stay here and try to rendezvous, maybe in communication range anyway");
+//                    visualize_unreachable_rendezvous(nextRendezvous.x, nextRendezvous.y);
+//                    teamMemberInRange = hallo(maxWaitTime*2);       // relay waits 2 times maxWaitTime -> rendezvous should not fail bc of wait time
+//                    ros::Duration(5).sleep();
+//                }
+//            }
         }
 
         if(teamMemberInRange == true)
@@ -334,6 +355,7 @@ void Rendezvous::relayRobot(){
         }
 
         if(rendezvousSuccessful == true){
+            num_successfulRend++;
             ROS_DEBUG("relay: list of rendezvous points after rendezvous:");
             printRendezvousPoints();
 
@@ -354,10 +376,12 @@ void Rendezvous::relayRobot(){
         }
         else
         {
-            ROS_WARN("Rendezvous failed!!");
+            num_failedRend++;
+            //ROS_WARN("Rendezvous failed!!");
             ROS_DEBUG("going to call plan B!");
             planB();
             // next move to backup rendezvous not home, bc it would take to long
+            ros::Duration(explorationTime-rendezvousTime).sleep();
         }
 
         if(this->mission_client.call(mission_srv) == false)
@@ -369,6 +393,8 @@ void Rendezvous::relayRobot(){
     }
 
     ROS_DEBUG("relay :  mission finished !!!!");
+    move_robot(home_x, home_y);
+    indicateSimulationEnd();
 
 }
 
@@ -721,6 +747,7 @@ bool Rendezvous::reachable(double x, double y)
 void Rendezvous::planB()
 {    //ROS_DEBUG("in planB");
 
+    num_planB++;
     // delete last rendezvous
     //rendezvousVector_mutex.lock();
     rendezvousPoints->pop_back();
@@ -850,6 +877,142 @@ bool Rendezvous::move_robot(double position_x, double position_y)
         }
     }
     return true;
+}
+
+void Rendezvous::indicateSimulationEnd()
+{
+    /// FIXME: remove this stuff once ported to multicast
+    std::stringstream robot_number;
+    robot_number << robot_prefix;
+
+    std::string prefix = "/robot_";
+    std::string status_directory = "/simulation_status";
+    std::string robo_name = prefix.append(robot_number.str());
+    std::string file_suffix(".finishedRendezvous");
+
+    std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+    std::string status_path = ros_package_path + status_directory;
+    std::string status_file = status_path + robo_name + file_suffix;
+
+    /// TODO: check whether directory exists
+    boost::filesystem::path boost_status_path(status_path.c_str());
+    if(!boost::filesystem::exists(boost_status_path))
+        if(!boost::filesystem::create_directories(boost_status_path))
+            ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+    std::ofstream outfile(status_file.c_str());
+    outfile.close();
+    ROS_INFO("Creating file %s to indicate end of exploration.", status_file.c_str());
+
+}
+
+void Rendezvous::initLogPath()
+{
+   /*
+    *  CREATE LOG PATH
+    * Following code enables to write the output to a file
+    * which is localized at the log_path
+    */
+
+    nh->param<std::string>("log_path",log_path,"");
+
+    std::string robo_name = robot_prefix;
+
+    log_path = log_path.append("/rendezvous");
+    log_path = log_path.append(robo_name);
+    log_path = log_path.append("/");
+    ROS_INFO("Logging files to %s", log_path.c_str());
+
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if(!boost::filesystem::exists(boost_log_path))
+        if(!boost::filesystem::create_directories(boost_log_path))
+            ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+
+}
+
+void Rendezvous::log_info()
+{
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << "#time, x_coordinate, y_coordinate, distance_to_home" << std::endl;
+    fs_csv.close();
+
+    while(ros::ok() && missionFinished != true)
+    {
+        ros::Duration time = ros::Time::now() - time_start;
+        double exploration_time = time.toSec();
+        double x, y, distance_to_home;
+
+        // get current robot position
+        explorer::getPosition srv;
+        srv.request.name = "currentPos";
+        if(this->position_client.call(srv) == false)
+        {
+            ROS_ERROR("Failed to call explorer service 'getPosition'");
+        }
+        else
+        {
+            x = srv.response.x;
+            y = srv.response.y;
+        }
+
+        distance_to_home = sqrt((x*x)+(y*y));
+
+        fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        fs_csv << exploration_time << ","
+               << x << ","
+               << y << ","
+               << distance_to_home
+               << std::endl;
+        fs_csv.close();
+
+        save_info();
+
+        ros::Duration(10.0).sleep();
+    }
+}
+
+void Rendezvous::save_info()
+{
+    ros::Duration ros_time = ros::Time::now() - time_start;
+    double exploration_time = ros_time.toSec();
+
+    std::string tmp_log = log_file;
+    fs.open(tmp_log.c_str(), std::fstream::in | std::fstream::trunc | std::fstream::out);
+
+    time_t raw_time;
+    struct tm* timeinfo;
+    time (&raw_time);
+    timeinfo = localtime (&raw_time);
+
+    fs << "[Rendezvous based exploration]" << std::endl;
+    fs << "time_file_written    			= " << asctime(timeinfo); // << std::endl;
+    fs << "start_time           			= " << time_start << std::endl;
+    fs << "end_time             			= " << ros::Time::now() << std::endl;
+    fs << "duration   			        = " << exploration_time << std::endl;
+
+    if(iAm == RELAY){
+        fs << "role                             = " << "RELAY" << std::endl;
+    } else if(iAm == EXPLORER){
+        fs << "role                             = " << "EXPLORER" << std::endl;
+    } else if(iAm == BASE){
+        fs << "role                             = " << "BASE" << std::endl;
+    }
+    fs << "ID of team member                = " << myBuddy_prefix << std::endl;
+    fs << "exploration time                 = " << explorationTime << std::endl;
+    fs << "max wait time at rendezvous      = " << maxWaitTime << std::endl;
+    fs << "rendezvous time                  = " << rendezvousTime << std::endl;
+    fs << "# successful rendezvous          = " << num_successfulRend << std::endl;
+    fs << "# failed rendezvous              = " << num_failedRend << std::endl;
+    fs << "# executing plan B               = " << num_planB << std::endl;
+
+    int n = 1;
+    for(std::vector<RendezvousPoint>::iterator i = rendezvousPoints->begin();
+        i != rendezvousPoints->end(); ++i)
+    {
+        fs << n << "-th rendezvous point: ( " << i->x << " / " << i->y << " )" << std::endl;
+        n++;
+    }
+
+    fs.close();
 }
 
 // ------------------------------------------------------ TEST FUNCTIONS --------------------------------------------------------

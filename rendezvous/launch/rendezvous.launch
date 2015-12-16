@@ -3,10 +3,12 @@
 	<arg name="robot_name" default="robot_0" />
     	<arg name="robot_prefix" default=""/>
 	<arg name="use_sim_time" default="false" />
+	<arg name="log_path" default="$(env HOME)/logs" />
 
 	<node pkg="rendezvous" type="rendezvous" name="rendezvous" >
 		<param name="robot_name" value="$(arg robot_name)" />
 		<param name="robot_prefix" value="$(arg robot_prefix)" />
+		<param name="log_path" value="$(arg log_path)" />
 		<param name="waitForResult" value="3" />
 		<param name="move_base_frame" value="$(arg robot_prefix)/map" />
 		<param name="maxWaitTime" value="40.0" />
