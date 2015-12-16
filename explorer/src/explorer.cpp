@@ -781,7 +781,7 @@ public:
     void map_info()
     {
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#time,exploration_travel_path_global,exploration_travel_path_average,global_map_progress,local_map_progress,number_of_completed_auctions, number_of_uncompleted_auctions, frontier_selection_strategy, costmap_size, unreachable_frontiers" << std::endl;
+        fs_csv << "#time,exploration_travel_path_global,exploration_travel_path_average,global_map_progress,local_map_progress,number_of_completed_auctions, number_of_uncompleted_auctions, frontier_selection_strategy, costmap_size, unreachable_frontiers, x_coordinate, y_coordinate, distance_to_home" << std::endl;
         fs_csv.close();
 
         while(ros::ok() && exploration_finished != true)
@@ -804,6 +804,8 @@ public:
                 exploration_travel_path_average = (exploration->exploration_travel_path_global) / counter;
             }
 
+            double distance_to_home = sqrt((robotPose.getOrigin().getX()*robotPose.getOrigin().getX()) + (robotPose.getOrigin().getY()*robotPose.getOrigin().getY()));
+
             //ROS_INFO("global map size: %f   at time: %f", map_progress.global_freespace, map_progress.time);
             //ROS_INFO("local map size : %f   at time: %f", map_progress.local_freespace, map_progress.time);
             //ROS_INFO("travel path glo: %d   at time: %f", exploration_travel_path_global, map_progress.time);
@@ -811,7 +813,16 @@ public:
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 
-            fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << exploration_travel_path_average << "," << map_progress.global_freespace << "," << map_progress.local_freespace << "," << global_iterattions <<  "," << exploration->number_of_completed_auctions << "," << exploration->number_of_uncompleted_auctions << "," << frontier_selection << "," <<  costmap_width << "," << exploration->unreachable_frontiers.size() <<  std::endl;
+            fs_csv << map_progress.time << "," << exploration_travel_path_global << ","
+                   << exploration_travel_path_average << "," << map_progress.global_freespace << ","
+                   << map_progress.local_freespace << "," << global_iterattions <<  ","
+                   << exploration->number_of_completed_auctions << ","
+                   << exploration->number_of_uncompleted_auctions << ","
+                   << frontier_selection << ","
+                   << costmap_width << "," << exploration->unreachable_frontiers.size() << ","
+                   << robotPose.getOrigin().getX() << ","
+                   << robotPose.getOrigin().getY() << ","
+                   << distance_to_home << std::endl;
             //fs_csv << "travel_path_global   = " << exploration_travel_path_global << std::endl;
             //fs_csv << "travel_path_average  = " << exploration_travel_path_average << std::endl;
             //fs_csv << "map_progress_global  = " << map_progress.global_freespace << std::endl;
