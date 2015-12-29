@@ -7,6 +7,7 @@ project(energy_mgmt)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  costmap_2d
   std_msgs
   message_generation
 )
