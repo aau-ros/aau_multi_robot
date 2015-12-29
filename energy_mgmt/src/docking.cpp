@@ -5,21 +5,21 @@ using namespace std;
 docking::docking()
 {
     // read weights for the likelihood values from parameter file
-    nh.param("w1", w1, 0.25);
-    nh.param("w2", w2, 0.25);
-    nh.param("w3", w3, 0.25);
-    nh.param("w4", w4, 0.25);
+    nh.param("energy_mgmt/w1", w1, 0.25);
+    nh.param("energy_mgmt/w2", w2, 0.25);
+    nh.param("energy_mgmt/w3", w3, 0.25);
+    nh.param("energy_mgmt/w4", w4, 0.25);
 
     // initialize auction id
     auction_id = 0;
 
     // initialize navigation function
-    nh.param("distance_close", distance_close, 8.0);
-    nh.param<string>("move_base_frame", move_base_frame, "map");
+    nh.param("energy_mgmt/distance_close", distance_close, 8.0);
+    nh.param<string>("energy_mgmt/move_base_frame", move_base_frame, "map");
     //nav.initialize("navigation_path", costmap);
 
     // initialize robot name
-    nh.param<string>("robot_prefix", robot_prefix, "");
+    nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
     if(robot_prefix.empty()){
         //TODO
         char hostname[1024];
