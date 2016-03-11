@@ -77,7 +77,7 @@ private:
      * Speed of the robot.
      * The values are received from subscribed topics.
      */
-    double speed_linear, speed_angular, speed_avg;
+    double speed_linear, speed_angular, speed_avg, speed_avg_init;
 
     /**
      * Total time the robot has been standing and moving.

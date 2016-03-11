@@ -5,7 +5,7 @@ using namespace std;
 battery::battery()
 {
     // read parameters
-    nh.getParam("energy_mgmt/speed_avg", speed_avg);
+    nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
     nh.getParam("energy_mgmt/power_charging", power_charging);
     nh.getParam("energy_mgmt/power_moving", power_moving);
     nh.getParam("energy_mgmt/power_standing", power_standing);
@@ -28,7 +28,7 @@ battery::battery()
     state.soc = 100;
     state.remaining_time_charge = 0;
     state.remaining_time_run = charge_max * (perc_moving / power_moving + perc_standing / power_standing) * 3600;
-    state.remaining_distance = speed_avg * charge_max / power_moving * 3600;
+    state.remaining_distance = speed_avg_init * charge_max / power_moving * 3600;
 
 
     bool debugShown = false;
@@ -63,7 +63,7 @@ void battery::compute()
     ros::Duration time_diff = ros::Time::now() - time_last;
     time_last = ros::Time::now();
     double time_diff_sec = time_diff.toSec();
-    // if there is no time difference to last computation then there is nothing todo
+    // if there is no time difference to last computation then there is nothing to do
     if(time_diff_sec <= 0)
         return;
 
@@ -154,12 +154,12 @@ void battery::cb_cmd_vel(const geometry_msgs::Twist &msg)
 
 void battery::cb_speed(const explorer::Speed &msg){
 
-    // If the average speed is very low, there is probably something wrong
-    if(msg.avg_speed > 0.25){
+    // if the average speed is very low, there is probably something wrong, set it to the value from the config file
+    if(msg.avg_speed > speed_avg_init){
         speed_avg = msg.avg_speed;
     }
     else{
-        speed_avg = 0.25;
+        speed_avg = speed_avg_init;
     }
 }
 

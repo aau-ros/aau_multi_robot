@@ -4,6 +4,13 @@ using namespace std;
 
 docking::docking()
 {
+    // get number of robots
+    nh.param("energy_mgmt/num_robots", num_robots, 1);
+    if(num_robots <= 1){
+        ROS_ERROR("Only one robot, no coordination of docking stations required, aborting");
+        return; //TODO: Don't just return but initialize for a single robot
+    }
+
     // read weights for the likelihood values from parameter file
     nh.param("energy_mgmt/w1", w1, 0.25);
     nh.param("energy_mgmt/w2", w2, 0.25);
@@ -20,7 +27,7 @@ docking::docking()
 
     // initialize robot name
     nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
-    if(robot_prefix.empty()){
+    if(robot_prefix.empty()){ // hardware platform
         //TODO
         char hostname[1024];
         hostname[1023] = '\0';
@@ -30,7 +37,7 @@ docking::docking()
         ROS_ERROR("ONLY SIMULATIONS HAVE BEEN IMPLEMENTED YET, ABORTING");
         exit(0);
     }
-    else{
+    else{ // simulations
         robot_name = robot_prefix;
         robot_id = atoi(robot_prefix.substr(7,1).c_str());
     }

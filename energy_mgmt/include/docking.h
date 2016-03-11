@@ -145,6 +145,7 @@ private:
     /**
      * A vector of all robots with their current state.
      */
+    int num_robots; // number of robots is known in simulations
     enum state_t {active, going_charging, charging, idle};
     struct robot_t{
         int id;

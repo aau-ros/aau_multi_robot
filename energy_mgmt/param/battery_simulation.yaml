@@ -1,4 +1,5 @@
-speed_avg: 0.5 # m/s, needed in the beginning when the average cannot be computed because its very inacurate
+speed_avg: 0.333 # m/s, needed for the initial estimation of remaining distance
+                 # it also serves as a lower bound when estimating the remaining distance later on
 power_charging: 150 # watt, power that the power supply provides, e.g. 36 for P3DX
 power_moving: 22.3775 # watt
 power_standing: 13.2075 # watt

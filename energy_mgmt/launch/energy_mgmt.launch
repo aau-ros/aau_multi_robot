@@ -2,6 +2,7 @@
 <launch>
     <arg name="output" default="log"/>
     <arg name="robot_prefix"/>
+    <arg name="num_robots"/>
 
     <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
         <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
@@ -9,5 +10,6 @@
 
         <param name="robot_prefix" value="$(arg robot_prefix)"/>
         <param name="move_base_frame" value="$(arg robot_prefix)/map"/>
+        <param name="num_robots" value="$(arg num_robots)"/>
     </node>
 </launch>
