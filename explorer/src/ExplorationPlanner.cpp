@@ -4383,7 +4383,7 @@ void ExplorationPlanner::sort_distance(bool energy_above_th)
     if (frontiers.size() > 0)
     {
         double d_gbe, suc_fct;
-        int w1 = 10, w2 = 20, w3 = 0, w4 = 9;
+        int w1 = 220, w2 = 100, w3 = 21, w4 = 104;
         for (int i = frontiers.size(); i >= 0; i--) {
             if(cnt>8)
                 break;
