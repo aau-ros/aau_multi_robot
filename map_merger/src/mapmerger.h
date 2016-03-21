@@ -96,7 +96,7 @@ private:
     int findTransformIndex(int robot_index);
     int findRobotIndex(int transform_index);
     void sendMapOverNetwork(string destination,std::vector<int>* containedUpdates,int start_row = 0,int start_collum = 0,int end_row = -1,int end_collum = -1);
-    void sendMetaData(float res = 0.05);
+    void sendMetaData(float res);
     void sendBackAskedMapData(string robotName, std::vector<int> missingUpdates );
     nav_msgs::OccupancyGrid* getMapPart(int map_index,int start_x,int start_y,int width,int height);
     nav_msgs::OccupancyGrid* matToMap(const cv::Mat mat, nav_msgs::OccupancyGrid *forInfo);
@@ -166,6 +166,7 @@ private:
     std::vector<int> * pos_seq_other;
     int pos_seq_my;
     bool turning;
+    double resolution;
 };
 
 #endif // MAPMERGER_Hd

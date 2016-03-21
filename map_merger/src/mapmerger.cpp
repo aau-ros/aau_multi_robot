@@ -70,6 +70,7 @@ MapMerger::MapMerger()
     nodeHandle->param<int>("seconds_send_position",seconds_send_position,2);
     nodeHandle->param<double>("max_trans_robots",max_trans_robot,-1);
     nodeHandle->param<double>("max_rotation_robots",max_rotation_robot,5);
+    nodeHandle->param<double>("resolution",resolution,0.05);
 
     nodeHandle->param<std::string>("local_map_topic",local_map_topic,"/map");
     nodeHandle->param<std::string>("local_map_metadata_topic",local_map_metadata_topic,"/map_metadata");
@@ -432,7 +433,7 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
     if(global_map != NULL && global_map_ready == true)
     {
         //todo: clear all near me!
-        //cv::Point org_point(map_width / 2 +tmp.pose.position.x / 0.05, map_height / 2 +tmp.pose.position.y / 0.05);
+        //cv::Point org_point(map_width / 2 +tmp.pose.position.x / resolution, map_height / 2 +tmp.pose.position.y / resolution);
         bool newData = false;
         for(int i = 0; i < new_data_maps->size(); i++)
         {
@@ -690,20 +691,20 @@ void MapMerger::callback_got_position_network(const adhoc_communication::MmRobot
                         return;
                     }
                     cv::Mat trans = transforms->at(index_transform);
-                    cv::Point org_point(map_width / 2 +tmp.pose.position.x / 0.05,
-                                        map_height / 2 +tmp.pose.position.y / 0.05);
+                    cv::Point org_point(map_width / 2 +tmp.pose.position.x / resolution,
+                                        map_height / 2 +tmp.pose.position.y / resolution);
                     cv::Point homogeneous;
                     std::vector<cv::Point> inPts,outPts;
                     inPts.push_back(org_point);
                     outPts.push_back(homogeneous);
                     cv::Size s;
-                    s.height = map_height; //* 0.05;
-                    s.width = map_width ;//* 0.05;
+                    s.height = map_height; //* resolution;
+                    s.width = map_width ;//* resolution;
 
                     cv::transform(inPts,outPts,trans);
 
-                    newPosition.x = (outPts.at(0).x - map_width / 2) * 0.05;
-                    newPosition.y = (outPts.at(0).y - map_height / 2) * 0.05;
+                    newPosition.x = (outPts.at(0).x - map_width / 2) * resolution;
+                    newPosition.y = (outPts.at(0).y - map_height / 2) * resolution;
                     positions->positions.at(j) = newPosition;
 
                     ROS_DEBUG("Publish other position,j:%i",j);
@@ -764,21 +765,21 @@ void MapMerger::callback_got_position_network(const adhoc_communication::MmRobot
                 }
                 ROS_DEBUG("get transform");
                 cv::Mat trans = transforms->at(index_transform);
-                cv::Point org_point(map_width / 2 +tmp.pose.position.x / 0.05,
-                                    map_height / 2 +tmp.pose.position.y / 0.05);
+                cv::Point org_point(map_width / 2 +tmp.pose.position.x / resolution,
+                                    map_height / 2 +tmp.pose.position.y / resolution);
                 cv::Point homogeneous;
                 ROS_DEBUG("got transform");
                 std::vector<cv::Point> inPts,outPts;
                 inPts.push_back(org_point);
                 outPts.push_back(homogeneous);
                 cv::Size s;
-                s.height = map_height; //* 0.05;
-                s.width = map_width ;//* 0.05;
+                s.height = map_height; //* resolution;
+                s.width = map_width ;//* resolution;
 
                 cv::transform(inPts,outPts,trans);
 
-                newPosition.x = (outPts.at(0).x - map_width / 2) * 0.05;
-                newPosition.y = (outPts.at(0).y - map_height / 2) * 0.05;
+                newPosition.x = (outPts.at(0).x - map_width / 2) * resolution;
+                newPosition.y = (outPts.at(0).y - map_height / 2) * resolution;
                 positions->positions.push_back(newPosition);
             }
             //ROS_ERROR("Publisch List");
@@ -794,18 +795,18 @@ void MapMerger::callback_got_position_network(const adhoc_communication::MmRobot
                 //index_transform = findTransformIndex()
                 tmp.header.frame_id = local_map_frame_id;
                 cv::Mat trans = transforms->at(index_transform);
-                cv::Point org_point(map_width / 2 +tmp.pose.position.x / 0.05,
-                                    map_height / 2 +tmp.pose.position.y / 0.05);
+                cv::Point org_point(map_width / 2 +tmp.pose.position.x / resolution,
+                                    map_height / 2 +tmp.pose.position.y / resolution);
                 cv::Point homogeneous;
                 std::vector<cv::Point> inPts,outPts;
                 inPts.push_back(org_point);
                 outPts.push_back(homogeneous);
                 cv::Size s;
-                s.height = map_height; //* 0.05;
-                s.width = map_width ;//* 0.05;
+                s.height = map_height; //* resolution;
+                s.width = map_width ;//* resolution;
                 cv::transform(inPts,outPts,trans);
-                tmp.pose.position.x = (outPts.at(0).x - map_width / 2) * 0.05;
-                tmp.pose.position.y = (outPts.at(0).y - map_height / 2) * 0.05;
+                tmp.pose.position.x = (outPts.at(0).x - map_width / 2) * resolution;
+                tmp.pose.position.y = (outPts.at(0).y - map_height / 2) * resolution;
                 //_position_other_robots[i] = tmp;
                 tmp.header.frame_id = local_map_frame_id;
                 tmp.pose.orientation.w -=  180./M_PI*atan2(trans.at<double>(0,1),trans.at<double>(1,1));
@@ -864,7 +865,7 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
 
                 global_map->info.origin.position.x = g_start_x;
                 global_map->info.origin.position.y = g_start_y;
-                global_map->info.resolution = 0.05;
+                global_map->info.resolution = resolution;
                 //this->map_width = toInsert->info.width;
                 //this->map_height = toInsert->info.height;
                 ROS_INFO("Local map is %ix%i",toInsert->info.height,toInsert->info.width);
@@ -1854,18 +1855,18 @@ bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_
         return false;
     }
     cv::Mat trans = transforms->at(index_transform);
-    cv::Point org_point(map_width / 2 +req.point.x / 0.05,
-                        map_height / 2 +req.point.y / 0.05);
+    cv::Point org_point(map_width / 2 +req.point.x / resolution,
+                        map_height / 2 +req.point.y / resolution);
     cv::Point homogeneous;
     std::vector<cv::Point> inPts,outPts;
     inPts.push_back(org_point);
     outPts.push_back(homogeneous);
     cv::Size s;
-    s.height = map_height; //* 0.05;
-    s.width = map_width ;//* 0.05;
+    s.height = map_height; //* resolution;
+    s.width = map_width ;//* resolution;
     cv::transform(inPts,outPts,trans);
-    res.point.x = (outPts.at(0).x - map_width / 2) * 0.05;
-    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
+    res.point.x = (outPts.at(0).x - map_width / 2) * resolution;
+    res.point.y = (outPts.at(0).y - map_height / 2) * resolution;
     res.point.src_robot = robot_hostname;
     return true;
 }

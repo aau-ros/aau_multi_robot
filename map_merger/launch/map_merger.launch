@@ -20,6 +20,7 @@
         <param name="seconds_pub_timer" value="6" />
         <param name="seconds_recompute_transform" value="25" />
         <param name="seconds_send_position" value="1" />
+        <param name="resolution" value="0.05" />
         <param name="position_other_robots_topic" value="position_other_robots"/>
         <param name="split_size" value="2048" />
         <param name="splitted" value="true" />
