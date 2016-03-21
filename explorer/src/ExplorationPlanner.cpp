@@ -4450,8 +4450,6 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
                 // sort frontiers according to cost function
                 if(cost > cost_next)
                 {
-                    ROS_ERROR("w1:%d, w2:%d, w3:%d, w4:%d", w1, w2, w3, w4);
-                    ROS_ERROR("cost: %.2f > %.2f", cost, cost_next);
                     frontier_t temp = frontiers.at(j+1);
                     frontiers.at(j+1) = frontiers.at(j);
                     frontiers.at(j) = temp;
