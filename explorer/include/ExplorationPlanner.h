@@ -157,7 +157,6 @@ namespace explorationPlanner
             std::string trajectory_strategy;
             bool first_run, first_negotiation_run;
             bool start_thr_auction;
-            int cnt;
 
             int number_of_auction_runs;
             int cluster_id, cluster_cells_seq_number;
@@ -205,7 +204,7 @@ namespace explorationPlanner
             int checkClustersID(adhoc_communication::ExpCluster cluster_to_check);
             bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name);
             void sort(int strategy);
-            void sort_distance(bool energy_above_th);
+            void sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
             void simulate();
             void visualize_Frontiers();
             void visualize_visited_Frontiers();
@@ -297,7 +296,7 @@ namespace explorationPlanner
             unsigned int* obstacle_trans_array_;
             int* frontier_map_array_;
             int home_position_x_,home_position_y_;
-            double x_last, y_last;
+            double robot_last_x, robot_last_y;
 
             bool* is_goal_array_;
             bool initialized_;

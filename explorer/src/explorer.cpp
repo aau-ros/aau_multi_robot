@@ -60,6 +60,11 @@ public:
         nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
         nh.param("recharging", recharging, false);
 
+        nh.param("w1", w1, 1);
+        nh.param("w2", w2, 0);
+        nh.param("w3", w3, 0);
+        nh.param("w4", w4, 0);
+
         ROS_INFO("Costmap width: %d", costmap_width);
         ROS_INFO("Frontier selection is set to: %d", frontier_selection);
 
@@ -724,7 +729,7 @@ public:
                     ROS_INFO("SORTING FRONTIERS...");
                     exploration->sort(2);
                     exploration->sort(3);
-                    exploration->sort_distance(battery_charge > 50);
+                    exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
@@ -1810,9 +1815,10 @@ public:
 
         double x_val, y_val, home_point_x, home_point_y;
         int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
-        int counter,cnt;
+        int counter;
         bool recharging;
         bool pioneer;
+        int w1, w2, w3, w4;
 };
 
 int main(int argc, char **argv)

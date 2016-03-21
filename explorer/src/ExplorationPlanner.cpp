@@ -70,13 +70,13 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
     }
 }
 
-ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), cnt(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
+ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
 
-    x_last = robotPose.getOrigin().getX();
-    y_last = robotPose.getOrigin().getY();
+    robot_last_x = robotPose.getOrigin().getX();
+    robot_last_y = robotPose.getOrigin().getY();
 
     responded_t init_responded;
     init_responded.auction_number = 0;
@@ -4371,88 +4371,99 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
      return false;
 }
 
-void ExplorationPlanner::sort_distance(bool energy_above_th)
+/**
+ * Sort frontiers in an energy aware manner according to a cost function with the weights w1, ..., w4
+ */
+void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
     tf::Stamped < tf::Pose > robotPose;
-    if (!costmap_ros_->getRobotPose(robotPose))
+    if(!costmap_ros_->getRobotPose(robotPose))
     {
         ROS_ERROR("Failed to get RobotPose");
         return;
     }
 
-    if (frontiers.size() > 0)
-    {
-        double d_gbe, suc_fct;
-        int w1 = 10, w2 = 20, w3 = 0, w4 = 9;
-        for (int i = frontiers.size(); i >= 0; i--) {
-            if(cnt>8)
-                break;
-            cnt++;
-            for (int j = 0; j < frontiers.size()-1; j++) {
-                if(j>8)
-                    break;
-                /*
-                Successor Function
-                    f = w1 · d_g + w2 · theta + w3 · d_gb + w4 · d_gbe
+    // process only eight frontiers
+    int max_front = 8;
 
-                        Parameter:
-                            w1...w4 ... weight
-                            d_g     ... Distance from the robots current position to the frontier.
-                            theta   ... A linear function θ ∈ [0, 1] measuring how much the robot has to turn to reach the frontier.
-                            d_gb    ... Distance from the frontier to the charging station.
-                            d_gbe   ... −d_gb if the robot has more than half of its energy left; d_gb if the robot has less than half of its energy left.
-                */
-                // search for the frontier with the minimal succesor function and sort it from the minimum to the maximum.
-                double x_pos = robotPose.getOrigin().getX();
-                double y_pos = robotPose.getOrigin().getY();
+    if(frontiers.size() > 0)
+    {
+        double robot_x, robot_y;
+        for(int i = frontiers.size(); i >= 0 && i > frontiers.size() - max_front; --i)
+        {
+            for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
+            {
+                /*
+                 * cost function
+                 * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
+                 *
+                 * parameters
+                 * w1, ..., w4 .. weights
+                 * d_g         .. distance from the robot's current position to the frontier
+                 * d_gb        .. distance from the frontier to the charging station
+                 * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
+                 * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
+                 */
+
+                // robot position
+                robot_x = robotPose.getOrigin().getX();
+                robot_y = robotPose.getOrigin().getY();
+
+                // frontier position
+                double frontier_x = frontiers.at(j).x_coordinate;
+                double frontier_y = frontiers.at(j).y_coordinate;
+                double next_frontier_x = frontiers.at(j+1).x_coordinate;
+                double next_frontier_y = frontiers.at(j+1).y_coordinate;
 
                 // calculate d_g
-                double x = frontiers.at(j).x_coordinate - x_pos;
-                double y = frontiers.at(j).y_coordinate - y_pos;
-                double d_g = sqrt(x * x + y * y);
-                double x_next = frontiers.at(j+1).x_coordinate - x_pos;
-                double y_next = frontiers.at(j+1).y_coordinate - y_pos;
-                double d_g_next = sqrt(x_next * x_next + y_next * y_next);
-
-                // calculate theta
-                double theta_s = atan2(y_last - y_pos,x_last - x_pos);
-                double theta_g = atan2(y_pos - frontiers.at(j).y_coordinate, x_pos - frontiers.at(j).x_coordinate);
-                double theta = 1/M_PI * (M_PI - abs(abs(theta_s-theta_g)-M_PI));
-                double theta_g_next = atan2(y_pos - frontiers.at(j+1).y_coordinate, x_pos - frontiers.at(j+1).x_coordinate);
-                double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s-theta_g_next)-M_PI));
+                int d_g = trajectory_plan(frontier_x, frontier_y);
+                int d_g_next = trajectory_plan(next_frontier_x, next_frontier_y);
 
                 // calculate d_gb
-                x = frontiers.at(j).x_coordinate - robot_home_x;
-                y = frontiers.at(j).y_coordinate - robot_home_y;
-                double d_gb = sqrt(x * x + y * y);
-                x_next = frontiers.at(j+1).x_coordinate - robot_home_x;
-                y_next = frontiers.at(j+1).y_coordinate - robot_home_y;
-                double d_gb_next = sqrt(x_next * x_next + y_next * y_next);
+                int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
+                int d_gb_next = trajectory_plan(next_frontier_x, next_frontier_y, robot_home_x, robot_home_y);
 
                 // calculate d_gbe
-                if(energy_above_th == true){
+                int d_gbe, d_gbe_next;
+                if(energy_above_th)
+                {
                     d_gbe = -d_gb;
-                }else{
+                    d_gbe_next = -d_gb_next;
+                }
+                else
+                {
                     d_gbe = d_gb;
+                    d_gbe_next = d_gb_next;
                 }
 
+                // calculate theta
+                double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+                double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+                double theta_g_next = atan2(robot_y - next_frontier_y, robot_x - next_frontier_x);
+                double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+                double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g_next) - M_PI));
 
-                // calculate successor function
-                suc_fct = w1 * d_g + w2 * theta + w3 * d_gb + w4 * d_gbe;
-                double suc_fct_next = w1 * d_g_next + w2 * theta_next + w3 * d_gb_next + w4 * d_gbe;
+                // calculate cost function
+                double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+                double cost_next = w1 * d_g_next + w2 * d_gb_next + w3 * d_gbe_next + w4 * theta_next;
 
-                if (suc_fct > suc_fct_next) {
-                        frontier_t temp = frontiers.at(j+1);
-                        frontiers.at(j + 1) = frontiers.at(j);
-                        frontiers.at(j) = temp;
+                // sort frontiers according to cost function
+                if(cost > cost_next)
+                {
+                    ROS_ERROR("w1:%d, w2:%d, w3:%d, w4:%d", w1, w2, w3, w4);
+                    ROS_ERROR("cost: %.2f > %.2f", cost, cost_next);
+                    frontier_t temp = frontiers.at(j+1);
+                    frontiers.at(j+1) = frontiers.at(j);
+                    frontiers.at(j) = temp;
                 }
             }
         }
-        x_last = robotPose.getOrigin().getX();
-        y_last = robotPose.getOrigin().getY();
-    } else
+        robot_last_x = robot_x;
+        robot_last_y = robot_y;
+    }
+    else
     {
-            ROS_INFO("Sorting not possible, no frontiers available!!!");
+        ROS_INFO("Sorting not possible, no frontiers available!!!");
     }
 }
 

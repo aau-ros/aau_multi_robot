@@ -39,6 +39,7 @@
         <param name="demonstrate" value="$(arg demonstrate)_val"/>
         <param name="frontier_selection" value="$(arg frontier_selection)" />
         <param name="recharging" value="$(arg recharging)" />
+        <rosparam file="$(find explorer)/param/cost_function_params.yaml" command="load" />
         <rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="global_costmap" />
         <rosparam file="$(find explorer)/param/simulation_costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find explorer)/param/simulation_local_costmap_params.yaml" command="load" />
