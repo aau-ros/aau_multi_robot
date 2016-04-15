@@ -23,6 +23,10 @@ parser.add_argument("--interface",dest='interface',nargs='?',type=str,default='w
 args, unknown = parser.parse_known_args()
 
 
+if os.environ.get('ROBOT_PLATFORM') == "pioneer3at":
+    os.system("sudo chmod a+rw /dev/ttyACM0")
+    os.system("sudo chmod a+rw /dev/ttyUSB0")
+
 
 if args.screen_output:
     output_type = "screen"
