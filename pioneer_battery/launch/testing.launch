@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node pkg="rosaria" type="RosAria" name="RosAria"/>
+    <node pkg="pioneer_battery" type="pioneer_battery" name="pioneer_battery" output="screen">
+        <rosparam file="$(find pioneer_battery)/param/pioneer_battery.yaml" command="load"/>
+    </node>
+
+</launch>

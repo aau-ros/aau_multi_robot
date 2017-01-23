@@ -94,25 +94,28 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a cpp library
-# add_library(pioneer_battery
-#   src/${PROJECT_NAME}/pioneer_battery.cpp
-# )
+## Declare a C++ library
+add_library(battery_calibration src/battery_calibration.cpp)
 
 ## Declare a cpp executable
-add_executable(measure src/measure.cpp)
+add_executable(pioneer_battery src/battery_measure.cpp)
+
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(measure roscpp rosaria)
+add_dependencies(pioneer_battery ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 
 ## Specify libraries to link a library or executable target against
- target_link_libraries(measure
-   ${catkin_LIBRARIES}
- )
+ target_link_libraries(pioneer_battery
+  battery_calibration
+  ${catkin_LIBRARIES}
+)
+
 
 #############
 ## Install ##
