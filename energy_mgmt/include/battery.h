@@ -7,6 +7,7 @@
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <energy_mgmt/battery_state.h>
 #include <explorer/Speed.h>
+#include "std_msgs/Float32.h"
 
 class battery
 {
@@ -19,7 +20,7 @@ public:
     /**
      * Compute the battery state.
      */
-    void compute();
+    virtual void compute() = 0;
 
     /**
      * Outputs the battery soc to the console.
@@ -52,7 +53,7 @@ private:
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_charge, sub_cmd_vel, sub_speed;
+    ros::Subscriber sub_charge, sub_cmd_vel, sub_speed, sub_soc, sub_time;
 
     /**
      * Publishers.
@@ -97,6 +98,12 @@ private:
     bool output_shown;
 
     /**
+     * TODO
+     * NEW, do we need this???
+     */
+    double total_time;
+
+    /**
      * The last time that the computations where carried out.
      */
     ros::Time time_last;
@@ -119,6 +126,17 @@ private:
      * Callback that is used to get the average speed of the robot.
      */
     void cb_speed(const explorer::Speed &msg);
+
+    /**
+     * Callback that is used to get the robot's state of charge.
+     */
+    void cb_soc(const std_msgs::Float32::ConstPtr& msg);
+
+    /**
+     * TODO: do we need this?
+     * Callback to get maximum time.
+     */
+    void totalTime(const std_msgs::Float32::ConstPtr& msg);
 };
 
 #endif  /* BATTERY_H */

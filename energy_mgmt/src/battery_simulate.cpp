@@ -42,7 +42,7 @@ battery::battery()
     sub_speed = nh.subscribe("avg_speed", 1, &battery::cb_speed, this);
 
     //TODO: do we need this?
-	sub_time = nh.subscribe("totalTime", 1, &battery::totalTime, this);
+    sub_time = nh.subscribe("totalTime", 1, &battery::totalTime, this);
 
 }
 
@@ -117,3 +117,5 @@ void battery::totalTime(const std_msgs::Float32::ConstPtr& msg)
 {
     total_time = ("%F", msg->data);
 }
+
+

@@ -1,0 +1,72 @@
+create sub classes for battery, one for simulation, one for pioneer robot, one for turtlebot:
+battery (abstract)
+ - output()
+ - publish()
+ - cb_charge()
+ - cb_cmd_vel()
+ - cb_speed()
+ - virtual compute() = 0
+bat_simulate
+bat_pioneer
+bat_turtle
+
+calculate battery parameters
+calculations could/should be based on pioneer measurements
+
+==========
+
+old approximated calculations for simulation:
+
+// increase battery charge
+if(state.charging == true){
+    charge += power_charging * time_diff_sec / 3600;
+
+    // battery is fully charged
+    if(charge >= charge_max){
+        state.charging = false;
+        charge = charge_max;
+        ROS_ERROR("Stopped recharging");
+    }
+
+}
+
+// decrease battery charge and compute standing and moving times
+else{
+    // robot is standing
+    if(speed_linear == 0 && speed_angular == 0){
+        charge -= power_standing * time_diff_sec / 3600;
+        time_standing += time_diff_sec;
+    }
+
+    // robot is moving
+    else{
+        charge -= power_moving * time_diff_sec / 3600;
+        time_moving += time_diff_sec;
+    }
+
+    // battery is dead
+    if(charge <= 0){
+        charge = 0;
+        ROS_ERROR("Battery depleted!");
+    }
+
+    // percentages of standing and moving times
+    perc_moving = time_moving / (time_moving + time_standing);
+    perc_standing = time_standing / (time_standing + time_moving);
+    if(perc_moving < 0.5){
+        perc_moving = 0.5;
+        perc_standing = 0.5;
+    }
+}
+
+// state of charge
+state.soc = charge / charge_max * 100;
+
+// remaining time until the battery is fully charged in seconds
+state.remaining_time_charge = (charge_max - charge) / power_charging * 3600;
+
+// remaining time the robot can still work in seconds
+state.remaining_time_run = charge * (perc_moving / power_moving + perc_standing / power_standing) * 3600;
+
+// remaining distance the robot can still travel in meters
+state.remaining_distance = speed_avg * charge / power_moving * 3600;
