@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -161,6 +161,7 @@ add_dependencies(adhoc_communication adhoc_communication_gencpp)
 ## Specify libraries to link a library or executable target against
  target_link_libraries(adhoc_communication
    ${catkin_LIBRARIES}
+   ${Boost_LIBRARIES}
  )
 
 

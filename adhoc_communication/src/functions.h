@@ -7,6 +7,7 @@
 
 #ifndef FUNCTIONS_H_
 #define FUNCTIONS_H_
+#include <boost/format.hpp>
 
 struct mac {
     unsigned char mac_adr[6];
