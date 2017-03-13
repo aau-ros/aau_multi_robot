@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <battery.h>
+#include <battery_simulate.h>
 #include <docking.h>
 
 int main(int argc, char** argv)
@@ -21,6 +22,11 @@ int main(int argc, char** argv)
     else{
         battery_simulate bat;
     }
+    */
+    
+    battery_simulate bat;
+    
+    /*
 
     // coordinate docking of robots for recharging
     docking doc;

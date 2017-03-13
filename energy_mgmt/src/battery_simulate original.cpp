@@ -38,11 +38,11 @@ battery_simulate::battery_simulate()
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
 
     // subscribe to topics
-    sub_charge = nh.subscribe("going_to_recharge", 1, &battery_simulate::cb_charge, this);
-    sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
+    sub_charge = nh.subscribe("going_to_recharge", 1, &battery::cb_charge, this);
+    sub_speed = nh.subscribe("avg_speed", 1, &battery::cb_speed, this);
 
     //TODO: do we need this?
-    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
+    sub_time = nh.subscribe("totalTime", 1, &battery::totalTime, this);
 
 }
 

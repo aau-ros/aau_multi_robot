@@ -121,7 +121,7 @@ include_directories(
 
 ## Declare a C++ library
 add_library(battery src/battery.cpp)
-#add_library(battery_simulate src/battery_simulate.cpp)
+add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 
 ## Add cmake target dependencies of the library
@@ -140,7 +140,7 @@ add_executable(energy_mgmt src/main.cpp)
 target_link_libraries(energy_mgmt
   battery
   docking
-  #battery_simulate
+  battery_simulate
   ${catkin_LIBRARIES}
 )
 
