@@ -9,6 +9,8 @@ int main(int argc, char** argv)
 
     // handle battery management for different robot platforms
     string platform;
+    
+    /*
     ros::get_environment_variable(platform, "ROBOT_PLATFORM");
     if(platform.compare("turtlebot") == 0){
         battery_turtle bat;
@@ -46,6 +48,8 @@ int main(int argc, char** argv)
         // sleep for 1/rate seconds
         loop_rate.sleep();
     }
+    
+    */
 
     return 0;
 }

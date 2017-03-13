@@ -121,6 +121,7 @@ include_directories(
 
 ## Declare a C++ library
 add_library(battery src/battery.cpp)
+#add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 
 ## Add cmake target dependencies of the library
@@ -133,12 +134,13 @@ add_executable(energy_mgmt src/main.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(energy_mgmt
   battery
   docking
+  #battery_simulate
   ${catkin_LIBRARIES}
 )
 

@@ -1,8 +1,8 @@
-#include <battery.h>
+#include <battery_simulate.h>
 
 using namespace std;
 
-battery::battery()
+battery_simulate::battery_simulate() : battery()
 {
     // read parameters
     nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
@@ -46,7 +46,7 @@ battery::battery()
 
 }
 
-void battery::compute()
+void battery_simulate::compute()
 {
     // calculate time difference
     ros::Duration time_diff = ros::Time::now() - time_last;
@@ -64,7 +64,7 @@ void battery::compute()
 
 }
 
-void battery::output()
+void battery_simulate::output()
 {
     if((int(state.soc) % 10) == 0)
     {
@@ -78,24 +78,24 @@ void battery::output()
         output_shown = false;
 }
 
-void battery::publish()
+void battery_simulate::publish()
 {
     pub_battery.publish(state);
 }
 
-void battery::cb_charge(const std_msgs::Empty::ConstPtr &msg)
+void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
     ROS_ERROR("Starting to recharge");
     state.charging = true;
 }
 
-void battery::cb_cmd_vel(const geometry_msgs::Twist &msg)
+void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
 }
 
-void battery::cb_speed(const explorer::Speed &msg)
+void battery_simulate::cb_speed(const explorer::Speed &msg)
 {
 
     // if the average speed is very low, there is probably something wrong, set it to the value from the config file
@@ -107,13 +107,13 @@ void battery::cb_speed(const explorer::Speed &msg)
     }
 }
 
-void battery::cb_soc(const std_msgs::Float32::ConstPtr& msg)
+void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr& msg)
 {
     state.soc = ("%F", msg->data);
 }
 
 //TODO: do we need this?
-void battery::totalTime(const std_msgs::Float32::ConstPtr& msg)
+void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr& msg)
 {
     total_time = ("%F", msg->data);
 }
