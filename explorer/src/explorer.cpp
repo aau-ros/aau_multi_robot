@@ -56,7 +56,7 @@ public:
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
     {
     
-        available_distance = 100; //F
+        //available_distance = 100; //F
 
         nh.param("frontier_selection",frontier_selection,1);
         nh.param("local_costmap/width",costmap_width,0);
@@ -225,9 +225,11 @@ public:
 	}
     void bat_callback(const energy_mgmt::battery_state::ConstPtr& msg)
     {
+        ROS_ERROR("Received battery state");
         battery_charge = (int) msg->soc;
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
+        ROS_ERROR("%f", available_distance);
 
         if(msg->charging == false && battery_charge == 100 && charge_time == 0){
             robot_state = fully_charged;

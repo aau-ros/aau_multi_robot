@@ -147,6 +147,8 @@ private:
     
     // Maximum speed of the robot
     double max_speed_linear;
+    
+    double remaining_power, total_power;
 };
 
 

@@ -23,7 +23,18 @@ battery_simulate::battery_simulate()
     perc_standing = 0.5;
     output_shown = false;
     time_last = ros::Time::now();
+    
+    
     max_speed_linear = 0.8;
+    total_power = 1000;
+    remaining_power = total_power;
+    speed_linear = max_speed_linear;
+    power_standing = 10;
+    power_moving = 20;
+    
+    
+    
+ 
 
 
     // initialize message
@@ -63,6 +74,13 @@ void battery_simulate::compute()
     if(time_diff_sec <= 0)
         return;
 
+    if(speed_linear > 0)
+        remaining_power -= power_standing;
+    else
+        remaining_power -= power_moving * max_speed_linear + power_standing;
+    
+    state.soc = remaining_power / total_power;
+
     /*
     if(speed_lienar > 0)
         //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
@@ -71,7 +89,9 @@ void battery_simulate::compute()
         state.remaining_time_run = (total_time * state.soc) / standing_consumption(100 * ((0.7551 * max_speed_linear) + 0.3959));    
     */
     
-    state.remaining_time_run--;
+    
+    
+    state.remaining_time_run = state.soc * total_power;
     state.remaining_distance = state.remaining_time_run;
     
     //state.remaining_time_run = 1000;

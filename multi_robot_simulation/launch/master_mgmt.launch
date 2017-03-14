@@ -98,6 +98,8 @@
             <arg name="use_sim_time" value="true" />
             <arg name="recharging" value="true" /> <!--F-->
         </include>
+        <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
+        </include>
     </group>
     <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/multi_robot.rviz" />-->
 </launch>
