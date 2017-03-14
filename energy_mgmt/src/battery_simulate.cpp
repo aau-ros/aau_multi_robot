@@ -69,11 +69,11 @@ battery_simulate::battery_simulate()
 void battery_simulate::compute()
 {
     if(state.charging) {
-        printf("%c[1;34mRecharging...\n", 27);
+        printf("%c[1;34mRecharging...\e[0m\n", 27);
         remaining_power += power_charging;
         state.soc = remaining_power / total_power;
         state.remaining_time_charge = 10;
-        printf("%c[1;34mSOC: %f\n", 27, state.soc);
+        printf("%c[1;34mSOC: %f\e[0m\n", 27, state.soc);
         if(state.soc * 100 >= 100) {
             state.soc = 100;
             state.charging = false;
@@ -81,7 +81,7 @@ void battery_simulate::compute()
             remaining_power = total_power;
             state.remaining_time_run = 60;
             state.remaining_distance = 60;
-            printf("%c[1;34mRecharging complete!\n", 27);
+            printf("%c[1;34mRecharging complete!\e[0m\n", 27);
             std_msgs::Empty msg;
             pub_charging_completed.publish(msg);
         }

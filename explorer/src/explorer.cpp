@@ -237,8 +237,11 @@ public:
 	
 	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
-        printf("%c[1;34mReceived charging complete!\n", 27);
-        
+        printf("%c[1;34mReceived charging complete!\e[0m\n", 27);
+        ROS_ERROR("3333333333333333333333333333333333333333333333333333333");
+        ROS_ERROR("%c[1;34mReceived charging complete!\e[0m\n", 27);
+        ROS_ERROR(" ");
+        printf("\t%c[1;34mReceived charging complete!\e[0m\n", 27);
         robot_state = fully_charged;
     }
 	
