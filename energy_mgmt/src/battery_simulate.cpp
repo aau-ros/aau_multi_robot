@@ -26,11 +26,12 @@ battery_simulate::battery_simulate()
     
     
     max_speed_linear = 0.8;
-    total_power = 1000;
+    total_power = 60; // NB: do not put it under 50-60, because otherwise robots do not have enough time to make computations...
     remaining_power = total_power;
     speed_linear = max_speed_linear;
-    power_standing = 10;
-    power_moving = 20;
+    power_standing = 1;
+    power_moving = 1.3;
+    power_charging = 5;
     
     
     
@@ -49,6 +50,7 @@ battery_simulate::battery_simulate()
 
     // advertise topics
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
+    pub_charging_completed = nh.advertise<std_msgs::Empty>("charging_completed", 1);
 
     // subscribe to topics
     sub_charge = nh.subscribe("going_to_recharge", 1, &battery_simulate::cb_charge, this);
@@ -66,41 +68,59 @@ battery_simulate::battery_simulate()
 
 void battery_simulate::compute()
 {
-    // calculate time difference
-    ros::Duration time_diff = ros::Time::now() - time_last;
-    time_last = ros::Time::now();
-    double time_diff_sec = time_diff.toSec();
-    // if there is no time difference to last computation then there is nothing to do
-    if(time_diff_sec <= 0)
-        return;
+    if(state.charging) {
+        printf("%c[1;34mRecharging...\n", 27);
+        remaining_power += power_charging;
+        state.soc = remaining_power / total_power;
+        state.remaining_time_charge = 10;
+        printf("%c[1;34mSOC: %f\n", 27, state.soc);
+        if(state.soc * 100 >= 100) {
+            state.soc = 100;
+            state.charging = false;
+            state.remaining_time_charge = 0;
+            remaining_power = total_power;
+            state.remaining_time_run = 60;
+            state.remaining_distance = 60;
+            printf("%c[1;34mRecharging complete!\n", 27);
+            std_msgs::Empty msg;
+            pub_charging_completed.publish(msg);
+        }
+    } else {
+        // calculate time difference
+        ros::Duration time_diff = ros::Time::now() - time_last;
+        time_last = ros::Time::now();
+        double time_diff_sec = time_diff.toSec();
+        // if there is no time difference to last computation then there is nothing to do
+        if(time_diff_sec <= 0)
+            return;
 
-    if(speed_linear > 0)
-        remaining_power -= power_standing;
-    else
-        remaining_power -= power_moving * max_speed_linear + power_standing;
-    
-    state.soc = remaining_power / total_power;
+        if(speed_linear > 0)
+            remaining_power -= power_standing;
+        else
+            remaining_power -= power_moving * max_speed_linear + power_standing;
+        
+        state.soc = remaining_power / total_power;
 
-    /*
-    if(speed_lienar > 0)
-        //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
-        //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
-    else
-        state.remaining_time_run = (total_time * state.soc) / standing_consumption(100 * ((0.7551 * max_speed_linear) + 0.3959));    
-    */
-    
-    
-    
-    state.remaining_time_run = state.soc * total_power;
-    state.remaining_distance = state.remaining_time_run;
-    
-    //state.remaining_time_run = 1000;
-    //state.remaining_distance = 1000;
-    //state.soc = 90;
-    ROS_ERROR("%f", state.remaining_distance);
-//     if you don't need the max. time left and the max. remaining distance, add 1 to the variable j of array[][j] in
-//     battery_measure.cpp, line 87 row 46 before publishing stateOfCharge (stoch.data)
-
+        /*
+        if(speed_lienar > 0)
+            //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
+            //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
+        else
+            state.remaining_time_run = (total_time * state.soc) / standing_consumption(100 * ((0.7551 * max_speed_linear) + 0.3959));    
+        */
+        
+        
+        
+        state.remaining_time_run = state.soc * total_power;
+        state.remaining_distance = state.remaining_time_run;
+        
+        //state.remaining_time_run = 1000;
+        //state.remaining_distance = 1000;
+        //state.soc = 90;
+        ROS_ERROR("%f", state.remaining_distance);
+    //     if you don't need the max. time left and the max. remaining distance, add 1 to the variable j of array[][j] in
+    //     battery_measure.cpp, line 87 row 46 before publishing stateOfCharge (stoch.data)
+    }
 }
 
 void battery_simulate::output()
@@ -126,6 +146,10 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
     ROS_ERROR("Starting to recharge");
     state.charging = true;
+    state.soc = 0;
+    remaining_power = 0;
+    state.remaining_time_run = 0;
+    state.remaining_distance = 0;
 }
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)

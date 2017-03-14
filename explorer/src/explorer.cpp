@@ -53,8 +53,14 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer {
 
 public:
+
+
+
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
     {
+    
+         if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
+            ros::console::notifyLoggerLevelsChanged();
     
         //available_distance = 100; //F
 
@@ -127,6 +133,10 @@ public:
 
             ROS_INFO("Robot name: %s    robot_id: %d", robot_name.c_str(), robot_id);
         }
+
+        
+        
+        
 
        /*
         *  CREATE LOG PATH
@@ -223,6 +233,16 @@ public:
 		ROS_INFO("************* INITIALIZING DONE *************");
 
 	}
+	
+	
+	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
+	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
+        printf("%c[1;34mReceived charging complete!\n", 27);
+        
+        robot_state = fully_charged;
+    }
+	
+	
     void bat_callback(const energy_mgmt::battery_state::ConstPtr& msg)
     {
         ROS_ERROR("Received battery state");
@@ -233,6 +253,7 @@ public:
 
         if(msg->charging == false && battery_charge == 100 && charge_time == 0){
             robot_state = fully_charged;
+            ROS_ERROR("22222222222222222222222222222222222222222222222222222222");
             recharge_cycles++;
         }
 
@@ -257,6 +278,7 @@ public:
 
 	void explore()
     {
+        
 		/*
 		 * Sleep is required to get the actual a
 		 * costmap updated with obstacle and inflated
@@ -284,6 +306,8 @@ public:
        // msg.data = "traveling home to recharge";
         ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",1);
         ros::Subscriber sub, sub2, sub3, pose_sub;
+        
+        ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
 
         // subscribe to battery management topics
         sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
@@ -297,7 +321,7 @@ public:
             // do nothing while recharging
             if(robot_state == charging)
             {
-                ROS_INFO("Waiting for battery to charge...");
+                ROS_ERROR("Waiting for battery to charge...");
                 if(charge_time > 0)
                     ros::Duration(charge_time).sleep();
                 else
@@ -740,7 +764,8 @@ public:
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                    ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
+                    //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
+                    ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 
                     // found a frontier, go there
                     if(goal_determined == true)
@@ -765,9 +790,12 @@ public:
                     // go charging
                     else
                     {
+                        if(charge_countdown > 0) //F
+                            charge_countdown = 0; //F
                         charge_countdown--;
                         if(charge_countdown <= 0){
-                            ROS_INFO("Could not determine goal, need to recharge!");
+                            //ROS_INFO("Could not determine goal, need to recharge!");
+                            ROS_ERROR("Could not determine goal, need to recharge!");
                             robot_state = going_charging;
                         }
                         else
@@ -909,7 +937,7 @@ public:
                 // robot reached home point, start recharging
                 if(robot_state == going_charging)
                 {
-                    ROS_INFO("At home for recharging");
+                    ROS_ERROR("At home for recharging");
                     // compute path length
                     exploration->trajectory_plan_store(home_point_x, home_point_y);
 

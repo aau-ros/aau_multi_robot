@@ -149,6 +149,8 @@ private:
     double max_speed_linear;
     
     double remaining_power, total_power;
+    
+    ros::Publisher pub_charging_completed;
 };
 
 
