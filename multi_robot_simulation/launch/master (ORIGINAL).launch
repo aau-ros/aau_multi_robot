@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="stage" pkg ="stage_ros" type="stageros" args="$(find multi_robot_simulation)/world/world.world" />
+    <param name="use_sim_time"  value="true"/>
+    <group ns="robot_0">
+        <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="robot_name" value="robot_0" />
+            <arg name="robot_prefix" value="/robot_0" />
+            <arg name="interface" value="lo" />
+            <arg name="use_sim_time" value="true" />
+            <arg name="mac" value="02:01:00:00:00:00" />
+            <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
+        </include>
+        <include file="$(find multi_robot_simulation)/launch/move_base.launch">
+            <arg name="robot" value="robot_0" />
+            <arg name="robot_pref" value="/robot_0" />
+            <arg name="output" value="log" />
+        </include>
+        <include file="$(find multi_robot_simulation)/launch/mapping.launch">
+            <arg name="robot" value="robot_0" />
+            <arg name="robot_prefix" value="/robot_0" />
+            <arg name="robot_local_map_frame" value="robot_0/map" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="use_sim_time" value="true" />
+            <arg name="xmax" value="35" />
+            <arg name="xmin" value="-35" />
+            <arg name="ymax" value="35" />
+            <arg name="ymin" value="-35" />
+        </include>
+        <include file="$(find map_merger)/launch/map_merger.launch">
+            <arg name="robot_name" value="robot_0" />
+            <arg name="robot_prefix" value="/robot_0" />
+            <arg name="robot_local_map_frame" value="robot_0/map" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="use_sim_time" value="true" />
+        </include>
+        <include file="$(find explorer)/launch/exploration.launch">
+            <arg name="robot_name" value="robot_0" />
+            <arg name="robot_prefix" value="/robot_0" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="frontier_selection" value="1" />
+            <arg name="use_sim_time" value="true" />
+        </include>
+    </group>
+    <group ns="robot_1">
+        <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="robot_name" value="robot_1" />
+            <arg name="robot_prefix" value="/robot_1" />
+            <arg name="interface" value="lo" />
+            <arg name="use_sim_time" value="true" />
+            <arg name="mac" value="02:02:00:00:00:00" />
+            <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
+        </include>
+        <include file="$(find multi_robot_simulation)/launch/move_base.launch">
+            <arg name="robot" value="robot_1" />
+            <arg name="robot_pref" value="/robot_1" />
+            <arg name="output" value="log" />
+        </include>
+        <include file="$(find multi_robot_simulation)/launch/mapping.launch">
+            <arg name="robot" value="robot_1" />
+            <arg name="robot_prefix" value="/robot_1" />
+            <arg name="robot_local_map_frame" value="robot_1/map" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="use_sim_time" value="true" />
+            <arg name="xmax" value="35" />
+            <arg name="xmin" value="-35" />
+            <arg name="ymax" value="35" />
+            <arg name="ymin" value="-35" />
+        </include>
+        <include file="$(find map_merger)/launch/map_merger.launch">
+            <arg name="robot_name" value="robot_1" />
+            <arg name="robot_prefix" value="/robot_1" />
+            <arg name="robot_local_map_frame" value="robot_1/map" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
+            <arg name="use_sim_time" value="true" />
+        </include>
+        <include file="$(find explorer)/launch/exploration.launch">
+            <arg name="robot_name" value="robot_1" />
+            <arg name="robot_prefix" value="/robot_1" />
+            <arg name="output" value="log" />
+            <arg name="log_path" value="15-11-20/14-06-42/1" />
+            <arg name="frontier_selection" value="1" />
+            <arg name="use_sim_time" value="true" />
+        </include>
+    </group>
+</launch>

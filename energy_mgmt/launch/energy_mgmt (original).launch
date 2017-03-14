@@ -5,12 +5,16 @@
  <!--   <arg name="num_robots"/> 		-->
  
     <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="screen">
-    <!--     <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/docking_common.yaml" command="load"/>
 
-       <param name="robot_prefix" value="$(arg robot_prefix)"/>		-->
+     <!--   <param name="robot_prefix" value="$(arg robot_prefix)"/>		-->
    <!--     <param name="move_base_frame" value="$(arg robot_prefix)/map"/>	-->
    <!--     <param name="num_robots" value="$(arg num_robots)"/>		-->
+    </node>
+    <node pkg="rosaria" type="RosAria" name="RosAria"/>
+    <node pkg="pioneer_battery" type="pioneer_battery" name="pioneer_battery" output="screen">
+        <rosparam file="$(find pioneer_battery)/param/pioneer_battery.yaml" command="load"/>
     </node>
 
 </launch>

@@ -144,6 +144,9 @@ private:
      * Callback to get maximum time.
      */
     void totalTime(const std_msgs::Float32::ConstPtr& msg);
+    
+    // Maximum speed of the robot
+    double max_speed_linear;
 };
 
 

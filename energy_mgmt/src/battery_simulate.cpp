@@ -11,6 +11,7 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_standing", power_standing);
     nh.getParam("energy_mgmt/charge_max", charge_max);
 
+    charge_max = 1000000;
 
     // initialize private variables
     charge = charge_max;
@@ -22,6 +23,7 @@ battery_simulate::battery_simulate()
     perc_standing = 0.5;
     output_shown = false;
     time_last = ros::Time::now();
+    max_speed_linear = 0.8;
 
 
     // initialize message
@@ -40,9 +42,14 @@ battery_simulate::battery_simulate()
     // subscribe to topics
     sub_charge = nh.subscribe("going_to_recharge", 1, &battery_simulate::cb_charge, this);
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
+    sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
 
     //TODO: do we need this?
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
+    
+    
+    state.remaining_time_run = 1000;
+    state.remaining_distance = 1000;
 
 }
 
@@ -56,9 +63,21 @@ void battery_simulate::compute()
     if(time_diff_sec <= 0)
         return;
 
-    //TODO: move calculations to pioneer_battery node or merge pioneer node into this one
-    state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * speed_linear) + 0.3959));
-    state.remaining_distance = state.remaining_time_run * speed_linear;
+    /*
+    if(speed_lienar > 0)
+        //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
+        //state.remaining_time_run = (total_time * state.soc) / (100 * ((0.7551 * max_speed_linear) + 0.3959));
+    else
+        state.remaining_time_run = (total_time * state.soc) / standing_consumption(100 * ((0.7551 * max_speed_linear) + 0.3959));    
+    */
+    
+    state.remaining_time_run--;
+    state.remaining_distance = state.remaining_time_run;
+    
+    //state.remaining_time_run = 1000;
+    //state.remaining_distance = 1000;
+    //state.soc = 90;
+    ROS_ERROR("%f", state.remaining_distance);
 //     if you don't need the max. time left and the max. remaining distance, add 1 to the variable j of array[][j] in
 //     battery_measure.cpp, line 87 row 46 before publishing stateOfCharge (stoch.data)
 
@@ -91,6 +110,7 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
+    ROS_ERROR("Received speed");
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
 }
@@ -107,8 +127,10 @@ void battery_simulate::cb_speed(const explorer::Speed &msg)
     }
 }
 
+// TODO - DO WE NEED THIS???
 void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr& msg)
 {
+    ROS_ERROR("Received SOC!!!");
     state.soc = ("%F", msg->data);
 }
 

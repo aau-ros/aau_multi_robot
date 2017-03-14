@@ -1,0 +1,8 @@
+global_costmap:
+   update_frequency: 0.2
+   publish_frequency: 0.5
+   static_map: true
+   rolling_window: false
+   width: 150.0
+   height: 150.0
+   max_obstacle_height: 1.0

@@ -26,10 +26,10 @@ int main(int argc, char** argv)
     
     battery_simulate bat;
     
-    /*
+    
 
     // coordinate docking of robots for recharging
-    docking doc;
+    //docking doc;
 
     // Frequency of loop
     double rate = 0.5; // Hz
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
         loop_rate.sleep();
     }
     
-    */
+    
 
     return 0;
 }

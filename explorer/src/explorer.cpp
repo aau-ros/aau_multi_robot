@@ -37,8 +37,10 @@
 
 #define OPERATE_ON_GLOBAL_MAP true
 #define OPERATE_WITH_GOAL_BACKOFF true
-#define EXIT_COUNTDOWN 5
-#define STUCK_COUNTDOWN 10
+//#define EXIT_COUNTDOWN 5
+#define EXIT_COUNTDOWN 500 //F
+//#define STUCK_COUNTDOWN 10
+#define STUCK_COUNTDOWN 1000 //F
 
 boost::mutex costmap_mutex;
 
@@ -53,6 +55,8 @@ class Explorer {
 public:
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
     {
+    
+        available_distance = 100; //F
 
         nh.param("frontier_selection",frontier_selection,1);
         nh.param("local_costmap/width",costmap_width,0);

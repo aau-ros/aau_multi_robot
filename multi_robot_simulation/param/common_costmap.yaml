@@ -1,0 +1,10 @@
+map_type: costmap
+transform_tolerance: 50
+obstacle_range: 2.5
+raytrace_range: 4.0
+inscribed_radius: 0.35
+circumscribed_radius: 0.4
+inflation_radius: 0.6
+cost_scaling_factor: 15.0
+lethal_cost_threshold: 100
+footprint: [[-0.12, -0.12], [-0.12, 0.12], [0.12, 0.12],[0.12, -0.12]]

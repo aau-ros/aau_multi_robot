@@ -1,0 +1,22 @@
+local_costmap:
+  update_frequency: 6
+  publish_frequency: 6
+  static_map: false
+  rolling_window: true
+  width: 8.0
+  height: 8.0
+  publish_voxel_map : true
+  unknown_cost_value : 255
+  track_unknown_space : true
+  origin_x: 0.0
+  origin_y: 0.0
+  origin_z: 0.0
+  unknown_threshold: 15
+  resolution: 0.05
+  restore_defaults: false
+  mark_threshold: 0
+  max_obstacle_height: 2.0
+  max_obstacle_range: 2.5
+  map_topic: map
+  z_resolution: 0.2
+  z_voxels: 10
