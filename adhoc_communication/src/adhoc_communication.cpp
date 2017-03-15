@@ -1,7 +1,9 @@
-/*!
- * \file adhoc_communication.cpp
- * \author Günther Cwioro
- * \brief Main file for the ad hoc communication node including the main function.
+/*
+ * ad_hoc_communication.cpp
+ *
+ *  Created on: 03.07.2013
+ *      Author: Günther Cwioro
+ *              g.cwioro@gmx.net
  *
  * Description:
  * This node implements a dynamic source routing protocol, which allows you to send data through a network of independent nodes.
@@ -48,6 +50,9 @@
  */
 
 
+#define DEBUG
+
+
 #include "header.h"
 
 bool getGroupStateF(adhoc_communication::GetGroupState::Request &req, adhoc_communication::GetGroupState::Response &res)
@@ -82,10 +87,36 @@ bool getGroupStateF(adhoc_communication::GetGroupState::Request &req, adhoc_comm
     }
 }
 
+uint8_t findActiveCrRouteUnicast(unsigned char* src, unsigned char* dest)
+{
+    boost::unique_lock<boost::mutex> lock_mc_groups(mtx_cr_entries);
+    for (list<cr_entry>::iterator i = cr_entries_l.begin(); i != cr_entries_l.end(); i++)
+    {
+        uint8_t relay_index = (*i).isRelay(src, dest);
+        if (relay_index != 255)
+        {
+            return relay_index;
+        }
+    }
+    return -1;
+}
 
-/*!
- * \brief Shuts down the rode node.
- */
+cr_route findActiveCrRouteMulticast(unsigned char* src, std::string group)
+{
+    cr_route result;
+    boost::unique_lock<boost::mutex> lock_mc_groups(mtx_cr_entries);
+    for (list<cr_entry>::iterator i = cr_entries_l.begin(); i != cr_entries_l.end(); i++)
+    {
+        result = (*i).isMcRelay(src, group);
+        if (result.relay_index != 255)
+        {
+            return result;
+        }
+    }
+    result.relay_index = -1;
+    return result;
+}
+
 void shutDown()
 {
     ros::shutdown();
@@ -98,13 +129,6 @@ bool shutDownRos(adhoc_communication::ShutDown::Request &req, adhoc_communicatio
     return true;
 }
 
-/*!
- * \brief Service to tell the node to attempt to connect to a multicast group.
- * \param [in] req The service request object.
- * \param [out] res The service response object.
- *
- * Implements the ROS service join_mc_group to tell a node to connect to a multicast group.
- */
 bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_communication::ChangeMCMembership::Response &res)
 {
     /* Description:
@@ -236,8 +260,8 @@ bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_co
 
                 resendUnackLinkFrame("", r_act_frame.header_.id, r_act_frame.header_.mac_destination, network_string, FRAME_TYPE_MC_ACTIVATION);
 
-                ROS_INFO("ACTIVATE MC ROUTE: MC GROUP[%s] NEXT HOP[%s]", t->group_name_.c_str(), getMacAsStr(t->route_uplink_->next_hop).c_str());
-                ROS_INFO("SUCCESSFULLY JOINED GROUP MC: [%s]", req.group_name.c_str());
+                ROS_INFO("Activate mc route: mc group[%s] next hop[%s]", t->group_name_.c_str(), getMacAsStr(t->route_uplink_->next_hop).c_str());
+                ROS_INFO("Successfully joined group mc: [%s]", req.group_name.c_str());
 
                 socketSend(network_string);
 #ifdef PERFORMANCE_LOGGING_MC_LINK_SUMMARY
@@ -338,6 +362,66 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
             res.neigbors.push_back(hn);
     }
 
+    return true;
+}
+
+bool SendEmAuction(adhoc_communication::SendEmAuction::Request &req, adhoc_communication::SendEmAuction::Response &res)
+{
+    /* Description:
+     * Service call to send an auction for energy management.
+     */
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    unsigned long time_call = getMillisecondsTime();
+#endif
+
+    ROS_DEBUG("Service called to send energy management auction...");
+    string s_msg = getSerializedMessage(req.auction);
+    /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
+    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_AUCTION, req.topic);
+
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    Logging::logServiceCalls("SendEmAuction", time_call, getMillisecondsTime(), s_msg.size(), res.status);
+#endif
+    return true;
+}
+
+bool SendEmDockingStation(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res)
+{
+    /* Description:
+     * Service call to send the location and state of a docking station.
+     */
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    unsigned long time_call = getMillisecondsTime();
+#endif
+
+    ROS_DEBUG("Service called to send location and state of a docking station...");
+    string s_msg = getSerializedMessage(req.docking_station);
+    /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
+    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_DOCKING_STATION, req.topic);
+
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    Logging::logServiceCalls("SendEmDockingStation", time_call, getMillisecondsTime(), s_msg.size(), res.status);
+#endif
+    return true;
+}
+
+bool SendEmRobot(adhoc_communication::SendEmRobot::Request &req, adhoc_communication::SendEmRobot::Response &res)
+{
+    /* Description:
+     * Service call to send the state of a robot.
+     */
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    unsigned long time_call = getMillisecondsTime();
+#endif
+
+    ROS_DEBUG("Service called to send state of a robot...");
+    string s_msg = getSerializedMessage(req.robot);
+    /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
+    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_ROBOT, req.topic);
+
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    Logging::logServiceCalls("SendEmRobot", time_call, getMillisecondsTime(), s_msg.size(), res.status);
+#endif
     return true;
 }
 
@@ -651,10 +735,10 @@ bool sendRouteRequest(string* dst, routing_entry* route)
     }
 
     /*SEND route request*/
-    ROS_INFO("SEND ROUTE REQUEST: HOST[%s] ID[%u]", dst->c_str(), rr.header_.id);
+    ROS_INFO("Send route request: host[%s] id[%u]", dst->c_str(), rr.header_.id);
     string network_string = rr.getRequestAsNetworkString(src_mac);
     socketSend(network_string);
-#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY    
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
     Logging::increaseProperty("num_rreq_sent");
     Logging::increaseProperty("num_total_bytes_sent", network_string.length());
 #endif
@@ -748,7 +832,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
     if (!bcast)
     {
-        ROS_DEBUG("DESTINATION: [%s]", hostname_destination.c_str());
+        ROS_DEBUG("----> Sending packet to destination: [%s]", hostname_destination.c_str());
         /* Try to find unicast route */
         send_successfully = getRoute(route, hostname_destination);
 
@@ -760,7 +844,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
             if (mc_t != NULL && mc_t->connected && mc_t->activated)
             {
 
-                ROS_DEBUG("DESTINATION IS A MC GROUP: [%s]", mc_t->group_name_.c_str());
+                ROS_DEBUG("Destination is a mc group: [%s]", mc_t->group_name_.c_str());
                 mc_frame = true;
                 send_successfully = true;
                 bcast = true;
@@ -770,7 +854,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
                 if (mc_t->root && mc_t->downlinks_l_.size() == 0)
                 {
-                    ROS_DEBUG("THERE ARE NO OTHER MEMBERS IN THE MC GROUP [%s]", mc_t->group_name_.c_str());
+                    ROS_DEBUG("There are no other members in the mc group [%s]. Returning true.", mc_t->group_name_.c_str());
                     return true;
                 }
             }
@@ -778,6 +862,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
         if (!send_successfully)
         {
+	    ROS_DEBUG("No route known. Attempting to find one...");
             send_successfully = sendRouteRequest(&hostname_destination, &route);
         }
     }
@@ -792,7 +877,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
     if (!send_successfully)
     {
-        ROS_WARN("NO ROUTED FOUND TO [%s]", hostname_destination.c_str());
+        ROS_WARN("No route found to [%s] though I've tried hard! Dropping packet", hostname_destination.c_str());
         return false;
     }
 
@@ -815,11 +900,11 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
     uint32_t packet_size = payload_len + (frames_count * header_len);
 
-    ROS_DEBUG("PACKET INFO: PL[%u] PL SPACE[%u] HEADER LEN[%u] SIZE[%u]", payload_len, payload_space, header_len, frames_count);
+    ROS_DEBUG("Packet info: ID[%u] Total length[%u] Available space in frame[%u] header len[%u] num total frames[%u]", packet_id_, payload_len, payload_space, header_len, frames_count);
     /*Check if packet is not too large and the frame have also space for payload data*/
     if (packet_size >= (unsigned) max_packet_size)
     {
-        ROS_ERROR("Packet[%uBYTES] is too big! Try to increase the 'max_packet_size' parameter [%uBYTES]", packet_size, max_packet_size);
+        ROS_ERROR("Packet[%u bytes] is too big! Try to increase the 'max_packet_size' parameter [%u bytes]", packet_size, max_packet_size);
         return false;
     }
     else if (header_len >= (unsigned) max_frame_size)
@@ -879,8 +964,9 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
         {
             McPosAckObj* ack_obj = NULL;
             {
-                /* safe an McPosAckObj before sending, because after sending it might be too late, because the acknowledgment of the receiver could already be here
-                   the same for the unicast*/
+		/* safe an McPosAckObj before sending, because after sending it
+ 		 * might be too late, because the acknowledgment of the receiver could already
+                 * be here the same for the unicast */
                 boost::unique_lock<boost::mutex> lock_mc(mtx_mc_groups);
                 McTree* mc_t = mc_handler.getMcGroup(&hostname_destination);
                 ack_obj = new McPosAckObj(&f, mc_t);
@@ -892,7 +978,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
         } /* UNICAST */
         else if (!packet.isMcFrame())
         {
-            /*SAFE routed frame as unacknowledged*/
+            /*save routed frame as unacknowledged*/
             {
                 boost::unique_lock<boost::mutex> lock(mtx_unack_routed_frame);
 
@@ -907,7 +993,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
             }
             // if (route.hobs > 2)
             {
-                /*SAFE link frame as unacknowledged*/
+                /*save link frame as unacknowledged*/
 
                 resendUnackLinkFrame(hostname, f.header_.frame_id, route.next_hop, network_string, FRAME_TYPE_TRANSPORT_DATA);
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
@@ -919,15 +1005,15 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
         }
 
         /* Wait a time for every nack mc frame to prevent network jam */
-        if (packet.isNack() && f.header_.packet_sequence_num % 10 == 0)//todo 
+        if (packet.isNack() && f.header_.packet_sequence_num % 10 == 0)//todo
             sleepMS(5);
 
         socketSend(network_string);
-        //ROS_INFO("SEND ROUTED FRAME: ID[%u] DESTINATION HOST[%s] NEXT HOP[%s] ROUTE ID[%u]", f.header_.frame_id, route.hostname_destination.c_str(), getMacAsStr(route.next_hop).c_str(), route.id);
+        ROS_DEBUG("Sent frame: packetId[%u] frameId[%u] dest[%s] nextHop[%s] routeid[%u]", f.header_.packet_id,f.header_.frame_id, route.hostname_destination.c_str(), getMacAsStr(route.next_hop).c_str(), route.id);
 #ifdef DELAY
         if (simulation_mode)
             boost::this_thread::sleep(boost::posix_time::milliseconds(delay)); //usleep(delay);
-#endif     
+#endif
 
 
 #ifdef PERFORMANCE_LOGGING_MC_LINK_SUMMARY
@@ -1001,23 +1087,23 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
         frames.pop_front();
     }
     if (!bcast)
-        ROS_INFO("SUCCESSFULLY SEND PACKET: ID[%u] DEST[%s]", packet_id_, hostname_destination.c_str());
+        ROS_DEBUG("<--- Successfully send packet: ID[%u] Dest[%s] # frames[%u]", packet_id_, hostname_destination.c_str(),frames_count);
     else if (packet.isMcFrame())
     {
         send_successfully = true;
         if (packet.isNack())
         {
-            ROS_INFO("SUCCESSFULLY SEND MC NEGATIVE ACK PACKET: ID[%u] GROUP[%s]", packet_id_, hostname_destination.c_str());
+            ROS_DEBUG("<--- Successfully send multicast NACK packet: id[%u] group[%s]", packet_id_, hostname_destination.c_str());
         }
         else
         {
-            ROS_INFO("SUCCESSFULLY SEND MC POSITIVE ACK PACKET: ID[%u] GROUP[%s]", packet_id_, hostname_destination.c_str());
+            ROS_DEBUG("<--- Successfully send mc positive ack packet: id[%u] group[%s]", packet_id_, hostname_destination.c_str());
         }
     }
     else
     {
         send_successfully = true;
-        ROS_INFO("SEND BROADCAST PACKET: ID[%u]", packet_id_);
+        ROS_DEBUG("Send broadcast packet: id[%u]", packet_id_);
     }
 
     return send_successfully;
@@ -1050,6 +1136,15 @@ int main(int argc, char **argv)
     ros::NodeHandle b_pub;
 
 
+
+#ifdef DEBUG
+    // ENABLE DEBUGGING OUTPUT
+    if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+       ros::console::notifyLoggerLevelsChanged();
+    }
+#endif
+
+
     n_priv = &b;
     n_pub = &b_pub;
 
@@ -1071,13 +1166,14 @@ int main(int argc, char **argv)
         hostname = std::string(hostname_c);
     }
 
+#define PRINT_PARAMS
 #ifdef PRINT_PARAMS
-    ROS_ERROR("NODE STARTED WITH FOLLOWING SETTINGS:");
-    ROS_ERROR("HOSTNAME[%s] MAC[%s] INTERFACE[%s]", hostname.c_str(), getMacAsStr(src_mac).c_str(), interface);
-    ROS_ERROR("num_link_retrans=%u num_e2e_retrans=%u num_rreq=%u", num_link_retrans, num_e2e_retrans, num_rreq);
-    ROS_ERROR("max_packet_size=%u max_frame_size=%u hop_limit_min=%u hop_limit_max=%u", max_packet_size, max_frame_size, hop_limit_min, hop_limit_max);
-    ROS_ERROR("hop_limit_increment=%u beacon_interval=%u", hop_limit_increment, beacon_interval);
-    ROS_ERROR("rebuild_mc_tree=%s", getBoolAsString(rebuild_mc_tree).c_str());
+    ROS_INFO("NODE STARTED WITH FOLLOWING SETTINGS:");
+    ROS_INFO("hostname[%s] MAC[%s] interface[%s]", hostname.c_str(), getMacAsStr(src_mac).c_str(), interface);
+    ROS_INFO("num_link_retrans=%u num_e2e_retrans=%u num_rreq=%u", num_link_retrans, num_e2e_retrans, num_rreq);
+    ROS_INFO("max_packet_size=%u max_frame_size=%u hop_limit_min=%u hop_limit_max=%u", max_packet_size, max_frame_size, hop_limit_min, hop_limit_max);
+    ROS_INFO("hop_limit_increment=%u beacon_interval=%u", hop_limit_increment, beacon_interval);
+    ROS_INFO("enable_cooperative_relaying=%s rebuild_mc_tree=%s", getBoolAsString(enable_cooperative_relaying).c_str(), getBoolAsString(rebuild_mc_tree).c_str());
 #endif
 
 
@@ -1111,15 +1207,21 @@ int main(int argc, char **argv)
 
     ros::ServiceServer getGroupStatusS = n_pub->advertiseService(robot_prefix + node_prefix + "get_group_state", getGroupStateF);
 
+    ros::ServiceServer sendEmAuctionS = n_pub->advertiseService("send_em_auction", SendEmAuction);
+    ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService("send_em_docking_station", SendEmDockingStation);
+    ros::ServiceServer sendEmRobotS = n_pub->advertiseService("send_em_robot", SendEmRobot);
+
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_new_robot, 1000, true));
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_remove_robot, 1000, true));
 
-    Logging::init(n_pub, &hostname);
+    Logging::init(n_priv, &hostname);
 
-    signal(SIGSEGV, handler); // install handler  
+    signal(SIGSEGV, handler); // install handler
 
     /*Tutorial*/
     //ros::ServiceServer sendQuaternionS = n->advertiseService("send_quaternion", sendQuaternion);
+
+
     /*INIT THREADS*/
 
     boost::thread receiveFramesT(receiveFrames);
@@ -1244,6 +1346,67 @@ int main(int argc, char **argv)
     return 0;
 }
 
+void resendCRFrame(ack_cr_info frame, uint8_t relay_index, std::list<ack_cr_info>* list, boost::mutex* mutex_4_l)
+{
+    Logging::increaseProperty("running_unicast_cr_threads");
+
+    sleepMS(INTERVAL_TO_RETRANSMIT_LINK_FRAMES * 3 / 4 + relay_index * RELAY_INDEX_MULTIPLICATOR);
+
+    if (!boost::this_thread::interruption_requested())
+    {
+
+        boost::unique_lock<boost::mutex> lock(*mutex_4_l);
+        std::list<ack_cr_info>::iterator cr_frame_it = std::find(list->begin(), list->end(), frame);
+
+        if (cr_frame_it != list->end())
+        {
+
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
+            Logging::increaseProperty("num_data_frames_relayed");
+            Logging::increaseProperty("num_total_bytes_sent", frame.network_string.length());
+#endif
+
+            (*cr_frame_it).retransmitted = true;
+            //ROS_ERROR("RESEND FRAME AS RELAY: ID[%u] INDEX[%u] CONFIRMER MAC[%s] SOURCE HOST[%s]", frame.id, relay_index, getMacAsStr(frame.frame_dst_mac).c_str(), frame.source_host.c_str());
+            socketSend(frame.network_string);
+        }
+    }
+
+    Logging::decreaseProperty("running_unicast_cr_threads");
+
+    return;
+
+}
+
+bool gotMcRelayAck(McAckFrame* f)
+{
+    boost::unique_lock<boost::mutex> lock(mtx_unack_mc_cr_frames);
+
+    for (std::list<ack_cr_info>::iterator i = unack_mc_cr_frames_l.begin(); i != unack_mc_cr_frames_l.end();)
+    {
+        if ((*i).id == f->header_.packet_id && (*i).seq == f->header_.frame_seq_num && (*i).source_host.compare(f->hostname_source_) == 0 && (*i).mc_group.compare(f->mc_group_) == 0 && compareMac((*i).frame_dst_mac, f->eh_h_.eh_source))
+        {
+
+            // ROS_ERROR("GOT ACK OF CR MC FRAME: ID[%u] SOURCE MAC[%s]", (*i).id, getMacAsCStr(f->eh_h_.eh_source));
+
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
+            Logging::increaseProperty("num_acknowledgments_received_relay");
+            Logging::increaseProperty("num_total_bytes_received", f->buffer_str_len_);
+#endif
+
+            unack_mc_cr_frames_l.erase(i);
+            return true;
+        }
+        else if (getMillisecondsTime() - (*i).ts >= MAX_TIME_CACHE_UNACK_CR_FRAMES)
+        {
+            ROS_WARN("Drop unacknowleged cr frame: id[%u] source mac[%s]", (*i).id, getMacAsStr(f->eh_h_.eh_source).c_str());
+            i = unack_mc_cr_frames_l.erase(i);
+        }
+        else
+            i++;
+    }
+}
+
 bool gotAck(AckLinkFrame* inc_frame)
 {
     /* Description:
@@ -1281,7 +1444,7 @@ bool gotAck(AckLinkFrame* inc_frame)
 #ifdef PERFORMANCE_LOGGING_UC_LINK_FRAMES
             Logging::logUcLinkTransmission(*i);
 #endif
-            ROS_INFO("GOT ACK OF LINK FRAME: ID[%u] SOURCE MAC[%s] TYPE[%s]", (*i).frame_id, getMacAsStr((*i).mac).c_str(), frame_types[(*i).type].c_str());
+            ROS_DEBUG("Received DL-ACK: id[%u] src mac[%s] type[%s]", (*i).frame_id, getMacAsStr((*i).mac).c_str(), frame_types[(*i).type].c_str());
             unack_link_frames_l.remove(*i);
             return true;
         }
@@ -1298,7 +1461,7 @@ bool gotAck(AckLinkFrame* inc_frame)
                     ROS_INFO("GOT ACK OF CR FRAME: ID[%u] SOURCE MAC[%s]", (*i).id, getMacAsStr(inc_frame->eh_h_.eh_source).c_str());
                 else if (compareMac(inc_frame->header_.mac_destination_, src_mac))
                 {
-                    ROS_INFO("GOT ACK OF RETRANSMITTED CR FRAME: ID[%u] SOURCE MAC[%s]", (*i).id, getMacAsStr(inc_frame->eh_h_.eh_source).c_str());
+                    ROS_DEBUG("GOT ACK OF RETRANSMITTED CR FRAME: ID[%u] SOURCE MAC[%s]", (*i).id, getMacAsStr(inc_frame->eh_h_.eh_source).c_str());
                     sendLinkAck((*i).frame_src_mac, (*i).frame_dst_mac, (*i).id, (*i).source_host, false, (*i).frame_type);
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
                     Logging::increaseProperty("num_acknowledgments_relayed");
@@ -1317,7 +1480,7 @@ bool gotAck(AckLinkFrame* inc_frame)
             }
             else if (getMillisecondsTime() - (*i).ts >= MAX_TIME_CACHE_UNACK_CR_FRAMES)
             {
-                ROS_WARN("DROP UNACKNOWLEGED CR FRAME: ID[%u] SOURCE MAC[%s]", (*i).id, getMacAsStr(inc_frame->eh_h_.eh_source).c_str());
+                ROS_WARN("Drop unacknowleged cr frame: id[%u] source mac[%s]", (*i).id, getMacAsStr(inc_frame->eh_h_.eh_source).c_str());
                 i = unack_cr_frames_l.erase(i);
             }
             else
@@ -1327,14 +1490,99 @@ bool gotAck(AckLinkFrame* inc_frame)
     return false;
 }
 
+void processCrSelectionFrame(CrSelectionFrame* f)
+{
+    /* Check if i am the destination */
+    if (!compareMac(f->eh_h_.eh_dest, src_mac))
+    {
+        return;
+    }
+
+    sendLinkAck(f->eh_h_.eh_source, src_mac, f->header_.id, "", false, FRAME_TYPE_CR_SELECTION);
+
+    cr_entry cr_route(f->eh_h_.eh_source, f->header_.relay_connection);
+
+    boost::unique_lock<boost::mutex> lock_neighbors(mtx_cr_entries);
+
+    std::list<cr_entry>::iterator find_relay = std::find(cr_entries_l.begin(), cr_entries_l.end(), cr_route);
+    /* return if there is no entry*/
+    if (find_relay == cr_entries_l.end())
+    {
+        return;
+    }
+
+    (*find_relay).activate(f->eh_h_.eh_source, f->header_.relay_index);
+    ROS_ERROR("GOT CR SELECTION FROM %s FOR %s RELAY INDEX[%u]", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(f->header_.relay_connection).c_str(), f->header_.relay_index);
+
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
+    Logging::increaseProperty("num_relay_selection_received");
+    Logging::increaseProperty("num_total_bytes_received", f->buffer_str_len_);
+#endif
+
+}
+
+void processCrDetectionFrame(CrDetectionFrame* f)
+{
+    /* check if frame is 4 me*/
+    if (!compareMac(f->header_.mac1, src_mac) && !compareMac(f->header_.mac2, src_mac))
+        return;
+
+    unsigned char* mac_dst = compareMac(f->header_.mac1, src_mac) ? f->header_.mac2 : f->header_.mac1;
+    uint8_t relay_index = -1;
+
+    relay_infos relay_info(mac_dst, f->eh_h_.eh_source);
+    {
+        boost::unique_lock<boost::mutex> lock_neighbors(mtx_relays);
+        std::list<relay_infos>::iterator find_relay = std::find(relays_l.begin(), relays_l.end(), relay_info);
+
+        /* NEW RELAY CONNECTION*/
+        if (find_relay != relays_l.end())
+        {
+            if ((*find_relay).addRelay(f->eh_h_.eh_source))
+            {
+                ROS_INFO("NEW RELAY[%s] ADDED FOR CONNECTION TO %s", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(mac_dst).c_str());
+            }
+            else
+            {
+                ROS_INFO("RELAY[%s] ALREADY EXSISTS FOR CONNECTION TO %s", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(mac_dst).c_str());
+            }
+
+            relay_index = (*find_relay).getIndex(f->eh_h_.eh_source);
+        }/* ADD RELAY IF NOT EXSISTS*/
+        else
+        {
+            ROS_INFO("ADD RELAY[%s] FOR CONNECTION TO %s", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(mac_dst).c_str());
+            relays_l.push_back(relay_info);
+            relay_index = relay_info.getIndex(f->eh_h_.eh_source);
+        }
+    }
+
+    CrSelectionFrame crs(f->eh_h_.eh_source, mac_dst, relay_index);
+    string network_string = crs.getFrameAsNetworkString(src_mac);
+
+    /*SAFE the cr selection as unacknowledged*/
+    resendUnackLinkFrame("", crs.header_.id, crs.eh_h_.eh_dest, network_string, FRAME_TYPE_CR_SELECTION);
+
+    socketSend(network_string);
+
+    ROS_INFO("SEND CR ACTIV FRAME TO %s FOR %s ", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(mac_dst).c_str());
+
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
+    Logging::increaseProperty("num_relay_detection_received");
+    Logging::increaseProperty("num_relay_selection_sent");
+    Logging::increaseProperty("num_total_bytes_sent", network_string.length());
+    Logging::increaseProperty("num_total_bytes_received", f->buffer_str_len_);
+#endif
+}
+
 void receiveFrames()
 {
 
     /* Description:
-     * This function receive all incoming frames on the interface and process them.
+     * This function receives all incoming frames on the interface and process them.
      * Behavior of the function will be explained within the function.
      *
-     * NOTE: This function runs as own thread.
+     * NOTE: This function runs as an own thread.
      */
     unsigned char* buffer_incoming = new unsigned char[ETHER_MAX_LEN]; //ETHER_MAX_LEN]; /* Buffer for ethernet frame (maximum size)*/
 
@@ -1345,6 +1593,13 @@ void receiveFrames()
     for (uint8_t i = 0; i < max_safed_frames; i++)
         frames_as_strings.push_back(std::string(" "));
 
+    float random_drop = 0;
+    if (loss_ratio > 0)
+    {
+        ROS_ERROR("------------------------------------------------------------------------------");
+        ROS_ERROR("----------------------LOSE FRAMES IS ACTIVATED!!------------------------------");
+        ROS_ERROR("------------------------------------------------------------------------------");
+    }
 
     while (ros::ok())
     {
@@ -1392,13 +1647,12 @@ void receiveFrames()
 
         if (loss_ratio > 0)
         {
-            if (incoming_frame_count == 0)
-            {
-                incoming_frame_count++;
-                ROS_ERROR("------------------------------------------------------------------------------");
-                ROS_ERROR("----------------------LOSE FRAMES IS ACTIVATED!!------------------------------");
-                ROS_ERROR("------------------------------------------------------------------------------");
-            }
+	    random_drop = rand() / RAND_MAX;
+            if (random_drop < loss_ratio)
+	        continue;
+        }
+
+	/*
             if (frame_type == FRAME_TYPE_TRANSPORT_DATA || frame_type == FRAME_TYPE_TRANSPORT_ACK)
             {
                 incoming_frame_count++;
@@ -1406,18 +1660,20 @@ void receiveFrames()
                 if ((float) incoming_frames_lost / (float) incoming_frame_count <= loss_ratio)
                 {
                     incoming_frames_lost++;
+
                     continue;
                 }
             }
         }
+	*/
 
-#ifdef USE_CHANNEL_MODEL                 
+#ifdef USE_CHANNEL_MODEL
         process_frame = isReachable(ethernet_header->eh_source);
-#endif                  
         if (!process_frame)
         {
             continue;
         }
+#endif
 
 
         /* Check if the current frame is not equal to the last ones */
@@ -1454,7 +1710,7 @@ void receiveFrames()
             if (frame.correct_crc_)
             {
 
-                if (iAmMember(frame.mc_group_))
+                if (iAmMember(frame.mc_group_) || findActiveCrRouteMulticast(frame.eh_h_.eh_source, frame.mc_group_).relay_index != 255)
                 {
                     boost::unique_lock<boost::mutex> lock(mtx_requested_frames);
                     requested_frames_l.push_back(frame);
@@ -1561,6 +1817,33 @@ void receiveFrames()
                 ROS_ERROR("McDisconnectionFrame: CRC INCORECCT!");
 
 
+        }/*PROCESS CrDetectionFrame*/
+        else if (frame_type == FRAME_TYPE_CR_DETECTION)
+        {
+            CrDetectionFrame cr_detec_frame(buffer_incoming);
+
+            if (cr_detec_frame.correct_crc_)
+            {
+                buffer_size = cr_detec_frame.buffer_str_len_;
+                processCrDetectionFrame(&cr_detec_frame);
+            }
+            else
+                ROS_ERROR("CrDetectionFrame: CRC INCORECCT!");
+
+
+        }/*PROCESS CrSelectionFrame*/
+        else if (frame_type == FRAME_TYPE_CR_SELECTION) // && packet_4_me )
+        {
+            CrSelectionFrame cr_select_frame(buffer_incoming);
+
+            if (cr_select_frame.correct_crc_)
+            {
+                buffer_size = cr_select_frame.buffer_str_len_;
+                processCrSelectionFrame(&cr_select_frame);
+            }
+            else
+                ROS_ERROR("CrSelectionFrame: CRC INCORECCT!");
+
         }
         else if (frame_type == FRAME_TYPE_BROADCAST)
         {
@@ -1599,7 +1882,7 @@ void receiveFrames()
                     }
                     adhoc_communication::RecvString data;
                     data.src_robot = bcast.hostname_source_;
-                    data.data = bcast.payload_;                  
+                    data.data = bcast.payload_;
                     publishMessage(data, bcast.topic_);
                 }
 
@@ -1653,10 +1936,41 @@ void publishMessage(message m, string topic)
             publishers_l.front().publish(m);
             //todo check if ledge = true is working
         }
-    }    catch (...)
+    }
+    catch (...)
     {
         ROS_ERROR("IN PUBLISH MESSAGE: NODE THROWS EXCEPTION!");
     }
+}
+
+void lostRelayConnection(unsigned char* mac)
+{
+    {
+        boost::unique_lock<boost::mutex> lock_relays(mtx_relays);
+        for (std::list<relay_infos>::iterator i = relays_l.begin(); i != relays_l.end(); i++)
+        {
+            if ((*i).removeRelay(mac))
+            {
+                ROS_WARN("LOST CONNECTION TO RELAY[%s] FOR [%s]", getMacAsStr(mac).c_str(), getMacAsStr((*i).dst_mac).c_str());
+            }
+        }
+    }
+
+    boost::unique_lock<boost::mutex> lock_relays(mtx_cr_entries);
+    for (std::list<cr_entry>::iterator i = cr_entries_l.begin(); i != cr_entries_l.end();)
+    {
+        if ((*i).deactivate(mac))
+        {
+            ROS_ERROR("LOST CONNECTION TO RELAY CLIENT[%s]", getMacAsStr(mac).c_str());
+            ROS_ERROR("REMOVE RELAY ENTRY FROM %s TO %s", getMacAsStr((*i).first_mac).c_str(), getMacAsStr((*i).second_mac).c_str());
+            i = cr_entries_l.erase(i);
+
+        }
+        else
+            i++;
+    }
+
+    return;
 }
 
 void sendBeacons()
@@ -1673,6 +1987,7 @@ void sendBeacons()
     Beacon hf = Beacon(src_mac, hostname);
     string beacon = hf.getFrameAsNetworkString();
     uint16_t beacon_len = beacon.length();
+    unsigned long int time_since_last_beacon = 0;
     while (ros::ok())
     {
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
@@ -1690,13 +2005,15 @@ void sendBeacons()
                 hostname_mac & neighbor(*i);
 
 
-                if (getMillisecondsTime() - neighbor.ts >= TIME_BEFORE_REMOVE_NEIGHBOR && neighbor.reachable)
+
+                time_since_last_beacon = getMillisecondsTime() - neighbor.ts;
+                if (time_since_last_beacon >= TIME_BEFORE_REMOVE_NEIGHBOR && neighbor.reachable)
                 {
-                    ROS_ERROR("REMOVE NEIGHBOR: HOSTNAME[%s]", neighbor.hostname.c_str());
+                    ROS_WARN("Remove neighbor: %s. Last beacon at %lu.", neighbor.hostname.c_str(),time_since_last_beacon);
                     std_msgs::String msg;
                     msg.data = neighbor.hostname;
                     lock_neighbors.unlock();
-
+                    lostRelayConnection(neighbor.mac);
                     publishMessage(msg, node_prefix + topic_remove_robot);
                     lock_neighbors.lock();
                     neighbor.reachable = false;
@@ -1709,10 +2026,10 @@ void sendBeacons()
 
                     boost::thread t(&mcLostConnection, n);
                 }
-                else
-                {
-                    ROS_DEBUG("NEIGHBOR: HOSTNAME[%s] LAST BEACON GOT[%lu]", neighbor.hostname.c_str(), neighbor.ts);
-                }
+                //else
+                //{
+                //    ROS_DEBUG("NEIGHBOR: HOSTNAME[%s] LAST BEACON GOT[%lu]", neighbor.hostname.c_str(), neighbor.ts);
+                //}
                 i++;
             }
         }
@@ -1783,7 +2100,8 @@ void processMcAckFrame(McAckFrame* f)
             }
         }
     }
-
+    if (enable_cooperative_relaying)
+        gotMcRelayAck(f);
 
 }
 
@@ -1812,17 +2130,46 @@ void processAckRoutedFrame(AckRoutedFrame * in_a_rf)
 
     if (!frame_is_for_me && !enable_cooperative_relaying)
     {
-        ROS_DEBUG("DONT PROCESS FRAME BECAUSE IT IS NOT FOR ME AND COOP_RELAYING IS TURNED OFF!");
+        ROS_DEBUG("Dont process frame because it is not for me and coop_relaying is turned off!");
         return;
     }
 
     if (!in_a_rf->correct_crc_)
     {
-        ROS_ERROR("ACK ROUTED FRAME: CRC INCORRECT!");
+        ROS_ERROR("ACK routed frame: crc incorrect!");
         return;
     }
 
     /* UNICAST */
+    if (enable_cooperative_relaying && !frame_is_for_me)
+    {
+        uint8_t relay_index = findActiveCrRouteUnicast(in_a_rf->eh_h_.eh_source, in_a_rf->header_.mac_destination_);
+        if (relay_index != 255)
+        {
+            in_a_rf->cr_flag = true;
+
+            /*Safe the frame as unacknowledged CR frame*/
+            ack_cr_info cr_frame;
+            cr_frame.frame_type = FRAME_TYPE_TRANSPORT_ACK;
+            cr_frame.id = in_a_rf->header_.frame_id;
+            cr_frame.source_host = in_a_rf->hostname_source_;
+            memcpy(cr_frame.frame_src_mac, in_a_rf->eh_h_.eh_source, 6);
+            memcpy(cr_frame.frame_dst_mac, in_a_rf->header_.mac_destination_, 6);
+            std::string network_string = in_a_rf->getFrameAsNetworkString(in_a_rf->header_.route_id, in_a_rf->header_.mac_destination_, in_a_rf->hostname_source_, src_mac);
+            cr_frame.network_string = network_string;
+
+            {
+                boost::unique_lock<boost::mutex> lock(mtx_unack_cr_frames);
+                unack_cr_frames_l.push_front(cr_frame);
+            }
+
+            boost::thread cr(&resendCRFrame, cr_frame, relay_index, &unack_cr_frames_l, &mtx_unack_cr_frames);
+            return;
+        }
+
+        return;
+    }
+
     routing_entry route;
     {
         route.hostname_source = in_a_rf->hostname_source_;
@@ -1851,7 +2198,7 @@ void processAckRoutedFrame(AckRoutedFrame * in_a_rf)
         if (route.hostname_source.compare(hostname) == 0)
         {
 
-            ROS_DEBUG("GOT ACKNOWLEGEMENT OF ROUTED FRAME: HOSTNAME[%s] ID[%u]", route.hostname_destination.c_str(), in_a_rf->header_.frame_id);
+            ROS_DEBUG("Received TL-ACK of frame: hostname[%s] frame id[%u]", route.hostname_destination.c_str(), in_a_rf->header_.frame_id);
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
             Logging::increaseProperty("num_data_frames_received_directly");
             Logging::increaseProperty("num_unique_data_frames_received_directly");
@@ -1919,9 +2266,9 @@ void processRoutedFrame(RoutedFrame * f)
         sendLinkAck(inc_frame.eh_h_.eh_source, src_mac, inc_frame.header_.frame_id, inc_frame.hostname_source_, f->cr_flag, f->header_.frame_type);
     }
 
-    if (!frame_is_for_me)
+    if (!frame_is_for_me && !enable_cooperative_relaying)
     {
-        ROS_DEBUG("DONT PROCESS FRAME BECAUSE IT IS NOT FOR ME AND COOP_RELAYING IS TURNED OFF!");
+        ROS_DEBUG("Don't process frame because it is not for me and coop_relaying is turned off!");
         return;
     }
 
@@ -1934,22 +2281,56 @@ void processRoutedFrame(RoutedFrame * f)
 
     /*CHECK if i got the frame already*/
 
-    if (gotFrameRecently(inc_frame))
+    /* TODO | FIXME:
+     * This is a problem because data for which acknowledgments are lost, are retransmitted but never acknowledged.
+     */
+    bool received_previously = gotFrameRecently(inc_frame);
+    if (received_previously)
     {
-        // ROS_ERROR("GOT R FRAME ALREADY %u", inc_frame.header_.packet_sequence_num);
-        return;
+        ROS_WARN("Received packet id[%u] frame id[%u] sequence number[%u] of type[%s] already before", inc_frame.header_.packet_id, inc_frame.header_.frame_id, inc_frame.header_.packet_sequence_num, frame_types[inc_frame.header_.frame_type].c_str());
+        //return;
     }
 
     safeFrame(inc_frame);
 
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
-    if (f->cr_flag)
-        Logging::increaseProperty("num_unique_data_frames_received_relay");
-    else
-        Logging::increaseProperty("num_unique_data_frames_received_directly");
+    if(!received_previously)
+        if (f->cr_flag)
+            Logging::increaseProperty("num_unique_data_frames_received_relay");
+        else
+            Logging::increaseProperty("num_unique_data_frames_received_directly");
 #endif
 
+    if (enable_cooperative_relaying && !frame_is_for_me)
+    {
+        uint8_t relay_index = findActiveCrRouteUnicast(f->eh_h_.eh_source, f->header_.mac_destination_);
+        if (relay_index != 255)
+        {
+            /*Safe the frame as unacknowledged CR frame*/
+            inc_frame.cr_flag = true;
+            ack_cr_info cr_frame;
+            cr_frame.frame_type = FRAME_TYPE_TRANSPORT_DATA;
+            cr_frame.id = f->header_.frame_id;
+            cr_frame.source_host = f->hostname_source_;
+            memcpy(cr_frame.frame_src_mac, f->eh_h_.eh_source, 6);
+            memcpy(cr_frame.frame_dst_mac, f->header_.mac_destination_, 6);
 
+            std::string network_string = inc_frame.getFrameAsNetworkString(inc_frame.header_.route_id, inc_frame.header_.mac_destination_, inc_frame.hostname_source_, src_mac);
+
+            cr_frame.network_string = network_string;
+            // ROS_ERROR("safe cr frame %u %s %s", cr_frame.id, getMacAsStr(cr_frame.mac).c_str(), cr_frame.hostname_source.c_str());
+
+            {
+                boost::unique_lock<boost::mutex> lock(mtx_unack_cr_frames);
+                unack_cr_frames_l.push_front(cr_frame);
+            }
+
+            boost::thread cr(&resendCRFrame, cr_frame, relay_index, &unack_cr_frames_l, &mtx_unack_cr_frames);
+            return;
+
+        }
+        return;
+    }
 
     /*SEARCH the route in the routing table*/
     routing_entry route_f;
@@ -1960,7 +2341,7 @@ void processRoutedFrame(RoutedFrame * f)
         std::list<routing_entry>::iterator find_route = std::find(routing_table_l.begin(), routing_table_l.end(), route_f);
         if (find_route == routing_table_l.end())
         {
-            ROS_DEBUG("ROUTE FOR THE ROUTED FRAME NOT FOUND: ID[%u] HOSTNAME SOURCE[%s] ROUTE ID[%u]", inc_frame.header_.frame_id, inc_frame.hostname_source_.c_str(), inc_frame.header_.route_id);
+            ROS_WARN("Cannot find route to process TL segment: ID[%u] HOSTNAME SOURCE[%s] ROUTE ID[%u]", inc_frame.header_.frame_id, inc_frame.hostname_source_.c_str(), inc_frame.header_.route_id);
             return;
         }
 
@@ -1974,11 +2355,10 @@ void processRoutedFrame(RoutedFrame * f)
 
     }
 
-    /*Check if i am the destination*/
+    /*Check if I am the destination*/
     if (route.hostname_destination.compare(hostname) == 0)
     {
-        ROS_DEBUG("GOT ROUTED FRAME: HOSTNAME[%s] ID[%u]", route.hostname_destination.c_str(), inc_frame.header_.frame_id);
-
+        ROS_DEBUG("Received TL segment: hostname[%s] packet id[%u] frame id[%u]", route.hostname_destination.c_str(), inc_frame.header_.packet_id, inc_frame.header_.frame_id);
 
         /*SEND ack to the root source */
         AckRoutedFrame arf = AckRoutedFrame(inc_frame);
@@ -1991,14 +2371,17 @@ void processRoutedFrame(RoutedFrame * f)
         resendUnackLinkFrame(arf.hostname_source_, arf.header_.frame_id, arf.header_.mac_destination_, network_string, FRAME_TYPE_TRANSPORT_ACK);
 
         socketSend(network_string);
-        ROS_DEBUG("SEND ACKNOWLEGEMENT OF ROUTED FRAME: ID[%u] DESTINATION[%s] NEXT HOP[%s]", inc_frame.header_.frame_id, route.hostname_destination.c_str(), getMacAsStr(route.previous_hop).c_str());
+        ROS_DEBUG("Send TL-ACK for frame: id[%u] destination[%s] next hop[%s]", inc_frame.header_.frame_id, route.hostname_destination.c_str(), getMacAsStr(route.previous_hop).c_str());
 
         boost::unique_lock<boost::mutex> lock(mtx_inc_rf_frames);
         inc_frames_l.push_back(inc_frame);
 
     }
-    else/*forward frame*/
+    else/*forward frame only if it wasn't received before*/
     {
+        if(received_previously)
+            // do not forward if the data was received previously, i.e., forwarded previously
+            return;
         string network_string = inc_frame.getFrameAsNetworkString(route, src_mac);
 
         /*Safe the frame as unacknowledged*/
@@ -2007,14 +2390,12 @@ void processRoutedFrame(RoutedFrame * f)
 
         resendUnackLinkFrame(f->hostname_source_, f->header_.frame_id, inc_frame.header_.mac_destination_, network_string, FRAME_TYPE_TRANSPORT_DATA);
 
-        ROS_DEBUG("FORWARD ROUTED FRAME: FROM[%s] TO[%s]", getMacAsStr(route.previous_hop).c_str(), getMacAsStr(route.next_hop).c_str());
+        ROS_DEBUG("Forward routed frame: id[%u] from[%s] to[%s] type[%s]", f->header_.frame_id,getMacAsStr(route.previous_hop).c_str(), getMacAsStr(route.next_hop).c_str(),frame_types[f->header_.frame_type].c_str());
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
         Logging::increaseProperty("num_unique_data_frames_forwarded");
         Logging::increaseProperty("num_total_bytes_sent ", network_string.length());
 #endif
-
         socketSend(network_string);
-
     }
 }
 
@@ -2029,7 +2410,7 @@ void sendMcAck(unsigned char* dst, string h_source, string g_name, uint32_t pack
 #ifdef PERFORMANCE_LOGGING_MC_LINK_SUMMARY
     Logging::increaseProperty("num_mc_acknowledgments_sent");
     Logging::increaseProperty("num_mc_total_bytes_sent ", network_string.length());
-#endif   
+#endif
 }
 
 void deliverMcAckFrame(stc_RoutedFrame& stc_rf, routing_entry& r, bool send_ack)
@@ -2079,7 +2460,46 @@ void processBroadcastFrame(RoutedFrame * f)
 
     RoutedFrame inc_frame(*f);
 
+    if (enable_cooperative_relaying && f->cr_flag == false)
+    {
+        cr_route cr_r = findActiveCrRouteMulticast(f->eh_h_.eh_source, f->mc_g_name_);
+        if (cr_r.relay_index != 255)
+        {
+            if (f->negative_ack_type)
+            {
+                cacheNackMcFrame(*f);
+            }
+            else
+            {
+                if (compareMac(cr_r.src, f->eh_h_.eh_source) == false)
+                {
+                    ROS_ERROR("UNEXPECTED FAILURE: WRONG CR ROUTE");
+                }
 
+                ack_cr_info cr_frame;
+                cr_frame.frame_type = FRAME_TYPE_TRANSPORT_DATA;
+                cr_frame.id = f->header_.packet_id;
+                cr_frame.seq = f->header_.packet_sequence_num;
+                cr_frame.source_host = f->hostname_source_;
+                cr_frame.mc_group = f->mc_g_name_;
+                memcpy(cr_frame.frame_src_mac, f->eh_h_.eh_source, 6);
+                memcpy(cr_frame.frame_dst_mac, cr_r.dst, 6);
+                f->cr_flag = true;
+
+                std::string network_string = f->getFrameAsNetworkString(f->header_.route_id, f->header_.mac_destination_, f->hostname_source_, src_mac);
+
+                cr_frame.network_string = network_string;
+                //  ROS_ERROR("safe cr frame %u %s %s", cr_frame.id, getMacAsStr(cr_frame.frame_dst_mac).c_str(), cr_frame.source_host.c_str());
+
+                {
+                    boost::unique_lock<boost::mutex> lock(mtx_unack_mc_cr_frames);
+                    unack_mc_cr_frames_l.push_front(cr_frame);
+                }
+                f->cr_flag = false;
+                boost::thread cr(&resendCRFrame, cr_frame, cr_r.relay_index, &unack_mc_cr_frames_l, &mtx_unack_mc_cr_frames);
+            }
+        }
+    }
 
     if (inc_frame.mc_flag)
     {
@@ -2165,7 +2585,7 @@ void processBroadcastFrame(RoutedFrame * f)
 
             propagated = mc_t->propagateFrame(inc_frame.eh_h_.eh_source);
         }
-        ROS_INFO("GOT MC FRAME: ID[%u] GROUP[%s] SOURCE[%s] FROM[%s] P_ID[%u] SEQ_N[%u]", inc_frame.header_.frame_id, inc_frame.mc_g_name_.c_str(), inc_frame.hostname_source_.c_str(), getHostnameFromMac(inc_frame.eh_h_.eh_source).c_str(), inc_frame.header_.packet_id, inc_frame.header_.packet_sequence_num);
+        ROS_INFO("Received MC frame: id[%u] group[%s] source[%s] from[%s] p_id[%u] seq_n[%u]", inc_frame.header_.frame_id, inc_frame.mc_g_name_.c_str(), inc_frame.hostname_source_.c_str(), getHostnameFromMac(inc_frame.eh_h_.eh_source).c_str(), inc_frame.header_.packet_id, inc_frame.header_.packet_sequence_num);
 
 
         /* NEGATIVE ACK */
@@ -2311,7 +2731,7 @@ void processRouteRequest(RouteRequest req)
                 inc_req.response_sent = true;
                 RouteResponse rr = RouteResponse(req, src_mac, 0);
 
-                ROS_INFO("GOT ROUTE REQUEST FOR ME: SOURCE[%s] ID[%u]", req.hostname_source_.c_str(), req.header_.id);
+                ROS_INFO("Received route request for me: source[%s] id[%u]", req.hostname_source_.c_str(), req.header_.id);
 
                 /*Safe route */
                 routing_entry new_route;
@@ -2323,7 +2743,7 @@ void processRouteRequest(RouteRequest req)
                 new_route.cr_entry = false;
                 memcpy(new_route.previous_hop, ethernet_header->eh_source, 6);
                 memcpy(new_route.next_hop, src_mac, 6);
-                ROS_INFO("ADD ROUTE: ID[%u] SOURCE[%s] DEST[%s] NEXT HOP[%s] PREVIUS HOP[%s] PATH:[%s]", new_route.id, new_route.hostname_source.c_str(), new_route.hostname_destination.c_str(), getMacAsStr(new_route.next_hop).c_str(), getMacAsStr(new_route.previous_hop).c_str(), getPathAsStr(rr.path_l_).c_str());
+                ROS_INFO("Add route: id[%u] source[%s] dest[%s] next hop[%s] previus hop[%s] path:[%s]", new_route.id, new_route.hostname_source.c_str(), new_route.hostname_destination.c_str(), getMacAsStr(new_route.next_hop).c_str(), getMacAsStr(new_route.previous_hop).c_str(), getPathAsStr(rr.path_l_).c_str());
 
                 /* Logging */
                 {
@@ -2335,9 +2755,9 @@ void processRouteRequest(RouteRequest req)
                 }
 
 
-                /* If the source and the destination are direct neighbors, 
+                /* If the source and the destination are direct neighbors,
                  * the request process duration is too fast for the "request resend thread".
-                 * The source gets the response before that thread can be started and so the thread will resend the request for no reason  
+                 * The source gets the response before that thread can be started and so the thread will resend the request for no reason
                  * To avoid this problem, a little delay must be added for this case
                  */
                 if (simulation_mode && new_route.hobs <= 1)
@@ -2400,7 +2820,7 @@ void processRouteRequest(RouteRequest req)
                 RouteResponse rr = RouteResponse(req, src_mac, mc_t->route_uplink_->root_distance + req.header_.hop_count);
 
                 // ROS_DEBUG("Path[%s]", getPathAsCStr(req.path_l_));
-                ROS_INFO("GOT MC REQUEST FOR ME AS DEST: MC GROUP[%s] SOURCE[%s] ID[%u] HOPS[%u] RD[%u]", mc_t->group_name_.c_str(), req.hostname_source_.c_str(), req.header_.id, req.header_.hop_count, mc_t->route_uplink_->root_distance);
+                ROS_INFO("Got MC request for me as dest: mc group[%s] source[%s] id[%u] hops[%u] rd[%u]", mc_t->group_name_.c_str(), req.hostname_source_.c_str(), req.header_.id, req.header_.hop_count, mc_t->route_uplink_->root_distance);
                 string network_string = rr.getResponseAsNetworkString(src_mac);
                 socketSend(network_string);
 
@@ -2478,6 +2898,60 @@ void processRouteRequest(RouteRequest req)
     }
 }
 
+bool crRouteAvailable(RouteResponse* rr, cr_entry & cr_route)
+{
+    bool first_conncection_found = false;
+    bool second_connection_found = false;
+    uint16_t first_pos = -1;
+    uint16_t second_pos = -1;
+
+    /*Check if this node is able to be a relay on the reported route.
+     * How: This loop looks if there is a connection between the path list of the route response and the neighbor list of the node, if there are more then two connection, the node could be a relay*/
+    uint16_t pos = 0;
+
+    for (std::list<mac>::iterator path_mac_it = rr->path_l_.begin(); path_mac_it != rr->path_l_.end(); ++path_mac_it)
+    {
+        mac current_path_mac = *path_mac_it;
+        if (compareMac(current_path_mac.mac_adr, src_mac))
+            return false;
+        hostname_mac neig;
+        memcpy(neig.mac, current_path_mac.mac_adr, 6);
+        boost::unique_lock<boost::mutex> lock_neighbors(mtx_neighbors);
+        std::list<hostname_mac>::iterator find_mac_it = std::find(neighbors_l.begin(), neighbors_l.end(), neig); // find the response
+        if (find_mac_it != neighbors_l.end() && (*find_mac_it).reachable)
+        {
+            hostname_mac founded_mac_in_path = *find_mac_it;
+            if (first_conncection_found == false)
+            {
+                memcpy(cr_route.first_mac, founded_mac_in_path.mac, 6);
+                first_conncection_found = true;
+                first_pos = pos;
+            }
+            else
+            {
+                memcpy(cr_route.second_mac, founded_mac_in_path.mac, 6);
+                second_connection_found = true;
+                second_pos = pos;
+            }
+        }
+        pos++;
+    }
+
+    if (second_connection_found)
+    {
+        /*Safe a cr route in the routing table*/
+        // cr_route = cr_entry(first_mac_in_path.mac_adr, last_mac_in_path.mac_adr);
+
+        if (second_pos - first_pos > 1)
+        {
+            cr_route.hop_by_hop = true;
+            cr_route.route_ids.push_back(rr->request_id_);
+        }
+        return true;
+    }
+    return false;
+}
+
 void processRouteResponse(RouteResponse rr)
 {
     /* Description:
@@ -2523,8 +2997,8 @@ void processRouteResponse(RouteResponse rr)
                 /*The response is for me */
                 if (rr.current_hop_ == rr.hop_count_ && rr.hostname_source_ == hostname)
                 {
-                    ROS_INFO("GOT ROUTE RESPONSE FROM[%s]", request.hostname_destination.c_str());
-                    ROS_INFO("PATH[%s]", getPathAsStr(rr.path_l_).c_str());
+                    ROS_INFO("Received route response from[%s]", request.hostname_destination.c_str());
+                    ROS_INFO("Path[%s]", getPathAsStr(rr.path_l_).c_str());
 
                     new_route.hostname_destination = request.hostname_destination;
 
@@ -2610,7 +3084,7 @@ void processRouteResponse(RouteResponse rr)
 #endif
                     //ROS_ERROR("%s", getPathAsCStr(rr.path_l_));
 
-                    ROS_INFO("GOT MC RESPONSE: ROOT DISTANCE[%u] FROM[%s] MC GROUP[%s]", route->root_distance, getMacAsStr(rr.eh_.h_source).c_str(), request.hostname_destination.c_str());
+                    ROS_INFO("Got MC response: root distance[%u] from[%s] mc group[%s]", route->root_distance, getMacAsStr(rr.eh_.h_source).c_str(), request.hostname_destination.c_str());
                     //ROS_INFO("PATH: %s", getPathAsCStr(rr.path_l_));
                 }
                 else
@@ -2635,8 +3109,50 @@ void processRouteResponse(RouteResponse rr)
         else if (compareMac(rr.mac_current_hop_, src_mac) == false)
             ROS_ERROR("I AM NOT THE CURRENT HOP[%s] TO FORWARD THE RESPONSE!", getMacAsStr(rr.mac_current_hop_).c_str());
 
+        if (enable_cooperative_relaying)// && rr.mc_flag_ == false)todo
+        {
+            cr_entry cr_route;
+            if (crRouteAvailable(&rr, cr_route))
+            {
+                boost::unique_lock<boost::mutex> lock(mtx_cr_entries);
+                std::list<cr_entry>::iterator find_cr_route = std::find(cr_entries_l.begin(), cr_entries_l.end(), cr_route); // find the response
 
+                /* THERE IS AN EXSISTING CR ENTRY */
+                if (find_cr_route != cr_entries_l.end())
+                {
+                    /* HOP BY HOP ROUTE */
+                    if (cr_route.hop_by_hop)
+                    {
+                        /*
+                        if (!(*find_cr_route).hop_by_hop)// if entry exsists the hop_by_hop flag should be true
+                        {
+                            ROS_ERROR("UNKNOWN FAILURE: 11231");
+                            return;
+                        }
 
+                        (*find_cr_route).route_ids.push_front(rr.request_id_); // add route id
+                        ROS_ERROR("ADD NEW ROUTE TO HOP IN HOP BY HOP RELAY ENTRY");
+                         */
+                    }
+                    else
+                    {
+                        ROS_ERROR("COULD ACT AS RELAY BETWEEN %s and %s", (getMacAsStr(cr_route.first_mac)).c_str(), (getMacAsStr(cr_route.second_mac)).c_str());
+                        sendCrDetectionFrame(cr_route.first_mac, cr_route.second_mac);
+                    }
+                }/* NEW CR ENTRY */
+                else
+                {
+                    cr_entries_l.push_back(cr_route);
+
+                    // if (cr_route.hop_by_hop)
+                    //     ROS_ERROR("CAN ACT AS HOP BY HOP RELAY BETWEEN %s and %s", (getMacAsStr(cr_route.first_mac)).c_str(), (getMacAsStr(cr_route.second_mac)).c_str());
+                    // else
+                    ROS_ERROR("COULD ACT AS RELAY BETWEEN %s and %s", (getMacAsStr(cr_route.first_mac)).c_str(), (getMacAsStr(cr_route.second_mac)).c_str());
+
+                    sendCrDetectionFrame(cr_route.first_mac, cr_route.second_mac);
+                }
+            }
+        }
     }
     else
         ROS_DEBUG("WAS NOT INVOLVED IN ROUTING PROCESS: ID[%u] SOURCE HOST[%s]", rr.request_id_, rr.hostname_source_.c_str());
@@ -2688,7 +3204,7 @@ void processBeacon(Beacon * beacon)
         lock_neighbors.unlock();
         publishMessage(msg, node_prefix + topic_new_robot);
         lock_neighbors.lock();
-        ROS_ERROR("NEW NEIGHBOR: NAME[%s]", hm.hostname.c_str());
+        ROS_WARN("New neighbor: %s", hm.hostname.c_str());
 
         if (new_neighbor)
         {
@@ -2697,8 +3213,33 @@ void processBeacon(Beacon * beacon)
     }
 }
 
+void addGroupToRelay(unsigned char* mac1, unsigned char* mac2, std::string group_name)
+{
+    cr_entry cr_route(mac1, mac2);
+
+    boost::unique_lock<boost::mutex> lock_neighbors(mtx_cr_entries);
+
+    std::list<cr_entry>::iterator find_relay = std::find(cr_entries_l.begin(), cr_entries_l.end(), cr_route);
+    /* return if there is no entry*/
+    if (find_relay != cr_entries_l.end())
+    {
+        if ((*find_relay).addMcRelayConnection(mac1, mac2, group_name))
+            ROS_ERROR("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac1).c_str(), getMacAsStr(mac2).c_str(), group_name.c_str());
+
+        if ((*find_relay).addMcRelayConnection(mac2, mac1, group_name))
+            ROS_ERROR("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac2).c_str(), getMacAsStr(mac1).c_str(), group_name.c_str());
+
+    }
+    else
+    {
+       // ROS_ERROR("no entry");
+    }
+}
+
 void processMcActivationFrame(McRouteActivationFrame * f)
 {
+    // if (iAmMember(f->mc_group_) == false)
+    addGroupToRelay(f->eh_h_.eh_source, f->header_.mac_destination, f->mc_group_);
 
     if (compareMac(f->header_.mac_destination, src_mac) == false)
         return;
@@ -2823,8 +3364,8 @@ void processIncomingFrames()
             {
                 unsigned long time_lock = getMillisecondsTime();
                 boost::unique_lock<boost::mutex> lock_packets_inco(mtx_packets_incomplete);
-               // if (getMillisecondsTime() - time_lock >= 100)
-               //     ROS_ERROR("dont got lock 1");
+                if (getMillisecondsTime() - time_lock >= 100)
+                    ROS_ERROR("dont got lock 1");
                 for (std::list<Packet>::iterator p_i = packets_incomplete_l.begin(); p_i != packets_incomplete_l.end();)
                 {
 
@@ -2887,7 +3428,7 @@ void processIncomingFrames()
                     }
                     else if (getMillisecondsTime() - p.ts_ > INTERVAL_DELETE_OLD_PACKETS)
                     {
-                        ROS_INFO("DROP UNFINISHED PACKET: ID[%u] SOURCE[%s] SIZE[%u/%lu]", p.id_, p.hostname_source_.c_str(), p.size_, p.frames_l_.size());
+                        ROS_WARN("Drop unfinished packet: ID[%u] Source[%s] Size[%u/%lu]", p.id_, p.hostname_source_.c_str(), p.size_, p.frames_l_.size());
                         p_i = packets_incomplete_l.erase(p_i);
                     }
                     else
@@ -3055,7 +3596,7 @@ void publishPacket(Packet * p)
                         adhoc_communication::MmRobotPosition();
                 //pos.position = getPoseStampFromNetworkString(
                 //		(unsigned char*) payload.data(), payload.length());
-                desializeObject((unsigned char*) payload.data(), payload.length(), &pos);
+                desializeObject((unsigned char*) payload.data(), payload.length(), &pos.position);
                 pos.src_robot = p->hostname_source_;
                 publishMessage(pos, p->topic_);
             }
@@ -3129,6 +3670,27 @@ void publishPacket(Packet * p)
 
                 publishMessage(r_up, p->topic_);
             }
+            else if (p->data_type_ == FRAME_DATA_TYPE_EM_AUCTION)
+            {
+                adhoc_communication::EmAuction data;
+                desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+                publishMessage(data, p->topic_);
+            }
+            else if (p->data_type_ == FRAME_DATA_TYPE_EM_DOCKING_STATION)
+            {
+                adhoc_communication::EmDockingStation data;
+                desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+                publishMessage(data, p->topic_);
+            }
+            else if (p->data_type_ == FRAME_DATA_TYPE_EM_ROBOT)
+            {
+                adhoc_communication::EmRobot data;
+                desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+                publishMessage(data, p->topic_);
+            }
             else
                 ROS_ERROR("UNKNOWN DATA TYPE!");
 
@@ -3173,11 +3735,11 @@ void resendRouteRequest(route_request &req, boost::condition_variable & con)
             {
                 req.hop_limit += hop_limit_increment;
                 req.retransmitted = 0;
-                ROS_INFO("INCREASE HOP COUNT OF ROUTE REQUEST: ID[%u] DESTINAION HOST[%s] MAX HOPS[%u]", req.id, req.hostname_destination.c_str(), req.hop_limit);
+                ROS_INFO("Increase hop count of route request: id[%u] destinaion host[%s] max hops[%u]", req.id, req.hostname_destination.c_str(), req.hop_limit);
             }
             else
             {
-                ROS_WARN("DROP ROUTE REQUEST: ID[%u] DESTINAION HOST[%s]", req.id, req.hostname_destination.c_str());
+                ROS_WARN("Drop route request: id[%u] destinaion host[%s]", req.id, req.hostname_destination.c_str());
 
                 {
                     boost::unique_lock<boost::mutex> lock(mtx_route_requests);
@@ -3193,7 +3755,7 @@ void resendRouteRequest(route_request &req, boost::condition_variable & con)
         else
         {
             req.id++;
-            ROS_INFO("RESEND ROUTE REQUEST: ID[%u] DESTINAION HOST[%s] MAX HOPS[%u]", req.id, req.hostname_destination.c_str(), req.hop_limit);
+            ROS_INFO("Resend route request: id[%u] destinaion host[%s] max hops[%u]", req.id, req.hostname_destination.c_str(), req.hop_limit);
             RouteRequest rr = RouteRequest(req);
             rr.req_count_stat++; // static count
 
@@ -3208,7 +3770,7 @@ void resendRouteRequest(route_request &req, boost::condition_variable & con)
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
             Logging::increaseProperty("num_rreq_sent");
             Logging::increaseProperty("num_total_bytes_sent", network_string.length());
-#endif    
+#endif
         }
 
         sleepMS(INTERVAL_RESEND_ROUTE_REQUEST);
@@ -3302,7 +3864,7 @@ void resendMcFrame(boost::condition_variable &condi, stc_RoutedFrame* rf, routin
 void deleteObsoleteRequests()
 {
     /* Description:
-     * This function delete obsolete route request from route_requests_l.
+     * This function deletes obsolete route request from route_requests_l.
      *
      * NOTE: This functions will be executed as a own thread.
      */
@@ -3318,7 +3880,7 @@ void deleteObsoleteRequests()
                 route_request & currentRequest(*r);
                 if (getMillisecondsTime() - currentRequest.ts > MAX_TIME_CACHE_ROUTE_REQUEST)
                 {
-                    ROS_DEBUG("DROP CACHED ROUTE REQUEST: ID[%u] DESTuINAION HOST[%s]", currentRequest.id, currentRequest.hostname_destination.c_str());
+                    ROS_DEBUG("drop cached route request: id[%u] destination host[%s]", currentRequest.id, currentRequest.hostname_destination.c_str());
                     r = route_requests_l.erase(r);
                 }
                 else
@@ -3348,7 +3910,7 @@ void deleteOldPackets()
                 Packet & p(*r);
                 if ((p.size_ <= p.frames_l_.size() && getMillisecondsTime() > p.ts_ && getMillisecondsTime() - p.ts_ >= INTERVAL_DELETE_OLD_PACKETS) || !p.isMcFrame())
                 {
-                    ROS_INFO("DROP OLD PACKET: ID[%u] GROUP[%s] SRC HOST[%s]", p.id_, p.mc_group_.c_str(), p.hostname_source_.c_str());
+                    ROS_DEBUG("Drop old packet: id[%u] group[%s] src host[%s]", p.id_, p.mc_group_.c_str(), p.hostname_source_.c_str());
                     r = cached_mc_packets_l.erase(r);
                 }
                 else
@@ -3365,7 +3927,7 @@ void deleteOldPackets()
                 Packet & p(*r);
                 if ((getMillisecondsTime() > p.ts_ && getMillisecondsTime() - p.ts_ >= INTERVAL_DELETE_OLD_PACKETS) && p.isMcFrame())
                 {
-                    ROS_INFO("DROP OLD UNFINISHED PACKET: ID[%u] GROUP[%s] SRC HOST[%s]", p.id_, p.mc_group_.c_str(), p.hostname_source_.c_str());
+                    ROS_WARN("Drop old unfinished packet: id[%u] group[%s] src host[%s]", p.id_, p.mc_group_.c_str(), p.hostname_source_.c_str());
                     r = packets_incomplete_l.erase(r);
                 }
                 else
@@ -3419,8 +3981,8 @@ void resendLinkFrame(stc_frame f)
                 Logging::increaseProperty("num_mc_total_bytes_sent ", f.network_string.length());
 #endif
 
-            //    ROS_ERROR("RESEND LINK FRAME: ID[%u] CONFIRMER MAC[%s] SOURCE HOST[%s] TYPE[%s] RELAY[%u]", f.frame_id, getMacAsStr(f.mac).c_str(), f.hostname_source.c_str(), frame_types[f.type].c_str(), f.cr);
             socketSend(f.network_string);
+            ROS_DEBUG("Resent frame: frameId[%u] dstMac[%s] source[%s] type[%s] relay[%u]", f.frame_id, getMacAsStr(f.mac).c_str(), f.hostname_source.c_str(), frame_types[f.type].c_str(), f.cr);
             f.retransmitted++;
         }
         else
@@ -3437,10 +3999,16 @@ void resendLinkFrame(stc_frame f)
             if (cr_frame_it != unack_link_frames_l.end())
             {
                 unack_link_frames_l.erase(cr_frame_it);
-                ROS_WARN("DROP FRAME: ID[%u] CONFIRMER MAC[%s] SOURCE HOST[%s] TYPE[%s]", f.frame_id, getMacAsStr(f.mac).c_str(), f.hostname_source.c_str(), frame_types[f.type].c_str());
+                ROS_WARN("Dropped frame missing ACK: frameId[%u] dstMac[%s] source[%s] type[%s] attempts[%d]", f.frame_id, getMacAsStr(f.mac).c_str(), f.hostname_source.c_str(), frame_types[f.type].c_str(), num_link_retrans);
             }
         }
-        if (f.type == FRAME_TYPE_MC_ACTIVATION)
+
+
+        if (f.type == FRAME_TYPE_CR_SELECTION)
+        {
+            lostRelayConnection(f.mac); //todo
+        }
+        else if (f.type == FRAME_TYPE_MC_ACTIVATION)
         {
             hostname_mac n;
             memcpy(n.mac, f.mac, 6);

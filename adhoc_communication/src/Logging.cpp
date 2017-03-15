@@ -404,19 +404,16 @@ bool Logging::createLogPath()
     Logging::n->param("log_path", Logging::log_path, std::string(""));
     Logging::log_path += "/adhoc_communication/" + *robot_name + "/";
 
-    ROS_INFO("Creating log path \"%s\".", Logging::log_path.c_str());
-    boost::filesystem::path boost_log_path(log_path.c_str());
-    if (!boost::filesystem::exists(boost_log_path))
-        try
-        {
-            if (!boost::filesystem::create_directories(boost_log_path))
-                ROS_ERROR("Cannot create directory \"%s\".", Logging::log_path.c_str());
-        } catch (const boost::filesystem::filesystem_error& e)
-        {
+    ROS_INFO("Logging files to %s", log_path.c_str());
 
-            ROS_ERROR("Cannot create path \"%s\".", Logging::log_path.c_str());
-            return false;
-        }
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if(!boost::filesystem::exists(boost_log_path))
+        if(!boost::filesystem::create_directories(boost_log_path))
+            // directory not created; check if it is there anyways
+            if(!boost::filesystem::is_directory(boost_log_path))
+                ROS_ERROR("Cannot create directory %s.", Logging::log_path.c_str());
+    else
+        ROS_INFO("Successfully created directory %s.", Logging::log_path.c_str());
     return true;
 }
 //time num_cr_entries, num_unicast_entries, num_multicast_entries, size

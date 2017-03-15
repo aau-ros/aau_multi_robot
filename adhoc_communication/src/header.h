@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
-
+//#include <ecl/time.hpp>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <boost/thread.hpp>
@@ -49,6 +49,9 @@ using std::string;
 #include "adhoc_communication/ExpCluster.h"
 #include "adhoc_communication/CMgrDimensions.h"
 #include "adhoc_communication/CMgrRobotUpdate.h"
+#include "adhoc_communication/EmAuction.h"
+#include "adhoc_communication/EmDockingStation.h"
+#include "adhoc_communication/EmRobot.h"
 
 /* Custom SRV Types*/
 #include "adhoc_communication/ChangeMCMembership.h"
@@ -69,6 +72,9 @@ using std::string;
 #include "adhoc_communication/ShutDown.h"
 #include "adhoc_communication/BroadcastCMgrRobotUpdate.h"
 #include "adhoc_communication/BroadcastString.h"
+#include "adhoc_communication/SendEmAuction.h"
+#include "adhoc_communication/SendEmDockingStation.h"
+#include "adhoc_communication/SendEmRobot.h"
 
 
 #include "nav_msgs/Odometry.h"
@@ -102,6 +108,10 @@ using std::string;
 #include "AckRoutedFrame.cpp"
 #include "McRouteActivationFrame.h"
 #include "McRouteActivationFrame.cpp"
+#include "CrDetectionFrame.h"
+#include "CrDetectionFrame.cpp"
+#include "CrSelectionFrame.h"
+#include "CrSelectionFrame.cpp"
 #include "Packet.cpp"
 #include "PositionSubscriber.h"
 #include "PositionSubscriber.cpp"
@@ -188,8 +198,8 @@ list<stc_packet> published_packets_l;
 list<PositionSubscriber*> robot_positions_l;
 PositionSubscriber* my_sim_position;
 
-
-
+list<cr_entry> cr_entries_l;
+list<relay_infos> relays_l;
 
 RoutedFrame frames_received_recently_a[MAX_FRAMES_CACHED]; // static array to cache frames incoming frames. This is needed, because frames are always received twice by the receive function
 uint16_t frr_index = 0; // current index to insert incoming frame.
@@ -444,7 +454,6 @@ void socketSend(string network_string)
 #ifdef DELAY
 
     if (simulation_mode)
-
         boost::this_thread::sleep(boost::posix_time::milliseconds(delay)); //usleep(delay);
 #endif
 }
@@ -528,7 +537,7 @@ void processMcDisconnectUplink(McDisconnectFrame* f)
     if (group->member)
     {
         groups_lock.unlock();
-       // ROS_ERROR("GOT DISCONNECT MSG FROM DOWNLINK: GROUP[%s] DOWNLINK[%s]", f->mc_group_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
+        ROS_ERROR("GOT DISCONNECT MSG FROM DOWNLINK: GROUP[%s] DOWNLINK[%s]", f->mc_group_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
         groups_lock.lock();
     } else
     {
@@ -566,11 +575,11 @@ void processMcDisconnectDownlink(McDisconnectFrame* f)
     }
 
     group->connected = false;
-    //ROS_ERROR("GOT MC PRUNE MESSAGE GROUP[%s] HOST[%s]", f->mc_group_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
+    ROS_ERROR("GOT MC PRUNE MESSAGE GROUP[%s] HOST[%s]", f->mc_group_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
 
     if (!group->downlinks_l_.empty())
     {
-      //  ROS_ERROR("FORWARD MC PRUNE GROUP[%s] HOST[%s]", group->group_name_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
+        ROS_ERROR("FORWARD MC PRUNE GROUP[%s] HOST[%s]", group->group_name_.c_str(), getHostnameFromMac(f->eh_h_.eh_source).c_str());
         group->downlinks_l_.clear();
         mtx_mc_groups.unlock();
         McDisconnectFrame dis_f(bcast_mac, f->mc_group_);
@@ -748,13 +757,13 @@ void initParams(ros::NodeHandle* n)
     n->param("max_packet_size", max_packet_size, 10000000);
     n->param("simulation_mode", simulation_mode, false);
     n->param("robots_in_simulation", robots_in_simulation, 10);
-    n->param("p_thres", p_thres, -75);
-    n->param("p_tx", p_tx, 15);
+    //n->param("p_thres", p_thres, -75); // FIXME this loads the wrong value for whatever reason
+    n->param("tx_power", p_tx, 15);
     n->param("n_model", n_model, 4);
     n->param("l_0_model", l_0_model, 33);
     n->param("topic_new_robot", topic_new_robot, std::string("new_robot"));
     n->param("topic_remove_robot", topic_remove_robot, std::string("remove_robot"));
-   
+    n->param("enable_cooperative_relaying", enable_cooperative_relaying, true);
     n->param("rebuild_mc_tree", rebuild_mc_tree, false);
     n->param("recursive_mc_ack", recursive_mc_ack, false);
     n->param("loss_ratio", loss_ratio, loss_ratio);
@@ -782,7 +791,7 @@ void initParams(ros::NodeHandle* n)
         std::string command = "iwconfig " + std::string((const char*) interface) + " txpower ";
         command.append(getIntAsString(p_tx) + "db");
         if (system(command.data()) == 0)
-            ROS_INFO("TX POWER CHANGED IN HARDWARE TO %u dbm", p_tx);
+            ROS_INFO("tx power changed in hardware to %u dbm", p_tx);
 
     }
 }
@@ -803,24 +812,24 @@ bool isReachable(unsigned char mac[6])
                 //ROS_ERROR("d: %f",d);
                 if (d == -1)
                 {
-
                     return false;
                 }
 
                 double p_rx = p_tx - (l_0_model + 10 * n_model * log10(d));
 
-
-                if (p_thres <= p_rx)
+                //ROS_FATAL("d = %lf, p_tx = %i, p_rx = %f, p_thres = %i", d, p_tx, p_rx, p_thres);
+                if (p_rx >= p_thres)
                 {
                     //ROS_DEBUG("connected with %s %f %f",other_robot->robot_name_.c_str(),d,p_rx);
                     return true;
-                } else
+                }
+                else
                     return false;
-
             }
         }
-
-    } else if (sim_robot_macs.compare("") != 0)
+        ROS_FATAL("Cannot determine position of node '%s' for incoming message. Do not have a position subscriber for that robot.", other_robot.robot_name_.c_str());
+    }
+    else if (sim_robot_macs.compare("") != 0)
     {
         boost::unique_lock<boost::mutex> lock(mtx_neighbors);
         hostname_mac n(mac);
@@ -894,7 +903,7 @@ void mcLostConnection(hostname_mac host)
         McTree* t = trees.back();
         trees.pop_back();
 
-       // ROS_ERROR("LOST CONNECTION TO UPLINK GROUP[%s] HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
+        ROS_ERROR("LOST CONNECTION TO UPLINK GROUP[%s] HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
 
         if (rebuild_mc_tree)
         {
@@ -935,7 +944,7 @@ void cacheNackMcFrame(RoutedFrame rf)
     for (std::list<Packet>::iterator it_p = cached_mc_packets_l.begin(); it_p != cached_mc_packets_l.end(); ++it_p)
     {
         Packet & p(*it_p);
-        
+
         if (p.id_ == rf.header_.packet_id)
         {
             packet_exsists = true;
@@ -1011,7 +1020,7 @@ void resendRequestedFrameFromPacket(McNackFrame nack)
 #ifdef PERFORMANCE_LOGGING_MC_LINK_SUMMARY
                     Logging::increaseProperty("num_mc_data_frames_resent");
                     Logging::increaseProperty("num_mc_total_bytes_sent", network_string.length());
-#endif          
+#endif
                 }
             }
 
@@ -1181,6 +1190,20 @@ void joinAllMcGroups()
 
 }
 
+void sendCrDetectionFrame(unsigned char* mac1, unsigned char* mac2)
+{
+    ROS_DEBUG("SEND CR DETECTION FRAME TO %s and %s", (getMacAsStr(mac1)).c_str(), (getMacAsStr(mac2)).c_str());
+
+    CrDetectionFrame frame(mac1, mac2);
+    string network_string = frame.getFrameAsNetworkString(src_mac);
+    socketSend(network_string);
+
+#ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
+    Logging::increaseProperty("num_relay_detection_sent");
+    Logging::increaseProperty("num_total_bytes_sent ", network_string.length());
+#endif
+}
+
 struct frame_packet_info
 {
     string source;
@@ -1314,7 +1337,7 @@ void requestPendingFrames()
 #ifdef PERFORMANCE_LOGGING_MC_LINK_SUMMARY
                     Logging::increaseProperty("num_mc_acknowledgments_sent");
                     Logging::increaseProperty("num_mc_total_bytes_sent", network_string.length());
-#endif      
+#endif
                     sleepMS(10);
 
                 }
@@ -1354,11 +1377,11 @@ void initRobotMacList(std::string * robot_mac)
             initMacFromString(hm.mac, hostname_mac_l[1].data());
 
             neighbors_l.push_back(hm);
-            ROS_ERROR("ADD TO WHITELIST: %s [%s]", hm.hostname.c_str(), getMacAsStr(hm.mac).c_str());
+            ROS_INFO("Add to whitelist: %s [%s]", hm.hostname.c_str(), getMacAsStr(hm.mac).c_str());
 
         } catch (const std::out_of_range& oor)
         {
-            ROS_ERROR("SYNTAX ERROR IN PARAMETER 'sim_robot_macs' %s ", robot_mac->c_str());
+            ROS_ERROR("Syntax error in parameter 'sim_robot_macs' %s ", robot_mac->c_str());
         }
     }
 }
@@ -1376,8 +1399,8 @@ void desializeObject(unsigned char* serialized_pose_stamp, uint32_t length, t * 
         ros::serialization::deserialize(stream, *obj);
     } catch (ros::serialization::StreamOverrunException e)
     {
-        ROS_ERROR("IN desializeObject: NODE THROWS EXCEPTION: %s ", e.what());
-        ROS_ERROR("PARAMETERS: length=[%u] object type=[%s]", length, typeid (*obj).name());
+        ROS_ERROR("In desializeObject: NODE THROWS EXCEPTION: %s ", e.what());
+        ROS_ERROR("Parameters: length=[%u] object type=[%s]", length, typeid (*obj).name());
     }
 }
 

@@ -1,29 +1,25 @@
 <?xml version="1.0"?>
 <package>
   <name>adhoc_communication</name>
-  <version>0.1.6</version>
-  <description>The adhoc_communication package allows to exchange data over an ad-hoc network setup by robots running the corresponding node. The package allows you to exchange data over serveral roscores by wrapping transmitting the data to the destination and publishing the data on a predefined topic at the destination host. Routing is accomplished using the hostname of the robots.
-  </description>
+  <version>2.0.0</version>
+  <description>The adhoc_communication package enabling ad hoc communication between robots.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
   <maintainer email="g.cwioro@gmx.net">Guenther Cwioro</maintainer>
 
-  <author email="g.cwioro@gmx.net">Guenter Cwioro</author>
-  <author email="torsten.andre@aau.at">Torsten Andre</author>
-
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>BSD</license>
+  <license>TODO</license>
 
 
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <url type="website">http://wiki.ros.org/adhoc_communication</url>
+  <!-- <url type="website">http://wiki.ros.org/adhoc_communication</url> -->
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
@@ -46,13 +42,13 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
-  <build_depend>ecl_time</build_depend>
+  <!--<build_depend>ecl_time</build_depend>-->
   <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
-  <run_depend>ecl_time</run_depend>
+  <!--<run_depend>ecl_time</run_depend>-->
   <run_depend>geometry_msgs</run_depend>
   <run_depend>nav_msgs</run_depend>
   

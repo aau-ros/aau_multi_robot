@@ -25,6 +25,18 @@ define erratic position
   gui_nose 1
   drive "diff"
   topurg(pose [ 0.050 0.000 -0.4 0.000 ])
+  fiducial
+    (
+      # fiducial properties
+      range_min 0.0
+      range_max 8.0
+      range_max_id 5.0
+      fov 3.14159
+
+      # model properties
+      size [ 0.1 0.1 0.1 ]
+      fiducial_return 2
+    )
 )
 
 define floorplan model
@@ -47,6 +59,7 @@ define floorplan model
 
 define docking_station model
 (
+    
     # size
     size [ 0.25 0.25 0.3 ]
 
@@ -67,6 +80,7 @@ define docking_station model
 
     # provide power also without any explicit subscriber
     alwayson 1
+    
 )
 
 

@@ -1,0 +1,1 @@
+- solve dependences problems (SendEmAuction, ...): when using catkin_make from sketch (i.e., with no build and devel folder already created), there are compilation problems that are solved by building different times (two usually is enough) the workspace

@@ -190,6 +190,141 @@ struct stc_packet {
 
 };
 
+struct cr_route {
+    unsigned char src[6];
+    unsigned char dst[6];
+    uint8_t relay_index;
+};
+
+struct cr_entry {
+    unsigned char first_mac[6];
+    unsigned char second_mac[6];
+
+    bool relay_4_fist_mac;
+    bool relay_4_second_mac;
+    bool hop_by_hop;
+    std::vector<std::string> group_connections_first_mac;
+    std::vector<std::string> group_connections_second_mac;
+
+    uint8_t index_fist_mac;
+    uint8_t index_second_mac;
+
+    list<uint32_t> route_ids; // only relevant for hop by hop
+
+    cr_entry(unsigned char* first_m, unsigned char* second_m) {
+        memcpy(first_mac, first_m, 6);
+        memcpy(second_mac, second_m, 6);
+        init();
+
+    }
+
+    cr_entry() {
+        init();
+
+    }
+
+    void init() {
+
+        hop_by_hop = false;
+        relay_4_fist_mac = false;
+        relay_4_second_mac = false;
+        index_fist_mac = -1;
+        index_second_mac = -1;
+    }
+
+    void print() {
+        ROS_ERROR("relay_4_fist_mac[%u] relay_4_second_mac[%u] ", relay_4_fist_mac, relay_4_second_mac);
+        ROS_ERROR("fist mac[%s] second mac[%s] ", getMacAsStr(first_mac).c_str(), getMacAsStr(second_mac).c_str());
+    }
+
+    uint8_t isRelay(unsigned char* src, unsigned char* dest) {
+        //this->print();
+
+
+        if (relay_4_fist_mac && compareMac(first_mac, src) && compareMac(second_mac, dest))
+            return index_fist_mac;
+
+
+        if (relay_4_second_mac && compareMac(second_mac, src) && compareMac(first_mac, dest))
+            return index_second_mac;
+
+        return -1;
+
+
+    }
+
+    cr_route isMcRelay(unsigned char* src, std::string group) {
+        //this->print();
+
+        cr_route result;
+        if (relay_4_fist_mac && compareMac(first_mac, src) && containsString(&group_connections_first_mac, &group)) {
+            ;
+            memcpy(result.src, first_mac, 6);
+            memcpy(result.dst, second_mac, 6);
+            result.relay_index = index_fist_mac;
+            return result;
+        }
+
+
+        if (relay_4_second_mac && compareMac(second_mac, src) && containsString(&group_connections_second_mac, &group)) {
+
+            memcpy(result.src, second_mac, 6);
+            memcpy(result.dst, first_mac, 6);
+            result.relay_index = index_second_mac;
+            return result;
+        }
+        result.relay_index = -1;
+        return result;
+
+
+    }
+
+    bool addMcRelayConnection(unsigned char* src, unsigned char* dest, std::string group) {
+        if (relay_4_fist_mac && compareMac(first_mac, src) && compareMac(second_mac, dest)) {
+            group_connections_first_mac.push_back(group);
+            return true;
+        }
+
+
+        if (relay_4_second_mac && compareMac(second_mac, src) && compareMac(first_mac, dest)) {
+            group_connections_second_mac.push_back(group);
+            return true;
+        }
+
+        return false;
+    }
+
+    bool deactivate(unsigned char* mac) {
+
+        if (compareMac(first_mac, mac)) {
+            relay_4_fist_mac = false;
+            index_fist_mac = -1;
+            return true;
+        } else if (compareMac(second_mac, mac)) {
+            relay_4_second_mac = false;
+            index_second_mac = -1;
+            return true;
+        }
+    }
+
+    void activate(unsigned char* mac, uint8_t relay_index) {
+        if (compareMac(first_mac, mac)) {
+            relay_4_fist_mac = true;
+            index_fist_mac = relay_index;
+        } else if (compareMac(second_mac, mac)) {
+            relay_4_second_mac = true;
+            index_second_mac = relay_index;
+        }
+    }
+
+    bool operator ==(const cr_entry& p) {
+
+
+        return (compareMac(first_mac, p.first_mac) && compareMac(second_mac, p.second_mac)) || (compareMac(first_mac, p.second_mac) && compareMac(second_mac, p.first_mac));
+    }
+
+};
+
 struct ack_cr_info {
     unsigned char frame_src_mac[6];
     unsigned char frame_dst_mac[6];
@@ -215,6 +350,83 @@ struct ack_cr_info {
     }
 };
 
+struct relay_infos {
+    unsigned char dst_mac[6];
+
+    std::list<unsigned char*> relay_macs;
+
+    relay_infos(unsigned char* dst_mac, unsigned char* relay_mac) {
+
+        memcpy(this->dst_mac, dst_mac, 6);
+        unsigned char* rmac = new unsigned char[6];
+        memcpy(rmac, relay_mac, 6);
+        relay_macs.push_back(rmac);
+    }
+
+    ~relay_infos() {
+        std::list<unsigned char*>::iterator i = relay_macs.begin();
+        while (i != relay_macs.end()) {
+
+            i = relay_macs.erase(i);
+        }
+    }
+
+    uint8_t getIndex(unsigned char* m) {
+        int i_dex = 0;
+        for (std::list<unsigned char*>::iterator i = relay_macs.begin(); i != relay_macs.end(); i++, i_dex++) {
+            if (compareMac(*i, m))
+                return i_dex;
+        }
+        return -1;
+    }
+
+    unsigned char* getRelay(uint8_t index) {
+        int i_dex = 0;
+        for (std::list<unsigned char*>::iterator i = relay_macs.begin(); i != relay_macs.end(); i++, i_dex++) {
+            if (i_dex == index)
+
+                return *i;
+        }
+        return NULL;
+    }
+
+    bool removeRelay(unsigned char* mac) {
+
+        for (std::list<unsigned char*>::iterator i = relay_macs.begin(); i != relay_macs.end(); i++) {
+            if (compareMac(mac, *i)) {
+                relay_macs.erase(i);
+
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool addRelay(unsigned char* relay_mac) {
+        if (relay_macs.size() >= MAX_RELAYS)
+            return false;
+
+
+
+        for (std::list<unsigned char*>::iterator i = relay_macs.begin(); i != relay_macs.end(); i++) {
+
+            if (compareMac(relay_mac, *i))
+                return false;
+
+        }
+        unsigned char* rmac = new unsigned char[6];
+        memcpy(rmac, relay_mac, 6);
+        relay_macs.push_back(rmac);
+
+        return true;
+    }
+
+    bool operator ==(const relay_infos& p) {
+
+        return compareMac(dst_mac, p.dst_mac);
+    }
+
+};
 
 /*
 struct neighbor

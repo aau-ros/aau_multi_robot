@@ -2,11 +2,11 @@
 import os
 import argparse
 import rospkg
-import rospy
+#import rospy
 import time
-import ConfigParser
-import random
-import socket
+#import ConfigParser
+#import random
+#import socket
 
 parser = argparse.ArgumentParser(description="Create and run multi-robot simulation.")
 parser.add_argument("-n", "--number-of-robots", dest="number_of_robots", type=int,
@@ -31,9 +31,20 @@ launch_path = os.path.join(package_path, "launch", launch_file)
 num_robots = args.number_of_robots[0]
 distance = args.distance[0]
 
-robot_macs = []
-for num_robot in range(0,num_robots):
-    robot_macs.append("02:%02d:00:00:00:00" %(num_robot + 1))
+robot_macs = {}
+connected_macs = {}
+all_macs = ""
+for robot in range(0,num_robots):
+    mac = "02:%02d:00:00:00:00" %(robot + 1)
+    robot_macs[robot] = mac
+    if all_macs:
+        all_macs += "!"
+    all_macs += "robot_%s,%s" %(robot,mac)
+for robot in range(num_robots):
+    connected_macs[robot] = all_macs
+
+
+
 
 
 date = time.strftime("%y-%m-%d", time.localtime())
@@ -51,20 +62,24 @@ fh_launch_file.write("\t<param name=\"num_robots\" value=\"%i\" /> \n"%num_robot
 fh_launch_file.write("\t<param name=\"distance\" value=\"%i\" /> \n"%distance)
 fh_launch_file.write("</node> \n")
 for num_robot in range(0,num_robots):
-	fh_launch_file.write("\t<group ns=\"robot_%i\">\n"% num_robot)
-	fh_launch_file.write("\t\t<include file=\"$(find adhoc_communication)/launch/adhoc_communication.launch\">\n")
-	fh_launch_file.write("\t\t\t<arg name=\"use_sim_time\" value=\"false\" />\n")
-	fh_launch_file.write("\t\t\t<arg name=\"num_of_robots\" value=\"%s\" />\n" % args.number_of_robots[0])
-	fh_launch_file.write("\t\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
-	fh_launch_file.write("\t\t\t<arg name=\"emulate\" value=\"false\" />\n") 
-	fh_launch_file.write("\t\t\t<arg name=\"hostname\" value=\"robot_%i\" />\n"%num_robot) 
-	fh_launch_file.write("\t\t\t<arg name=\"interface\" value=\"lo\" />\n")
-	fh_launch_file.write("\t\t\t<arg name=\"simulation_mode\" value=\"true\" />\n") 
-	fh_launch_file.write("\t\t\t<arg name=\"mac\" value=\"%s\" />\n" %robot_macs[num_robot])
-	fh_launch_file.write("\t\t</include>\n")
-	fh_launch_file.write("\t</group>\n")
+    fh_launch_file.write("\t<group ns=\"robot_%i\">\n"% num_robot)
+    fh_launch_file.write("\t\t<include file=\"$(find adhoc_communication)/launch/adhoc_communication.launch\">\n")
+    fh_launch_file.write("\t\t\t<arg name=\"use_sim_time\" value=\"false\" />\n")
+    fh_launch_file.write("\t\t\t<arg name=\"num_of_robots\" value=\"%s\" />\n" % args.number_of_robots[0])
+    fh_launch_file.write("\t\t\t<arg name=\"log_path\" value=\"%s\" />\n" %log_path)
+    fh_launch_file.write("\t\t\t<arg name=\"emulate\" value=\"false\" />\n") 
+    fh_launch_file.write("\t\t\t<arg name=\"hostname\" value=\"robot_%i\" />\n"%num_robot) 
+    fh_launch_file.write("\t\t\t<arg name=\"robot_name\" value=\"robot_%i\" />\n"%num_robot) 
+    fh_launch_file.write("\t\t\t<arg name=\"interface\" value=\"lo\" />\n")
+    fh_launch_file.write("\t\t\t<arg name=\"simulation_mode\" value=\"true\" />\n") 
+    fh_launch_file.write("\t\t\t<arg name=\"tx_power\" value=\"20\" />\n")
+    fh_launch_file.write("\t\t\t<arg name=\"mac\" value=\"%s\" />\n" %robot_macs[num_robot])
+    fh_launch_file.write("\t\t\t<arg name=\"sim_robot_macs\" value=\"%s\" />\n" %connected_macs[num_robot])
+    fh_launch_file.write("\t\t</include>\n")
+    fh_launch_file.write("\t</group>\n")
 fh_launch_file.write("</launch>")
 fh_launch_file.close()
+
+
+
 os.system("roslaunch adhoc_communication test_route_repair.launch")
-
-

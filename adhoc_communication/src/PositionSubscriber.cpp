@@ -11,17 +11,15 @@
 
 PositionSubscriber::PositionSubscriber()
 {
-    // TODO Auto-generated constructor stub
     initialized = false;
     x_pos_ = 0;
     y_pos_ = 0;
     callback_count = 0;
-    callback_refresh = 4; // every 10 call of the subscribe f, the position will be updated.
+    callback_refresh = 1; // every 10 call of the subscribe f, the position will be updated.
 }
 
 PositionSubscriber::~PositionSubscriber()
 {
-    // TODO Auto-generated destructor stub
 }
 
 void PositionSubscriber::Subscribe(const nav_msgs::Odometry::ConstPtr& position)

@@ -1,4 +1,5 @@
- <!-- To make this file work on your system you must change the args of the simulation node (stage) 
+<?xml version="1.0"?>
+<!-- To make this file work on your system you must change the args of the simulation node (stage) 
 -->
 
 <launch>

@@ -27,7 +27,6 @@ int main(int argc, char** argv)
     battery_simulate bat;
     
     
-
     // coordinate docking of robots for recharging
     //docking doc;
 
