@@ -1,30 +1,30 @@
 define block model
 (
-  size [0.500 0.500 0.500]
+  size [0.5 0.5 0.5] 
   gui_nose 0
 )
 
 define topurg ranger
 (
-	sensor( 			
-    range [ 0.0  30.0 ]
+	sensor(	
+	range [ 0.0  30.0 ]
     fov 270.25
-   samples 1081
+	samples 1081
   )
 
-  # generic model properties
-  color "black"
-  size [ 0.050 0.050 0.100 ]
+    # generic model properties
+  color "black" 
+  size [ 0.05 0.05 0.1 ]
 )
 
 define erratic position
 (
-  #size [0.415 0.392 0.25]
-  size [0.350 0.350 0.250]
-  origin [-0.050 0.000 0.000 0.000]
+  #size [0.1 0.1 0.1]
+  size [0.2 0.2 0.7]
+  origin [-0.05 0 0 0]
   gui_nose 1
   drive "diff"
-  topurg(pose [ 0.050 0.000 0.000 0.000 ])
+  topurg(pose [ 0.050 0.000 -0.4 0.000 ])
 )
 
 define floorplan model
@@ -37,7 +37,7 @@ define floorplan model
 
   gui_nose 0
   gui_grid 0
-
+   gui_move 0
   gui_outline 0
   gripper_return 0
   fiducial_return 0
@@ -51,27 +51,17 @@ interval_sim 100  # simulation timestep in milliseconds
 
 
 window
-( 
-  size [ 745 448 ] 
-
-  rotate [ 0.000 2.940 ]
-  scale 14.782 
+(
+  size [ 745.000 448.000 ] 
+  rotate [ 0.000 0.000 ]
+  scale 28.806 
 )
-
-# load an environment bitmap
 floorplan
-( 
-  name "willow"
-  bitmap "willow-full.pgm"
-  size [54.000 58.700 0.500]
-  pose [ -24.250 28.077 0.000 90.000 ]
+(
+  name "small_map.png"
+  bitmap "small_map.png"
+  size [10 10 0.4]
+  pose [ 0 0.000 0 0.000 ]
 )
-
-# throw in a robot
-erratic( pose [ -7.780 23.262 0.000 180.000 ] name "robot_0" color "blue")
-erratic( pose [ -10.780 23.262 0.000 180.000 ] name "robot_1" color "yellow")
-erratic( pose [ -25.277 23.266 0.000 180.000 ] name "robot_2" color "red")
-erratic( pose [ -32.669 24.888 0.000 180.000 ] name "robot_3" color "green")
-erratic( pose [ -40.630 23.006 0.000 180.000 ] name "robot_4" color "pink")
-
-
+erratic( pose [ -2.000000 3.500000 0 0.0 ] name "robot_0" color "red" )
+erratic( pose [ -1.000000 3.500000 0 0.0 ] name "robot_1" color "blue" )
