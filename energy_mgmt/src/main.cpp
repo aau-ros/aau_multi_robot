@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     
     
     // coordinate docking of robots for recharging
-    //docking doc;
+    docking doc;
 
     // Frequency of loop
     double rate = 0.5; // Hz

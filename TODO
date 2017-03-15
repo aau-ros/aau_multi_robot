@@ -1,1 +1,3 @@
 - solve dependences problems (SendEmAuction, ...): when using catkin_make from sketch (i.e., with no build and devel folder already created), there are compilation problems that are solved by building different times (two usually is enough) the workspace
+- [/robot_1/adhoc_communication] [isReachable:830]: Cannot determine position of node 'robot_0' for incoming message. Do not have a position subscriber for that robot.
+

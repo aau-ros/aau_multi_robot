@@ -11,6 +11,7 @@ docking::docking()
         return; //TODO: Don't just return but initialize for a single robot
     }
 
+    /*
     // read weights for the likelihood values from parameter file
     nh.param("energy_mgmt/w1", w1, 0.25);
     nh.param("energy_mgmt/w2", w2, 0.25);
@@ -59,6 +60,8 @@ docking::docking()
     sub_jobs = nh.subscribe(robot_name+"/frontiers", 10000, &docking::cb_jobs, this);
     sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
+    
+    */
 
 }
 
