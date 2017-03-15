@@ -53,7 +53,9 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer {
 
 public:
-
+    
+    //F
+        bool test;
 
 
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
@@ -63,6 +65,9 @@ public:
             ros::console::notifyLoggerLevelsChanged();
     
         //available_distance = 100; //F
+        //F
+        test = true;
+        
 
         nh.param("frontier_selection",frontier_selection,1);
         nh.param("local_costmap/width",costmap_width,0);
@@ -244,6 +249,18 @@ public:
         printf("\t%c[1;34mReceived charging complete!\e[0m\n", 27);
         robot_state = fully_charged;
     }
+    
+    
+    void docking_station_detected_callback(const std_msgs::Empty::ConstPtr& msg) {
+        ROS_ERROR("4444444");
+        if(test) {
+            ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            home_point_x = home_point_x + 1;
+            home_point_y = home_point_y + 1;
+            test = false;
+        }
+        
+    }
 	
 	
     void bat_callback(const energy_mgmt::battery_state::ConstPtr& msg)
@@ -296,6 +313,8 @@ public:
         twi_publisher.publish(twi);
         ros::Duration(5.0).sleep();
         twi_publisher.publish(twi);
+        
+        
 
         int exit_countdown = EXIT_COUNTDOWN;
         int charge_countdown = EXIT_COUNTDOWN;
@@ -311,6 +330,7 @@ public:
         ros::Subscriber sub, sub2, sub3, pose_sub;
         
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
+        ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
 
         // subscribe to battery management topics
         sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
@@ -930,6 +950,7 @@ public:
             else if(robot_state == going_charging)
             {
                     ROS_ERROR("Traveling home for recharging");
+                    ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
             }
@@ -986,6 +1007,9 @@ public:
             ROS_INFO("DONE EXPLORING");
 		}
 	}
+	
+	
+	    
 
         void frontiers()
         {

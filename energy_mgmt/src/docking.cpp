@@ -11,7 +11,7 @@ docking::docking()
         return; //TODO: Don't just return but initialize for a single robot
     }
 
-    /*
+    
     // read weights for the likelihood values from parameter file
     nh.param("energy_mgmt/w1", w1, 0.25);
     nh.param("energy_mgmt/w2", w2, 0.25);
@@ -26,6 +26,7 @@ docking::docking()
     nh.param<string>("energy_mgmt/move_base_frame", move_base_frame, "map");
     //nav.initialize("navigation_path", costmap);
 
+    
     // initialize robot name
     nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
     if(robot_prefix.empty()){ // hardware platform
@@ -40,9 +41,13 @@ docking::docking()
     }
     else{ // simulations
         robot_name = robot_prefix;
-        robot_id = atoi(robot_prefix.substr(7,1).c_str());
+        
+        // This line makes the program crash if the robot_prefix has not the required format!!!!
+        //robot_id = atoi(robot_prefix.substr(7,1).c_str());
+        robot_id = 0;
     }
 
+    
     // initialize robot struct
     robot_t robot;
     robot.id = robot_id;
@@ -55,14 +60,39 @@ docking::docking()
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name+"adhoc_communication/send_em_robot");
 
     // subscribe to topics
-    sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
+    //sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
+    sub_battery = nh.subscribe("battery_state", 1, &docking::cb_battery, this);
     sub_robots = nh.subscribe(robot_name+"/robots", 100, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(robot_name+"/frontiers", 10000, &docking::cb_jobs, this);
     sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
     
-    */
+    
+    //F
+    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1);
+    test = true;
+    
+    
+}
 
+void docking::detect_ds() {
+    if(test) {
+        std_msgs::Empty msg;
+        pub_ds.publish(msg);
+        
+        ds_t new_ds;
+        new_ds.id = 1;
+        new_ds.x = 10;
+        new_ds.y = 10;
+        
+        ds.push_back(new_ds);
+        
+        test = false;
+    } else {
+        std_msgs::Empty msg;
+        pub_ds.publish(msg);
+    }
+        
 }
 
 double docking::get_llh()
@@ -318,6 +348,8 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr& msg)
 {
+    ROS_ERROR("Received battery state!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
     battery.charging = msg.get()->charging;
     battery.soc = msg.get()->soc;
     battery.remaining_time_charge = msg.get()->remaining_time_charge;

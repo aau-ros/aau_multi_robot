@@ -24,6 +24,9 @@ public:
      * Constructor.
      */
     docking();
+    
+    //F
+    void detect_ds();
 
 private:
     /**
@@ -40,6 +43,10 @@ private:
      * Subscribers for the required topics.
      */
     ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction;
+    
+    //F
+    ros::Publisher pub_ds;
+    bool test;
 
     /**
      * Callbacks for the subscribed topics.
@@ -188,6 +195,8 @@ private:
      * The weights for the weighted sum of the likelihood values l1,...,l4.
      */
     double w1, w2, w3, w4;
+    
+    
 };
 
 #endif  /* DOCKING_H */
