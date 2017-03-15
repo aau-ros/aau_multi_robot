@@ -16,6 +16,9 @@
         <!--
     <arg name="simulation_mode" default="false" />
         -->
+        
+    <arg name="simulation_mode" default="true" />
+        
     <arg name="tx_power" default="" />
     <arg name="enable_cooperative_relaying" default="true" />
     <arg name="num_link_retrans" default="2" />

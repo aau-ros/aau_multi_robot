@@ -44,6 +44,33 @@ define floorplan model
   laser_return 1
 )
 
+
+define docking_station model
+(
+    # size
+    size [ 0.25 0.25 0.3 ]
+
+    # color in the gui
+    color "purple"
+
+    # cannot be detected by a laser range finder
+    ranger_return -1
+
+    # cannot collide with other obstacles
+    obstacle_return 0
+
+    # amount of stored energy (-1 is infinite)
+    kjoules -1
+
+    # power output in W
+    give_watts 250
+
+    # provide power also without any explicit subscriber
+    alwayson 1
+)
+
+
+
 # set the resolution of the underlying raytrace model in meters
 resolution 0.02
 
@@ -65,3 +92,19 @@ floorplan
 )
 erratic( pose [ -2.000000 3.500000 0 0.0 ] name "robot_0" color "red" )
 erratic( pose [ -1.000000 3.500000 0 0.0 ] name "robot_1" color "blue" )
+#erratic( pose [  3.000000 3.500000 0 0.0 ] name "robot_2" color "green" )
+
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ -1.5 4 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 2
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds2"
+)
