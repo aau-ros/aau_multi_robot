@@ -394,7 +394,8 @@ bool SendEmDockingStation(adhoc_communication::SendEmDockingStation::Request &re
     unsigned long time_call = getMillisecondsTime();
 #endif
 
-    ROS_DEBUG("Service called to send location and state of a docking station...");
+    //ROS_DEBUG("Service called to send location and state of a docking station..."); //F
+    ROS_ERROR("Service called to send location and state of a docking station...");
     string s_msg = getSerializedMessage(req.docking_station);
     /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
     res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_DOCKING_STATION, req.topic);
@@ -1208,7 +1209,10 @@ int main(int argc, char **argv)
     ros::ServiceServer getGroupStatusS = n_pub->advertiseService(robot_prefix + node_prefix + "get_group_state", getGroupStateF);
 
     ros::ServiceServer sendEmAuctionS = n_pub->advertiseService("send_em_auction", SendEmAuction);
-    ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService("send_em_docking_station", SendEmDockingStation);
+    ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService(node_prefix + "/send_em_docking_station", SendEmDockingStation);
+        ROS_ERROR("%s", sendEmDockingStationS.getService().c_str());
+    
+    
     ros::ServiceServer sendEmRobotS = n_pub->advertiseService("send_em_robot", SendEmRobot);
 
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_new_robot, 1000, true));
@@ -3578,7 +3582,7 @@ void publishPacket(Packet * p)
         try
         {
             std::string payload = p->getPayload();
-
+            ROS_ERROR("PUBLISH PACKET: %04x", p->data_type_);
             if (p->data_type_ == FRAME_DATA_TYPE_MAP)
             {
                 nav_msgs::OccupancyGrid map;

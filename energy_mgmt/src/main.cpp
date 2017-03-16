@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "main");
+    ros::init(argc, argv, "energy_mgmt");
 
     // handle battery management for different robot platforms
     string platform;

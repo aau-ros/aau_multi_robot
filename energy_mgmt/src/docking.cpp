@@ -57,8 +57,8 @@ docking::docking()
     // initialize service clients
     sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_em_auction");
     
-    sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(robot_name+"adhoc_communication/send_em_docking_station");
-    //sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>("adhoc_communication/send_em_docking_station"); //F
+    //sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(robot_name+"adhoc_communication/send_em_docking_station");
+    sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>("adhoc_communication/send_em_docking_station"); //F
     
     //ss_send_docking_station = nh.advertiseService("adhoc_communication/send_em_docking_station", &docking::foo, this);
     //ss_send_docking_station = nh.advertiseService("send_em_docking_station", &adhoc_communication::SendEmDockingStation);
@@ -123,7 +123,7 @@ void docking::compute_best_ds() {
     for(; it != ds.end(); it++)
         if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
-            ROS_ERROR("New best DS!");
+            ROS_ERROR("New best DS! Send it...");
             geometry_msgs::PointStamped msg;
             msg.point.x = (*it).x;
             msg.point.y = (*it).y;
@@ -131,6 +131,7 @@ void docking::compute_best_ds() {
             best_ds = *it;
             
             adhoc_communication::SendEmDockingStation srv;
+            ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
             sc_send_docking_station.call(srv);
             
         }
