@@ -112,7 +112,49 @@ erratic( pose [ -1.000000 3.500000 0 0.0 ] name "robot_1" color "blue" )
 # a docking station
 docking_station(
     # position in world coordinates
-    pose [ -1.5 4 0 0 ]
+    pose [ -1 4.5 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 2
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds2"
+)
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ -2 1.5 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 2
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds2"
+)
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ -0 4.5 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 2
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds2"
+)
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ -1 1.5 0 0 ]
 
     # fiducial id that is returned to a fiducial sensor
     # must be unique among multiple docking stations

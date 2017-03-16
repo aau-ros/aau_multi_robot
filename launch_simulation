@@ -1,8 +1,9 @@
- #!/bin/sh
- 
- # Script to launch a Stage simulation
- # cd $HOME/
- 
- echo "Still under development..."
- 
- roslaunch $(rospack find multi_robot_simulation)/launch/master_ext.launch
+#!/bin/sh
+
+# Script to launch a Stage simulation
+# cd $HOME/
+
+echo "Still under development..."
+
+rm -r /home/fabrizio/.ros/log
+roslaunch $(rospack find multi_robot_simulation)/launch/master_ext.launch

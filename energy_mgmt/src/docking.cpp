@@ -56,8 +56,15 @@ docking::docking()
 
     // initialize service clients
     sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_em_auction");
+    
     sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(robot_name+"adhoc_communication/send_em_docking_station");
+    //sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>("adhoc_communication/send_em_docking_station"); //F
+    
+    //ss_send_docking_station = nh.advertiseService("adhoc_communication/send_em_docking_station", &docking::foo, this);
+    //ss_send_docking_station = nh.advertiseService("send_em_docking_station", &adhoc_communication::SendEmDockingStation);
+       
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name+"adhoc_communication/send_em_robot");
+    
 
     // subscribe to topics
     //sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
@@ -70,7 +77,11 @@ docking::docking()
     
     //F
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1);
+    pub_new_best_ds = nh.advertise<geometry_msgs::PointStamped>("new_best_docking_station_selected", 1);
     test = true;
+    sub_robot_position = nh.subscribe("goalPoint/goalPoint", 1, &docking::robot_position_callback, this);
+    pub_adhoc_new_best_ds = nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 1);
+    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 1, &docking::adhoc_ds, this);
     
     
 }
@@ -82,10 +93,17 @@ void docking::detect_ds() {
         
         ds_t new_ds;
         new_ds.id = 1;
-        new_ds.x = 10;
-        new_ds.y = 10;
-        
+        new_ds.x = 1;
+        new_ds.y = 1;
         ds.push_back(new_ds);
+        
+        ds_t new_ds2;
+        new_ds2.id = 1;
+        new_ds2.x = 0;
+        new_ds2.y = -2;
+        ds.push_back(new_ds2);
+        
+        best_ds = new_ds;
         
         test = false;
     } else {
@@ -94,6 +112,38 @@ void docking::detect_ds() {
     }
         
 }
+
+
+//void docking::compute_best_ds(const move_base_msgs::MoveBaseGoal::ConstPtr& msg) {
+void docking::compute_best_ds() {
+    
+    double x = robot_x;
+    double y = robot_y;
+    std::vector<ds_t>::iterator it = ds.begin();
+    for(; it != ds.end(); it++)
+        if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
+                ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
+            ROS_ERROR("New best DS!");
+            geometry_msgs::PointStamped msg;
+            msg.point.x = (*it).x;
+            msg.point.y = (*it).y;
+            pub_new_best_ds.publish(msg);
+            best_ds = *it;
+            
+            adhoc_communication::SendEmDockingStation srv;
+            sc_send_docking_station.call(srv);
+            
+        }
+}
+
+bool docking::foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res) {
+    return true;
+}
+
+void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg) {
+    ROS_ERROR("adhoc_ds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+}
+
 
 double docking::get_llh()
 {
@@ -346,9 +396,17 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     return distance;
 }
 
+
+
+void docking::robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
+    //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    robot_x = msg.get()->point.x;
+    robot_y = msg.get()->point.y;
+}
+
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr& msg)
 {
-    ROS_ERROR("Received battery state!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    //ROS_ERROR("Received battery state!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
     battery.charging = msg.get()->charging;
     battery.soc = msg.get()->soc;

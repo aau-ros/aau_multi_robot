@@ -56,6 +56,7 @@ public:
     
     //F
         bool test;
+        ros::Publisher pub_robot_pos;
 
 
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
@@ -67,6 +68,7 @@ public:
         //available_distance = 100; //F
         //F
         test = true;
+        pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         
 
         nh.param("frontier_selection",frontier_selection,1);
@@ -243,37 +245,47 @@ public:
 	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
         printf("%c[1;34mReceived charging complete!\e[0m\n", 27);
-        ROS_ERROR("3333333333333333333333333333333333333333333333333333333");
-        ROS_ERROR("%c[1;34mReceived charging complete!\e[0m\n", 27);
-        ROS_ERROR(" ");
-        printf("\t%c[1;34mReceived charging complete!\e[0m\n", 27);
+        //ROS_ERROR("3333333333333333333333333333333333333333333333333333333");
+        //ROS_ERROR("%c[1;34mReceived charging complete!\e[0m\n", 27);
+        //ROS_ERROR(" ");
+        //printf("\t%c[1;34mReceived charging complete!\e[0m\n", 27);
         robot_state = fully_charged;
     }
     
     
     void docking_station_detected_callback(const std_msgs::Empty::ConstPtr& msg) {
-        ROS_ERROR("4444444");
-        if(test) {
-            ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        //ROS_ERROR("4444444");
+        if(false) {
+            //ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
             home_point_x = home_point_x + 1;
             home_point_y = home_point_y + 1;
             test = false;
         }
         
     }
+    
+    
+    void new_best_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
+        //ROS_ERROR("4444444");
+        //ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
+        home_point_x = msg.get()->point.x;
+        home_point_y = msg.get()->point.y;
+    }
 	
 	
     void bat_callback(const energy_mgmt::battery_state::ConstPtr& msg)
     {
-        ROS_ERROR("Received battery state");
+        //ROS_ERROR("Received battery state");
         battery_charge = (int) msg->soc;
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        ROS_ERROR("%f", available_distance);
+        //ROS_ERROR("%f", available_distance);
 
         if(msg->charging == false && battery_charge == 100 && charge_time == 0){
             robot_state = fully_charged;
-            ROS_ERROR("22222222222222222222222222222222222222222222222222222222");
+            //ROS_ERROR("22222222222222222222222222222222222222222222222222222222");
             recharge_cycles++;
         }
 
@@ -331,6 +343,7 @@ public:
         
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
         ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
+        ros::Subscriber sub_new_best_ds = nh.subscribe("new_best_docking_station_selected", 1, &Explorer::new_best_docking_station_selected_callback, this);  //F
 
         // subscribe to battery management topics
         sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
@@ -344,7 +357,7 @@ public:
             // do nothing while recharging
             if(robot_state == charging)
             {
-                ROS_ERROR("Waiting for battery to charge...");
+                //ROS_ERROR("Waiting for battery to charge...");
                 if(charge_time > 0)
                     ros::Duration(charge_time).sleep();
                 else
@@ -1534,6 +1547,11 @@ public:
             ROS_INFO("GOAL %d:  x: %f      y: %f", counter, goal.at(0), goal.at(1));
             completed_navigation = move_robot(counter, goal.at(0), goal.at(1));
             rotation_counter = 0;
+            
+            //F
+            // publish goal position
+            
+            
         }
 
         // no valid goal found
@@ -1674,6 +1692,11 @@ public:
         goal_msgs.target_pose.pose.orientation.y = 0;
         goal_msgs.target_pose.pose.orientation.z = 0;
         goal_msgs.target_pose.pose.orientation.w = 1;
+        
+        
+        //F
+        
+        pub_robot_pos.publish(goal_msgs);
 
         ac.sendGoal(goal_msgs);
 

@@ -117,7 +117,7 @@ void battery_simulate::compute()
         //state.remaining_time_run = 1000;
         //state.remaining_distance = 1000;
         //state.soc = 90;
-        ROS_ERROR("%f", state.remaining_distance);
+        //ROS_INFO("%f", state.remaining_distance);
     //     if you don't need the max. time left and the max. remaining distance, add 1 to the variable j of array[][j] in
     //     battery_measure.cpp, line 87 row 46 before publishing stateOfCharge (stoch.data)
     }
@@ -129,7 +129,7 @@ void battery_simulate::output()
     {
         if (output_shown == false)
         {
-            ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc, state.remaining_distance);
+            ROS_INFO("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc, state.remaining_distance);
             output_shown = true;
         }
     }
@@ -144,7 +144,7 @@ void battery_simulate::publish()
 
 void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
-    ROS_ERROR("Starting to recharge");
+    //ROS_INFO("Starting to recharge");
     state.charging = true;
     state.soc = 0;
     remaining_power = 0;
@@ -154,7 +154,7 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
-    ROS_ERROR("Received speed");
+    //ROS_INFO("Received speed");
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
 }
@@ -174,7 +174,7 @@ void battery_simulate::cb_speed(const explorer::Speed &msg)
 // TODO - DO WE NEED THIS???
 void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr& msg)
 {
-    ROS_ERROR("Received SOC!!!");
+    //ROS_INFO("Received SOC!!!");
     state.soc = ("%F", msg->data);
 }
 

@@ -2,7 +2,7 @@
 #define DOCKING_H
 
 #include <ros/ros.h>
-//#include <navfn/navfn_ros.h>
+#include <navfn/navfn_ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
 #include <adhoc_communication/MmListOfPoints.h>
@@ -14,6 +14,8 @@
 #include <adhoc_communication/SendEmDockingStation.h>
 #include <adhoc_communication/SendEmRobot.h>
 #include <energy_mgmt/battery_state.h>
+
+#include <geometry_msgs/PointStamped.h>
 
 using namespace std;
 
@@ -27,6 +29,12 @@ public:
     
     //F
     void detect_ds();
+    //void compute_best_ds(const move_base_msgs::MoveBaseGoal::ConstPtr& msg);
+    void compute_best_ds();
+    
+    void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg);
+    void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg);
+    
 
 private:
     /**
@@ -43,10 +51,6 @@ private:
      * Subscribers for the required topics.
      */
     ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction;
-    
-    //F
-    ros::Publisher pub_ds;
-    bool test;
 
     /**
      * Callbacks for the subscribed topics.
@@ -196,6 +200,16 @@ private:
      */
     double w1, w2, w3, w4;
     
+    //F
+    ros::Publisher pub_ds, pub_new_best_ds;
+    bool test;
+    ds_t best_ds;
+    ros::Subscriber sub_robot_position;
+    double robot_x, robot_y;
+    ros::ServiceServer ss_send_docking_station;
+    bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
+    ros::Publisher pub_adhoc_new_best_ds;
+    ros::Subscriber sub_adhoc_new_best_ds;
     
 };
 
