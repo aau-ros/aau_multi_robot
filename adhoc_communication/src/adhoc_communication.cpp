@@ -395,10 +395,11 @@ bool SendEmDockingStation(adhoc_communication::SendEmDockingStation::Request &re
 #endif
 
     //ROS_DEBUG("Service called to send location and state of a docking station..."); //F
-    ROS_ERROR("Service called to send location and state of a docking station...");
+    //ROS_ERROR("Service called to send location and state of a docking station...");
     string s_msg = getSerializedMessage(req.docking_station);
     /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
     res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_DOCKING_STATION, req.topic);
+    //ROS_ERROR("%d", res.status); //F
 
 #ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
     Logging::logServiceCalls("SendEmDockingStation", time_call, getMillisecondsTime(), s_msg.size(), res.status);
@@ -870,6 +871,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
     else
     {
         /*BROADCAST*/
+        //ROS_ERROR("Broadcast"); //F
         memcpy(route.next_hop, bcast_mac, 6);
         route.hostname_destination = "";
         route.hostname_source = hostname;
@@ -1210,13 +1212,14 @@ int main(int argc, char **argv)
 
     ros::ServiceServer sendEmAuctionS = n_pub->advertiseService("send_em_auction", SendEmAuction);
     ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService(node_prefix + "/send_em_docking_station", SendEmDockingStation);
-        ROS_ERROR("%s", sendEmDockingStationS.getService().c_str());
+        //ROS_ERROR("%s", sendEmDockingStationS.getService().c_str()); //F
     
     
     ros::ServiceServer sendEmRobotS = n_pub->advertiseService("send_em_robot", SendEmRobot);
 
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_new_robot, 1000, true));
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_remove_robot, 1000, true));
+    publishers_l.push_front(n_pub->advertise<adhoc_communication::EmDockingStation>(node_prefix + "/send_em_docking_station", 1000, true));
 
     Logging::init(n_priv, &hostname);
 
@@ -1582,6 +1585,8 @@ void processCrDetectionFrame(CrDetectionFrame* f)
 void receiveFrames()
 {
 
+    //ROS_ERROR("Received frame"); //F
+
     /* Description:
      * This function receives all incoming frames on the interface and process them.
      * Behavior of the function will be explained within the function.
@@ -1914,6 +1919,7 @@ void receiveFrames()
 template<class message>
 void publishMessage(message m, string topic)
 {
+    //ROS_ERROR("e[1;34mPublishing a message...\e[0m"); //F
     /* Description:
      * Publish any ROS message on a given topic.
      * Maximal different topics to publish are limited by MAX_DIFFERENT_TOPICS -> defines.h
@@ -1925,11 +1931,13 @@ void publishMessage(message m, string topic)
         std::string topic_w_prefix = "/" + hostname + "/" + topic;
         if (simulation_mode)
             topic = topic_w_prefix;
-
+        // ROS_ERROR("\n\e[1;34mRequested topic: %s\e[0m", topic.c_str());   //F
         for (std::list<ros::Publisher>::iterator i = publishers_l.begin(); i != publishers_l.end(); i++)
         {
+            //ROS_ERROR("\n\e[1;34mTopic: %s\e[0m", (*i).getTopic().c_str()); //F
             if ((*i).getTopic().compare(topic) == 0)
             {
+                //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
                 (*i).publish(m);
                 pubExsists = true;
             }
@@ -3582,7 +3590,7 @@ void publishPacket(Packet * p)
         try
         {
             std::string payload = p->getPayload();
-            ROS_ERROR("PUBLISH PACKET: %04x", p->data_type_);
+            //ROS_ERROR("PUBLISH PACKET: %04x", p->data_type_); //F
             if (p->data_type_ == FRAME_DATA_TYPE_MAP)
             {
                 nav_msgs::OccupancyGrid map;

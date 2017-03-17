@@ -71,7 +71,11 @@ docking::docking()
     sub_battery = nh.subscribe("battery_state", 1, &docking::cb_battery, this);
     sub_robots = nh.subscribe(robot_name+"/robots", 100, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(robot_name+"/frontiers", 10000, &docking::cb_jobs, this);
-    sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
+    
+    //sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
+    sub_docking_stations = nh.subscribe("adhoc_communication/send_em_docking_station", 100, &docking::cb_docking_stations, this);
+    ROS_ERROR("\e[1;34m%s\e[0m\n", sub_docking_stations.getTopic().c_str());
+    
     sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
     
     
@@ -131,6 +135,7 @@ void docking::compute_best_ds() {
             best_ds = *it;
             
             adhoc_communication::SendEmDockingStation srv;
+            srv.request.topic = "adhoc_communication/send_em_docking_station";
             ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
             sc_send_docking_station.call(srv);
             
@@ -532,6 +537,9 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg)
 {
+    
+    ROS_ERROR("\e[1;34mYESSSSSSSSSSSSSSSSSSS\e[0m\n");
+
     // check if docking station is in list already
     bool new_ds = true;
     for(int i=0; i<ds.size(); ++i){
