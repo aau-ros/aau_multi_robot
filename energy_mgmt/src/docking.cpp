@@ -87,6 +87,9 @@ docking::docking()
     pub_adhoc_new_best_ds = nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 1);
     sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 1, &docking::adhoc_ds, this);
     
+    sub_all_points = nh.subscribe("all_positions", 1, &docking::points, this);
+    
+    sc_trasform = nh.serviceClient<map_merger::TransformPoint>("robot_1/map_merger/transformPoint");
     
 }
 
@@ -107,7 +110,29 @@ void docking::detect_ds() {
         new_ds2.y = -2;
         ds.push_back(new_ds2);
         
-        best_ds = new_ds;
+        
+        
+        
+        geometry_msgs::PointStamped msg2;
+        adhoc_communication::SendEmDockingStation srv;
+        srv.request.topic = "adhoc_communication/send_em_docking_station";
+        
+        msg2.point.x = new_ds.x;
+        msg2.point.y = new_ds.y;
+        pub_new_best_ds.publish(msg2);
+        sc_send_docking_station.call(srv);
+        
+        msg2.point.x = new_ds2.x;
+        msg2.point.y = new_ds2.y;
+        pub_new_best_ds.publish(msg2);
+        sc_send_docking_station.call(srv);
+        
+        best_ds = new_ds2;
+        pub_new_best_ds.publish(msg2);
+        
+        //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
+        sc_send_docking_station.call(srv);
+        
         
         test = false;
     } else {
@@ -127,24 +152,23 @@ void docking::compute_best_ds() {
     for(; it != ds.end(); it++)
         if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
-            ROS_ERROR("New best DS! Send it...");
-            geometry_msgs::PointStamped msg;
-            msg.point.x = (*it).x;
-            msg.point.y = (*it).y;
-            pub_new_best_ds.publish(msg);
+            ROS_ERROR("New best DS!");
             best_ds = *it;
-            
-            adhoc_communication::SendEmDockingStation srv;
-            srv.request.topic = "adhoc_communication/send_em_docking_station";
-            ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
-            sc_send_docking_station.call(srv);
-            
+            geometry_msgs::PointStamped msg;
+            msg.point.x = best_ds.x;
+            msg.point.y = best_ds.y;
+            pub_new_best_ds.publish(msg);
         }
 }
 
 bool docking::foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res) {
     return true;
 }
+
+void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr& msg) {
+    
+}
+    
 
 void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg) {
     ROS_ERROR("adhoc_ds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -559,12 +583,23 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
     // add new docking station
     if(new_ds){
+        ROS_ERROR("\e[1;34mNew docking station received\e[0m");
         ds_t s;
         s.id = msg.get()->id;
         s.x = msg.get()->x;
         s.y = msg.get()->y;
         s.vacant = msg.get()->vacant;
         ds.push_back(s);
+        
+        map_merger::TransformPoint point;
+        point.request.point.src_robot = "robot_1";
+        point.request.point.x = s.x;
+        point.request.point.y = s.y;
+        
+        ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
+        sc_trasform.call(point);
+        
+
     }
 
     // update charging likelihood

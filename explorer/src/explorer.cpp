@@ -268,7 +268,8 @@ public:
     
     void new_best_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
         //ROS_ERROR("4444444");
-        //ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        ROS_ERROR("Storing new best DS position");
+        ROS_INFO("Storing new best DS position");
         //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
         home_point_x = msg.get()->point.x;
         home_point_y = msg.get()->point.y;

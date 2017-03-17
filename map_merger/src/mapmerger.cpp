@@ -1114,6 +1114,7 @@ void MapMerger::start()
     ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
                                                           &MapMerger::transformPointSRV,
                                                           this);
+    ROS_ERROR("\e[1;34m%s\e[0m", transform_srv.getService().c_str());
     ros::ServiceServer log_output_srv = nodeHandle->advertiseService("logOutput",
                                                                      &MapMerger::log_output_srv,
                                                                      this);
@@ -1832,6 +1833,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 
 bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {
+    ROS_ERROR("\n\t\e[1;34m transformPointSRV called \e[0m\n");
     //need transform
     int index_transform = -1;
     if(req.point.src_robot == robot_name)
@@ -1850,7 +1852,7 @@ bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_
     }
     if(index_transform == -1)
     {
-        ROS_WARN("Could not transform point, no transform matrix found for %s",
+        ROS_ERROR("Could not transform point, no transform matrix found for %s",
                  req.point.src_robot.c_str());
         return false;
     }

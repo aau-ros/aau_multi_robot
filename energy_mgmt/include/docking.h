@@ -13,6 +13,8 @@
 #include <adhoc_communication/SendEmAuction.h>
 #include <adhoc_communication/SendEmDockingStation.h>
 #include <adhoc_communication/SendEmRobot.h>
+//#include <adhoc_communication/SendMmPoint.h>
+#include <map_merger/TransformPoint.h>
 #include <energy_mgmt/battery_state.h>
 
 #include <geometry_msgs/PointStamped.h>
@@ -34,6 +36,7 @@ public:
     
     void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg);
     void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg);
+    void points(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
     
 
 private:
@@ -209,7 +212,8 @@ private:
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
     ros::Publisher pub_adhoc_new_best_ds;
-    ros::Subscriber sub_adhoc_new_best_ds;
+    ros::Subscriber sub_adhoc_new_best_ds, sub_all_points;
+    ros::ServiceClient sc_trasform;
     
 };
 
