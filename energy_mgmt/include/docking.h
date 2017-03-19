@@ -216,6 +216,10 @@ private:
     ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
     ros::ServiceClient sc_trasform;
     
+    void timerCallback(const ros::TimerEvent&);
+    
+    ros::Timer timer, timer2;
+    
 };
 
 #endif  /* DOCKING_H */

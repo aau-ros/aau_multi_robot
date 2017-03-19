@@ -2,6 +2,8 @@
 
 using namespace std;
 
+void timerCallback2(const ros::TimerEvent&);
+
 docking::docking()
 {
     // get number of robots
@@ -396,6 +398,17 @@ bool docking::auction(int docking_station, int id)
     else                // it is a new auction by this robot
         ++auction_id;
 
+    adhoc_communication::SendEmAuction srv;
+    srv.request.topic = "adhoc_communication/send_em_auction";
+    srv.request.auction.auction = id;
+    srv.request.auction.robot = robot_id;
+    srv.request.auction.docking_station = best_ds.id;
+    srv.request.auction.bid = 10.0;
+    ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+    sc_send_auction.call(srv);
+
+
+/*
     // refresh auction bid for current docking station
     update_l4(docking_station);
 
@@ -408,6 +421,8 @@ bool docking::auction(int docking_station, int id)
 
     // send auction over multicast
     //auction_send_multicast("mc_", auction_msg, "ds_auction");
+  
+  */
     
 }
 
@@ -669,8 +684,10 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
     ROS_ERROR("\n\t\e[1;34mAuction received!!!\e[0m\n");
     // only process callback if auction is not initiated by this robot
-    if(msg.get()->robot == robot_id)
+    if(msg.get()->robot == robot_id) {
+        ROS_ERROR("\n\t\e[1;34mReceived auction started by me!\e[0m\n");
         return;
+    }
 
     // respond to auction
     if(auction(msg.get()->docking_station, msg.get()->auction) == false)
@@ -681,6 +698,18 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 
 void docking::cb_recharge(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m\n");
+    
+    // Start auction timer
+    //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
+    timer = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true);
+    timer2 = nh.createTimer(ros::Duration(5), timerCallback2, true);
+    
+    ROS_ERROR("\n\t\e[1;34mStartint timer\e[0m\n");
+    
+    timer.start();
+    
+
+    
     adhoc_communication::SendEmAuction srv;
     srv.request.topic = "adhoc_communication/send_em_auction";
     srv.request.auction.auction = auction_id;
@@ -689,4 +718,16 @@ void docking::cb_recharge(const std_msgs::Empty& msg) {
     srv.request.auction.bid = 10.0;
     ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
+    
+    
+}
+
+void timerCallback2(const ros::TimerEvent& event) {
+    ROS_ERROR("\n\t\e[1;34mTime ended 2!\e[0m\n");
+     ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+}
+
+void docking::timerCallback(const ros::TimerEvent &event) {
+    ROS_ERROR("\n\t\e[1;34mTime ended!\e[0m\n");
+         ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 }

@@ -99,10 +99,10 @@ window
 )
 floorplan
 (
-  name "open_space.png"
-  bitmap "open_space.png"
+  name "small_map.png"
+  bitmap "small_map.png"
   size [10 10 0.4]
-  pose [ -3 0.000 0 0.000 ]
+  pose [ 0 0.000 0 0.000 ]
 )
 erratic( pose [ -2.000000 3.500000 0 0.0 ] name "robot_0" color "red" )
 erratic( pose [ -1.000000 3.500000 0 0.0 ] name "robot_1" color "blue" )
