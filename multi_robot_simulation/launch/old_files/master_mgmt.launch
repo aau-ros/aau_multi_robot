@@ -13,7 +13,7 @@
             <arg name="use_sim_time" value="true" />
             <arg name="mac" value="02:01:00:00:00:00" />
             <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
-            <!-- <arg name="simulation_mode" value="true"/> F -->
+            <arg name="simulation_mode" value="true"/> <!--F-->
         </include>
         <include file="$(find multi_robot_simulation)/launch/move_base.launch">
             <arg name="robot" value="robot_0" />
@@ -50,7 +50,6 @@
             <arg name="recharging" value="true" /> <!--F-->
         </include>
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
-            <arg name="robot_prefix" value="/robot_0" />
         </include>
         
     </group>
@@ -63,7 +62,7 @@
             <arg name="use_sim_time" value="true" />
             <arg name="mac" value="02:02:00:00:00:00" />
             <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
-            <!-- <arg name="simulation_mode" value="true"/> F-->
+            <arg name="simulation_mode" value="true"/> <!--F-->
         </include>
         <include file="$(find multi_robot_simulation)/launch/move_base.launch">
             <arg name="robot" value="robot_1" />
@@ -100,7 +99,6 @@
             <arg name="recharging" value="true" /> <!--F-->
         </include>
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
-            <arg name="robot_prefix" value="/robot_1" />
         </include>
     </group>
     <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/multi_robot.rviz" />-->

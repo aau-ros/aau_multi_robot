@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="log_path" default="$(env HOME)/logs" />
+    <arg name="robot_name" default="" />
+    <arg name="use_sim_time" default="false" />
+    <arg name="output" default="log" />
+    <arg name="position_local_robot_topic" default="odom" />
+    <arg name="hostname" default="" />
+    <arg name="mac" default="" />
+    <arg name="emulate" default="false"/>
+    <arg name="interface" default="lo" />	
+    <arg name="num_of_robots" default="10" />
+    <arg name="robot_prefix" default="" />
+    <arg name="sim_robot_macs" default="" />
+    <arg name="launch_prefix" default="" />
+    <arg name="simulation_mode" default="false" />
+    <arg name="tx_power" default="" />
+    <arg name="enable_cooperative_relaying" default="true" />
+    <arg name="num_link_retrans" default="2" />
+    <arg name="num_e2e_retrans" default="10" /> 
+<arg name="nack_threshold" default="10" />    
+
+
+<node unless="$(arg emulate)" launch-prefix="$(arg launch_prefix)" pkg="adhoc_communication" type="adhoc_communication" name="adhoc_communication" output="$(arg output)">
+        <param name="robots_in_simulation" value="$(arg num_of_robots)" />
+        <param name="robot_name" value="$(arg robot_name)" />
+   <param name="nack_threshold" value="$(arg nack_threshold)" />
+        <param name="use_sim_time"  value="$(arg use_sim_time)"/>
+        <param name="max_packet_size" value="10000000" />
+        <param name="enable_cooperative_relaying" value="$(arg enable_cooperative_relaying)" />
+        <param name="log_path" value="$(arg log_path)" />
+        <param name="simulation_mode" value="$(arg simulation_mode)" />
+        <param name="num_link_retrans" value="$(arg num_link_retrans)" />
+        <param name="num_e2e_retrans" value="$(arg num_e2e_retrans)" />
+        <param name="sim_robot_macs" value="$(arg sim_robot_macs)" />
+        <param name="mac" value="$(arg mac)" />
+	<param name="interface" value="$(arg interface)" />
+	<param name="tx_power" value="$(arg tx_power)" />
+    </node>
+    <node if="$(arg emulate)" pkg="adhoc_communication_emulator" type="adhoc_communication_emulator.py" name="adhoc_communication" args="-n $(arg num_of_robots)" output="$(arg output)"/>
+</launch>

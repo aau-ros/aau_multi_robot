@@ -399,6 +399,7 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
     if(map_data->size() > 0 && transforms->size() > 0)
     {
         ROS_DEBUG("Merging other maps into global map in callback_global_pub,sizeTransforms:%lu,sizeRobots:%lu",transforms->size(),robots->size());
+        //ROS_ERROR("%lu", transforms->size());
         for(int i = 0; i < transforms->size(); i++)
         {
             if(new_data_maps->at(findRobotIndex(i)) == false)
@@ -447,7 +448,9 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
         }
        // updateMapArea(-1,local_map,true);
         pub.publish(*global_map);
-        ROS_DEBUG("!!!After publishing global map!!!");
+        //ROS_ERROR("!!!After publishing global map!!!"); 
+        //ROS_ERROR("\n\t\e[1;34m Global map origin: (%f, %f)\e[0m\n", global_map->info.origin.position.x, global_map->info.origin.position.y);
+        //ROS_ERROR("\n\t\e[1;34m Local map origin: (%f, %f)\e[0m\n", local_map->info.origin.position.x, local_map->info.origin.position.y);
     }
     else
     {
@@ -932,7 +935,7 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
 
 void MapMerger::callback_map(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
-    ROS_DEBUG("Start callback_map");
+    //ROS_ERROR("Start callback_map");
     //get the message
     nav_msgs::OccupancyGrid tmp = *msg.get();
     nav_msgs::OccupancyGrid * toInsert = &tmp;
@@ -972,7 +975,7 @@ void MapMerger::callback_map(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
 void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
 {
-    ROS_DEBUG("Process Local Map");
+    //ROS_ERROR("Process Local Map");
     if(!has_local_map)
         return;
     local_map_new_data = true;
@@ -1065,6 +1068,7 @@ void MapMerger::start()
 
 
     ros::Subscriber  sub = nodeHandle->subscribe(local_map_topic,1000,&MapMerger::callback_map,this);
+    //ROS_ERROR("Subscribe map topic [%s] !!!!!!!!!", sub.getTopic().c_str());
     ros::Duration(0.1).sleep();
     ros::spinOnce();
 
@@ -1081,6 +1085,7 @@ void MapMerger::start()
     //#ifndef DEBUG
 
     ros::Subscriber  sub_new_robot = nodeHandle->subscribe(robot_prefix+"/adhoc_communication/new_robot",1000,&MapMerger::callback_new_robot,this);
+    //ROS_ERROR("Subscribe map topic [%s] !!!!!!!!!", sub_new_robot.getTopic().c_str());
     ros::Duration(0.1).sleep();
     ros::spinOnce();
     //#else
@@ -1114,7 +1119,7 @@ void MapMerger::start()
     ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
                                                           &MapMerger::transformPointSRV,
                                                           this);
-    ROS_ERROR("\e[1;34m%s\e[0m", transform_srv.getService().c_str());
+    //ROS_ERROR("\e[1;34m%s\e[0m", transform_srv.getService().c_str());
     ros::ServiceServer log_output_srv = nodeHandle->advertiseService("logOutput",
                                                                      &MapMerger::log_output_srv,
                                                                      this);
@@ -1136,7 +1141,7 @@ void MapMerger::start()
 
 void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int min_y, int max_x, int max_y)
 {
-    ROS_DEBUG("Start merging map: [%s]",mapToMerge->header.frame_id.c_str());
+    //ROS_ERROR("Start merging map: [%s]",mapToMerge->header.frame_id.c_str());
     if(global_map == NULL)
     {
         ROS_INFO("Stop merging maps, globl map is null");
@@ -1178,7 +1183,7 @@ void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int mi
                     global_map->data[index_global_map] = mapToMerge->data[index_map_to_merge];
          }
     }
-     ROS_DEBUG("Merged maps succesfully");
+    //ROS_ERROR("Merged maps succesfully");
 }
 
 cv::Mat MapMerger::mapToMat(const nav_msgs::OccupancyGrid *map)
@@ -1640,7 +1645,7 @@ void MapMerger::sendMetaData(float res)
 
 int MapMerger::findTransformIndex(int robot_index)
 {
-    //ROS_DEBUG("finding TransformIndex for robot_index:%i",robot_index);
+    //ROS_ERROR("finding TransformIndex for robot_index:%i",robot_index);
     if(transforms->size() == 0)
     {
       //  ROS_DEBUG("no transforms, skipping findingTransformindex");
@@ -1652,11 +1657,11 @@ int MapMerger::findTransformIndex(int robot_index)
     {
         if(robots_in_transform->at(r)==robots->at(robot_index))
         {
-            //ROS_DEBUG("found TransformIndex for robot_index:%i",robot_index);
+            //ROS_ERROR("found TransformIndex for robot_index:%i",robot_index);
             return r;
         }
     }
-   // ROS_DEBUG("Could not found TransformIndex for robot_index:%i",robot_index);
+    //ROS_ERROR("Could not found TransformIndex for robot_index:%i",robot_index);
     return -1;
 }
     int MapMerger::findRobotIndex(int transform_index)
@@ -1708,9 +1713,10 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 
     if(req.log & LOG_GLOBAL_MAP)
     {
-        if(!global_map)
+        if(!global_map) {
             ROS_WARN("No global map. Skipping save global map.");
-        else
+            //ROS_ERROR("\n\t\e[1;34m No global map. Skipping save global map. \e[0m\n");
+        } else
         {
             // log the global map
             ROS_DEBUG("Storing global file...");
@@ -1719,7 +1725,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
             circle(glo,Point(glo.rows/2,glo.cols/2),5,Scalar(0,0,0),2);
             if(global_map_ready)
                 cv::imwrite(file.c_str(),glo);
-            ROS_DEBUG("Successfully logged global map.");
+            //ROS_ERROR("Successfully logged global map.");
+            //ROS_ERROR("\n\t\e[1;34m Successfully logged global map. \e[0m\n");
         }
     }
     if(req.log & LOG_LOCAL_MAP)
@@ -1833,7 +1840,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 
 bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {
-    ROS_ERROR("\n\t\e[1;34m transformPointSRV called \e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34m transformPointSRV called \e[0m\n");
     //need transform
     int index_transform = -1;
     if(req.point.src_robot == robot_name)
@@ -1852,8 +1859,7 @@ bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_
     }
     if(index_transform == -1)
     {
-        ROS_ERROR("Could not transform point, no transform matrix found for %s",
-                 req.point.src_robot.c_str());
+        ROS_ERROR("Could not transform point, no transform matrix found for %s", req.point.src_robot.c_str());
         return false;
     }
     cv::Mat trans = transforms->at(index_transform);

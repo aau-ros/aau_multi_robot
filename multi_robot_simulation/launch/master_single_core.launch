@@ -50,7 +50,7 @@
             <arg name="recharging" value="true" /> <!--F-->
         </include>
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
-            <arg name="robot_prefix" value="/robot_0" />
+            <!--<arg name="robot_prefix" value="/robot_0" />-->
         </include>
         
     </group>
@@ -100,7 +100,7 @@
             <arg name="recharging" value="true" /> <!--F-->
         </include>
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
-            <arg name="robot_prefix" value="/robot_1" />
+            <!--<arg name="robot_prefix" value="/robot_1" />-->
         </include>
     </group>
     <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/multi_robot.rviz" />-->

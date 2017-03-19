@@ -29,6 +29,7 @@ docking::docking()
     
     // initialize robot name
     nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
+    /*
     if(robot_prefix.empty()){ // hardware platform
         //TODO
         char hostname[1024];
@@ -39,12 +40,19 @@ docking::docking()
         ROS_ERROR("ONLY SIMULATIONS HAVE BEEN IMPLEMENTED YET, ABORTING");
         exit(0);
     }
-    else{ // simulations
-        robot_name = robot_prefix;
+    else
+    */
+    { // simulations
+        //robot_name = robot_prefix;
+        robot_name = "";
         
         // This line makes the program crash if the robot_prefix has not the required format!!!!
         //robot_id = atoi(robot_prefix.substr(7,1).c_str());
-        robot_id = 0;
+        if(robot_prefix == "/robot_0")
+            robot_id = 0;
+        if(robot_prefix == "/robot_1")
+            robot_id = 1;
+        ROS_ERROR("\e[1;34mRobot prefix: %s, robot id: %d\e[0m", robot_prefix.c_str(), robot_id);
     }
 
     
@@ -55,7 +63,8 @@ docking::docking()
     robots.push_back(robot);
 
     // initialize service clients
-    sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_em_auction");
+    //sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(robot_name+"/adhoc_communication/send_em_auction");
+    sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>("adhoc_communication/send_em_auction");
     
     //sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(robot_name+"adhoc_communication/send_em_docking_station");
     sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>("adhoc_communication/send_em_docking_station"); //F
@@ -64,6 +73,8 @@ docking::docking()
     //ss_send_docking_station = nh.advertiseService("send_em_docking_station", &adhoc_communication::SendEmDockingStation);
        
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name+"adhoc_communication/send_em_robot");
+    
+    
     
 
     // subscribe to topics
@@ -74,9 +85,13 @@ docking::docking()
     
     //sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_docking_stations = nh.subscribe("adhoc_communication/send_em_docking_station", 100, &docking::cb_docking_stations, this);
-    ROS_ERROR("\e[1;34m%s\e[0m\n", sub_docking_stations.getTopic().c_str());
+    sub_auction = nh.subscribe("adhoc_communication/send_em_auction", 100, &docking::cb_auction, this);
+    ROS_ERROR("\e[1;34m%s\e[0m\n", sub_auction.getTopic().c_str());
     
-    sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
+    //sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
+    
+    sub_recharge = nh.subscribe("going_to_recharge", 100, &docking::cb_recharge, this);
+    ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sub_recharge.getTopic().c_str());
     
     
     //F
@@ -89,7 +104,7 @@ docking::docking()
     
     sub_all_points = nh.subscribe("all_positions", 1, &docking::points, this);
     
-    sc_trasform = nh.serviceClient<map_merger::TransformPoint>("robot_1/map_merger/transformPoint");
+    sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
     
 }
 
@@ -139,6 +154,19 @@ void docking::detect_ds() {
         std_msgs::Empty msg;
         pub_ds.publish(msg);
     }
+    
+    map_merger::TransformPoint point;
+
+    if(robot_prefix == "/robot_0")
+        point.request.point.src_robot = "robot_1";
+    else
+        point.request.point.src_robot = "robot_0";
+        
+    point.request.point.x = 1;
+    point.request.point.y = 1;
+    
+    //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded\e[0m");
+    //else ROS_ERROR("\e[1;34mEPIC FAIL!!!!\e[0m");
         
 }
 
@@ -152,12 +180,39 @@ void docking::compute_best_ds() {
     for(; it != ds.end(); it++)
         if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
-            ROS_ERROR("New best DS!");
+            //ROS_ERROR("New best DS!");
+            
             best_ds = *it;
             geometry_msgs::PointStamped msg;
             msg.point.x = best_ds.x;
             msg.point.y = best_ds.y;
             pub_new_best_ds.publish(msg);
+            
+            
+            adhoc_communication::SendEmDockingStation srv;
+            srv.request.topic = "adhoc_communication/send_em_docking_station";
+            sc_send_docking_station.call(srv);
+            //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
+            
+            
+            
+            map_merger::TransformPoint point;
+            //ROS_ERROR("\e[1;34mCaller robot: %s\e[0m", robot_prefix.c_str());
+            if(robot_prefix == "/robot_0")
+                point.request.point.src_robot = "robot_1";
+            else
+                point.request.point.src_robot = "robot_0";
+                
+            //ROS_ERROR("\e[1;34mPoint to transform is of robot %s\e[0m", point.request.point.src_robot.c_str());
+            point.request.point.x = best_ds.x;
+            point.request.point.y = best_ds.y;
+            
+            //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
+            //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+            //else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
+            
+            
+            
         }
 }
 
@@ -329,6 +384,8 @@ void docking::update_l4(int docking_station)
 
 bool docking::auction(int docking_station, int id)
 {
+    ROS_ERROR("\n\t\e[1;34mmanaging auction\e[0m\n");
+    
     // set auction id
     if(id > auction_id) // it is a new action from another robot, respond
         auction_id = id;
@@ -350,7 +407,8 @@ bool docking::auction(int docking_station, int id)
     auction_msg.bid = get_llh();
 
     // send auction over multicast
-    auction_send_multicast("mc_", auction_msg, "ds_auction");
+    //auction_send_multicast("mc_", auction_msg, "ds_auction");
+    
 }
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic)
@@ -360,6 +418,7 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
     string destination_name = multicast_group + robot_name;
 
     ROS_INFO("Sending auction to multicast group %s on topic %s", destination_name.c_str(), topic.c_str());
+    ROS_ERROR("Sending auction to multicast group %s on topic %s", destination_name.c_str(), topic.c_str());
     auction_service.request.dst_robot = destination_name;
     auction_service.request.auction = auction;
     auction_service.request.topic = topic;
@@ -562,7 +621,7 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg)
 {
     
-    ROS_ERROR("\e[1;34mYESSSSSSSSSSSSSSSSSSS\e[0m\n");
+    //ROS_ERROR("\e[1;34mYESSSSSSSSSSSSSSSSSSS\e[0m\n");
 
     // check if docking station is in list already
     bool new_ds = true;
@@ -583,7 +642,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
     // add new docking station
     if(new_ds){
-        ROS_ERROR("\e[1;34mNew docking station received\e[0m");
+        //ROS_ERROR("\e[1;34mNew docking station received\e[0m");
         ds_t s;
         s.id = msg.get()->id;
         s.x = msg.get()->x;
@@ -592,11 +651,11 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         ds.push_back(s);
         
         map_merger::TransformPoint point;
-        point.request.point.src_robot = "robot_1";
+        point.request.point.src_robot = "robot_0";
         point.request.point.x = s.x;
         point.request.point.y = s.y;
         
-        ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
+        //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
         sc_trasform.call(point);
         
 
@@ -608,6 +667,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
+    ROS_ERROR("\n\t\e[1;34mAuction received!!!\e[0m\n");
     // only process callback if auction is not initiated by this robot
     if(msg.get()->robot == robot_id)
         return;
@@ -615,4 +675,18 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
     // respond to auction
     if(auction(msg.get()->docking_station, msg.get()->auction) == false)
         ROS_ERROR("Failed to respond to auction %d", msg.get()->auction);
+    else
+        ROS_ERROR("Responded correclty to auction %d", msg.get()->auction);
+}
+
+void docking::cb_recharge(const std_msgs::Empty& msg) {
+    ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m\n");
+    adhoc_communication::SendEmAuction srv;
+    srv.request.topic = "adhoc_communication/send_em_auction";
+    srv.request.auction.auction = auction_id;
+    srv.request.auction.robot = robot_id;
+    srv.request.auction.docking_station = best_ds.id;
+    srv.request.auction.bid = 10.0;
+    ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+    sc_send_auction.call(srv);
 }

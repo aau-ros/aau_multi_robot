@@ -367,6 +367,7 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
 
 bool SendEmAuction(adhoc_communication::SendEmAuction::Request &req, adhoc_communication::SendEmAuction::Response &res)
 {
+    ROS_ERROR("\n\t\e[1;34mSending auction...\e[0m\n");
     /* Description:
      * Service call to send an auction for energy management.
      */
@@ -1209,8 +1210,7 @@ int main(int argc, char **argv)
     ros::ServiceServer shutDownRosS = n_pub->advertiseService(robot_prefix + node_prefix + "shut_down", shutDownRos);
 
     ros::ServiceServer getGroupStatusS = n_pub->advertiseService(robot_prefix + node_prefix + "get_group_state", getGroupStateF);
-
-    ros::ServiceServer sendEmAuctionS = n_pub->advertiseService("send_em_auction", SendEmAuction);
+    ros::ServiceServer sendEmAuctionS = n_pub->advertiseService(node_prefix + "/send_em_auction", SendEmAuction);
     ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService(node_prefix + "/send_em_docking_station", SendEmDockingStation);
         //ROS_ERROR("%s", sendEmDockingStationS.getService().c_str()); //F
     
@@ -1220,6 +1220,7 @@ int main(int argc, char **argv)
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_new_robot, 1000, true));
     publishers_l.push_front(n_pub->advertise<std_msgs::String>(robot_prefix + node_prefix + topic_remove_robot, 1000, true));
     publishers_l.push_front(n_pub->advertise<adhoc_communication::EmDockingStation>(node_prefix + "/send_em_docking_station", 1000, true));
+    publishers_l.push_front(n_pub->advertise<adhoc_communication::EmAuction>(node_prefix + "/send_em_auction", 1000, true));
 
     Logging::init(n_priv, &hostname);
 
@@ -1937,7 +1938,7 @@ void publishMessage(message m, string topic)
             //ROS_ERROR("\n\e[1;34mTopic: %s\e[0m", (*i).getTopic().c_str()); //F
             if ((*i).getTopic().compare(topic) == 0)
             {
-                //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
+                ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
                 (*i).publish(m);
                 pubExsists = true;
             }

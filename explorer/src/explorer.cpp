@@ -167,6 +167,7 @@ public:
 		ROS_DEBUG("                                             ");
 
         if(OPERATE_ON_GLOBAL_MAP == true)
+        //if(false)
         {
             costmap2d_local_size = new costmap_2d::Costmap2DROS("local_costmap", tf);
             costmap2d_local_size->pause();
@@ -193,6 +194,10 @@ public:
             costmap2d_local->start();
             ROS_INFO("BOTH COSTMAPS STARTED AND RUNNING ...");
         }
+        
+        //ROS_ERROR("\n\t\e[1;34m Global costmap origin: (%f, %f) \e[0m\n", costmap2d_global->getCostmap()->getOriginX(), costmap2d_global->getCostmap()->getOriginY());
+        //ROS_ERROR("\n\t\e[1;34m Local costmap origin: (%f, %f) \e[0m\n", costmap2d_local->getCostmap()->getOriginX(), costmap2d_local->getCostmap()->getOriginY());
+        
 
 		ROS_INFO("---------------- COSTMAP DONE ---------------");
 
@@ -209,6 +214,8 @@ public:
 		}
 		visualize_goal_point(robotPose.getOrigin().getX(),
 				robotPose.getOrigin().getY());
+				
+		//ROS_ERROR("\n\t\e[1;34m Robot starting position in local map: (%f, %f) \e[0m\n", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
 
 		// transmit three times, since rviz need at least 1 to buffer before visualizing the point
 		for (int i = 0; i <= 2; i++) {
@@ -268,11 +275,22 @@ public:
     
     void new_best_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
         //ROS_ERROR("4444444");
-        ROS_ERROR("Storing new best DS position");
+        //ROS_ERROR("Storing new best DS position");
         ROS_INFO("Storing new best DS position");
         //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
         home_point_x = msg.get()->point.x;
         home_point_y = msg.get()->point.y;
+        
+        
+        map_merger::TransformPoint point;
+        point.request.point.src_robot = "robot_0";
+        point.request.point.x = home_point_x;
+        point.request.point.y = home_point_y;
+        
+        
+        ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
+       //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());sc_trasform.call(point);
+        
     }
 	
 	
@@ -340,11 +358,14 @@ public:
         std_msgs::Empty msg;
        // msg.data = "traveling home to recharge";
         ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",1);
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", publisher_re.getTopic().c_str());
         ros::Subscriber sub, sub2, sub3, pose_sub;
         
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
         ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
         ros::Subscriber sub_new_best_ds = nh.subscribe("new_best_docking_station_selected", 1, &Explorer::new_best_docking_station_selected_callback, this);  //F
+        
+        
 
         // subscribe to battery management topics
         sub = nh.subscribe("battery_state",1,&Explorer::bat_callback,this);
@@ -802,7 +823,7 @@ public:
                     ROS_INFO("DETERMINE GOAL...");
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                     //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
-                    ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
+                    //ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 
                     // found a frontier, go there
                     if(goal_determined == true)
@@ -963,8 +984,8 @@ public:
             // navigate robot home for recharging
             else if(robot_state == going_charging)
             {
-                    ROS_ERROR("Traveling home for recharging");
-                    ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
+                    //ROS_ERROR("Traveling home for recharging");
+                    //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
             }
@@ -980,7 +1001,7 @@ public:
                     exploration->trajectory_plan_store(home_point_x, home_point_y);
 
                     publisher_re.publish(msg);
-                    robot_state = charging;
+                    
                 }
 
                 // robot reached frontier
@@ -1380,6 +1401,8 @@ public:
         void indicateSimulationEnd()
         {
             /// FIXME: remove this stuff once ported to multicast
+            
+            /*
             std::stringstream robot_number;
             robot_number << robot_id;
 
@@ -1400,7 +1423,7 @@ public:
             std::ofstream outfile(status_file.c_str());
             outfile.close();
             ROS_INFO("Creating file %s to indicate end of exploration.", status_file.c_str());
-
+            */
 
         }
 
