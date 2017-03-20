@@ -52,22 +52,30 @@ void sleepok(int t, ros::NodeHandle &nh)
 
 class Explorer {
 
+
+
+  
 public:
     
     //F
-        bool test;
-        ros::Publisher pub_robot_pos;
+    bool test, winner_of_auction;
+    ros::Publisher pub_robot_pos;
+    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue};
+    state_t robot_state;
 
-
-    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0), robot_state(fully_charged), charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
+    Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0),
+    //robot_state(fully_charged),
+    charge_time(0), pose_x(0), pose_y(0), pose_angle(0), prev_pose_x(0), prev_pose_y(0), prev_pose_angle(0)
     {
     
          if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) )
             ros::console::notifyLoggerLevelsChanged();
-    
+        
         //available_distance = 100; //F
         //F
         test = true;
+        winner_of_auction = false;
+        robot_state == fully_charged;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         
 
@@ -251,8 +259,8 @@ public:
 	
 	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
-        printf("%c[1;34mReceived charging complete!\e[0m\n", 27);
-        //ROS_ERROR("3333333333333333333333333333333333333333333333333333333");
+        //printf("%c[1;34mReceived charging complete!\e[0m\n", 27);
+        ROS_ERROR("3333333333333333333333333333333333333333333333333333333");
         //ROS_ERROR("%c[1;34mReceived charging complete!\e[0m\n", 27);
         //ROS_ERROR(" ");
         //printf("\t%c[1;34mReceived charging complete!\e[0m\n", 27);
@@ -303,7 +311,7 @@ public:
         //ROS_ERROR("%f", available_distance);
 
         if(msg->charging == false && battery_charge == 100 && charge_time == 0){
-            robot_state = fully_charged;
+            //robot_state = fully_charged;
             //ROS_ERROR("22222222222222222222222222222222222222222222222222222222");
             recharge_cycles++;
         }
@@ -987,8 +995,12 @@ public:
                     //ROS_ERROR("Traveling home for recharging");
                     //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
+                    
+                    
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
             }
+            
+            //F: I exit from move_robot only when the goal has been reached
 
             // result of navigation successful
             if(navigate_to_goal == true)
@@ -1000,7 +1012,7 @@ public:
                     // compute path length
                     exploration->trajectory_plan_store(home_point_x, home_point_y);
 
-                    publisher_re.publish(msg);
+                    publisher_re.publish(msg); //F
                     
                 }
 
@@ -1751,10 +1763,22 @@ public:
                 prev_pose_y = pose_y;
                 prev_pose_angle = pose_angle;
             }
+            
+            int remaining_distance = exploration->trajectory_plan(position_x, position_y);
+            if(robot_state == going_charging)
+                ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
+            if(remaining_distance < 50 && robot_state == going_charging && winner_of_auction == false) {
+            //if(remaining_distance < 10 && winner_of_auction == false) {
+                ac.cancelGoal();
+                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
+                robot_state = in_queue;
+            }
 
             ros::Duration(0.5).sleep();
+            
         }
         ROS_INFO("Not longer ACTIVE");
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", ac.getState().toString().c_str());
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED) {
@@ -1894,8 +1918,8 @@ public:
 
     private:
 
-        enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck};
-        state_t robot_state;
+        //enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue};
+        //state_t robot_state;
 
         ros::Publisher pub_move_base;
         ros::Publisher pub_Point;

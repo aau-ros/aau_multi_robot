@@ -220,6 +220,12 @@ private:
     
     ros::Timer timer, timer2;
     
+    struct auction_bid_t{
+        int robot_id;
+        float bid;
+    };
+    vector<auction_bid_t> auction_bids;
+    
 };
 
 #endif  /* DOCKING_H */

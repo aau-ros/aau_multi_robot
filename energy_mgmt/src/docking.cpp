@@ -403,7 +403,7 @@ bool docking::auction(int docking_station, int id)
     srv.request.auction.auction = id;
     srv.request.auction.robot = robot_id;
     srv.request.auction.docking_station = best_ds.id;
-    srv.request.auction.bid = 10.0;
+    srv.request.auction.bid = get_llh();
     ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
 
@@ -688,7 +688,20 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
         ROS_ERROR("\n\t\e[1;34mReceived auction started by me!\e[0m\n");
         return;
     }
-
+    
+    if(msg.get()->auction == auction_id) {
+        ROS_ERROR("\n\t\e[1;34mReceived back my own auction... store replay bid\e[0m\n");
+        
+        auction_bid_t bid;
+        bid.robot_id = msg.get()->robot;
+        bid.bid = msg.get()->bid;
+        auction_bids.push_back(bid);
+        
+        
+        return;
+    }
+        
+    
     // respond to auction
     if(auction(msg.get()->docking_station, msg.get()->auction) == false)
         ROS_ERROR("Failed to respond to auction %d", msg.get()->auction);
@@ -708,6 +721,7 @@ void docking::cb_recharge(const std_msgs::Empty& msg) {
     
     timer.start();
     
+    auction_id++;
 
     
     adhoc_communication::SendEmAuction srv;
@@ -715,7 +729,7 @@ void docking::cb_recharge(const std_msgs::Empty& msg) {
     srv.request.auction.auction = auction_id;
     srv.request.auction.robot = robot_id;
     srv.request.auction.docking_station = best_ds.id;
-    srv.request.auction.bid = 10.0;
+    srv.request.auction.bid = get_llh();
     ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
     
@@ -725,9 +739,21 @@ void docking::cb_recharge(const std_msgs::Empty& msg) {
 void timerCallback2(const ros::TimerEvent& event) {
     ROS_ERROR("\n\t\e[1;34mTime ended 2!\e[0m\n");
      ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+     
+
 }
 
 void docking::timerCallback(const ros::TimerEvent &event) {
     ROS_ERROR("\n\t\e[1;34mTime ended!\e[0m\n");
          ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+         
+     int winner;
+     float winner_bid = -100;
+     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
+     for(; it != auction_bids.end(); it++) {
+        ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
+        if((*it).bid > winner_bid)
+            winner = (*it).robot_id;
+     }
+     ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
 }
