@@ -1222,6 +1222,11 @@ int main(int argc, char **argv)
     publishers_l.push_front(n_pub->advertise<adhoc_communication::EmDockingStation>(node_prefix + "/send_em_docking_station", 1000, true));
     publishers_l.push_front(n_pub->advertise<adhoc_communication::EmAuction>(node_prefix + "/send_em_auction", 1000, true));
 
+    //publishers_l.push_front(n_pub->advertise<adhoc_communication::MmControl>("control", 1000, true));
+    //publishers_l.push_front(n_pub->advertise<adhoc_communication::MmMapUpdate>("map_other", 1000, true));
+    //publishers_l.push_front(n_pub->advertise<adhoc_communication::MmRobotPosition>("position_other_robots ", 1000, true));
+    
+
     Logging::init(n_priv, &hostname);
 
     signal(SIGSEGV, handler); // install handler

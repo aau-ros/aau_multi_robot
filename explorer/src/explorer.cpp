@@ -273,8 +273,8 @@ public:
         if(false) {
             //ROS_ERROR("Storing new DS position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
-            home_point_x = home_point_x + 1;
-            home_point_y = home_point_y + 1;
+            //home_point_x = home_point_x + 1;
+            //home_point_y = home_point_y + 1;
             test = false;
         }
         
@@ -291,13 +291,23 @@ public:
         
         
         map_merger::TransformPoint point;
-        point.request.point.src_robot = "robot_0";
+        if(robot_prefix == "/robot_1")
+            point.request.point.src_robot = "robot_0";
+        else if(robot_prefix == "/robot_0")
+            point.request.point.src_robot = "robot_1";
+        else
+            ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         point.request.point.x = home_point_x;
         point.request.point.y = home_point_y;
         
         
         ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
+        if(!sc_trasform.call(point))
+            ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
        //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());sc_trasform.call(point);
+               ROS_ERROR("\e[1;34mOriginal point:   (%f, %f)\e[0m", point.request.point.x, point.request.point.y);
+        ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m", point.response.point.x, point.response.point.y);
+       
         
     }
 	

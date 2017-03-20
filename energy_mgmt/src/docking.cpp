@@ -182,7 +182,7 @@ void docking::compute_best_ds() {
     for(; it != ds.end(); it++)
         if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
-            //ROS_ERROR("New best DS!");
+            ROS_ERROR("New best DS!");
             
             best_ds = *it;
             geometry_msgs::PointStamped msg;
@@ -196,26 +196,41 @@ void docking::compute_best_ds() {
             sc_send_docking_station.call(srv);
             //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
             
-            
+              
             
             map_merger::TransformPoint point;
             //ROS_ERROR("\e[1;34mCaller robot: %s\e[0m", robot_prefix.c_str());
-            if(robot_prefix == "/robot_0")
+            if(robot_prefix == "/robot_0") {
                 point.request.point.src_robot = "robot_1";
-            else
+                point.request.point.x = best_ds.x;
+                point.request.point.y = best_ds.y;
+                if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+                
+                
+            
+            }
+            else if(robot_prefix == "/robot_1") {
+            
                 point.request.point.src_robot = "robot_0";
+                point.request.point.x = 0.95;
+                point.request.point.y = -2;
+                if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+               
+                
+            } else
+                ROS_ERROR("\e[1;34m!!!!!!!!!!!!!!!!!!!!\e[0m");
                 
             //ROS_ERROR("\e[1;34mPoint to transform is of robot %s\e[0m", point.request.point.src_robot.c_str());
-            point.request.point.x = best_ds.x;
-            point.request.point.y = best_ds.y;
             
             //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
-            //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
             //else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
             
             
             
-        }
+        }    
+            
+            
+        
 }
 
 bool docking::foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res) {

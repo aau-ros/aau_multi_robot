@@ -81,6 +81,10 @@ MapMerger::MapMerger()
     nodeHandle->param<std::string>("position_other_robots_topic",position_other_robots_topic,"position_other_robots");
     nodeHandle->param<std::string>("control_topic",control_topic,"control");
     nodeHandle->param<std::string>("robot_prefix",robot_prefix,"");
+    
+    //F!!!!!!
+    robot_prefix = "";
+    
     nodeHandle->param<std::string>("log_path",log_path,"");
 
     time_start = ros::Time::now();
@@ -129,7 +133,7 @@ MapMerger::MapMerger()
     ROS_INFO("Has local map:%i",has_local_map);
     ROS_INFO("Split size:%i",size);
     ROS_INFO("Robot name:%s",robot_name.c_str());
-    ROS_ERROR("Prefix:%s",robot_prefix.c_str());
+    ROS_INFO("Prefix:%s",robot_prefix.c_str());
     ROS_INFO("Local Map Frame:%s",local_map_frame_id.c_str());
     robot_hostname = robot_name;
 
@@ -261,8 +265,7 @@ void MapMerger::callback_remove_robot(const std_msgs::StringConstPtr &msg)
 
 void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &msg)
 {
-    ROS_ERROR("\n\t\e[1;34m Got a control message\e[0m\n");
-    ROS_ERROR("Got a control message");
+    ROS_DEBUG("Got a control message");
     adhoc_communication::MmControl tmp = *msg.get();
     if(tmp.update_numbers.size() == 0)
     {
@@ -661,8 +664,6 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
 
 void MapMerger::callback_got_position_network(const adhoc_communication::MmRobotPosition::ConstPtr &msg)
 {
-    ROS_ERROR("\n\t\e[1;34m Got other robot position \e[0m\n");
-    ROS_ERROR("Got other robot position");
     //ros::nodeHandle nodeHandle ("~");
     geometry_msgs::PoseStamped tmp = msg.get()->position;
     std::string source_host = msg.get()->src_robot;
@@ -843,8 +844,6 @@ void MapMerger::callback_got_position(const nav_msgs::Odometry::ConstPtr &msg)
 
 void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPtr &msg)
 {
-    ROS_ERROR("\n\t\e[1;34m Get other map \e[0m\n");
-    ROS_ERROR("Get other map");
     nav_msgs::OccupancyGrid tmp =  msg.get()->map;
     nav_msgs::OccupancyGrid * toInsert = &tmp;
     int index_robots = -1;
@@ -1073,15 +1072,11 @@ void MapMerger::start()
 
 
     ros::Subscriber  sub = nodeHandle->subscribe(local_map_topic,1000,&MapMerger::callback_map,this);
-    //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub.getTopic().c_str());
-    
     //ROS_ERROR("Subscribe map topic [%s] !!!!!!!!!", sub.getTopic().c_str());
     ros::Duration(0.1).sleep();
     ros::spinOnce();
 
     ros::Subscriber  sub_control = nodeHandle->subscribe(robot_prefix+"/"+control_topic,1000,&MapMerger::callback_control,this);
-    ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_control.getTopic().c_str());
-    
     ros::Duration(0.1).sleep();
     ros::spinOnce();
 
@@ -1089,8 +1084,6 @@ void MapMerger::start()
 
     ROS_INFO("Init Sub_other_maps");
     ros::Subscriber  sub_other_maps = nodeHandle->subscribe(robot_prefix+"/"+topic_over_network,1000,&MapMerger::callback_map_other,this);
-    ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_other_maps.getTopic().c_str());
-    
     ros::Duration(0.1).sleep();
     ros::spinOnce();
     //#ifndef DEBUG
@@ -1108,8 +1101,6 @@ void MapMerger::start()
         ROS_INFO("Creating position stuff");
         sub_position_local = nodeHandle->subscribe(robot_prefix+ "/" + position_local_robot_topic,1000,&MapMerger::callback_got_position,this);
         sub_position_network = nodeHandle->subscribe(robot_prefix + "/" + position_other_robots_topic,5,&MapMerger::callback_got_position_network,this);
-        ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_position_network.getTopic().c_str());
-        
         if(has_local_map)
             send_position = nodeHandle->createTimer(ros::Duration(seconds_send_position),&MapMerger::callback_send_position,this);
         list_of_positions_publisher = nodeHandle->advertise<adhoc_communication::MmListOfPoints>(robot_prefix+"/"+"all_positions",3);
@@ -1875,7 +1866,6 @@ bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_
         ROS_ERROR("Could not transform point, no transform matrix found for %s", req.point.src_robot.c_str());
         return false;
     }
-    ROS_ERROR("%d, %f", map_width, resolution);
     cv::Mat trans = transforms->at(index_transform);
     cv::Point org_point(map_width / 2 +req.point.x / resolution,
                         map_height / 2 +req.point.y / resolution);
@@ -1931,10 +1921,10 @@ void MapMerger::sendControlMessage(std::vector<int>* updateNumbers,std::string d
             if(exchange.response.status)
                 ROS_DEBUG("Could  send control message");
             else
-                ROS_ERROR("Problem sending control message to %s",dest.c_str());
+                ROS_WARN("Problem sending control message to %s",dest.c_str());
         }
         else
-            ROS_ERROR("Could not call service to send control message");
+            ROS_DEBUG("Could not call service to send control message");
 }
 bool MapMerger::getHasLocalMap()
 {
