@@ -226,6 +226,11 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed;
+    
+    void cb_charging_completed(const std_msgs::Empty& msg);
+    void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    
 };
 
 #endif  /* DOCKING_H */

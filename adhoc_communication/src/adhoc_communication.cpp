@@ -1943,7 +1943,7 @@ void publishMessage(message m, string topic)
             //ROS_ERROR("\n\e[1;34mTopic: %s\e[0m", (*i).getTopic().c_str()); //F
             if ((*i).getTopic().compare(topic) == 0)
             {
-                ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
+                //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
                 (*i).publish(m);
                 pubExsists = true;
             }

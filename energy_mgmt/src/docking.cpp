@@ -108,6 +108,9 @@ docking::docking()
     
     sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
     
+    sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
+    sub_vacant_docking_station = nh.subscribe("vacant_docking_station", 100, &docking::cb_vacant_docking_station, this);
+    
 }
 
 void docking::detect_ds() {
@@ -680,13 +683,14 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         s.vacant = msg.get()->vacant;
         ds.push_back(s);
         
-        map_merger::TransformPoint point;
-        point.request.point.src_robot = "robot_0";
-        point.request.point.x = s.x;
-        point.request.point.y = s.y;
+        
+        //map_merger::TransformPoint point;
+        //point.request.point.src_robot = "robot_0";
+        //point.request.point.x = s.x;
+        //point.request.point.y = s.y;
         
         //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
-        sc_trasform.call(point);
+        //sc_trasform.call(point);
         
 
     }
@@ -771,4 +775,22 @@ void docking::timerCallback(const ros::TimerEvent &event) {
             winner = (*it).robot_id;
      }
      ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
+}
+
+void docking::cb_charging_completed(const std_msgs::Empty& msg) {
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "vacant_docking_station";
+    srv_msg.request.docking_station.id = best_ds.id;
+    srv_msg.request.docking_station.vacant = true;
+    
+    sc_send_docking_station.call(srv_msg);
+
+}
+
+void docking::cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_ERROR("\n\t\e[1;34mVACANT !!!!!!!!!!!!!!!!!!!!!!\e[0m\n");
+    std::vector<ds_t>::iterator it = ds.begin();
+    for( ; it != ds.end(); it++)
+        if((*it).id == msg.get()->id)
+            (*it).vacant == true;
 }

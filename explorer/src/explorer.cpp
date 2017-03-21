@@ -397,7 +397,7 @@ public:
             // do nothing while recharging
             if(robot_state == charging)
             {
-                //ROS_ERROR("Waiting for battery to charge...");
+                ROS_ERROR("Waiting for battery to charge...");
                 if(charge_time > 0)
                     ros::Duration(charge_time).sleep();
                 else
@@ -839,7 +839,8 @@ public:
 
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                    //goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*0.8, &final_goal, count, &robot_str, -1);
                     //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
                     //ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 
@@ -1023,6 +1024,8 @@ public:
                     exploration->trajectory_plan_store(home_point_x, home_point_y);
 
                     publisher_re.publish(msg); //F
+                    
+                    robot_state = charging; //F
                     
                 }
 
@@ -1776,12 +1779,12 @@ public:
             
             int remaining_distance = exploration->trajectory_plan(position_x, position_y);
             if(robot_state == going_charging)
-                ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
+                ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
             if(remaining_distance < 50 && robot_state == going_charging && winner_of_auction == false) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
-                ac.cancelGoal();
-                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
-                robot_state = in_queue;
+                //ac.cancelGoal();
+                //ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
+                //robot_state = in_queue;
             }
 
             ros::Duration(0.5).sleep();
