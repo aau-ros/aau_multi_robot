@@ -226,10 +226,12 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_going_charging, sub_translate;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
     void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void cb_going_charging(const std_msgs::Empty& msg);
+    void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     
     state_t robot_state;
     

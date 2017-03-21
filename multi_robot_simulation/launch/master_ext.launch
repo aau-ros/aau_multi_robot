@@ -52,7 +52,7 @@
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
             <arg name="robot_prefix" value="/robot_0" />
         </include>
-        
+        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />-->
     </group>
     <group ns="robot_1">
         <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
@@ -102,6 +102,6 @@
         <include file="$(find energy_mgmt)/launch/energy_mgmt.launch">
             <arg name="robot_prefix" value="/robot_1" />
         </include>
+        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_1.rviz" />-->
     </group>
-    <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/multi_robot.rviz" />-->
 </launch>

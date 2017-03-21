@@ -498,17 +498,17 @@ void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
 {
     if(transforms->size() == 0)
     {
-        ROS_DEBUG("No transforms to recompute");
+        ROS_ERROR("No transforms to recompute");
         return;
     }
-    ROS_INFO("Recompute transforms");
+    ROS_ERROR("Recompute transforms");
 
     int newTransforms = 0;
     for(int i = 0; i < map_data->size(); i++)
     {
         if(new_data_maps->at(i) || force_recompute_all == true)
         {
-            ROS_DEBUG("New data at index:%i, recomputing Transform",i);
+            ROS_ERROR("New data at index:%i, recomputing Transform",i);
             bool success = recomputeTransform(i);
             if(success)
                 newTransforms++;
@@ -541,21 +541,22 @@ void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
 
 void MapMerger::callback_send_map(const ros::TimerEvent &e)
 {
+    ROS_ERROR("\n\t\e[1;34mSend map\e[0m\n");
     if(local_map_new_data == false)
     {
-        ROS_DEBUG("Do not send map,no new local map data");
+        ROS_ERROR("Do not send map,no new local map data");
         return;
     }
 
     if(robots->size() == 0)
     {
-        ROS_WARN("Do not send map, no robots");
+        ROS_ERROR("Do not send map, no robots");
         return;
     }
 
     if(local_map->data.size() == 0 || local_map_old->data.size() == 0)
     {
-        ROS_WARN("Do not send map, local map contains no data");
+        ROS_ERROR("Do not send map, local map contains no data");
          return;
     }
     local_map_new_data = false;
@@ -594,7 +595,7 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     }
     if(min_x == 9999 || min_y == 9999 || max_x == -1 || max_y == -1)
     {
-        ROS_DEBUG("map did not changed,skip sending");
+        ROS_ERROR("map did not changed,skip sending");
         return;
     }
 #else
@@ -606,7 +607,7 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     if(max_x < min_x || max_y < min_y)
         return;
     ROS_DEBUG("Found values\n min_x:%i|max_x:%i|min_y:%i|max_y:%i",min_x,max_x,min_y,max_y);
-    ROS_DEBUG("Merge Local Map");
+    ROS_ERROR("Merge Local Map");
     mergeMaps(local_map);
     //because that is optimized for a map_part, not for other start values
     //mergeMaps(local_map,min_x -5 ,min_y -5 ,max_x +5, max_x +5 );
@@ -618,9 +619,13 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
 */
     sendMapOverNetwork("mc_" + robot_name,containedUpdates,min_x,min_y,max_x,max_y);
     delete containedUpdates;
+    
+    
     //sendMapOverNetwork("",min_x,min_y,max_x,max_y);
     //send_map_over_network("");
-    ROS_DEBUG("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
+    
+    
+    ROS_ERROR("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
     update_list->push_back(new UpdateEntry(update_seq,min_x,min_y,max_x,max_y));
     update_seq++;
     if(local_map->data.size() != local_map_old->data.size())
@@ -657,6 +662,7 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     }
     ROS_DEBUG("copy local_map->data to local_map_old->data");
     std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+    ROS_ERROR("\n\t\e[1;34mSending map succeded!\e[0m\n");
 }
 
 void MapMerger::callback_got_position_network(const adhoc_communication::MmRobotPosition::ConstPtr &msg)
@@ -1125,10 +1131,22 @@ void MapMerger::start()
     if(seconds_recompute_transform != -1)
     {
         ROS_INFO("Create timer to recompute the transformations all %i seconds",seconds_recompute_transform);
-        recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this);
+        
+        //F
+        //recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this);
+        recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this, false);
+        recompute_transform_timer.start();
     }
     global_timer_pub = nodeHandle->createTimer(ros::Duration(seconds_publish_timer),&MapMerger::callback_global_pub,this);
-    send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
+    
+    
+    //F
+    //send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
+    send_map = nodeHandle->createTimer(ros::Duration(10),&MapMerger::callback_send_map,this, false);
+    
+    send_map.start();
+    
+    
     ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
                                                           &MapMerger::transformPointSRV,
                                                           this);
@@ -1555,6 +1573,7 @@ void MapMerger::callback_robot_status(const nav_msgs::MapMetaData::ConstPtr &msg
 
 void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* containedUpdates, int start_row, int start_collum, int end_row, int end_collum)
 {
+    ROS_ERROR("\n\t\e[1;34m sendMapOverNetwork \e[0m\n");
      //ros::nodeHandle nodeHandle ("~");
      ros::ServiceClient client;
      bool isWholeMap = false;
@@ -1610,8 +1629,15 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                 exchange.request.map_update.map.data = t->data;
                 exchange.request.map_update.update_numbers = *containedUpdates;
                 std::string hostname = destination;
+                
+                //F
                 exchange.request.dst_robot = destination;
-                ROS_DEBUG("Send Map to %s(if nothing -> boradcast) ,frame id:%s| topic:[%s]|data<_size:%lu",
+                if(robot_name == "robot_0")
+                    exchange.request.dst_robot = "robot_1";
+                else
+                    exchange.request.dst_robot = "robot_0";
+                
+                ROS_ERROR("Send Map to %s(if nothing -> boradcast) ,frame id:%s| topic:[%s]|data<_size:%lu",
                           destination.c_str(),t->header.frame_id.c_str(),
                           topic_over_network.c_str(), exchange.request.map_update.map.data.size());
                 if(client.call(exchange))
@@ -1622,10 +1648,10 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                     else
                         ROS_DEBUG("Sended Map to:%s,topic:%s|r:%i;c:%i",exchange.request.dst_robot.c_str(),exchange.request.topic.c_str(),row,collum);
                     else
-                        ROS_WARN("Destination host unreachable [%s](if nothing -> boradcast)",hostname.c_str());
+                        ROS_ERROR("Destination host unreachable [%s](if nothing -> boradcast)",hostname.c_str());
                 }
                 else
-                    ROS_DEBUG("Could not call service to send map");
+                    ROS_ERROR("Could not call service to send map");
             }
         }
 }

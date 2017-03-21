@@ -78,6 +78,7 @@ public:
         robot_state == fully_charged;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         
+        
 
         nh.param("frontier_selection",frontier_selection,1);
         nh.param("local_costmap/width",costmap_width,0);
@@ -376,6 +377,7 @@ public:
         std_msgs::Empty msg;
        // msg.data = "traveling home to recharge";
         ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",1);
+        ros::Publisher pub_going_charging = nh.advertise<std_msgs::Empty>("going_charging", 1);
         //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", publisher_re.getTopic().c_str());
         ros::Subscriber sub, sub2, sub3, pose_sub;
         
@@ -874,6 +876,8 @@ public:
                             //ROS_INFO("Could not determine goal, need to recharge!");
                             ROS_ERROR("Could not determine goal, need to recharge!");
                             robot_state = going_charging;
+                            std_msgs::Empty msg;
+                            pub_going_charging.publish(msg);
                         }
                         else
                             continue;

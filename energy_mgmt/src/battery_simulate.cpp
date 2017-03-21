@@ -1,5 +1,7 @@
 #include <battery_simulate.h>
 
+#define VALUE_FOR_FULL_BATTERY 1000000
+
 using namespace std;
 
 battery_simulate::battery_simulate()
@@ -61,8 +63,8 @@ battery_simulate::battery_simulate()
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
     
     
-    state.remaining_time_run = 1000;
-    state.remaining_distance = 1000;
+    state.remaining_time_run = VALUE_FOR_FULL_BATTERY;
+    state.remaining_distance = VALUE_FOR_FULL_BATTERY;
 
 }
 
@@ -79,8 +81,8 @@ void battery_simulate::compute()
             state.charging = false;
             state.remaining_time_charge = 0;
             remaining_power = total_power;
-            state.remaining_time_run = 60;
-            state.remaining_distance = 60;
+            state.remaining_time_run = VALUE_FOR_FULL_BATTERY;
+            state.remaining_distance = VALUE_FOR_FULL_BATTERY;
             //ROS_ERROR("%c[1;34mRecharging complete!\e[0m\n", 27);
             std_msgs::Empty msg;
             pub_charging_completed.publish(msg);
