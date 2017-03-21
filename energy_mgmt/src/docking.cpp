@@ -111,6 +111,8 @@ docking::docking()
     sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
     sub_vacant_docking_station = nh.subscribe("vacant_docking_station", 100, &docking::cb_vacant_docking_station, this);
     
+    robot_state = active;
+    
 }
 
 void docking::detect_ds() {
@@ -775,6 +777,13 @@ void docking::timerCallback(const ros::TimerEvent &event) {
             winner = (*it).robot_id;
      }
      ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
+     
+    //if(robot_id != winner)
+    if(false)
+    {
+        timer = nh.createTimer(ros::Duration(5), &docking::timer_callback_schedure_auction_restarting, this, false);
+        timer.start();
+    }
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty& msg) {
@@ -793,4 +802,21 @@ void docking::cb_vacant_docking_station(const adhoc_communication::EmDockingStat
     for( ; it != ds.end(); it++)
         if((*it).id == msg.get()->id)
             (*it).vacant == true;
+    
+        
+}
+
+void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event) {
+    ROS_ERROR("\n\t\e[1;34mRESTARTING AUCTION !!!!!!!!!!!!!!!!!!!!!!\e[0m\n");
+    if(false) {
+        auction_id++;
+        adhoc_communication::SendEmAuction srv;
+        srv.request.topic = "adhoc_communication/send_em_auction";
+        srv.request.auction.auction = auction_id;
+        srv.request.auction.robot = robot_id;
+        srv.request.auction.docking_station = best_ds.id;
+        srv.request.auction.bid = get_llh();
+        ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+        sc_send_auction.call(srv);
+    }
 }
