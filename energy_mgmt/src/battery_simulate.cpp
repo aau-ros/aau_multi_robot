@@ -33,7 +33,7 @@ battery_simulate::battery_simulate()
     speed_linear = max_speed_linear;
     power_standing = 1;
     power_moving = 10;
-    power_charging = 5;
+    power_charging = 100;
     
     
     
@@ -83,7 +83,7 @@ void battery_simulate::compute()
             remaining_power = total_power;
             state.remaining_time_run = VALUE_FOR_FULL_BATTERY;
             state.remaining_distance = VALUE_FOR_FULL_BATTERY;
-            //ROS_ERROR("%c[1;34mRecharging complete!\e[0m\n", 27);
+            ROS_ERROR("%c[1;34mRecharging complete!\e[0m\n", 27);
             std_msgs::Empty msg;
             pub_charging_completed.publish(msg);
 

@@ -1142,7 +1142,7 @@ void MapMerger::start()
     
     //F
     //send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
-    send_map = nodeHandle->createTimer(ros::Duration(10),&MapMerger::callback_send_map,this, false);
+    send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this, false);
     
     send_map.start();
     
