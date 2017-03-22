@@ -52,15 +52,13 @@ void sleepok(int t, ros::NodeHandle &nh)
 
 class Explorer {
 
-
-
-  
 public:
     
     //F
     bool test, winner_of_auction;
     ros::Publisher pub_robot_pos;
-    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue};
+    //ros::Subscriber sub_auction_completed;
+    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue, auctioning};
     state_t robot_state;
 
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0),
@@ -77,6 +75,7 @@ public:
         winner_of_auction = false;
         robot_state == fully_charged;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
+        //sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
         
         
 
@@ -306,8 +305,8 @@ public:
         if(!sc_trasform.call(point))
             ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
        //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());sc_trasform.call(point);
-               ROS_ERROR("\e[1;34mOriginal point:   (%f, %f)\e[0m", point.request.point.x, point.request.point.y);
-        ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m", point.response.point.x, point.response.point.y);
+               //ROS_ERROR("\e[1;34mOriginal point:   (%f, %f)\e[0m", point.request.point.x, point.request.point.y);
+        //ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m", point.response.point.x, point.response.point.y);
        
         
     }
@@ -384,6 +383,9 @@ public:
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
         ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
         ros::Subscriber sub_new_best_ds = nh.subscribe("new_best_docking_station_selected", 1, &Explorer::new_best_docking_station_selected_callback, this);  //F
+        ros::Subscriber sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
+        ros::Subscriber sub_winner_completed = nh.subscribe("auction_winner", 1, &Explorer::auction_winner_callback, this);
+        ros::Subscriber sub_loser_completed = nh.subscribe("auction_loser", 1, &Explorer::auction_loser_callback, this);
         
         
 
@@ -842,7 +844,7 @@ public:
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
                     //goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*0.8, &final_goal, count, &robot_str, -1);
+                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*0.015, &final_goal, count, &robot_str, -1);
                     //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
                     //ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 
@@ -875,7 +877,8 @@ public:
                         if(charge_countdown <= 0){
                             //ROS_INFO("Could not determine goal, need to recharge!");
                             ROS_ERROR("Could not determine goal, need to recharge!");
-                            robot_state = going_charging;
+                            //robot_state = going_charging;
+                            robot_state = auctioning;
                             std_msgs::Empty msg;
                             pub_going_charging.publish(msg);
                         }
@@ -1003,19 +1006,33 @@ public:
                     navigate_to_goal = navigate(final_goal);
                 }
             }
+            
+            else if(robot_state == auctioning) { 
+                ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                while(robot_state == auctioning) {
+                    //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                    ros::Duration(0.1).sleep();
+                    ros::spinOnce();
+                }
+                ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m\n");
+            }
 
             // navigate robot home for recharging
-            else if(robot_state == going_charging)
+            if(robot_state == going_charging)
             {
-                    //ROS_ERROR("Traveling home for recharging");
+                    ROS_ERROR("Traveling home for recharging");
                     //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
                     
                     
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
             }
-            
             //F: I exit from move_robot only when the goal has been reached
+            
+            
+                
+            
+            
 
             // result of navigation successful
             if(navigate_to_goal == true)
@@ -1029,7 +1046,7 @@ public:
 
                     publisher_re.publish(msg); //F
                     
-                    robot_state = charging; //F
+                    //robot_state = charging; //F
                     
                 }
 
@@ -1786,9 +1803,9 @@ public:
                 ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
             if(remaining_distance < 50 && robot_state == going_charging && winner_of_auction == false) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
-                //ac.cancelGoal();
-                //ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
-                //robot_state = in_queue;
+                ac.cancelGoal();
+                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
+                robot_state = in_queue;
             }
 
             ros::Duration(0.5).sleep();
@@ -1883,6 +1900,21 @@ public:
 			;
 
 		return true;
+    }
+    
+    void auction_completed_callback(const std_msgs::Empty::ConstPtr &msg) {
+        ROS_ERROR("\n\t\e[1;34mAuction completed: going to charging or going in queue?\e[0m\n");
+        robot_state = going_charging;
+    }
+    
+    void auction_winner_callback(const std_msgs::Empty::ConstPtr &msg) {
+        ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
+        winner_of_auction = true;
+    }
+    
+    void auction_loser_callback(const std_msgs::Empty::ConstPtr &msg) {
+        ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
+        winner_of_auction = false;
     }
 
     public:

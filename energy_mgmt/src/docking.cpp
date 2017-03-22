@@ -120,6 +120,10 @@ docking::docking()
     
     robot_state = active;
     
+    pub_auction_completed = nh.advertise<std_msgs::Empty>("auction_completed", 1);
+    pub_auction_winner = nh.advertise<std_msgs::Empty>("auction_winner", 1);
+    pub_auction_loser = nh.advertise<std_msgs::Empty>("auction_loser", 1);
+    
 }
 
 void docking::detect_ds() {
@@ -130,10 +134,10 @@ void docking::detect_ds() {
         int index = 0;
         std::string ds_prefix = "d" + SSTR(index);
         std::string param_name = "energy_mgmt/" + ds_prefix + "/x";
-        ROS_ERROR("\e[1;34m%s\e[0m", param_name.c_str());
+        //ROS_ERROR("\e[1;34m%s\e[0m", param_name.c_str());
         double x, y;
         while(nh.hasParam("energy_mgmt/" + ds_prefix + "/x")) { //would be better to use a do-while...
-            ROS_ERROR("\e[1;34mFOUND!!!!!!!!!!!!!!!!!!!!\e[0m");
+            //ROS_ERROR("\e[1;34mFOUND!!!!!!!!!!!!!!!!!!!!\e[0m");
             nh.param("energy_mgmt/" + ds_prefix + "/x", x, 0.0);
             nh.param("energy_mgmt/" + ds_prefix + "/y", y, 0.0);
             ds_t new_ds;
@@ -148,47 +152,46 @@ void docking::detect_ds() {
         
         std::vector<ds_t>::iterator it = ds.begin();
         for( ; it != ds.end(); it++)
-            ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
+            ; //ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
         
         
         
+        if(false) {
         
         
-        ds_t new_ds;
-        new_ds.id = 1;
-        new_ds.x = 1;
-        new_ds.y = 1;
-        ds.push_back(new_ds);
-        
-        ds_t new_ds2;
-        new_ds2.id = 1;
-        new_ds2.x = 0;
-        new_ds2.y = -2;
-        ds.push_back(new_ds2);
-        
-        
+            ds_t new_ds;
+            new_ds.id = 1;
+            new_ds.x = 1;
+            new_ds.y = 1;
+            ds.push_back(new_ds);
+            
+            ds_t new_ds2;
+            new_ds2.id = 1;
+            new_ds2.x = 0;
+            new_ds2.y = -2;
+            ds.push_back(new_ds2);        
         
         
-        geometry_msgs::PointStamped msg2;
-        adhoc_communication::SendEmDockingStation srv;
-        srv.request.topic = "adhoc_communication/send_em_docking_station";
-        
-        msg2.point.x = new_ds.x;
-        msg2.point.y = new_ds.y;
-        pub_new_best_ds.publish(msg2);
-        sc_send_docking_station.call(srv);
-        
-        msg2.point.x = new_ds2.x;
-        msg2.point.y = new_ds2.y;
-        pub_new_best_ds.publish(msg2);
-        sc_send_docking_station.call(srv);
-        
-        best_ds = new_ds2;
-        pub_new_best_ds.publish(msg2);
-        
-        //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
-        sc_send_docking_station.call(srv);
-        
+            geometry_msgs::PointStamped msg2;
+            adhoc_communication::SendEmDockingStation srv;
+            srv.request.topic = "adhoc_communication/send_em_docking_station";
+            
+            msg2.point.x = new_ds.x;
+            msg2.point.y = new_ds.y;
+            pub_new_best_ds.publish(msg2);
+            sc_send_docking_station.call(srv);
+            
+            msg2.point.x = new_ds2.x;
+            msg2.point.y = new_ds2.y;
+            pub_new_best_ds.publish(msg2);
+            sc_send_docking_station.call(srv);
+            
+            best_ds = new_ds2;
+            pub_new_best_ds.publish(msg2);
+            
+            //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
+            sc_send_docking_station.call(srv);
+        }
         
         test = false;
     } else {
@@ -229,7 +232,7 @@ void docking::compute_best_ds() {
             msg.point.y = best_ds.y;
             pub_new_best_ds.publish(msg);
             
-        }     
+            
             adhoc_communication::SendEmDockingStation srv;
             srv.request.topic = "adhoc_communication/send_em_docking_station";
             sc_send_docking_station.call(srv);
@@ -245,7 +248,7 @@ void docking::compute_best_ds() {
                 point.request.point.y = best_ds.y;
                 //point.request.point.x = 300;
                 //point.request.point.y = 300;
-                if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+                //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
                 
                 adhoc_communication::SendEmDockingStation srv_msg;
                 srv_msg.request.topic = "translate";
@@ -272,7 +275,7 @@ void docking::compute_best_ds() {
             //else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
             
             
-            
+        }    
            
             
             
@@ -774,50 +777,37 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 void docking::cb_recharge(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m\n");
     
-    // Start auction timer
-    //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
-    timer = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true);
-    timer2 = nh.createTimer(ros::Duration(5), timerCallback2, true);
     
-    ROS_ERROR("\n\t\e[1;34mStartint timer\e[0m\n");
-    
-    timer.start();
-    
-    auction_id++;
-
-    
-    adhoc_communication::SendEmAuction srv;
-    srv.request.topic = "adhoc_communication/send_em_auction";
-    srv.request.auction.auction = auction_id;
-    srv.request.auction.robot = robot_id;
-    srv.request.auction.docking_station = best_ds.id;
-    srv.request.auction.bid = get_llh();
-    ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
-    sc_send_auction.call(srv);
     
     
 }
 
 void timerCallback2(const ros::TimerEvent& event) {
-    ROS_ERROR("\n\t\e[1;34mTime ended 2!\e[0m\n");
-     ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-     
-
+    //ROS_ERROR("\n\t\e[1;34mTime ended 2!\e[0m\n");
+    // ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    ;
 }
 
 void docking::timerCallback(const ros::TimerEvent &event) {
-    ROS_ERROR("\n\t\e[1;34mTime ended!\e[0m\n");
-         ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-         
-     int winner;
-     float winner_bid = -100;
-     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
-     for(; it != auction_bids.end(); it++) {
-        ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
-        if((*it).bid > winner_bid)
-            winner = (*it).robot_id;
-     }
-     ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
+    ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m\n");
+    
+    std_msgs::Empty msg;
+    pub_auction_completed.publish(msg);
+    
+    if(robot_id == 0)
+        pub_auction_winner.publish(msg);
+    else
+        pub_auction_loser.publish(msg);
+    
+    int winner;
+    float winner_bid = -100;
+    std::vector<auction_bid_t>::iterator it = auction_bids.begin();
+    for(; it != auction_bids.end(); it++) {
+    ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
+    if((*it).bid > winner_bid)
+        winner = (*it).robot_id;
+    }
+    ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
      
     //if(robot_id != winner)
     if(false)
@@ -825,6 +815,15 @@ void docking::timerCallback(const ros::TimerEvent &event) {
         timer = nh.createTimer(ros::Duration(5), &docking::timer_callback_schedure_auction_restarting, this, false);
         timer.start();
     }
+    
+    adhoc_communication::SendEmAuction srv_mgs;
+    srv_mgs.request.topic = "adhoc_communication/auction_winner";
+    srv_mgs.request.auction.auction = auction_id;
+    srv_mgs.request.auction.robot = winner;
+    //srv_mgs.request.auction.docking_station = best_ds.id;
+    //srv_mgs.request.auction.bid = get_llh();
+    //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+    sc_send_auction.call(srv_mgs);
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty& msg) {
@@ -863,21 +862,42 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 }
 
 void docking::cb_going_charging(const std_msgs::Empty& msg) {
-    ROS_ERROR("\n\t\e[1;34mNeed to charge\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mNeed to charge\e[0m\n");
+    // Start auction timer
+    //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
+    timer = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true);
+    timer2 = nh.createTimer(ros::Duration(5), timerCallback2, true);
+    
+    //ROS_ERROR("\n\t\e[1;34mStartint timer\e[0m\n");
+    
+    timer.start();
+    
+    auction_id++;
+
+    
+    adhoc_communication::SendEmAuction srv;
+    srv.request.topic = "adhoc_communication/send_em_auction";
+    srv.request.auction.auction = auction_id;
+    srv.request.auction.robot = robot_id;
+    srv.request.auction.docking_station = best_ds.id;
+    srv.request.auction.bid = get_llh();
+    //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+    sc_send_auction.call(srv);
 }
 
 void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
      if(robot_prefix == "/robot_1") {
-        ROS_ERROR("\n\t\e[1;34mReply to translation\e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34mReply to translation\e[0m\n");
         map_merger::TransformPoint point;
         
         point.request.point.src_robot = "robot_0";
         point.request.point.x = msg.get()->x;
         point.request.point.y = msg.get()->y;
-        if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+        //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
         
             
     }
     
     
 }
+

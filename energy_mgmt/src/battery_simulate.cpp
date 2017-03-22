@@ -1,6 +1,6 @@
 #include <battery_simulate.h>
 
-#define VALUE_FOR_FULL_BATTERY 1000000
+#define VALUE_FOR_FULL_BATTERY 1000
 
 using namespace std;
 
@@ -13,7 +13,7 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_standing", power_standing);
     nh.getParam("energy_mgmt/charge_max", charge_max);
 
-    charge_max = 1000000;
+    charge_max = VALUE_FOR_FULL_BATTERY;
 
     // initialize private variables
     charge = charge_max;
@@ -28,11 +28,11 @@ battery_simulate::battery_simulate()
     
     
     max_speed_linear = 0.8;
-    total_power = 60; // NB: do not put it under 50-60, because otherwise robots do not have enough time to make computations...
+    total_power = VALUE_FOR_FULL_BATTERY; // NB: do not put it under 50-60, because otherwise robots do not have enough time to make computations...
     remaining_power = total_power;
     speed_linear = max_speed_linear;
     power_standing = 1;
-    power_moving = 1.3;
+    power_moving = 10;
     power_charging = 5;
     
     

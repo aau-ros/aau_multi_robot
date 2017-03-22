@@ -205,7 +205,7 @@ private:
     double w1, w2, w3, w4;
     
     //F
-    ros::Publisher pub_ds, pub_new_best_ds;
+    ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser;
     bool test;
     ds_t best_ds;
     ros::Subscriber sub_robot_position;
