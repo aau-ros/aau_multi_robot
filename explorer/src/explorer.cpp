@@ -42,6 +42,8 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000 //F
 
+#define SAFETY_COEFF 0.015
+
 boost::mutex costmap_mutex;
 
 void sleepok(int t, ros::NodeHandle &nh)
@@ -844,7 +846,7 @@ public:
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
                     //goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*0.015, &final_goal, count, &robot_str, -1);
+                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*SAFETY_COEFF, &final_goal, count, &robot_str, -1);
                     //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
                     //ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 

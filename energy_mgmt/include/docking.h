@@ -38,6 +38,7 @@ public:
     void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg);
     void points(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
     void cb_recharge(const std_msgs::Empty& msg);
+    void cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &msg);
     
 
 private:
@@ -208,7 +209,7 @@ private:
     ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser;
     bool test;
     ds_t best_ds;
-    ros::Subscriber sub_robot_position;
+    ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
@@ -236,6 +237,7 @@ private:
     state_t robot_state;
     
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
+    
     
 };
 
