@@ -8,6 +8,7 @@
     <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="screen">
         <param name="num_robots" value="2" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
+        <rosparam file="$(find energy_mgmt)/param/docking.yaml" command="load"/>
     <!--   <param name="robot_prefix" value="$(arg robot_prefix)"/> -->
     <!--     <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/docking_common.yaml" command="load"/>

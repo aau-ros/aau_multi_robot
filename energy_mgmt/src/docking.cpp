@@ -1,4 +1,8 @@
 #include <docking.h>
+#include <sstream>
+
+#define SSTR( x ) static_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
 
 using namespace std;
 
@@ -39,7 +43,6 @@ docking::docking()
         gethostname(hostname, 1023);
         robot_name = string(hostname);
         robot_id = 0;
-        ROS_ERROR("ONLY SIMULATIONS HAVE BEEN IMPLEMENTED YET, ABORTING");
         exit(0);
     }
     else
@@ -123,6 +126,33 @@ void docking::detect_ds() {
     if(test) {
         std_msgs::Empty msg;
         pub_ds.publish(msg);
+        
+        int index = 0;
+        std::string ds_prefix = "d" + SSTR(index);
+        std::string param_name = "energy_mgmt/" + ds_prefix + "/x";
+        ROS_ERROR("\e[1;34m%s\e[0m", param_name.c_str());
+        double x, y;
+        while(nh.hasParam("energy_mgmt/" + ds_prefix + "/x")) { //would be better to use a do-while...
+            ROS_ERROR("\e[1;34mFOUND!!!!!!!!!!!!!!!!!!!!\e[0m");
+            nh.param("energy_mgmt/" + ds_prefix + "/x", x, 0.0);
+            nh.param("energy_mgmt/" + ds_prefix + "/y", y, 0.0);
+            ds_t new_ds;
+            new_ds.id = index;
+            new_ds.x = x;
+            new_ds.y = y;
+            ds.push_back(new_ds);
+            //n.deleteParam("my_param");
+            index++;
+            ds_prefix = "d" + SSTR(index);
+        }
+        
+        std::vector<ds_t>::iterator it = ds.begin();
+        for( ; it != ds.end(); it++)
+            ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
+        
+        
+        
+        
         
         ds_t new_ds;
         new_ds.id = 1;
