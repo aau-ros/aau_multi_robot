@@ -2,12 +2,18 @@
 <launch>
  <!--  <arg name="output" default="log"/>	-->
 <arg name="robot_prefix"/>
+<arg name="x"/>
+<arg name="y"/>
  <!--   <arg name="num_robots"/> 		-->
  
  
     <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="screen">
         <param name="num_robots" value="2" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
+
+        <param name="x" value ="$(arg x)" />
+        <param name="y" value ="$(arg y)" />
+
         <rosparam file="$(find energy_mgmt)/param/docking.yaml" command="load"/>
     <!--   <param name="robot_prefix" value="$(arg robot_prefix)"/> -->
     <!--     <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>

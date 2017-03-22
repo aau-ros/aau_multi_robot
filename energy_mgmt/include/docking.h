@@ -238,6 +238,10 @@ private:
     
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
     
+    void translate_coordinates(double a, double b, double*c, double*d);
+    
+    double origin_absolute_x, origin_absolute_y;
+    
     
 };
 
