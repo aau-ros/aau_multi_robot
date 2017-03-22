@@ -1086,7 +1086,7 @@ void MapMerger::start()
     ros::spinOnce();
 
     ros::Subscriber  sub_control = nodeHandle->subscribe(robot_prefix+"/"+control_topic,1000,&MapMerger::callback_control,this);
-    ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_control.getTopic().c_str());
+    //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_control.getTopic().c_str());
     
     ros::Duration(0.1).sleep();
     ros::spinOnce();
@@ -1095,7 +1095,7 @@ void MapMerger::start()
 
     ROS_INFO("Init Sub_other_maps");
     ros::Subscriber  sub_other_maps = nodeHandle->subscribe(robot_prefix+"/"+topic_over_network,1000,&MapMerger::callback_map_other,this);
-    ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_other_maps.getTopic().c_str());
+    //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_other_maps.getTopic().c_str());
     
     ros::Duration(0.1).sleep();
     ros::spinOnce();
@@ -1114,7 +1114,7 @@ void MapMerger::start()
         ROS_INFO("Creating position stuff");
         sub_position_local = nodeHandle->subscribe(robot_prefix+ "/" + position_local_robot_topic,1000,&MapMerger::callback_got_position,this);
         sub_position_network = nodeHandle->subscribe(robot_prefix + "/" + position_other_robots_topic,5,&MapMerger::callback_got_position_network,this);
-        ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_position_network.getTopic().c_str());
+        //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_position_network.getTopic().c_str());
         
         if(has_local_map)
             send_position = nodeHandle->createTimer(ros::Duration(seconds_send_position),&MapMerger::callback_send_position,this);

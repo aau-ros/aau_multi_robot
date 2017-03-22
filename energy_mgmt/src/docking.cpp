@@ -129,6 +129,40 @@ docking::docking()
     
     sub_auction_winner_adhoc = nh.subscribe("adhoc_communication/auction_winner", 100, &docking::cb_auction_winner, this);
     
+    //optimal_ds_computed_once == false;
+    
+    preload_docking_stations();
+    
+}
+
+void docking::preload_docking_stations() {      
+    int index = 0;
+    std::string ds_prefix = "d" + SSTR(index);
+    std::string param_name = "energy_mgmt/" + ds_prefix + "/x";
+    //ROS_ERROR("\e[1;34m%s\e[0m", param_name.c_str());
+    double x, y;
+    while(nh.hasParam("energy_mgmt/" + ds_prefix + "/x")) { //would be better to use a do-while...
+        //ROS_ERROR("\e[1;34mFOUND!!!!!!!!!!!!!!!!!!!!\e[0m");
+        nh.param("energy_mgmt/" + ds_prefix + "/x", x, 0.0);
+        nh.param("energy_mgmt/" + ds_prefix + "/y", y, 0.0);
+        ds_t new_ds;
+        new_ds.id = index;
+        translate_coordinates(x, y, &(new_ds.x), &(new_ds.y));
+        ds.push_back(new_ds);
+        //n.deleteParam("my_param");
+        index++;
+        ds_prefix = "d" + SSTR(index);
+    }
+
+    std::vector<ds_t>::iterator it = ds.begin();
+    
+    best_ds = (*it);
+    ROS_ERROR("\e[1;34mFirst optimal DS: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
+    
+    for( ; it != ds.end(); it++)
+        ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
+        
+
 }
 
 void docking::detect_ds() {
@@ -224,62 +258,75 @@ void docking::compute_best_ds() {
     
     double x = robot_x;
     double y = robot_y;
+    bool computed_new_optimal_ds = false;
     std::vector<ds_t>::iterator it = ds.begin();
     for(; it != ds.end(); it++)
-        if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
+        //if(optimal_ds_computed_once) {
+            if( (best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) > 
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y) ) {
-            ROS_ERROR("New best DS!");
-            
-            best_ds = *it;
-            geometry_msgs::PointStamped msg;
-            msg.point.x = best_ds.x;
-            msg.point.y = best_ds.y;
-            pub_new_best_ds.publish(msg);
-            
-            
-            adhoc_communication::SendEmDockingStation srv;
-            srv.request.topic = "adhoc_communication/send_em_docking_station";
-            sc_send_docking_station.call(srv);
-            //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
-            
-              
-            
-            map_merger::TransformPoint point;
-            //ROS_ERROR("\e[1;34mCaller robot: %s\e[0m", robot_prefix.c_str());
-            if(robot_prefix == "/robot_0") {
-                point.request.point.src_robot = "robot_1";
-                point.request.point.x = best_ds.x;
-                point.request.point.y = best_ds.y;
-                //point.request.point.x = 300;
-                //point.request.point.y = 300;
-                //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
-                
-                adhoc_communication::SendEmDockingStation srv_msg;
-                srv_msg.request.topic = "translate";
-                srv_msg.request.docking_station.x = point.response.point.x;
-                srv_msg.request.docking_station.y = point.response.point.y;
-                sc_send_docking_station.call(srv_msg);
-            
-            }
-            else if(robot_prefix == "/robot_1") {
-            
-                if(false) {
-                    point.request.point.src_robot = "robot_0";
-                    point.request.point.x = 0.95;
-                    point.request.point.y = -2;
-                    if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
-               }
-                
+                    computed_new_optimal_ds = true;
+                    best_ds = *it;
             } else
-                ROS_ERROR("\e[1;34m!!!!!!!!!!!!!!!!!!!!\e[0m");
-                
-            //ROS_ERROR("\e[1;34mPoint to transform is of robot %s\e[0m", point.request.point.src_robot.c_str());
+                ; //ROS_ERROR("\e[1;34m!!!!\e[0m");
+        //} else {
+        //    ROS_ERROR("\e[1;34mFirst computation of optimal DS: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
+        //    optimal_ds_computed_once = true;
+        //    best_ds = *it;
+        //}
+        
+    if(computed_new_optimal_ds) {
+        ROS_ERROR("\e[1;34mNew optimal DS computed: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
+        
+        
+        geometry_msgs::PointStamped msg;
+        msg.point.x = best_ds.x;
+        msg.point.y = best_ds.y;
+        pub_new_best_ds.publish(msg);
+        
+        
+        adhoc_communication::SendEmDockingStation srv;
+        srv.request.topic = "adhoc_communication/send_em_docking_station";
+        sc_send_docking_station.call(srv);
+        //ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
+        
+          
+        
+        map_merger::TransformPoint point;
+        //ROS_ERROR("\e[1;34mCaller robot: %s\e[0m", robot_prefix.c_str());
+        if(robot_prefix == "/robot_0") {
+            point.request.point.src_robot = "robot_1";
+            point.request.point.x = best_ds.x;
+            point.request.point.y = best_ds.y;
+            //point.request.point.x = 300;
+            //point.request.point.y = 300;
+            //if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
             
-            //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
-            //else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
+            adhoc_communication::SendEmDockingStation srv_msg;
+            srv_msg.request.topic = "translate";
+            srv_msg.request.docking_station.x = point.response.point.x;
+            srv_msg.request.docking_station.y = point.response.point.y;
+            sc_send_docking_station.call(srv_msg);
+        
+        }
+        else if(robot_prefix == "/robot_1") {
+        
+            if(false) {
+                point.request.point.src_robot = "robot_0";
+                point.request.point.x = 0.95;
+                point.request.point.y = -2;
+                if(sc_trasform.call(point)) ROS_ERROR("\e[1;34mTransformation succeded:\n\t\tOriginal point: (%f, %f)\n\t\tObtained point: (%f, %f)\e[0m",point.request.point.x, point.request.point.y, point.response.point.x, point.response.point.y);
+           }
             
+        } else
+            ROS_ERROR("\e[1;34m!!!!!!!!!!!!!!!!!!!!\e[0m");
             
-        }    
+        //ROS_ERROR("\e[1;34mPoint to transform is of robot %s\e[0m", point.request.point.src_robot.c_str());
+        
+        //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
+        //else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
+        
+        
+    }   
            
             
             
@@ -296,7 +343,7 @@ void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr& msg) {
     
 
 void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg) {
-    ROS_ERROR("adhoc_ds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    ;//ROS_ERROR("adhoc_ds!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 }
 
 
@@ -478,7 +525,7 @@ bool docking::auction(int docking_station, int id)
         srv.request.auction.robot = robot_id;
         srv.request.auction.docking_station = best_ds.id;
         srv.request.auction.bid = get_llh();
-        ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
         sc_send_auction.call(srv);
     }
 
@@ -577,7 +624,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 
 void docking::robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
-    //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     robot_x = msg.get()->point.x;
     robot_y = msg.get()->point.y;
 }

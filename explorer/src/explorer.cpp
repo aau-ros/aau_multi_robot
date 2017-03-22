@@ -60,7 +60,7 @@ public:
     bool test, winner_of_auction;
     ros::Publisher pub_robot_pos;
     //ros::Subscriber sub_auction_completed;
-    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue, auctioning};
+    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue, auctioning, reaching_frontier_before_going_charging};
     state_t robot_state;
 
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0),
@@ -382,8 +382,8 @@ public:
         ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
         ros::Subscriber sub_new_best_ds = nh.subscribe("new_best_docking_station_selected", 1, &Explorer::new_best_docking_station_selected_callback, this);  //F
         ros::Subscriber sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
-        ros::Subscriber sub_winner_completed = nh.subscribe("auction_winner", 1, &Explorer::auction_winner_callback, this);
-        ros::Subscriber sub_loser_completed = nh.subscribe("auction_loser", 1, &Explorer::auction_loser_callback, this);
+        ros::Subscriber sub_auction_winner = nh.subscribe("auction_winner", 1, &Explorer::auction_winner_callback, this);
+        ros::Subscriber sub_auction_loser = nh.subscribe("auction_loser", 1, &Explorer::auction_loser_callback, this);
         
         
 
@@ -1907,6 +1907,7 @@ public:
     
     void auction_winner_callback(const std_msgs::Empty::ConstPtr &msg) {
         ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
+        robot_state = reaching_frontier_before_going_charging; //F WRONG in the general case!!!!
         winner_of_auction = true;
     }
     

@@ -242,6 +242,10 @@ private:
     
     double origin_absolute_x, origin_absolute_y;
     
+    bool optimal_ds_computed_once;
+    
+    void preload_docking_stations();
+    
     
 };
 
