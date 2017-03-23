@@ -162,7 +162,7 @@ private:
      * A vector of all robots with their current state.
      */
     int num_robots; // number of robots is known in simulations
-    enum state_t {active, going_charging, charging, idle, in_queue};
+    enum state_t {active, going_charging, charging, idle, in_queue_state};
     struct robot_t{
         int id;
         state_t state;
@@ -206,7 +206,7 @@ private:
     double w1, w2, w3, w4;
     
     //F
-    ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser;
+    ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser, pub_abort_charging;
     bool test;
     ds_t best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
@@ -245,6 +245,9 @@ private:
     bool optimal_ds_computed_once;
     
     void preload_docking_stations();
+    
+    bool recharging, in_queue;
+    double remaining_time;
     
     
 };

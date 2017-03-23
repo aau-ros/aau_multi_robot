@@ -33,7 +33,7 @@ battery_simulate::battery_simulate()
     speed_linear = max_speed_linear;
     power_standing = 1;
     power_moving = 10;
-    power_charging = 100;
+    power_charging = 50;
     
     
     
@@ -58,6 +58,8 @@ battery_simulate::battery_simulate()
     sub_charge = nh.subscribe("going_to_recharge", 1, &battery_simulate::cb_charge, this);
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
+    
+    sub_abort_charging = nh.subscribe("charging_aborted", 1, &battery_simulate::cb_abort_charging, this);
 
     //TODO: do we need this?
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
@@ -68,6 +70,10 @@ battery_simulate::battery_simulate()
 
 }
 
+void battery_simulate::cb_abort_charging(const std_msgs::Empty::ConstPtr &msg) {
+    state.charging = false;
+}
+
 void battery_simulate::compute()
 {
     if(state.charging) {
@@ -75,7 +81,9 @@ void battery_simulate::compute()
         remaining_power += power_charging;
         state.soc = remaining_power / total_power;
         state.remaining_time_charge = 10;
-        //printf("%c[1;34mSOC: %f\e[0m\n", 27, state.soc);
+        state.remaining_time_run = state.soc * total_power;
+        state.remaining_distance = state.remaining_time_run;
+        //printf("%c[1;34mSOC: %f, remaining_time_run: %f\e[0m\n", 27, state.soc, state.remaining_time_run);
         if(state.soc * 100 >= 100) {
             state.soc = 100;
             state.charging = false;
@@ -152,7 +160,7 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
     state.soc = 0;
     remaining_power = 0;
     state.remaining_time_run = 0;
-    state.remaining_distance = 0;
+    state.remaining_distance = 10;
 }
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)

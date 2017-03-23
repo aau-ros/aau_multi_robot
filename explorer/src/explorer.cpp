@@ -42,7 +42,7 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000 //F
 
-#define SAFETY_COEFF 0.015
+#define SAFETY_COEFF 0.013
 #define INCR 1
 
 boost::mutex costmap_mutex;
@@ -65,6 +65,7 @@ public:
     enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue,
                   auctioning, //auctioning: the robot has started an auction; notice that if the robot is aprticipating to an auction that it was not started by
                               //it, its state is not equal to auctioning!!!
+                  going_in_queue,
                   moving_to_frontier_before_going_charging, moving_to_frontier};
     state_t robot_state;
     
@@ -272,7 +273,6 @@ public:
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
         ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m\n");
         robot_state = fully_charged;
-        number_of_recharges++;
     }
     
     
@@ -1063,10 +1063,24 @@ public:
                 ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m\n");
                 
             }
+            
+            
+            
 
             // navigate robot home for recharging
            //IMPORTANT: do not puit and else if here, because when I exit from the above else if(robot_state == auctioning), I may need to go home / to ds
            // since now I may be in state going_charging because I won an auction!!!!
+            if(robot_state == going_in_queue) {
+                ROS_ERROR("Traveling to DS to go in queue");
+                
+                counter++;
+                    
+                    
+                    move_robot(counter, home_point_x, home_point_y);
+            
+            }
+            
+            
             
             if(robot_state == going_charging)
             {
@@ -1091,6 +1105,7 @@ public:
                 if(robot_state == going_charging)
                 {
                     ROS_ERROR("At home for recharging");
+                    number_of_recharges++;
                     robot_state = charging; //F
                     publisher_re.publish(msg); //F
                     
@@ -1828,6 +1843,8 @@ public:
         
         pub_robot_pos.publish(goal_msgs);
 
+        ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m\n");
+        
         ac.sendGoal(goal_msgs);
 
         ac.waitForResult(ros::Duration(waitForResult));
@@ -1861,7 +1878,7 @@ public:
             int remaining_distance = exploration->trajectory_plan(position_x, position_y);
             if(robot_state == going_charging)
                 ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
-            if(remaining_distance < 50 && robot_state == going_charging && winner_of_auction == false) {
+            if(remaining_distance < 50 && robot_state == going_in_queue) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
                 ac.cancelGoal();
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
@@ -1875,6 +1892,11 @@ public:
         //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", ac.getState().toString().c_str());
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
+            if(robot_state == in_queue)
+                ROS_ERROR("\n\t\e[1;34mWAITING!!!\e[0m\n");
+            else
+                break;
+            ros::Duration(2).sleep();
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED) {
                 ROS_INFO("ABORTED");
 
@@ -1884,6 +1906,7 @@ public:
             }
         }
         ROS_INFO("TARGET REACHED");
+        //ROS_ERROR("TARGET REACHED");
 
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
@@ -1976,19 +1999,33 @@ public:
         else if(robot_state != charging) {//maybe the robot is already at a DS...
             ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
             robot_state = going_charging;
+            //move_robot(counter, home_point_x, home_point_y);
         }
+        else if (robot_state == in_queue) {
+            ROS_ERROR("\n\t\e[1;34mOh yeah! Now the DS is free: going to charge!\e[0m\n");
+            robot_state = going_charging;
+            //move_robot(counter, home_point_x, home_point_y);
+        }
+            
         winner_of_auction = true;
     }
     
     void auction_loser_callback(const std_msgs::Empty::ConstPtr &msg) {
     // the robot receive the relative signal only if it has lost an auction started by itself, otherwise it doesn't care if it has lost an auction, it will just continue to explorer and, if necessary, it will start its own auction later
-        ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
-        
-        //TODO //F
-        //robot_state = going_in_queue;
-        robot_state = going_charging;
-        
-        winner_of_auction = false;
+    // OR!!! if it was recharging...
+        if(robot_state == charging) {
+            robot_state = exploring;
+            ROS_ERROR("\n\t\e[1;34mLeaving DS and stopping charing...\e[0m\n");
+        }
+        else {
+            ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
+            
+            
+            robot_state = going_in_queue;
+            //robot_state = going_charging;
+            
+            winner_of_auction = false;
+        }
     }
     
     void auction_participation_callback(const std_msgs::Empty::ConstPtr &msg) {

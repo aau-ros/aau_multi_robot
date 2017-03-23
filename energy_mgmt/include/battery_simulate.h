@@ -151,6 +151,9 @@ private:
     double remaining_power, total_power;
     
     ros::Publisher pub_charging_completed;
+    ros::Subscriber sub_abort_charging;
+    
+    void cb_abort_charging(const std_msgs::Empty::ConstPtr &msg);
 };
 
 
