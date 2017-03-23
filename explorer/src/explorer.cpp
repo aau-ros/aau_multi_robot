@@ -43,6 +43,7 @@
 #define STUCK_COUNTDOWN 1000 //F
 
 #define SAFETY_COEFF 0.015
+#define INCR 1
 
 boost::mutex costmap_mutex;
 
@@ -57,11 +58,18 @@ class Explorer {
 public:
     
     //F
+    int number_of_recharges = 0;
     bool test, winner_of_auction;
     ros::Publisher pub_robot_pos;
     //ros::Subscriber sub_auction_completed;
-    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue, auctioning, reaching_frontier_before_going_charging};
+    enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue,
+                  auctioning, //auctioning: the robot has started an auction; notice that if the robot is aprticipating to an auction that it was not started by
+                              //it, its state is not equal to auctioning!!!
+                  moving_to_frontier_before_going_charging, moving_to_frontier};
     state_t robot_state;
+    
+    enum auction_participation_t {none, participating};
+    //auction_participation_t auction_participation;
 
     Explorer(tf::TransformListener& tf) : counter(0), rotation_counter(0), nh("~"), number_of_robots(1), accessing_cluster(0), cluster_element_size(0), cluster_flag(false), cluster_element(-1), cluster_initialize_flag(false), global_iterations(0), global_iterations_counter(0), counter_waiting_for_clusters(0), global_costmap_iteration(0), robot_prefix_empty(false), robot_id(0), battery_charge(100), recharge_cycles(0), battery_charge_temp(100), energy_consumption(0), available_distance(0),
     //robot_state(fully_charged),
@@ -78,6 +86,7 @@ public:
         robot_state == fully_charged;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         //sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
+        //auction_participation = none;
         
         
 
@@ -263,6 +272,7 @@ public:
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
         ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m\n");
         robot_state = fully_charged;
+        number_of_recharges++;
     }
     
     
@@ -282,10 +292,10 @@ public:
     void new_best_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
         //ROS_ERROR("4444444");
         //ROS_ERROR("Storing new best DS position");
-        ROS_INFO("Storing new best DS position");
         //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
         home_point_x = msg.get()->point.x;
         home_point_y = msg.get()->point.y;
+        //ROS_ERROR("x = %f; y: %f", home_point_x, home_point_y);
         
         
         map_merger::TransformPoint point;
@@ -294,14 +304,14 @@ public:
         else if(robot_prefix == "/robot_0")
             point.request.point.src_robot = "robot_1";
         else
-            ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            ;//ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         point.request.point.x = home_point_x;
         point.request.point.y = home_point_y;
         
         
         ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
         if(!sc_trasform.call(point))
-            ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            ;//ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
        //ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());sc_trasform.call(point);
                //ROS_ERROR("\e[1;34mOriginal point:   (%f, %f)\e[0m", point.request.point.x, point.request.point.y);
         //ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m", point.response.point.x, point.response.point.y);
@@ -327,7 +337,7 @@ public:
         // robot is out of energy, exit
         if(available_distance <= 0 && robot_state != charging)
         {
-            ROS_ERROR("Robot has run out of energy!");
+            ROS_FATAL("Robot has run out of energy!");
             finalize_exploration();
         }
     }
@@ -384,6 +394,7 @@ public:
         ros::Subscriber sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
         ros::Subscriber sub_auction_winner = nh.subscribe("auction_winner", 1, &Explorer::auction_winner_callback, this);
         ros::Subscriber sub_auction_loser = nh.subscribe("auction_loser", 1, &Explorer::auction_loser_callback, this);
+        ros::Subscriber sub_auction_participation = nh.subscribe("auction_participation", 1, &Explorer::auction_participation_callback, this);
         
         
 
@@ -841,15 +852,19 @@ public:
 
                     // look for a frontier as goal
                     ROS_INFO("DETERMINE GOAL...");
+                    //F
                     //goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*SAFETY_COEFF, &final_goal, count, &robot_str, -1);
+                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*SAFETY_COEFF + available_distance*SAFETY_COEFF*INCR*number_of_recharges, &final_goal, count, &robot_str, -1);
                     //ROS_INFO("Goal_determined: %d   counter: %d",goal_determined, count);
                     //ROS_ERROR("Goal_determined: %d   counter: %d",goal_determined, count);
 
                     // found a frontier, go there
                     if(goal_determined == true)
                     {
-                        robot_state = exploring;
+                        //F
+                        //robot_state = exploring;
+                        robot_state = moving_to_frontier;
+                        
                         exit_countdown = EXIT_COUNTDOWN;
                         charge_countdown = EXIT_COUNTDOWN;
                     }
@@ -869,6 +884,37 @@ public:
                     // go charging
                     else
                     {
+                        /*
+                        robot_state = auctioning;
+                        //F
+                        if(auction_participation == participating) {
+                            ROS_ERROR("\n\t\e[1;34mI need to recharge, must I'm participating to an auction, so let's see what happens...\e[0m\n");
+                           while(auction_participation == participating) {
+                                //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                                ros::Duration(0.1).sleep();
+                                ros::spinOnce();
+                            }
+                            
+                            if(winner_of_auction == true)
+                                robot_state = going_charging; //F actually it is no needed, since there is already auction_winner_callback...
+                        }
+                    
+                        if(charge_countdown > 0) //F
+                            charge_countdown = 0; //F
+                        charge_countdown--;
+                        if(charge_countdown <= 0){
+                            //ROS_INFO("Could not determine goal, need to recharge!");
+                            ROS_ERROR("Could not determine goal, need to recharge!");
+                            //robot_state = going_charging;
+                            
+                            std_msgs::Empty msg;
+                            pub_going_charging.publish(msg);
+                        }
+                        else
+                            continue;
+                        */
+                        
+                        //F
                         if(charge_countdown > 0) //F
                             charge_countdown = 0; //F
                         charge_countdown--;
@@ -984,7 +1030,9 @@ public:
             ROS_INFO("Navigating to Goal");
 
             // navigate robot to next frontier
-            if(robot_state == exploring)
+            //F
+            //if(robot_state == exploring)
+            if(robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
             {
                 if(OPERATE_WITH_GOAL_BACKOFF == true)
                 {
@@ -1013,9 +1061,13 @@ public:
                     ros::spinOnce();
                 }
                 ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m\n");
+                
             }
 
             // navigate robot home for recharging
+           //IMPORTANT: do not puit and else if here, because when I exit from the above else if(robot_state == auctioning), I may need to go home / to ds
+           // since now I may be in state going_charging because I won an auction!!!!
+            
             if(robot_state == going_charging)
             {
                     ROS_ERROR("Traveling home for recharging");
@@ -1039,18 +1091,22 @@ public:
                 if(robot_state == going_charging)
                 {
                     ROS_ERROR("At home for recharging");
-                    // compute path length
-                    exploration->trajectory_plan_store(home_point_x, home_point_y);
-
+                    robot_state = charging; //F
                     publisher_re.publish(msg); //F
                     
-                    robot_state = charging; //F
-                    
+                    // compute path length
+                    exploration->trajectory_plan_store(home_point_x, home_point_y);
+  
                 }
 
                 // robot reached frontier
-                else if(robot_state == exploring)
+                //else if(robot_state == exploring)
+                else if(robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
                 {
+                    if(robot_state == moving_to_frontier)
+                        robot_state = exploring;
+                    else
+                        robot_state = going_charging;
                     ROS_INFO("STORING PATH");
                     // compute path length
                     exploration->trajectory_plan_store(exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).x_coordinate, exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).y_coordinate);
@@ -1072,9 +1128,15 @@ public:
                     if(exit_countdown <= 0)
                         finalize_exploration();
                 }
-                else if(robot_state == exploring)
+                //else if(robot_state == exploring)
+                else if(robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
                 {
+                    if(robot_state == moving_to_frontier)
+                        robot_state = exploring;
+                    else
+                        robot_state = going_charging;
                     ROS_INFO("Storing unreachable...");
+                    
                     exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
                     ROS_DEBUG("Stored unreachable frontier");
                 }
@@ -1901,19 +1963,37 @@ public:
     }
     
     void auction_completed_callback(const std_msgs::Empty::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34mAuction completed: going to charging or going in queue?\e[0m\n");
-        robot_state = going_charging;
+        ROS_ERROR("\n\t\e[1;34mAuction completet\e[0m\n");
+        //auction_participation = none; //TODO //F wrong in the general case!!! maybe the robot is participating to more than one auction!!!
     }
     
     void auction_winner_callback(const std_msgs::Empty::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
-        robot_state = reaching_frontier_before_going_charging; //F WRONG in the general case!!!!
+        //TODO //F check...
+        if(robot_state == moving_to_frontier) {
+            ROS_ERROR("\n\t\e[1;34mLet's complete my job, and then let's go to charge!\e[0m\n");
+            robot_state = moving_to_frontier_before_going_charging;
+        }
+        else if(robot_state != charging) {//maybe the robot is already at a DS...
+            ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
+            robot_state = going_charging;
+        }
         winner_of_auction = true;
     }
     
     void auction_loser_callback(const std_msgs::Empty::ConstPtr &msg) {
+    // the robot receive the relative signal only if it has lost an auction started by itself, otherwise it doesn't care if it has lost an auction, it will just continue to explorer and, if necessary, it will start its own auction later
         ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
+        
+        //TODO //F
+        //robot_state = going_in_queue;
+        robot_state = going_charging;
+        
         winner_of_auction = false;
+    }
+    
+    void auction_participation_callback(const std_msgs::Empty::ConstPtr &msg) {
+        ROS_ERROR("\n\t\e[1;34mparticipating to auction!\e[0m\n");
+        //auction_participation = participating;
     }
 
     public:

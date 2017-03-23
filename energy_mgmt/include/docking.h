@@ -213,7 +213,7 @@ private:
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
-    ros::Publisher pub_adhoc_new_best_ds;
+    ros::Publisher pub_adhoc_new_best_ds, pub_auction_participation;
     ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
     ros::ServiceClient sc_trasform;
     

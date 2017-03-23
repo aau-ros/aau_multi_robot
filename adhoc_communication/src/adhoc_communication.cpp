@@ -367,7 +367,7 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
 
 bool SendEmAuction(adhoc_communication::SendEmAuction::Request &req, adhoc_communication::SendEmAuction::Response &res)
 {
-    ROS_ERROR("\n\t\e[1;34mSending auction...\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mSending auction...\e[0m\n");
     /* Description:
      * Service call to send an auction for energy management.
      */

@@ -94,12 +94,12 @@ docking::docking()
     //sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_docking_stations = nh.subscribe("adhoc_communication/send_em_docking_station", 100, &docking::cb_docking_stations, this);
     sub_auction = nh.subscribe("adhoc_communication/send_em_auction", 100, &docking::cb_auction, this);
-    ROS_ERROR("\e[1;34m%s\e[0m\n", sub_auction.getTopic().c_str());
+    //ROS_ERROR("\e[1;34m%s\e[0m\n", sub_auction.getTopic().c_str());
     
     //sub_auction = nh.subscribe(robot_name+"/ds_auction", 100, &docking::cb_auction, this);
     
     sub_recharge = nh.subscribe("going_to_recharge", 100, &docking::cb_recharge, this);
-    ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sub_recharge.getTopic().c_str());
+    //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sub_recharge.getTopic().c_str());
     
     
     //F
@@ -126,12 +126,15 @@ docking::docking()
     pub_auction_completed = nh.advertise<std_msgs::Empty>("auction_completed", 1);
     pub_auction_winner = nh.advertise<std_msgs::Empty>("auction_winner", 1);
     pub_auction_loser = nh.advertise<std_msgs::Empty>("auction_loser", 1);
+    pub_auction_participation = nh.advertise<std_msgs::Empty>("auction_participation", 1);
     
     sub_auction_winner_adhoc = nh.subscribe("adhoc_communication/auction_winner", 100, &docking::cb_auction_winner, this);
     
     //optimal_ds_computed_once == false;
     
     preload_docking_stations();
+    
+    
     
 }
 
@@ -157,15 +160,20 @@ void docking::preload_docking_stations() {
     std::vector<ds_t>::iterator it = ds.begin();
     
     best_ds = (*it);
-    ROS_ERROR("\e[1;34mFirst optimal DS: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
+    //ROS_ERROR("\e[1;34mFirst optimal DS: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
+    geometry_msgs::PointStamped msg;
+    msg.point.x = best_ds.x;
+    msg.point.y = best_ds.y;
+    pub_new_best_ds.publish(msg); //TODO //F here is too early!!! explorer has not the corresponding subscriber yet!!!
     
     for( ; it != ds.end(); it++)
-        ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
+        ; //ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
         
 
 }
 
 void docking::detect_ds() {
+
     if(test) {
         std_msgs::Empty msg;
         pub_ds.publish(msg);
@@ -255,6 +263,12 @@ void docking::detect_ds() {
 
 //void docking::compute_best_ds(const move_base_msgs::MoveBaseGoal::ConstPtr& msg) {
 void docking::compute_best_ds() {
+    
+    // Just to force updating best_ds at the beginning...
+    geometry_msgs::PointStamped msg1;
+    msg1.point.x = best_ds.x;
+    msg1.point.y = best_ds.y;
+    pub_new_best_ds.publish(msg1);
     
     double x = robot_x;
     double y = robot_y;
@@ -501,7 +515,7 @@ void docking::update_l4(int docking_station)
 
 bool docking::auction(int docking_station, int id)
 {
-    ROS_ERROR("\n\t\e[1;34mmanaging auction\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mmanaging auction\e[0m\n");
     
     // set auction id
     if(id > auction_id) // it is a new action from another robot, respond
@@ -524,7 +538,10 @@ bool docking::auction(int docking_station, int id)
         srv.request.auction.auction = id;
         srv.request.auction.robot = robot_id;
         srv.request.auction.docking_station = best_ds.id;
-        srv.request.auction.bid = get_llh();
+        
+        //srv.request.auction.bid = get_llh();
+        srv.request.auction.bid = robot_id;
+        
         //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
         sc_send_auction.call(srv);
     }
@@ -544,6 +561,8 @@ bool docking::auction(int docking_station, int id)
     //auction_send_multicast("mc_", auction_msg, "ds_auction");
   
   */
+  
+  return true;
     
 }
 
@@ -624,7 +643,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 
 void docking::robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg) {
-    ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     robot_x = msg.get()->point.x;
     robot_y = msg.get()->point.y;
 }
@@ -805,6 +824,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
     ROS_ERROR("\n\t\e[1;34mAuction received!!!\e[0m\n");
+    
     // only process callback if auction is not initiated by this robot
     if(msg.get()->robot == robot_id) {
         ROS_ERROR("\n\t\e[1;34mReceived my bid, ignore it\e[0m\n");
@@ -822,14 +842,15 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
         return;
     }
     
-    
+    std_msgs::Empty empty_msg;
+    pub_auction_participation.publish(empty_msg);
     
     
     // respond to auction
     if(auction(msg.get()->docking_station, msg.get()->auction) == false)
         ROS_ERROR("Failed to respond to auction %d", msg.get()->auction);
     else
-        ROS_ERROR("Responded correclty to auction %d", msg.get()->auction);
+        ;//ROS_ERROR("Responded correclty to auction %d", msg.get()->auction);
 }
 
 void docking::cb_recharge(const std_msgs::Empty& msg) {
@@ -857,8 +878,10 @@ void docking::timerCallback(const ros::TimerEvent &event) {
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for(; it != auction_bids.end(); it++) {
         ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
-        if((*it).bid > winner_bid)
-            winner = (*it).robot_id;
+        if((*it).bid > winner_bid) {
+           winner = (*it).robot_id;
+           winner_bid = (*it).bid;
+        }
     }
     ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
     
@@ -866,6 +889,7 @@ void docking::timerCallback(const ros::TimerEvent &event) {
         pub_auction_winner.publish(msg);
     else
     {
+        // the robot has lost its own auction
         pub_auction_loser.publish(msg);
         timer = nh.createTimer(ros::Duration(5), &docking::timer_callback_schedure_auction_restarting, this, false);
         //timer.start();
@@ -910,7 +934,10 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
         srv.request.auction.auction = auction_id;
         srv.request.auction.robot = robot_id;
         srv.request.auction.docking_station = best_ds.id;
-        srv.request.auction.bid = get_llh();
+        
+        //srv.request.auction.bid = get_llh();
+        srv.request.auction.bid = robot_id;
+        
         ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
         sc_send_auction.call(srv);
     }
@@ -935,13 +962,19 @@ void docking::cb_going_charging(const std_msgs::Empty& msg) {
     srv.request.auction.auction = auction_id;
     srv.request.auction.robot = robot_id;
     srv.request.auction.docking_station = best_ds.id;
-    srv.request.auction.bid = get_llh();
+    
+    //srv.request.auction.bid = get_llh();
+    srv.request.auction.bid = robot_id;
+    
     //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
     
     auction_bid_t bid;
     bid.robot_id = robot_id;
-    bid.bid = get_llh();
+    
+    //bid.bid = get_llh();
+    bid.bid = robot_id;
+    
     auction_bids.push_back(bid);
 }
 
@@ -963,12 +996,17 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 
 void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &msg) {
+    std_msgs::Empty msg2;
     if(msg.get()->docking_station == best_ds.id) {
         ROS_ERROR("\n\t\e[1;34mReceived auction result\e[0m\n");
-        if(robot_id == msg.get()->robot)
+        if(robot_id == msg.get()->robot) {
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m\n");
-        else
-            ROS_ERROR("\n\t\e[1;34mloser...\e[0m\n");
+            pub_auction_winner.publish(msg2);
+        }
+        else {
+            ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, so who cares...\e[0m\n");
+            //pub_auction_loser.publish(msg2); //NO!!!
+        }
     }
 }
 
