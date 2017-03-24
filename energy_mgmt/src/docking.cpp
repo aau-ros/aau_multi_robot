@@ -1056,6 +1056,8 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
                 ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging at that DS, so I have to leave...\e[0m\n");
                 pub_auction_loser.publish(msg2);
                 pub_abort_charging.publish(msg2);
+                timer_restart_auction.setPeriod(ros::Duration(10), true);
+                timer_restart_auction.start();
             } else
                 ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, so who cares...\e[0m\n");
         }

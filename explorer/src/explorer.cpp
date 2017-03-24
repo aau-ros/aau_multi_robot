@@ -369,6 +369,8 @@ public:
 
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose)
     {
+        ROS_ERROR("£££££££££££££££££££");
+    
       // Get rotation of robot relative to starting position
       tf::Quaternion orientation = tf::Quaternion(pose->pose.pose.orientation.x, pose->pose.pose.orientation.y, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
       pose_angle = orientation.getAngle();
@@ -912,6 +914,8 @@ public:
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
+                    
+                    //TODO //F recharging == false? but recharging is never touched in the code!!!
                     else if(recharging == false || robot_state == fully_charged)
                     {
                         exit_countdown--;
@@ -1109,7 +1113,7 @@ public:
             
 
             // navigate robot home for recharging
-           //IMPORTANT: do not puit and else if here, because when I exit from the above else if(robot_state == auctioning), I may need to go home / to ds
+           //IMPORTANT: do not put an else-if here, because when I exit from the above else if(robot_state == auctioning), I may need to go home / to ds
            // since now I may be in state going_charging because I won an auction!!!!
             if(robot_state == going_in_queue) {
                 ROS_ERROR("Traveling to DS to go in queue");
@@ -1908,12 +1912,23 @@ public:
             if(prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)
             {
                 stuck_countdown--;
-                if(stuck_countdown <= 5){
+                //if(stuck_countdown <= 5){
+                
+                //TODO //F if STUCK_COUNTDOWN is too low, even when the robot is computing the frontier, it is believed to be stucked...
+                if(stuck_countdown <= 10){
+                    
                     ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                    
                 }
+                
                 if(stuck_countdown <= 0) {
                     exit(0);
                 }
+                
+                //F
+                ros::spinOnce();
+                ros::Duration(0.5).sleep();
+                
             }
             else
             {
@@ -2070,7 +2085,6 @@ public:
     // the robot receive the relative signal only if it has lost an auction started by itself, otherwise it doesn't care if it has lost an auction, it will just continue to explorer and, if necessary, it will start its own auction later
     // OR!!! if it was recharging...
         if(robot_state == charging) {
-            
             //leaving_ds = true;
             ROS_ERROR("\n\t\e[1;34mLeaving DS and stopping charing...\e[0m\n");
             if(fully_charged_bool) {
