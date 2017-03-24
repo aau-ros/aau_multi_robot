@@ -157,9 +157,9 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
     //ROS_INFO("Starting to recharge");
     state.charging = true;
-    state.soc = 0;
-    remaining_power = 0;
-    state.remaining_time_run = 0;
+    remaining_power = total_power / 2;
+    state.soc = remaining_power / total_power;
+    state.remaining_time_run = state.soc * total_power;
     state.remaining_distance = 10;
 }
 

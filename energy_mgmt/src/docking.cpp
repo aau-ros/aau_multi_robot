@@ -142,6 +142,10 @@ docking::docking()
     in_queue = false;
     
     
+    sub_vacant_ds = nh.subscribe("explorer/vacant_ds",  1, &docking::vacant_ds_callback, this);
+    sub_occupied_ds = nh.subscribe("occupied_ds",  1, &docking::occupied_ds_callback, this);
+    
+    
     
 }
 
@@ -1054,4 +1058,20 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
 void docking::translate_coordinates(double starting_x, double starting_y, double *relative_x, double *relative_y) {
     *relative_x = starting_x - origin_absolute_x;
     *relative_y = starting_y - origin_absolute_y;
+}
+
+void docking::vacant_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
+    ROS_ERROR("\n\t\e[1;34mdocking::vacant_ds_callback\e[0m\n");
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "explorer/adhoc_communication/vacant_ds";
+    srv_msg.request.docking_station.id = best_ds.id;
+    sc_send_docking_station.call(srv_msg);
+}
+
+void docking::occupied_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
+    ROS_ERROR("\n\t\e[1;34mdocking::occupied_ds_callback\e[0m\n");
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "explorer/adhoc_communication/occupied_ds";
+    srv_msg.request.docking_station.id = best_ds.id;
+    sc_send_docking_station.call(srv_msg);
 }

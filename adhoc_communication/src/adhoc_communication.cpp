@@ -1952,6 +1952,7 @@ void publishMessage(message m, string topic)
         {
             publishers_l.push_front(n_pub->advertise<message>(topic, 1000, true));
             publishers_l.front().publish(m);
+            //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", publishers_l.front().getTopic().c_str()); //F
             //todo check if ledge = true is working
         }
     }
