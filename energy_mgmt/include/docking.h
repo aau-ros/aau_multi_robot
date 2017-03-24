@@ -219,7 +219,7 @@ private:
     
     void timerCallback(const ros::TimerEvent&);
     
-    ros::Timer timer, timer2;
+    ros::Timer timer_restart_auction, timer_finish_auction, timer2;
     
     struct auction_bid_t{
         int robot_id;

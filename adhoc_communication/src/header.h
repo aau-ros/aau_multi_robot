@@ -1377,8 +1377,7 @@ void initRobotMacList(std::string * robot_mac)
             initMacFromString(hm.mac, hostname_mac_l[1].data());
 
             neighbors_l.push_back(hm);
-            //ROS_INFO("Add to whitelist: %s [%s]", hm.hostname.c_str(), getMacAsStr(hm.mac).c_str());
-            ROS_ERROR("Add to whitelist: %s [%s]", hm.hostname.c_str(), getMacAsStr(hm.mac).c_str());
+            ROS_INFO("Add to whitelist: %s [%s]", hm.hostname.c_str(), getMacAsStr(hm.mac).c_str());
 
         } catch (const std::out_of_range& oor)
         {

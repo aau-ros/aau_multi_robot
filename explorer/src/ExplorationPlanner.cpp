@@ -916,6 +916,7 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
     }
     else
     {
+        ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         return -1;
     }
 }
@@ -1138,7 +1139,6 @@ bool ExplorationPlanner::storeUnreachableFrontier(double x, double y, int detect
 
     if(robot_prefix_empty_param == true)
     {
-        ROS_ERROR("111111");
         ROS_DEBUG("Storing Unreachable Frontier ID: %d   Robot: %s", unreachable_frontier_id_count, detected_by_robot_str.c_str());
 
         if(id != -1)
@@ -1157,7 +1157,6 @@ bool ExplorationPlanner::storeUnreachableFrontier(double x, double y, int detect
 
     }else
     {
-        ROS_ERROR("22222");
         if(detected_by_robot != robot_name)
         {
             unreachable_frontier.id = id;

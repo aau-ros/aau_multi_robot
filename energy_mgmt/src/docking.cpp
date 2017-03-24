@@ -141,6 +141,8 @@ docking::docking()
     recharging = false;
     in_queue = false;
     
+    timer_finish_auction = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true, false);
+    timer_restart_auction = nh.createTimer(ros::Duration(10), &docking::timer_callback_schedure_auction_restarting, this, true, false);
     
     sub_vacant_ds = nh.subscribe("explorer/vacant_ds",  1, &docking::vacant_ds_callback, this);
     sub_occupied_ds = nh.subscribe("occupied_ds",  1, &docking::occupied_ds_callback, this);
@@ -891,26 +893,29 @@ void docking::timerCallback(const ros::TimerEvent &event) {
     float winner_bid = -10000000000;
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for(; it != auction_bids.end(); it++) {
-        ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
+        //ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m\n", (*it).robot_id, (*it).bid);
         if((*it).bid > winner_bid) {
            winner = (*it).robot_id;
            winner_bid = (*it).bid;
         }
     }
-    ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m\n", winner);
+    ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m", winner);
     
     auction_bids.clear(); //TODO inefficient!!!!
     
-    if(winner == robot_id)
+    if(winner == robot_id) {
+        in_queue = false;
         pub_auction_winner.publish(msg);
+        timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
+    }
     else {
         // the robot has lost its own auction
         if(!in_queue) {
             in_queue = true;
             pub_auction_loser.publish(msg);
         }
-        timer = nh.createTimer(ros::Duration(10), &docking::timer_callback_schedure_auction_restarting, this, true);
-        //timer.start();
+        timer_restart_auction.setPeriod(ros::Duration(10), true);
+        timer_restart_auction.start();
     }
     
     adhoc_communication::SendEmAuction srv_mgs;
@@ -940,7 +945,7 @@ void docking::cb_charging_completed(const std_msgs::Empty& msg) {
 }
 
 void docking::cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-    ROS_ERROR("\n\t\e[1;34mVACANT !!!!!!!!!!!!!!!!!!!!!!\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mVACANT !!!!!!!!!!!!!!!!!!!!!!\e[0m\n");
     std::vector<ds_t>::iterator it = ds.begin();
     for( ; it != ds.end(); it++)
         if((*it).id == msg.get()->id)
@@ -976,8 +981,8 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
         //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", sc_send_auction.getService().c_str());
         sc_send_auction.call(srv);
         
-        timer = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true);
-        timer.start();
+        timer_finish_auction.setPeriod(ros::Duration(5), true);
+        timer_finish_auction.start();
     
 }
 
@@ -985,12 +990,13 @@ void docking::cb_going_charging(const std_msgs::Empty& msg) {
     //ROS_ERROR("\n\t\e[1;34mNeed to charge\e[0m\n");
     // Start auction timer
     //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
-    timer = nh.createTimer(ros::Duration(5), &docking::timerCallback, this, true);
+    
     timer2 = nh.createTimer(ros::Duration(5), timerCallback2, true);
     
     //ROS_ERROR("\n\t\e[1;34mStartint timer\e[0m\n");
     
-    timer.start();
+    timer_finish_auction.setPeriod(ros::Duration(5), true);
+    timer_finish_auction.start();
     
     auction_id++;
 
@@ -1043,6 +1049,7 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m\n");
             pub_auction_winner.publish(msg2);
             recharging = true;
+            //timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
         }
         else {
             if(recharging) {
@@ -1061,7 +1068,7 @@ void docking::translate_coordinates(double starting_x, double starting_y, double
 }
 
 void docking::vacant_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
-    ROS_ERROR("\n\t\e[1;34mdocking::vacant_ds_callback\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mdocking::vacant_ds_callback\e[0m\n");
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "explorer/adhoc_communication/vacant_ds";
     srv_msg.request.docking_station.id = best_ds.id;
@@ -1069,7 +1076,7 @@ void docking::vacant_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
 }
 
 void docking::occupied_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
-    ROS_ERROR("\n\t\e[1;34mdocking::occupied_ds_callback\e[0m\n");
+    //ROS_ERROR("\n\t\e[1;34mdocking::occupied_ds_callback\e[0m\n");
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "explorer/adhoc_communication/occupied_ds";
     srv_msg.request.docking_station.id = best_ds.id;

@@ -39,12 +39,12 @@
 #define OPERATE_ON_GLOBAL_MAP true
 #define OPERATE_WITH_GOAL_BACKOFF true
 //#define EXIT_COUNTDOWN 5
-#define EXIT_COUNTDOWN 500 //F
+#define EXIT_COUNTDOWN 50 //F
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000 //F
 
 #define SAFETY_COEFF 0.013
-#define INCR 1
+#define INCR 1.5
 
 boost::mutex costmap_mutex;
 
@@ -91,10 +91,10 @@ public:
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         pub_vacant_ds = nh.advertise<std_msgs::Empty>("vacant_ds", 1);
         sub_vacant_ds = nh.subscribe("adhoc_communication/vacant_ds",  1, &Explorer::vacant_ds_callback, this);
-        ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_vacant_ds.getTopic().c_str());
+        //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_vacant_ds.getTopic().c_str());
         
         sub_occupied_ds = nh.subscribe("adhoc_communication/occupied_ds",  1, &Explorer::occupied_ds_callback, this);
-        ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_occupied_ds.getTopic().c_str());
+        //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_occupied_ds.getTopic().c_str());
         
         //sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
         //auction_participation = none;
@@ -302,12 +302,12 @@ public:
     
     void vacant_ds_callback(const adhoc_communication::EmDockingStation &msg) {
         vacant_ds = true;
-        ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! Received vacant ds signal \e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! Received vacant ds signal \e[0m\n");
     }
     
     void occupied_ds_callback(const adhoc_communication::EmDockingStation msg) {
         vacant_ds = false;
-        ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!!!!!!!!!!!!!!Received occupied ds message \e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!!!!!!!!!!!!!!Received occupied ds message \e[0m\n");
     }
     
     
@@ -889,9 +889,19 @@ public:
                         //robot_state = exploring;
                         robot_state = moving_to_frontier;
                         
-                        exit_countdown = EXIT_COUNTDOWN;
+                        
+                        //F
+                        if(exit_countdown != EXIT_COUNTDOWN) {
+                            exit_countdown = EXIT_COUNTDOWN;
+                            ROS_ERROR("To be sae, resetting exit countdown at starting value; something must have gone wrong however, because this shoulw never happen...");
+                        }
+                        
+                        
+                        
                         charge_countdown = EXIT_COUNTDOWN;
                     }
+
+                    //TODO //F we shoudl better check if there are still unvisited frontier and the robot is not able to reach any of them even if fully charged, because clearly this is a problem...
 
                     // robot cannot reach any frontier, even if fully charged
                     // simulation is over
@@ -1098,9 +1108,8 @@ public:
                 ROS_ERROR("Traveling to DS to go in queue");
                 
                 counter++;
-                    
-                    
-                    move_robot(counter, home_point_x, home_point_y);
+                
+                move_robot(counter, home_point_x, home_point_y);
             
             }
             
