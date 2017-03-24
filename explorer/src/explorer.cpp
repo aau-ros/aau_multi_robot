@@ -44,7 +44,7 @@
 #define STUCK_COUNTDOWN 1000 //F
 
 #define SAFETY_COEFF 0.013
-#define INCR 1.5
+#define INCR 2
 
 boost::mutex costmap_mutex;
 
@@ -60,6 +60,7 @@ public:
     
     //F
     int number_of_recharges = 0;
+    bool fully_charged_bool;
     bool test, winner_of_auction;
     ros::Publisher pub_robot_pos, pub_vacant_ds;
     ros::Subscriber sub_vacant_ds, sub_occupied_ds;
@@ -88,6 +89,7 @@ public:
         test = true;
         winner_of_auction = false;
         robot_state == fully_charged;
+        fully_charged_bool = false;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         pub_vacant_ds = nh.advertise<std_msgs::Empty>("vacant_ds", 1);
         sub_vacant_ds = nh.subscribe("adhoc_communication/vacant_ds",  1, &Explorer::vacant_ds_callback, this);
@@ -284,7 +286,8 @@ public:
 	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
         ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m\n");
-        robot_state = fully_charged;
+        fully_charged_bool = true; //TODO //F improve...
+        //robot_state = fully_charged;
     }
     
     
@@ -440,6 +443,10 @@ public:
                 else
                     ros::Duration(1).sleep();
                 ros::spinOnce(); // update charge_time
+                if(fully_charged_bool) {
+                    robot_state = fully_charged;
+                    fully_charged_bool = false;
+                }
                 continue;
             }
 
@@ -1120,8 +1127,7 @@ public:
                     ROS_ERROR("Traveling home for recharging");
                     //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
-                    
-                    
+
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
             }
             //F: I exit from move_robot only when the goal has been reached
@@ -2064,9 +2070,15 @@ public:
     // the robot receive the relative signal only if it has lost an auction started by itself, otherwise it doesn't care if it has lost an auction, it will just continue to explorer and, if necessary, it will start its own auction later
     // OR!!! if it was recharging...
         if(robot_state == charging) {
-            robot_state = exploring;
+            
             //leaving_ds = true;
             ROS_ERROR("\n\t\e[1;34mLeaving DS and stopping charing...\e[0m\n");
+            if(fully_charged_bool) {
+                robot_state = fully_charged;
+                fully_charged_bool = false;
+            }
+            else
+                robot_state = exploring;
         }
         else {
             ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
