@@ -106,7 +106,7 @@ floorplan
 )
 erratic( pose [ -2.000000 3.500000 0 0.0 ] name "robot_0" color "red" )
 erratic( pose [ -1.000000 3.500000 0 0.0 ] name "robot_1" color "blue" )
-erratic( pose [  0.000000 3.500000 0 0.0 ] name "robot_2" color "green" )
+#erratic( pose [  3.000000 3.500000 0 0.0 ] name "robot_2" color "green" )
 
 
 # a docking station

@@ -55,7 +55,7 @@ private:
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction;
+    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction_starting, sub_auction_reply;
 
     /**
      * Callbacks for the subscribed topics.
@@ -99,7 +99,7 @@ private:
      * @param int id: The ID of the auction. If it is left to default (i.e. 0), then a new auction is started. Otherwise this robot participates at the given auction.
      * @return bool: Success of auction.
      */
-    bool auction(int docking_station, int id=0);
+    bool auction(int docking_station, int id, int bid);
 
     /**
      * Send an auction to a multicast group.
@@ -214,7 +214,7 @@ private:
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
     ros::Publisher pub_adhoc_new_best_ds, pub_auction_participation;
-    ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
+    ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge, sub_check_vacancy;
     ros::ServiceClient sc_trasform;
     
     void timerCallback(const ros::TimerEvent&);
@@ -227,7 +227,7 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_going_charging, sub_translate, sub_vacant_ds, sub_occupied_ds;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_going_charging, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
     void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
@@ -252,7 +252,19 @@ private:
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);
     
+    struct auction_t {
+        int robot_id;
+        int auction_id;
+    };
     
+    vector<auction_t> auctions;
+    
+    void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr&);
+    
+    bool ongoing_auction;
+
+    void check_vacancy_callback(const std_msgs::Empty::ConstPtr &);
+    void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 };
 
 #endif  /* DOCKING_H */

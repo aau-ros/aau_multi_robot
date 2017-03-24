@@ -62,13 +62,13 @@ public:
     int number_of_recharges = 0;
     bool fully_charged_bool;
     bool test, winner_of_auction;
-    ros::Publisher pub_robot_pos, pub_vacant_ds;
+    ros::Publisher pub_robot_pos, pub_vacant_ds, pub_check_vacancy;
     ros::Subscriber sub_vacant_ds, sub_occupied_ds;
     //ros::Subscriber sub_auction_completed;
     enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue,
                   auctioning, //auctioning: the robot has started an auction; notice that if the robot is aprticipating to an auction that it was not started by
                               //it, its state is not equal to auctioning!!!
-                  going_in_queue,
+                  going_in_queue, checking_vacancy,
                   moving_to_frontier_before_going_charging, moving_to_frontier};
     state_t robot_state;
     bool vacant_ds, leaving_ds;
@@ -93,10 +93,12 @@ public:
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         pub_vacant_ds = nh.advertise<std_msgs::Empty>("vacant_ds", 1);
         sub_vacant_ds = nh.subscribe("adhoc_communication/vacant_ds",  1, &Explorer::vacant_ds_callback, this);
-        //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_vacant_ds.getTopic().c_str());
+        pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);
+        
+        //ROS_ERROR("\n\t\e[1;34m %s \e[0m", sub_vacant_ds.getTopic().c_str());
         
         sub_occupied_ds = nh.subscribe("adhoc_communication/occupied_ds",  1, &Explorer::occupied_ds_callback, this);
-        //ROS_ERROR("\n\t\e[1;34m %s \e[0m\n", sub_occupied_ds.getTopic().c_str());
+        //ROS_ERROR("\n\t\e[1;34m %s \e[0m", sub_occupied_ds.getTopic().c_str());
         
         //sub_auction_completed = nh.subscribe("auction_completed", 1, &Explorer::auction_completed_callback, this);
         //auction_participation = none;
@@ -229,8 +231,8 @@ public:
             ROS_INFO("BOTH COSTMAPS STARTED AND RUNNING ...");
         }
         
-        //ROS_ERROR("\n\t\e[1;34m Global costmap origin: (%f, %f) \e[0m\n", costmap2d_global->getCostmap()->getOriginX(), costmap2d_global->getCostmap()->getOriginY());
-        //ROS_ERROR("\n\t\e[1;34m Local costmap origin: (%f, %f) \e[0m\n", costmap2d_local->getCostmap()->getOriginX(), costmap2d_local->getCostmap()->getOriginY());
+        //ROS_ERROR("\n\t\e[1;34m Global costmap origin: (%f, %f) \e[0m", costmap2d_global->getCostmap()->getOriginX(), costmap2d_global->getCostmap()->getOriginY());
+        //ROS_ERROR("\n\t\e[1;34m Local costmap origin: (%f, %f) \e[0m", costmap2d_local->getCostmap()->getOriginX(), costmap2d_local->getCostmap()->getOriginY());
         
 
 		ROS_INFO("---------------- COSTMAP DONE ---------------");
@@ -249,7 +251,7 @@ public:
 		visualize_goal_point(robotPose.getOrigin().getX(),
 				robotPose.getOrigin().getY());
 				
-		//ROS_ERROR("\n\t\e[1;34m Robot starting position in local map: (%f, %f) \e[0m\n", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+		//ROS_ERROR("\n\t\e[1;34m Robot starting position in local map: (%f, %f) \e[0m", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
 
 		// transmit three times, since rviz need at least 1 to buffer before visualizing the point
 		for (int i = 0; i <= 2; i++) {
@@ -285,7 +287,7 @@ public:
 	
 	//void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
 	void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr& msg)  { //F
-        ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m\n");
+        ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m");
         fully_charged_bool = true; //TODO //F improve...
         //robot_state = fully_charged;
     }
@@ -305,12 +307,12 @@ public:
     
     void vacant_ds_callback(const adhoc_communication::EmDockingStation &msg) {
         vacant_ds = true;
-        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! Received vacant ds signal \e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! Received vacant ds signal \e[0m");
     }
     
     void occupied_ds_callback(const adhoc_communication::EmDockingStation msg) {
         vacant_ds = false;
-        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!!!!!!!!!!!!!!Received occupied ds message \e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!!!!!!!!!!!!!!Received occupied ds message \e[0m");
     }
     
     
@@ -412,7 +414,7 @@ public:
        // msg.data = "traveling home to recharge";
         ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge",1);
         ros::Publisher pub_going_charging = nh.advertise<std_msgs::Empty>("going_charging", 1);
-        //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", publisher_re.getTopic().c_str());
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m", publisher_re.getTopic().c_str());
         ros::Subscriber sub, sub2, sub3, pose_sub;
         
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
@@ -933,9 +935,9 @@ public:
                         robot_state = auctioning;
                         //F
                         if(auction_participation == participating) {
-                            ROS_ERROR("\n\t\e[1;34mI need to recharge, must I'm participating to an auction, so let's see what happens...\e[0m\n");
+                            ROS_ERROR("\n\t\e[1;34mI need to recharge, must I'm participating to an auction, so let's see what happens...\e[0m");
                            while(auction_participation == participating) {
-                                //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                                //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
                                 ros::Duration(0.1).sleep();
                                 ros::spinOnce();
                             }
@@ -1099,13 +1101,13 @@ public:
             }
             
             else if(robot_state == auctioning) { 
-                ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
                 while(robot_state == auctioning) {
-                    //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m\n");
+                    //ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
                     ros::Duration(0.1).sleep();
                     ros::spinOnce();
                 }
-                ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m\n");
+                ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m");
                 
             }
             
@@ -1889,7 +1891,7 @@ public:
         
         pub_robot_pos.publish(goal_msgs);
 
-        //ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m");
         //if(robot_state == leaving_ds)
         //if(leaving_ds) {
         //    std_msgs::Empty empty_msg;
@@ -1940,11 +1942,20 @@ public:
             
             int remaining_distance = exploration->trajectory_plan(position_x, position_y);
             if(robot_state == going_charging)
-                ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m\n", remaining_distance);
-            if(remaining_distance < 50 && robot_state == going_in_queue) {
+                ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m", remaining_distance);
+            //if(remaining_distance < 50 && robot_state == going_in_queue) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
+            if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) ) {
                 ac.cancelGoal();
-                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!!!!!\e[0m\n");
+                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP: let's check if the Ds is free...\e[0m");
+                robot_state = checking_vacancy;
+                
+                std_msgs::Empty check_vacancy;
+                pub_check_vacancy.publish(check_vacancy);
+                while(robot_state == checking_vacancy) {
+                    ros::Duration(1).sleep();
+                    ros::spinOnce();
+                }
                 robot_state = in_queue;
             }
 
@@ -1952,11 +1963,11 @@ public:
             
         }
         ROS_INFO("Not longer ACTIVE");
-        //ROS_ERROR("\n\t\e[1;34m%s\e[0m\n", ac.getState().toString().c_str());
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m", ac.getState().toString().c_str());
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
             if(robot_state == in_queue)
-                ; //ROS_ERROR("\n\t\e[1;34mWAITING!!!\e[0m\n");
+                ; //ROS_ERROR("\n\t\e[1;34mWAITING!!!\e[0m");
             else
                 break;
             ros::Duration(2).sleep();
@@ -2049,34 +2060,39 @@ public:
     }
     
     void auction_completed_callback(const std_msgs::Empty::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34mAuction completet\e[0m\n");
+        ROS_ERROR("\n\t\e[1;34mAuction completet\e[0m");
         //auction_participation = none; //TODO //F wrong in the general case!!! maybe the robot is participating to more than one auction!!!
     }
     
     void auction_winner_callback(const std_msgs::Empty::ConstPtr &msg) {
-        //TODO //F check...
+        //TODO //F check... its' seems that state exploring is missing...
         if(robot_state == moving_to_frontier) {
-            ROS_ERROR("\n\t\e[1;34mLet's complete my job, and then let's go to charge!\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mLet's complete my job, and then let's go to charge!\e[0m");
             robot_state = moving_to_frontier_before_going_charging;
         }
         else if (robot_state == in_queue) {
-            ROS_ERROR("\n\t\e[1;34mI have to wait for the DS to be free...\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mI have to wait for the DS to be free...\e[0m");
             
             //TODO //F do it in a better way!!!
             ros::Duration(10).sleep();
             
             //while(!vacant_ds)
             //    ;
-            ROS_ERROR("\n\t\e[1;34mOh yeah! Now the DS is free: going to charge!\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mOh yeah! Now the DS is free: going to charge!\e[0m");
             robot_state = going_charging;
             //move_robot(counter, home_point_x, home_point_y);
         }
         else if(robot_state != charging) {//maybe the robot is already at a DS...
-            ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mGoing to charge!\e[0m");
             robot_state = going_charging;
             //move_robot(counter, home_point_x, home_point_y);
+        } else {
+            ROS_ERROR("ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            if(robot_state == exploring)
+                robot_state = going_charging;
+            else if(robot_state == fully_charged || fully_charged_bool)
+                ;
         }
-        
             
         winner_of_auction = true;
     }
@@ -2086,7 +2102,7 @@ public:
     // OR!!! if it was recharging...
         if(robot_state == charging) {
             //leaving_ds = true;
-            ROS_ERROR("\n\t\e[1;34mLeaving DS and stopping charing...\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mLeaving DS and stopping charing...\e[0m");
             if(fully_charged_bool) {
                 robot_state = fully_charged;
                 fully_charged_bool = false;
@@ -2095,7 +2111,7 @@ public:
                 robot_state = exploring;
         }
         else {
-            ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m\n");
+            ROS_ERROR("\n\t\e[1;34mGoing in queue...\e[0m");
             
             
             robot_state = going_in_queue;
@@ -2106,7 +2122,7 @@ public:
     }
     
     void auction_participation_callback(const std_msgs::Empty::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34mparticipating to auction!\e[0m\n");
+        //ROS_ERROR("\n\t\e[1;34mparticipating to auction!\e[0m");
         //auction_participation = participating;
     }
 
