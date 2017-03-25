@@ -11,8 +11,8 @@
             <arg name="robot_prefix" value="/robot_0" />
             <arg name="interface" value="lo" />
             <arg name="use_sim_time" value="true" />
-            <arg name="mac" value="02:01:00:00:00:00" />
-            <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
+            <arg name="mac" value="00:11:00:00:00:00"/>
+            <arg name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00" />
             <!-- <arg name="simulation_mode" value="true"/> F -->
         </include>
         <include file="$(find multi_robot_simulation)/launch/move_base.launch">
@@ -63,8 +63,8 @@
             <arg name="robot_prefix" value="/robot_1" />
             <arg name="interface" value="lo" />
             <arg name="use_sim_time" value="true" />
-            <arg name="mac" value="02:02:00:00:00:00" />
-            <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
+            <arg name="mac" value="11:00:00:00:00:00"/>
+            <arg name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00" />
             <!-- <arg name="simulation_mode" value="true"/> F-->
         </include>
         <include file="$(find multi_robot_simulation)/launch/move_base.launch">
@@ -115,8 +115,8 @@
             <arg name="robot_prefix" value="/robot_2" />
             <arg name="interface" value="lo" />
             <arg name="use_sim_time" value="true" />
-            <arg name="mac" value="02:01:00:00:00:00" />
-            <arg name="sim_robot_macs" value="robot_0,02:01:00:00:00:00!robot_1,02:02:00:00:00:00" />
+            <arg name="mac" value="22:00:00:00:00:00"/>
+            <arg name="sim_robot_macs" value="robot_0,00:11:00:00:00:00!robot_1,11:00:00:00:00:00!robot_2,22:00:00:00:00:00" />
             <!-- <arg name="simulation_mode" value="true"/> F -->
         </include>
         <include file="$(find multi_robot_simulation)/launch/move_base.launch">
