@@ -61,9 +61,9 @@ public:
     //F
     int number_of_recharges = 0;
     bool fully_charged_bool;
-    bool test, winner_of_auction, occupied_ds;
+    bool test, winner_of_auction;
     ros::Publisher pub_robot_pos, pub_vacant_ds, pub_check_vacancy;
-    ros::Subscriber sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
+    ros::Subscriber sub_vacant_ds, sub_occupied_ds;
     //ros::Subscriber sub_auction_completed;
     enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue,
                   auctioning, //auctioning: the robot has started an auction; notice that if the robot is aprticipating to an auction that it was not started by
@@ -94,8 +94,6 @@ public:
         pub_vacant_ds = nh.advertise<std_msgs::Empty>("vacant_ds", 1);
         sub_vacant_ds = nh.subscribe("adhoc_communication/vacant_ds",  1, &Explorer::vacant_ds_callback, this);
         pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);
-        
-        sub_check_vacancy = nh.subscribe("adhoc_communication/reply_for_vacancy",  1, &Explorer::reply_for_vacancy_callback, this);
         
         //ROS_ERROR("\n\t\e[1;34m %s \e[0m", sub_vacant_ds.getTopic().c_str());
         
@@ -292,11 +290,6 @@ public:
         ROS_ERROR("\n\t\e[1;34m Received charging complete! \e[0m");
         fully_charged_bool = true; //TODO //F improve...
         //robot_state = fully_charged;
-    }
-    
-    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34m Received occupied DS!!!!! \e[0m");
-        occupied_ds = true;
     }
     
     
@@ -1953,31 +1946,17 @@ public:
             //if(remaining_distance < 50 && robot_state == going_in_queue) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
             if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) ) {
-            //if(remaining_distance < 80 && (robot_state == going_in_queue) ) {
                 ac.cancelGoal();
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP: let's check if the Ds is free...\e[0m");
+                robot_state = checking_vacancy;
                 
-                //robot_state = checking_vacancy;
-                robot_state = in_queue;
-                
-                std_msgs::Empty check_vacancy_msg;
-                occupied_ds = false;
-                pub_check_vacancy.publish(check_vacancy_msg);
-                int i = 5;
-                while(i > 0) {
+                std_msgs::Empty check_vacancy;
+                pub_check_vacancy.publish(check_vacancy);
+                while(robot_state == checking_vacancy) {
                     ros::Duration(1).sleep();
                     ros::spinOnce();
-                    i--;
                 }
-                if(occupied_ds) {
-                    ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
-                    robot_state = in_queue;
-                }
-                else {
-                    ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
-                    //robot_state = going_charging;
-                    robot_state = in_queue;
-                }
+                robot_state = in_queue;
             }
 
             ros::Duration(0.5).sleep();

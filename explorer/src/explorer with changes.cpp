@@ -60,10 +60,10 @@ public:
     
     //F
     int number_of_recharges = 0;
-    bool fully_charged_bool;
+    bool fully_charged_bool, checking_vacancy_bool;
     bool test, winner_of_auction, occupied_ds;
     ros::Publisher pub_robot_pos, pub_vacant_ds, pub_check_vacancy;
-    ros::Subscriber sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
+    ros::Subscriber sub_vacant_ds, sub_occupied_ds;
     //ros::Subscriber sub_auction_completed;
     enum state_t {exploring, going_charging, charging, finished, fully_charged, stuck, in_queue,
                   auctioning, //auctioning: the robot has started an auction; notice that if the robot is aprticipating to an auction that it was not started by
@@ -72,6 +72,7 @@ public:
                   moving_to_frontier_before_going_charging, moving_to_frontier};
     state_t robot_state;
     bool vacant_ds, leaving_ds;
+    ros::Publisher pub_in_queue;
     
     enum auction_participation_t {none, participating};
     //auction_participation_t auction_participation;
@@ -90,12 +91,13 @@ public:
         winner_of_auction = false;
         robot_state == fully_charged;
         fully_charged_bool = false;
+        checking_vacancy_bool = false;
+        occupied_ds = false;
         pub_robot_pos = nh.advertise<move_base_msgs::MoveBaseGoal>("robot_position", 1);
         pub_vacant_ds = nh.advertise<std_msgs::Empty>("vacant_ds", 1);
         sub_vacant_ds = nh.subscribe("adhoc_communication/vacant_ds",  1, &Explorer::vacant_ds_callback, this);
         pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);
-        
-        sub_check_vacancy = nh.subscribe("adhoc_communication/reply_for_vacancy",  1, &Explorer::reply_for_vacancy_callback, this);
+        pub_in_queue = nh.advertise<std_msgs::Empty>("in_queue", 1);
         
         //ROS_ERROR("\n\t\e[1;34m %s \e[0m", sub_vacant_ds.getTopic().c_str());
         
@@ -110,6 +112,8 @@ public:
         
 
         nh.param("frontier_selection",frontier_selection,1);
+        ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!%d", frontier_selection);
+        
         nh.param("local_costmap/width",costmap_width,0);
         nh.param<double>("local_costmap/resolution",costmap_resolution,0);
         nh.param("number_unreachable_for_cluster", number_unreachable_frontiers_for_cluster,3);
@@ -295,7 +299,7 @@ public:
     }
     
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34m Received occupied DS!!!!! \e[0m");
+        ROS_ERROR("\n\t\e[1;34mOh no! It is occupied...\e[0m");
         occupied_ds = true;
     }
     
@@ -406,6 +410,7 @@ public:
         twi_publisher.publish(twi);
         ros::Duration(5.0).sleep();
         twi_publisher.publish(twi);
+        ros::Subscriber sub_reply_for_vacancy = nh.subscribe("adhoc_communication/reply_for_vacancy", 1, &Explorer::reply_for_vacancy_callback, this);
         
         
 
@@ -423,6 +428,8 @@ public:
         ros::Publisher pub_going_charging = nh.advertise<std_msgs::Empty>("going_charging", 1);
         //ROS_ERROR("\n\t\e[1;34m%s\e[0m", publisher_re.getTopic().c_str());
         ros::Subscriber sub, sub2, sub3, pose_sub;
+        
+        
         
         ros::Subscriber my_sub = nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);   ;//F
         ros::Subscriber sub_ds = nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  //F
@@ -893,7 +900,7 @@ public:
                     exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                     // look for a frontier as goal
-                    ROS_INFO("DETERMINE GOAL...");
+                    ROS_ERROR("DETERMINE GOAL...");
                     //F
                     //goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                     goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance*SAFETY_COEFF + available_distance*SAFETY_COEFF*INCR*number_of_recharges, &final_goal, count, &robot_str, -1);
@@ -903,6 +910,7 @@ public:
                     // found a frontier, go there
                     if(goal_determined == true)
                     {
+                    ROS_ERROR("DETERMINED GOAL...");
                         //F
                         //robot_state = exploring;
                         robot_state = moving_to_frontier;
@@ -938,6 +946,7 @@ public:
                     // go charging
                     else
                     {
+                        ROS_ERROR("NON DETERMINED GOAL...");
                         /*
                         robot_state = auctioning;
                         //F
@@ -1177,7 +1186,7 @@ public:
                         robot_state = exploring;
                     else
                         robot_state = going_charging;
-                    ROS_INFO("STORING PATH");
+                    ROS_ERROR("STORING PATH");
                     // compute path length
                     exploration->trajectory_plan_store(exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).x_coordinate, exploration->visited_frontiers.at(exploration->visited_frontiers.size()-1).y_coordinate);
 
@@ -1205,7 +1214,7 @@ public:
                         robot_state = exploring;
                     else
                         robot_state = going_charging;
-                    ROS_INFO("Storing unreachable...");
+                    ROS_ERROR("Storing unreachable...");
                     
                     exploration->storeUnreachableFrontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),robot_str.at(0),final_goal.at(3));
                     ROS_DEBUG("Stored unreachable frontier");
@@ -1953,30 +1962,29 @@ public:
             //if(remaining_distance < 50 && robot_state == going_in_queue) {
             //if(remaining_distance < 10 && winner_of_auction == false) {
             if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) ) {
-            //if(remaining_distance < 80 && (robot_state == going_in_queue) ) {
                 ac.cancelGoal();
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP: let's check if the Ds is free...\e[0m");
+                robot_state = checking_vacancy;
                 
-                //robot_state = checking_vacancy;
-                robot_state = in_queue;
-                
-                std_msgs::Empty check_vacancy_msg;
+                std_msgs::Empty check_vacancy;
+                pub_check_vacancy.publish(check_vacancy);
+                checking_vacancy_bool = true;
                 occupied_ds = false;
-                pub_check_vacancy.publish(check_vacancy_msg);
-                int i = 5;
+                //while(robot_state == checking_vacancy) {
+                int i = 10;
                 while(i > 0) {
                     ros::Duration(1).sleep();
                     ros::spinOnce();
                     i--;
                 }
-                if(occupied_ds) {
-                    ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
+                if(occupied_ds || robot_state == going_in_queue) {
+                    ROS_ERROR("\n\t\e[1;34mOccupied\e[0m");
                     robot_state = in_queue;
+                    std_msgs::Empty queue_msg;
+                    pub_in_queue.publish(queue_msg);
                 }
-                else {
-                    ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
-                    //robot_state = going_charging;
-                    robot_state = in_queue;
+                else if(robot_state == going_charging) {
+                    ROS_ERROR("\n\t\e[1;34mgoing charging\e[0m");
                 }
             }
 

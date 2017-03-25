@@ -209,7 +209,7 @@ private:
     ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser, pub_abort_charging;
     bool test;
     ds_t best_ds;
-    ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
+    ros::Subscriber sub_robot_position, sub_auction_winner_adhoc, sub_in_queue;
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
@@ -265,6 +265,8 @@ private:
 
     void check_vacancy_callback(const std_msgs::Empty::ConstPtr &);
     void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
+
 };
 
 #endif  /* DOCKING_H */
