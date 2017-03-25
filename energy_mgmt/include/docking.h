@@ -266,6 +266,8 @@ private:
     void check_vacancy_callback(const std_msgs::Empty::ConstPtr &);
     void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
+    
+    bool going_to_ds;
 
 };
 

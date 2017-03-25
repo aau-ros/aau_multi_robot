@@ -1114,7 +1114,7 @@ public:
                     ros::Duration(0.1).sleep();
                     ros::spinOnce();
                 }
-                ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m");
+                //ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m");
                 
             }
             
@@ -1975,8 +1975,16 @@ public:
                 }
                 else {
                     ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
-                    //robot_state = going_charging;
-                    robot_state = in_queue;
+                    robot_state = going_charging;
+                    //robot_state = in_queue;
+                    
+                    ac.sendGoal(goal_msgs);
+                    ac.waitForResult(ros::Duration(waitForResult));
+                    while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
+                    {
+                        ros::Duration(0.5).sleep();
+                    }
+                    ROS_ERROR("Not longer PENDING");
                 }
             }
 
@@ -2081,7 +2089,8 @@ public:
     }
     
     void auction_completed_callback(const std_msgs::Empty::ConstPtr &msg) {
-        ROS_ERROR("\n\t\e[1;34mAuction completet\e[0m");
+        ;
+        //ROS_ERROR("\n\t\e[1;34mAuction completet\e[0m");
         //auction_participation = none; //TODO //F wrong in the general case!!! maybe the robot is participating to more than one auction!!!
     }
     

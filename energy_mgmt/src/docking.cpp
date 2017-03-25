@@ -166,6 +166,7 @@ docking::docking()
     
     
     ongoing_auction = false;
+    going_to_ds = false;
     
 }
 
@@ -567,12 +568,12 @@ bool docking::auction(int docking_station, int id, int bid)
     
         
     if(docking_station != best_ds.id) {
-        ROS_ERROR("\n\t\e[1;34mI'm not interested in this docking station... ignore auction\e[0m");  
+        //ROS_ERROR("\n\t\e[1;34mI'm not interested in this docking station... ignore auction\e[0m");  
     }
     else {
-        ROS_ERROR("\n\t\e[1;34mI'm interested in this docking station! \e[0m");
+        //ROS_ERROR("\n\t\e[1;34mI'm interested in this docking station! \e[0m");
         if(-remaining_time > bid) {
-            ROS_ERROR("\n\t\e[1;34mLet's try... \e[0m");
+            //ROS_ERROR("\n\t\e[1;34mLet's try... \e[0m");
             adhoc_communication::SendEmAuction srv;
             srv.request.topic = "adhoc_communication/send_em_auction/reply";
             srv.request.auction.auction = id;
@@ -587,7 +588,7 @@ bool docking::auction(int docking_station, int id, int bid)
             sc_send_auction.call(srv);
         }
         else
-            ROS_ERROR("\n\t\e[1;34mIbut i have no chance to win... \e[0m");
+            ; //ROS_ERROR("\n\t\e[1;34mIbut i have no chance to win... \e[0m");
     }
 
 /*
@@ -869,13 +870,13 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
-    ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    //ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     
     bool already_received = false;
     std::vector<auction_t>::iterator it = auctions.begin();
     for(; it != auctions.end(); it++)
         if((*it).robot_id == msg.get()->robot && (*it).auction_id == msg.get()->auction) {
-            ROS_ERROR("\n\t\e[1;34mBut I have already received it...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mBut I have already received it...\e[0m");
             return;
         }
     
@@ -919,17 +920,18 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 
 void docking::cb_recharge(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
+    recharging = true;
 }    
     
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& msg) {
     //TODO //F probably in this version doesn't work with multi-hoop replies!!!!! 
-    ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    //ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     //if(msg.get()->robot == robot_id) {
     
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for(; it != auction_bids.end(); it++)
         if((*it).robot_id == msg.get()->robot) {
-            ROS_ERROR("\n\t\e[1;34mBut I have already received it...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mBut I have already received it...\e[0m");
             return;
         }
     
@@ -939,14 +941,14 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& m
         
         if(ongoing_auction) {
         
-            ROS_ERROR("\n\t\e[1;34mreply stored\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mreply stored\e[0m");
             auction_bid_t bid;
             bid.robot_id = msg.get()->robot;
             bid.bid = msg.get()->bid;
             auction_bids.push_back(bid);
         
         } else {
-            ROS_ERROR("\n\t\e[1;34mbut it was out of time...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mbut it was out of time...\e[0m");
             return; //F ???
         }
 
@@ -982,29 +984,34 @@ void docking::timerCallback(const ros::TimerEvent &event) {
     float winner_bid = -10000000000;
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for(; it != auction_bids.end(); it++) {
-        ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m", (*it).robot_id, (*it).bid);
+        //ROS_ERROR("\n\t\e[1;34mRobot %d replied with %f\e[0m", (*it).robot_id, (*it).bid);
         if((*it).bid > winner_bid) {
            winner = (*it).robot_id;
            winner_bid = (*it).bid;
         }
     }
-    ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m", winner);
+    //ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m", winner);
     
     auction_bids.clear(); //TODO inefficient!!!!
     
     if(winner == robot_id) {
+        ROS_ERROR("\n\t\e[1;34mI won my own auction!\e[0m");
+        going_to_ds = true;
         in_queue = false;
         pub_auction_winner.publish(msg);
         timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
     }
     else {
+        ROS_ERROR("\n\t\e[1;34mI lost won my own auction...\e[0m");
         // the robot has lost its own auction
         if(!in_queue) {
             //in_queue = true;
             pub_auction_loser.publish(msg);
         }
+        timer_restart_auction.setPeriod(ros::Duration(30), true);
         //timer_restart_auction.setPeriod(ros::Duration(10), true);
-        //timer_restart_auction.start();
+        timer_restart_auction.start();
+        
     }
     
     adhoc_communication::SendEmAuction srv_mgs;
@@ -1030,6 +1037,7 @@ void docking::cb_charging_completed(const std_msgs::Empty& msg) {
     sc_send_docking_station.call(srv_msg);
     
     recharging = false;
+    going_to_ds = false;
     
     
 
@@ -1139,20 +1147,20 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &msg) {
     std_msgs::Empty msg2;
     if(msg.get()->docking_station == best_ds.id) {
-        ROS_ERROR("\n\t\e[1;34mReceived auction result\e[0m");
+        //ROS_ERROR("\n\t\e[1;34mReceived auction result\e[0m");
         if(robot_id == msg.get()->robot) {
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m");
             pub_auction_winner.publish(msg2);
-            recharging = true; //TODO not here...
+            //recharging = true; //TODO not here...
             timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
+            going_to_ds = true;
         }
         else {
             if(recharging) {
                 ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging at that DS, so I have to leave...\e[0m");
                 pub_auction_loser.publish(msg2);
                 pub_abort_charging.publish(msg2);
-                //timer_restart_auction.setPeriod(ros::Duration(10), true);
-                //timer_restart_auction.start();
+                recharging = false;
             } else
                 ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, so who cares...\e[0m");
         }
@@ -1181,7 +1189,7 @@ void docking::occupied_ds_callback(const std_msgs::Empty::ConstPtr &msg) {
 }
 
 void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg) {
-    ROS_ERROR("\n\t\e[1;34mCHECKING!!!!\e[0m");
+    //ROS_ERROR("\n\t\e[1;34mCHECKING!!!!\e[0m");
     
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "adhoc_communication/ask_for_vacancy";
@@ -1194,7 +1202,7 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg) {
 
 
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-    if(msg.get()->id == best_ds.id && recharging) {
+    if(msg.get()->id == best_ds.id && (recharging || going_to_ds) ) {
         ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
@@ -1202,7 +1210,7 @@ void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStati
         sc_send_docking_station.call(srv_msg);
     }
     else
-        ROS_ERROR("\n\t\e[1;34mfree?\e[0m");
+        ; //ROS_ERROR("\n\t\e[1;34mfree?\e[0m");
 }
 
 void docking::in_queue_callback(const std_msgs::Empty::ConstPtr &msg) {
