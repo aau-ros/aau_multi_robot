@@ -261,7 +261,8 @@ private:
     
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr&);
     
-    bool ongoing_auction;
+    bool managing_auction;
+    int participating_to_auction;
 
     void check_vacancy_callback(const std_msgs::Empty::ConstPtr &);
     void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);

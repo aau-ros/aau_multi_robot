@@ -1127,9 +1127,42 @@ public:
             if(robot_state == going_in_queue) {
                 ROS_ERROR("Traveling to DS to go in queue");
                 
+                int distance_temp = exploration->trajectory_plan(home_point_x - 2, home_point_y - 2);
+                int x_temp = home_point_x - 2;
+                int y_temp = home_point_y - 2;
+                if(distance_temp > exploration->trajectory_plan(home_point_x - 2, home_point_y + 2)) {
+                    distance_temp = exploration->trajectory_plan(home_point_x - 2, home_point_y + 2);
+                    x_temp = home_point_x - 2;
+                    y_temp = home_point_y + 2;
+                } else if (distance_temp > exploration->trajectory_plan(home_point_x + 2, home_point_y + 2)) {
+                    distance_temp = exploration->trajectory_plan(home_point_x + 2, home_point_y + 2);
+                    x_temp = home_point_x + 2;
+                    y_temp = home_point_y + 2;
+                } else if (distance_temp > exploration->trajectory_plan(home_point_x + 2, home_point_y - 2)) {
+                    distance_temp = exploration->trajectory_plan(home_point_x + 2, home_point_y - 2);
+                    x_temp = home_point_x + 2;
+                    y_temp = home_point_y - 2;
+                }
+                    
+                
+                /*
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2, home_point_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2, home_point_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2, home_point_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    , home_point_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    , home_point_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    , home_point_y + 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2, home_point_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2, home_point_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2, home_point_y + 2));
+                */
+                
                 counter++;
                 
-                move_robot(counter, home_point_x, home_point_y);
+                //move_robot(counter, home_point_x, home_point_y);
+                move_robot(counter, x_temp, y_temp);
+                
+                robot_state = in_queue;
             
             }
             
@@ -1140,8 +1173,13 @@ public:
                     ROS_ERROR("Traveling home for recharging");
                     //ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x, home_point_y);
                     counter++;
+                    
+                    
 
                     navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
+                    
+                    robot_state = charging;
+                    
             }
             //F: I exit from move_robot only when the goal has been reached
             
@@ -1947,18 +1985,28 @@ public:
                 prev_pose_angle = pose_angle;
             }
             
+            //ROS_ERROR("\n\t\e[1;34mbefore: %f\e[0m", ros::Time::now().toSec());
             int remaining_distance = exploration->trajectory_plan(position_x, position_y);
-            if(robot_state == going_charging)
-                ;//ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m", remaining_distance);
-            //if(remaining_distance < 50 && robot_state == going_in_queue) {
-            //if(remaining_distance < 10 && winner_of_auction == false) {
-            if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) ) {
-            //if(remaining_distance < 80 && (robot_state == going_in_queue) ) {
-                ac.cancelGoal();
-                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP: let's check if the Ds is free...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mafter: %f\e[0m", ros::Time::now().toSec());
+            if(robot_state == going_charging || robot_state == going_in_queue)
+            {
+                ;
+                ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m", remaining_distance);
+            }
+            //if(remaining_distance < 50 && robot_state == going_in_queue)
+            //if(remaining_distance < 10 && winner_of_auction == false)
+            //if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) )
+            //if(remaining_distance < 80 && (robot_state == going_in_queue) )
+            if(remaining_distance < 100 && robot_state == going_in_queue)
+            {
+                //ac.cancelGoal();
+                robot_state = in_queue;
+                
+                /*
+                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if the Ds is free...\e[0m");
                 
                 //robot_state = checking_vacancy;
-                robot_state = in_queue;
+                
                 
                 std_msgs::Empty check_vacancy_msg;
                 occupied_ds = false;
@@ -1986,9 +2034,179 @@ public:
                     }
                     ROS_ERROR("Not longer PENDING");
                 }
-            }
+                */
+            } else
+                ; //ROS_ERROR("\n\t\e[1;34mcontinue...\e[0m");
 
+            //ros::Duration(0.5).sleep();
+            
+        }
+        ROS_INFO("Not longer ACTIVE");
+        //ROS_ERROR("\n\t\e[1;34m%s\e[0m", ac.getState().toString().c_str());
+
+        while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
+            if(robot_state == in_queue)
+                ; //ROS_ERROR("\n\t\e[1;34mWAITING!!!\e[0m");
+            else
+                break;
+            ros::Duration(2).sleep();
+            if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED) {
+                ROS_INFO("ABORTED");
+
+                exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                return false;
+            }
+        }
+        ROS_INFO("TARGET REACHED");
+        //ROS_ERROR("TARGET REACHED");
+
+        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+        return true;
+    }
+    
+    
+    bool move_robot_old(int seq, double position_x, double position_y)
+    {
+        exploration->next_auction_position_x = position_x;
+        exploration->next_auction_position_y = position_y;
+        int stuck_countdown = EXIT_COUNTDOWN;
+
+        /*
+         * Move the robot with the help of an action client. Goal positions are
+         * transmitted to the robot and feedback is given about the actual
+         * driving state of the robot.
+         */
+        if (!costmap2d_local->getRobotPose(robotPose)) {
+            ROS_ERROR("Failed to get RobotPose");
+        }
+
+        actionlib::SimpleActionClient <move_base_msgs::MoveBaseAction> ac("move_base", true);
+
+        while (!ac.waitForServer(ros::Duration(10.0)))
+        ;
+
+        move_base_msgs::MoveBaseGoal goal_msgs;
+
+        goal_msgs.target_pose.header.seq = seq;	// increase the sequence number
+        goal_msgs.target_pose.header.frame_id = move_base_frame; //"map";
+        goal_msgs.target_pose.pose.position.x = position_x;
+        goal_msgs.target_pose.pose.position.y = position_y;
+        goal_msgs.target_pose.pose.position.z = 0;
+        goal_msgs.target_pose.pose.orientation.x = 0;
+        goal_msgs.target_pose.pose.orientation.y = 0;
+        goal_msgs.target_pose.pose.orientation.z = 0;
+        goal_msgs.target_pose.pose.orientation.w = 1;
+        
+        
+        //F
+        
+        pub_robot_pos.publish(goal_msgs);
+
+        //ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m");
+        //if(robot_state == leaving_ds)
+        //if(leaving_ds) {
+        //    std_msgs::Empty empty_msg;
+        //    pub_vacant_ds.publish(empty_msg);
+        //    leaving_ds = false;
+        //}
+        
+        ac.sendGoal(goal_msgs);
+
+        ac.waitForResult(ros::Duration(waitForResult));
+        while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
+        {
             ros::Duration(0.5).sleep();
+        }
+        ROS_INFO("Not longer PENDING");
+
+        while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        {
+            // robot seems to be stuck
+            if(prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)
+            {
+                stuck_countdown--;
+                //if(stuck_countdown <= 5){
+                
+                //TODO //F if STUCK_COUNTDOWN is too low, even when the robot is computing the frontier, it is believed to be stucked...
+                if(stuck_countdown <= 10){
+                    
+                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                    
+                }
+                
+                if(stuck_countdown <= 0) {
+                    exit(0);
+                }
+                
+                //F
+                ros::spinOnce();
+                ros::Duration(0.5).sleep();
+                
+            }
+            else
+            {
+                stuck_countdown = STUCK_COUNTDOWN; // robot is moving again
+                prev_pose_x = pose_x;
+                prev_pose_y = pose_y;
+                prev_pose_angle = pose_angle;
+            }
+            
+            //ROS_ERROR("\n\t\e[1;34mbefore: %f\e[0m", ros::Time::now().toSec());
+            int remaining_distance = exploration->trajectory_plan(position_x, position_y);
+            //ROS_ERROR("\n\t\e[1;34mafter: %f\e[0m", ros::Time::now().toSec());
+            if(robot_state == going_charging || robot_state == going_in_queue)
+            {
+                ;
+                ROS_ERROR("\n\t\e[1;34mRemaining distance: %d\e[0m", remaining_distance);
+            }
+            //if(remaining_distance < 50 && robot_state == going_in_queue)
+            //if(remaining_distance < 10 && winner_of_auction == false)
+            //if(remaining_distance < 80 && (robot_state == going_in_queue || robot_state == going_charging) )
+            //if(remaining_distance < 80 && (robot_state == going_in_queue) )
+            if(remaining_distance < 100 && robot_state == going_in_queue)
+            {
+                //ac.cancelGoal();
+                robot_state = in_queue;
+                
+                /*
+                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if the Ds is free...\e[0m");
+                
+                //robot_state = checking_vacancy;
+                
+                
+                std_msgs::Empty check_vacancy_msg;
+                occupied_ds = false;
+                pub_check_vacancy.publish(check_vacancy_msg);
+                int i = 5;
+                while(i > 0) {
+                    ros::Duration(1).sleep();
+                    ros::spinOnce();
+                    i--;
+                }
+                if(occupied_ds) {
+                    ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
+                    robot_state = in_queue;
+                }
+                else {
+                    ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
+                    robot_state = going_charging;
+                    //robot_state = in_queue;
+                    
+                    ac.sendGoal(goal_msgs);
+                    ac.waitForResult(ros::Duration(waitForResult));
+                    while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
+                    {
+                        ros::Duration(0.5).sleep();
+                    }
+                    ROS_ERROR("Not longer PENDING");
+                }
+                */
+            } else
+                ; //ROS_ERROR("\n\t\e[1;34mcontinue...\e[0m");
+
+            //ros::Duration(0.5).sleep();
             
         }
         ROS_INFO("Not longer ACTIVE");

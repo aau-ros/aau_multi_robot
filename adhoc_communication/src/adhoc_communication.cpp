@@ -881,7 +881,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
     if (!send_successfully)
     {
-        ROS_WARN("No route found to [%s] though I've tried hard! Dropping packet", hostname_destination.c_str());
+        ROS_ERROR("No route found to [%s] though I've tried hard! Dropping packet", hostname_destination.c_str());
         return false;
     }
 
@@ -1081,7 +1081,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
                 }
 
-                ROS_WARN("Could not sent unicast packet: ID[%u] destination host[%s]", unack_routed_frame->frame.header_.packet_id, route.hostname_destination.c_str());
+                ROS_ERROR("Could not sent unicast packet: ID[%u] destination host[%s]", unack_routed_frame->frame.header_.packet_id, route.hostname_destination.c_str());
                 return false;
             }
             else

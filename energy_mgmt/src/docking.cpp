@@ -164,8 +164,8 @@ docking::docking()
     sub_in_queue = nh.subscribe("explorer/in_queue", 1, &docking::in_queue_callback, this);
     
     
-    
-    ongoing_auction = false;
+    participating_to_auction = 0;
+    managing_auction = false;
     going_to_ds = false;
     
 }
@@ -572,9 +572,10 @@ bool docking::auction(int docking_station, int id, int bid)
     }
     else {
         //ROS_ERROR("\n\t\e[1;34mI'm interested in this docking station! \e[0m");
-        if(-remaining_time > bid) {
+        //if(-remaining_time > bid) {
             //ROS_ERROR("\n\t\e[1;34mLet's try... \e[0m");
             adhoc_communication::SendEmAuction srv;
+            //srv.request.dst_robot = id;
             srv.request.topic = "adhoc_communication/send_em_auction/reply";
             srv.request.auction.auction = id;
             srv.request.auction.robot = robot_id;
@@ -586,9 +587,13 @@ bool docking::auction(int docking_station, int id, int bid)
             
             //ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
             sc_send_auction.call(srv);
+        /*
         }
-        else
-            ; //ROS_ERROR("\n\t\e[1;34mIbut i have no chance to win... \e[0m");
+        else {
+            ROS_ERROR("\n\t\e[1;34mIbut i have no chance to win... \e[0m");
+            participating_to_auction--;
+        }
+        */
     }
 
 /*
@@ -870,8 +875,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
+    participating_to_auction++;
     //ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     
+    /*
     bool already_received = false;
     std::vector<auction_t>::iterator it = auctions.begin();
     for(; it != auctions.end(); it++)
@@ -884,7 +891,7 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
     new_auction.auction_id = msg.get()->auction;
     new_auction.robot_id = msg.get()->robot;
     auctions.push_back(new_auction);
-    
+    */
     /*
     // Multi-hoop start
     adhoc_communication::SendEmAuction srv;
@@ -928,6 +935,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& m
     //ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     //if(msg.get()->robot == robot_id) {
     
+    
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for(; it != auction_bids.end(); it++)
         if((*it).robot_id == msg.get()->robot) {
@@ -935,11 +943,13 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& m
             return;
         }
     
-    //if(msg.get()->robot == robot_id && msg.get()->auction == auction_id) {
+    //if(msg.get()->robot == robot_id && msg.get()->auction == auction_id)
     {
+    //TODO it is ok ONLY assuming taht a robot during different auctions do not changes its bid!!!
+    
         //ROS_ERROR("\n\t\e[1;34mReceived back my own auction... store bid of the sending robot\e[0m");
         
-        if(ongoing_auction) {
+        if(managing_auction) {
         
             //ROS_ERROR("\n\t\e[1;34mreply stored\e[0m");
             auction_bid_t bid;
@@ -953,6 +963,8 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& m
         }
 
     }
+    //else
+    //    ROS_ERROR("\n\t\e[1;34mbut it is not a reply to an auction of mine...\e[0m");
 
     /*
     // Multi-hoop reply
@@ -976,7 +988,8 @@ void timerCallback2(const ros::TimerEvent& event) {
 
 void docking::timerCallback(const ros::TimerEvent &event) {
     //ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m");
-    ongoing_auction = false;
+    managing_auction = false;
+    participating_to_auction--;
     std_msgs::Empty msg;
     pub_auction_completed.publish(msg);
          
@@ -990,6 +1003,9 @@ void docking::timerCallback(const ros::TimerEvent &event) {
            winner_bid = (*it).bid;
         }
     }
+    if(auction_bids.size() < 3)
+        ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
+    
     //ROS_ERROR("\n\t\e[1;34mThe winner is robot %d\e[0m", winner);
     
     auction_bids.clear(); //TODO inefficient!!!!
@@ -1056,7 +1072,8 @@ void docking::cb_vacant_docking_station(const adhoc_communication::EmDockingStat
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event) {
     ROS_ERROR("\n\t\e[1;34mRESTARTING AUCTION !!!!!!!!!!!!!!!!!!!!!!\e[0m");
         auction_id++;
-        ongoing_auction = true;
+        managing_auction = true;
+        participating_to_auction++;
         adhoc_communication::SendEmAuction srv;
         srv.request.topic = "adhoc_communication/send_em_auction/starting";
         srv.request.auction.auction = auction_id;
@@ -1088,7 +1105,8 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 
 void docking::cb_going_charging(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mNeed to charge; start new auction\e[0m");
-    ongoing_auction = true;
+    managing_auction = true;
+    participating_to_auction++;
     // Start auction timer
     //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
     
@@ -1148,6 +1166,7 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
     std_msgs::Empty msg2;
     if(msg.get()->docking_station == best_ds.id) {
         //ROS_ERROR("\n\t\e[1;34mReceived auction result\e[0m");
+        participating_to_auction--;
         if(robot_id == msg.get()->robot) {
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m");
             pub_auction_winner.publish(msg2);
@@ -1156,8 +1175,8 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
             going_to_ds = true;
         }
         else {
-            if(recharging) {
-                ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging at that DS, so I have to leave...\e[0m");
+            if(recharging || going_to_ds) {
+                ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging / prepararing to go charging, so I have to ...\e[0m");
                 pub_auction_loser.publish(msg2);
                 pub_abort_charging.publish(msg2);
                 recharging = false;
