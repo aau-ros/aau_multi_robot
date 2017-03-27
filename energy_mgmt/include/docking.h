@@ -40,6 +40,8 @@ public:
     void cb_recharge(const std_msgs::Empty& msg);
     void cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &msg);
     
+    void update_robot_state();
+    
 
 private:
     /**
@@ -168,6 +170,9 @@ private:
         state_t state;
     };
     vector<robot_t> robots;
+    
+    enum state_next_t {going_charging_next, going_queue, exploring, stay};
+    state_next_t robot_state_next;
 
     /**
      * A vector of all docking stations with coordinates and vacancy.
@@ -269,7 +274,13 @@ private:
     void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
     
-    bool going_to_ds, going_to_check_if_ds_is_free;
+    bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed;
+    
+    std::vector<ros::Timer> timers;
+    
+    void end_auction_participation_timer_callback(const ros::TimerEvent &event);
+    
+    ros::Publisher pub_going_charging, pub_going_queue, pub_exploring, pub_fully_charged;
 
 };
 

@@ -171,6 +171,17 @@ docking::docking()
     going_to_ds = false;
     going_to_check_if_ds_is_free = false;
     
+    need_to_charge = false;
+    
+    
+    pub_going_charging = nh.advertise<std_msgs::Empty>("explorer/going_charging",  1);
+    pub_going_queue = nh.advertise<std_msgs::Empty>("explorer/going_queue",  1);
+    pub_exploring = nh.advertise<std_msgs::Empty>("explorer/exploring",  1);
+    pub_fully_charged = nh.advertise<std_msgs::Empty>("explorer/fully_charged",  1);
+    
+    robot_state_next = stay;
+    charging_completed = false;
+    
 }
 
 void docking::preload_docking_stations() {      
@@ -878,7 +889,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 {
-    participating_to_auction++;
+    //participating_to_auction++;
     //ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     
     /*
@@ -931,9 +942,19 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg)
 void docking::cb_recharge(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
     recharging = true;
+    need_to_charge = false;
 }    
     
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr& msg) {
+
+    participating_to_auction++;
+    //ROS_ERROR("\n\t\e[1;34mstart timer\e[0m");
+    //ros::Timer timer = nh.createTimer(ros::Duration(AUCTION_TIMEOUT+2), &docking::end_auction_participation_timer_callback, this, true, false);
+    ros::Timer timer = nh.createTimer(ros::Duration(AUCTION_TIMEOUT+2), &docking::end_auction_participation_timer_callback, this);
+    timer.start();
+    timers.push_back(timer);
+
+
     //TODO //F probably in this version doesn't work with multi-hoop replies!!!!! 
     //ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     //if(msg.get()->robot == robot_id) {
@@ -989,9 +1010,15 @@ void timerCallback2(const ros::TimerEvent& event) {
     ;
 }
 
+void docking::end_auction_participation_timer_callback(const ros::TimerEvent &event) {
+    //ROS_ERROR("\n\t\e[1;34mdecrementing\e[0m");
+    participating_to_auction--;
+}
+
 void docking::timerCallback(const ros::TimerEvent &event) {
     //ROS_ERROR("\n\t\e[1;34mAuction completed\e[0m");
     managing_auction = false;
+    //ROS_ERROR("\n\t\e[1;34mdecrementing\e[0m");
     participating_to_auction--;
     std_msgs::Empty msg;
     pub_auction_completed.publish(msg);
@@ -1018,7 +1045,11 @@ void docking::timerCallback(const ros::TimerEvent &event) {
         //going_to_ds = true;
         going_to_check_if_ds_is_free = true;
         in_queue = false;
-        pub_auction_winner.publish(msg);
+        
+        
+        //pub_auction_winner.publish(msg);
+        robot_state_next = going_charging_next;
+        
         timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
     }
     else {
@@ -1026,7 +1057,10 @@ void docking::timerCallback(const ros::TimerEvent &event) {
         // the robot has lost its own auction
         if(!in_queue) {
             //in_queue = true;
-            pub_auction_loser.publish(msg);
+            
+            //pub_auction_loser.publish(msg);
+            robot_state_next = going_queue;
+            
         }
         timer_restart_auction.setPeriod(ros::Duration(30), true);
         //timer_restart_auction.setPeriod(ros::Duration(10), true);
@@ -1059,6 +1093,8 @@ void docking::cb_charging_completed(const std_msgs::Empty& msg) {
     recharging = false;
     going_to_ds = false;
     
+    charging_completed = true;
+    
     
 
 }
@@ -1077,6 +1113,8 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
     ROS_ERROR("\n\t\e[1;34mRESTARTING AUCTION !!!!!!!!!!!!!!!!!!!!!!\e[0m");
         auction_id++;
         managing_auction = true;
+        
+        //ROS_ERROR("\n\t\e[1;34mincrementing\e[0m");
         participating_to_auction++;
         adhoc_communication::SendEmAuction srv;
         srv.request.topic = "adhoc_communication/send_em_auction/starting";
@@ -1109,8 +1147,16 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 
 void docking::cb_going_charging(const std_msgs::Empty& msg) {
     ROS_ERROR("\n\t\e[1;34mNeed to charge; start new auction\e[0m");
+    need_to_charge = true;
+    
     managing_auction = true;
+    
+    //ROS_ERROR("\n\t\e[1;34mincrementing\e[0m");
     participating_to_auction++;
+    
+    
+    //timer
+    
     // Start auction timer
     //timer = nh.createTimer(ros::Duration(10), timerCallback2, this, true);
     
@@ -1170,10 +1216,13 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
     std_msgs::Empty msg2;
     if(msg.get()->docking_station == best_ds.id) {
         //ROS_ERROR("\n\t\e[1;34mReceived auction result\e[0m");
-        participating_to_auction--;
+        //participating_to_auction--;
         if(robot_id == msg.get()->robot) {
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m");
-            pub_auction_winner.publish(msg2);
+            
+            robot_state_next = going_charging_next;
+            
+            //pub_auction_winner.publish(msg2);
             //recharging = true; //TODO not here...
             timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
             //going_to_ds = true;
@@ -1187,8 +1236,13 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
                     ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was prepararing to go charging, so I have to leave\e[0m");
                 if(going_to_check_if_ds_is_free)
                     ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was prepararing to check for vacancy, so I have to leave\e[0m");
-                pub_auction_loser.publish(msg2);
-                pub_abort_charging.publish(msg2);
+                
+                //pub_auction_loser.publish(msg2);
+                //pub_abort_charging.publish(msg2);
+                
+                robot_state_next = exploring;
+                
+                
                 recharging = false;
                 going_to_check_if_ds_is_free = false;
                 going_to_ds = false;
@@ -1256,4 +1310,26 @@ void docking::really_going_charging_callback(const std_msgs::Empty::ConstPtr &ms
     going_to_ds = true;
     going_to_check_if_ds_is_free = false;
     recharging = true;
+}
+
+void docking::update_robot_state() {
+    if(participating_to_auction < 0)
+        ; //ROS_ERROR("\n\t\e[1;34mnegative value!!!\e[0m");
+    if(participating_to_auction > 0) {
+        //ROS_ERROR("\n\t\e[1;34mcannot udpate state: %d\e[0m", participating_to_auction);
+        return;
+    }
+    //ROS_ERROR("\n\t\e[1;34mudpate state\e[0m");
+    std_msgs::Empty msg;
+    if(charging_completed) {
+        charging_completed = false; //TODO hmm...
+        pub_fully_charged.publish(msg); //fully_charged
+    }
+    else if(robot_state_next == going_charging_next)
+        pub_going_charging.publish(msg); //going_charging
+    else if(need_to_charge && robot_state_next != stay)
+       pub_going_queue.publish(msg); //going_queue
+    else if(robot_state_next == exploring)
+        pub_exploring.publish(msg); //exploring
+    robot_state_next = stay;
 }

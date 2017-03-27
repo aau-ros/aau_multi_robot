@@ -54,6 +54,8 @@ int main(int argc, char** argv)
         
         //
         doc.compute_best_ds();
+        
+        doc.update_robot_state();
 
         // sleep for 1/rate seconds
         loop_rate.sleep();
