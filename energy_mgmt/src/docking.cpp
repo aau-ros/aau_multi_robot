@@ -159,6 +159,8 @@ docking::docking()
     sub_occupied_ds = nh.subscribe("occupied_ds",  1, &docking::occupied_ds_callback, this);
     
     sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 1, &docking::check_vacancy_callback, this);
+    sub_really_going_charging = nh.subscribe("explorer/really_going_charging", 1, &docking::really_going_charging_callback, this);
+    
     sub_ask_for_vacancy = nh.subscribe("adhoc_communication/ask_for_vacancy", 1, &docking::ask_for_vacancy_callback, this);
     
     sub_in_queue = nh.subscribe("explorer/in_queue", 1, &docking::in_queue_callback, this);
@@ -167,6 +169,7 @@ docking::docking()
     participating_to_auction = 0;
     managing_auction = false;
     going_to_ds = false;
+    going_to_check_if_ds_is_free = false;
     
 }
 
@@ -1012,7 +1015,8 @@ void docking::timerCallback(const ros::TimerEvent &event) {
     
     if(winner == robot_id) {
         ROS_ERROR("\n\t\e[1;34mI won my own auction!\e[0m");
-        going_to_ds = true;
+        //going_to_ds = true;
+        going_to_check_if_ds_is_free = true;
         in_queue = false;
         pub_auction_winner.publish(msg);
         timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
@@ -1172,14 +1176,22 @@ void docking::cb_auction_winner(const adhoc_communication::EmAuction::ConstPtr &
             pub_auction_winner.publish(msg2);
             //recharging = true; //TODO not here...
             timer_restart_auction.stop(); //F i'm not sure that this follows the idea in the paper...
-            going_to_ds = true;
+            //going_to_ds = true;
+            going_to_check_if_ds_is_free = true;
         }
         else {
-            if(recharging || going_to_ds) {
-                ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging / prepararing to go charging, so I have to ...\e[0m");
+            if(recharging || going_to_ds || going_to_check_if_ds_is_free) {
+                if(recharging)
+                    ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was recharging, so I have to leave\e[0m");
+                if(going_to_ds)
+                    ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was prepararing to go charging, so I have to leave\e[0m");
+                if(going_to_check_if_ds_is_free)
+                    ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, but I was prepararing to check for vacancy, so I have to leave\e[0m");
                 pub_auction_loser.publish(msg2);
                 pub_abort_charging.publish(msg2);
                 recharging = false;
+                going_to_check_if_ds_is_free = false;
+                going_to_ds = false;
             } else
                 ROS_ERROR("\n\t\e[1;34mI lost an auction not started by me, so who cares...\e[0m");
         }
@@ -1221,19 +1233,27 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg) {
 
 
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-    if(msg.get()->id == best_ds.id && (recharging || going_to_ds) ) {
-        ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
+    if(msg.get()->id == best_ds.id && (recharging || going_to_ds || going_to_check_if_ds_is_free) ) {
+        //ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
         srv_msg.request.docking_station.id = best_ds.id;
         sc_send_docking_station.call(srv_msg);
     }
-    else
-        ; //ROS_ERROR("\n\t\e[1;34mfree?\e[0m");
+    else{
+        ;
+        //ROS_ERROR("\n\t\e[1;34mfree?\e[0m");
+    }
 }
 
 void docking::in_queue_callback(const std_msgs::Empty::ConstPtr &msg) {
     in_queue = true;
     timer_restart_auction.setPeriod(ros::Duration(10), true);
     timer_restart_auction.start();
+}
+
+void docking::really_going_charging_callback(const std_msgs::Empty::ConstPtr &msg) {
+    going_to_ds = true;
+    going_to_check_if_ds_is_free = false;
+    recharging = true;
 }

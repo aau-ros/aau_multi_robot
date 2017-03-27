@@ -227,7 +227,7 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_going_charging, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_going_charging, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy, sub_really_going_charging;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
     void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
@@ -260,6 +260,7 @@ private:
     vector<auction_t> auctions;
     
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr&);
+    void really_going_charging_callback(const std_msgs::Empty::ConstPtr &msg);
     
     bool managing_auction;
     int participating_to_auction;
@@ -268,7 +269,7 @@ private:
     void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
     
-    bool going_to_ds;
+    bool going_to_ds, going_to_check_if_ds_is_free;
 
 };
 
