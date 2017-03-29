@@ -912,6 +912,19 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
     if(successful == true)
     {
         distance =  global_plan.size();
+        
+        /*
+        distance = 0;
+        std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
+        geometry_msgs::PoseStamped prev_point = (*it);
+        it++;
+        for(; it != global_plan.end(); it++) {
+            distance = sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) );
+            prev_point = (*it);
+        }
+        */
+        
+        
         return distance;
     }
     else
@@ -3827,6 +3840,12 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
     return false;
 }
 
+double ExplorationPlanner::my_distance(double x, double y) {
+    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution();
+}
+
+
+
 /**
  * Check a frontier (or a cluster) if it is within reach of the robot considering its available energy
  * mode: 1=frontier, 2=cluster
@@ -3928,7 +3947,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
-                    ROS_ERROR("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
+                    ROS_INFO("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     return false;
                 }
             }

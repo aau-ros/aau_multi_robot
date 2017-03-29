@@ -37,7 +37,8 @@ public:
     
     //F
     void detect_ds();
-    void compute_optimal_ds();
+    //void compute_best_ds(const move_base_msgs::MoveBaseGoal::ConstPtr& msg);
+    void compute_best_ds();
     
     void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg);
     void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg);

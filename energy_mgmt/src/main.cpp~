@@ -53,7 +53,7 @@ int main(int argc, char** argv)
         //doc.detect_ds();
         
         //
-        doc.compute_optimal_ds();
+        doc.compute_best_ds();
         
         doc.update_robot_state();
 

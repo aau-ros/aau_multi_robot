@@ -248,6 +248,8 @@ namespace explorationPlanner
             bool sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_to_send, std::string topic);
             bool sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic);
 
+            double my_distance(double x, double y);
+
 
         private:
             //Edit Peter

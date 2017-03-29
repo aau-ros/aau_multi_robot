@@ -1422,10 +1422,8 @@ void docking::update_robot_state()
             pub_lost_own_auction.publish(msg);
 
         /* If the robot is the winner of at least one auction, notify explorer */
-        else if (auction_winner) {
+        else if (auction_winner)
             pub_won_auction.publish(msg);
-            going_to_check_if_ds_is_free = true; //TODO not here!!!!   
-        }
 
         /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was recharging, it has to leave the docking station) */
         else if (lost_other_robot_auction)

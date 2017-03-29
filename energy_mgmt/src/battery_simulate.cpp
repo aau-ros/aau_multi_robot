@@ -59,7 +59,8 @@ battery_simulate::battery_simulate()
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
     
-    sub_abort_charging = nh.subscribe("charging_aborted", 1, &battery_simulate::cb_abort_charging, this);
+    //sub_abort_charging = nh.subscribe("charging_aborted", 1, &battery_simulate::cb_abort_charging, this);
+    sub_abort_charging = nh.subscribe("explorer/abort_charging", 1, &battery_simulate::cb_abort_charging, this);
 
     //TODO: do we need this?
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
@@ -157,10 +158,10 @@ void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
 {
     //ROS_INFO("Starting to recharge");
     state.charging = true;
-    remaining_power = total_power / 2;
-    state.soc = remaining_power / total_power;
+    //remaining_power = total_power / 2;
+    //state.soc = remaining_power / total_power;
     state.remaining_time_run = state.soc * total_power;
-    state.remaining_distance = 10;
+    state.remaining_distance = state.remaining_time_run;
 }
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)

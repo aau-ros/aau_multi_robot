@@ -337,7 +337,7 @@ class Explorer
                 robot_state = going_checking_vacancy;
             }
             else
-                ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
+                ROS_ERROR("\n\t\e[1;34m already charging \e[0m");
         }
 
         /* Check if the robot should go in a queue */
