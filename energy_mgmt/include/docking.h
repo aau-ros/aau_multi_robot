@@ -98,9 +98,8 @@ private:
 
     /**
      * Update the likelihood value l4.
-     * @param int docking_station: The docking station to which the distance shall be computed.
      */
-    void update_l4(int docking_station);
+    void update_l4();
 
     /**
      * Start or respond to an auction for a docking station.

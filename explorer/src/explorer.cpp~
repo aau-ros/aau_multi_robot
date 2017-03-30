@@ -1661,7 +1661,7 @@ ros::ServiceServer ss_robot_pose;
         // run, this kills all processes and starts a new run
         this->indicateSimulationEnd();
 
-        ROS_ERROR("Shutting down...");
+        ROS_INFO("Shutting down...");
         ros::shutdown();
     }
 

@@ -516,7 +516,7 @@ void docking::update_l1()
             ++num_robots_active;
     }
 
-    // sanity check
+    // sanity checks
     if (num_ds_vacant < 0)
     {
         ROS_ERROR("Invalid number of vacant docking stations: %d!", num_ds_vacant);
@@ -552,7 +552,7 @@ void docking::update_l2()
     double time_run = battery.remaining_time_run;
     double time_charge = battery.remaining_time_charge;
 
-    // sanity check
+    // sanity checks
     if (time_charge < 0)
     {
         ROS_ERROR("Invalid charging time: %.2f!", time_charge);
@@ -588,7 +588,7 @@ void docking::update_l3()
             ++num_jobs_close;
     }
 
-    // sanity check
+    // sanity checks
     if (num_jobs < 0)
     {
         ROS_ERROR("Invalid number of jobs: %d", num_jobs);
@@ -621,13 +621,13 @@ void docking::update_l3()
     }
 }
 
-void docking::update_l4(int docking_station)
+void docking::update_l4()
 {
     // get distance to docking station
     int dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
-        if (ds[i].id == docking_station)
+        if (ds[i].id == target_ds.id)
         {
             dist_ds = distance(ds[i].x, ds[i].y);
             break;
@@ -643,13 +643,7 @@ void docking::update_l4(int docking_station)
             dist_job = dist_job_temp;
     }
 
-    // sanity check
-    if (dist_ds < 0)
-    {
-        ROS_ERROR("Invalid docking station: %d", docking_station);
-        l4 = 1;
-        return;
-    }
+    // sanity checks
     if (dist_job < 0 || dist_job >= numeric_limits<int>::max())
     {
         ROS_ERROR("Invalid distance to closest job: %d", dist_job);

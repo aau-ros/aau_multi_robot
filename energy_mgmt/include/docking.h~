@@ -301,7 +301,7 @@ private:
     ros::Subscriber sub_robot_pose;
     ros::ServiceClient sc_robot_pose;
     
-    ds_t next_optimal_ds, target_ds;
+    ds_t next_optimal_ds, target_ds, next_target_ds;
 
 };
 
