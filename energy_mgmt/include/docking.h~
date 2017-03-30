@@ -18,7 +18,7 @@
 #include <energy_mgmt/battery_state.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <adhoc_communication/SendMmRobotPosition.h>
+#include <explorer/RobotPosition.h>
 #include <sstream>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
