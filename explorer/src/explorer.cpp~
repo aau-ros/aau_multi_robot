@@ -449,8 +449,6 @@ ros::ServiceServer ss_robot_pose;
         ros::Subscriber my_sub =
             nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);
         ;  // F
-        ros::Subscriber sub_ds =
-            nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  // F
         ros::Subscriber sub_new_target_ds = nh.subscribe(
             "new_target_docking_station_selected", 1, &Explorer::new_target_docking_station_selected_callback, this);  // F
         ros::Subscriber sub_auction_participation =
@@ -949,7 +947,7 @@ ros::ServiceServer ss_robot_pose;
                         &final_goal, count, &robot_str, -1);  // TODO ...
                     ROS_DEBUG("Goal_determined: %d counter: %d", goal_determined, count);
 
-                    /* Found a frontier, go there */
+                    /* Check if the robot has found a recheable frontier */
                     if (goal_determined == true)
                     {
                         /* The robot has found a recheable frontier: it can move toward it
@@ -966,12 +964,10 @@ ros::ServiceServer ss_robot_pose;
                         }
                         charge_countdown = EXIT_COUNTDOWN;
                     }
-
-                    /* If the robot is fully charged, it means that it will never be able
-                       to reach any new frontier even after a recharging: exploration is
-                       over */
+                    
                     else if (robot_state == fully_charged)
                     {
+                        /* The robot wasn't able to find a recheable frontier even if it is fully charged: this means that it will never be able to reach a frontier even after a new recharging: exploration is over */
                         // TODO //F we shoudl better check if there are still unvisited
                         // frontier and the robot is not able to reach any of them even if
                         // fully charged, because clearly this is a problem...
@@ -979,11 +975,12 @@ ros::ServiceServer ss_robot_pose;
                                  "exploration is completed");
 
                         /* Start countdown to finalize exploration */
-                        exit_countdown--;
-                        ROS_ERROR("Shutdown in: %d", exit_countdown);
-                        if (exit_countdown <= 0)
+                        //TODO
+                        //exit_countdown--;
+                        //ROS_ERROR("Shutdown in: %d", exit_countdown);
+                        //if (exit_countdown <= 0)
                             finalize_exploration();
-                        continue;
+                        //continue;
                     }
 
                     /* Robot cannot reach any frontier but it is not fully charged, so a
@@ -1167,62 +1164,62 @@ ros::ServiceServer ss_robot_pose;
             if (robot_state == going_in_queue || robot_state == going_checking_vacancy || robot_state == going_charging)
             {
                 if (robot_state == going_checking_vacancy)
-                    ROS_ERROR("Approaching ds%d (%f, %f) to check if it is free", -1, home_point_x, home_point_y);
+                    ROS_ERROR("Approaching ds%d (%f, %f) to check if it is free", -1, target_ds_x, target_ds_y);
                 else if (robot_state == going_in_queue)
                     ROS_ERROR("Travelling to DS to go in queue");
                 else
                     ROS_ERROR("Robot can finally prepare itself to recharge");
 
                 /*
-                int distance_temp = exploration->trajectory_plan(home_point_x - 2,
-                home_point_y - 2);
-                int x_temp = home_point_x - 2;
-                int y_temp = home_point_y - 2;
-                if(distance_temp > exploration->trajectory_plan(home_point_x - 2,
-                home_point_y + 2)) {
-                    distance_temp = exploration->trajectory_plan(home_point_x - 2,
-                home_point_y + 2);
-                    x_temp = home_point_x - 2;
-                    y_temp = home_point_y + 2;
-                } else if (distance_temp > exploration->trajectory_plan(home_point_x +
-                2, home_point_y + 2)) {
-                    distance_temp = exploration->trajectory_plan(home_point_x + 2,
-                home_point_y + 2);
-                    x_temp = home_point_x + 2;
-                    y_temp = home_point_y + 2;
-                } else if (distance_temp > exploration->trajectory_plan(home_point_x +
-                2, home_point_y - 2)) {
-                    distance_temp = exploration->trajectory_plan(home_point_x + 2,
-                home_point_y - 2);
-                    x_temp = home_point_x + 2;
-                    y_temp = home_point_y - 2;
+                int distance_temp = exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y - 2);
+                int x_temp = target_ds_x - 2;
+                int y_temp = target_ds_y - 2;
+                if(distance_temp > exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y + 2)) {
+                    distance_temp = exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y + 2);
+                    x_temp = target_ds_x - 2;
+                    y_temp = target_ds_y + 2;
+                } else if (distance_temp > exploration->trajectory_plan(target_ds_x +
+                2, target_ds_y + 2)) {
+                    distance_temp = exploration->trajectory_plan(target_ds_x + 2,
+                target_ds_y + 2);
+                    x_temp = target_ds_x + 2;
+                    y_temp = target_ds_y + 2;
+                } else if (distance_temp > exploration->trajectory_plan(target_ds_x +
+                2, target_ds_y - 2)) {
+                    distance_temp = exploration->trajectory_plan(target_ds_x + 2,
+                target_ds_y - 2);
+                    x_temp = target_ds_x + 2;
+                    y_temp = target_ds_y - 2;
                 }
 
 
                 /*
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2,
-                home_point_y - 2));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2,
-                home_point_y    ));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x - 2,
-                home_point_y - 2));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    ,
-                home_point_y - 2));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    ,
-                home_point_y    ));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x    ,
-                home_point_y + 2));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2,
-                home_point_y - 2));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2,
-                home_point_y    ));
-                ROS_ERROR("%d", exploration->trajectory_plan(home_point_x + 2,
-                home_point_y + 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x - 2,
+                target_ds_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x    ,
+                target_ds_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x    ,
+                target_ds_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x    ,
+                target_ds_y + 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x + 2,
+                target_ds_y - 2));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x + 2,
+                target_ds_y    ));
+                ROS_ERROR("%d", exploration->trajectory_plan(target_ds_x + 2,
+                target_ds_y + 2));
                 */
 
                 counter++;
-
-                navigate_to_goal = move_robot(counter, home_point_x, home_point_y);
+                navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
+                
             }
 
             if (navigate_to_goal == true)
@@ -1236,10 +1233,10 @@ ros::ServiceServer ss_robot_pose;
                     pub_robot_in_queue.publish(msg);
                 }
 
-                // robot reached home point, start recharging
                 if (robot_state == going_charging)
                 {
-                    ROS_ERROR("At home for recharging");
+                    /* Robot reached DS: it can start recharging */
+                    ROS_ERROR("Reached DS for recharging");
 
                     pub_occupied_ds.publish(msg);
 
@@ -1248,7 +1245,7 @@ ros::ServiceServer ss_robot_pose;
                     publisher_re.publish(msg);  // F
 
                     // compute path length
-                    exploration->trajectory_plan_store(home_point_x, home_point_y);
+                    exploration->trajectory_plan_store(target_ds_x, target_ds_y);
                 }
 
                 // robot reached frontier
@@ -1640,6 +1637,8 @@ ros::ServiceServer ss_robot_pose;
 
         // finish log files
         exploration_has_finished();
+
+        //TODO hmm...
 
         visualize_goal_point(home_point_x, home_point_y);
 
@@ -2335,21 +2334,6 @@ ros::ServiceServer ss_robot_pose;
         occupied_ds = true;
     }
 
-    void docking_station_detected_callback(const std_msgs::Empty::ConstPtr &msg)
-    {
-        // ROS_ERROR("4444444");
-        if (false)
-        {
-            // ROS_ERROR("Storing new DS
-            // position!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            // ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x,
-            // home_point_y);
-            // home_point_x = home_point_x + 1;
-            // home_point_y = home_point_y + 1;
-            test = false;
-        }
-    }
-
     void vacant_ds_callback(const adhoc_communication::EmDockingStation &msg)
     {
         vacant_ds = true;
@@ -2367,9 +2351,9 @@ ros::ServiceServer ss_robot_pose;
     {
         ROS_INFO("Storing new target DS position");
         ROS_ERROR("\n\t\e[1;34m Storing new target DS position \e[0m");
-        home_point_x = msg.get()->point.x;
-        home_point_y = msg.get()->point.y;
-        ROS_ERROR("New target DS is placed at (%f, %f)", home_point_x, home_point_y);
+        target_ds_x = msg.get()->point.x;
+        target_ds_y = msg.get()->point.y;
+        ROS_ERROR("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
 
         /*
         map_merger::TransformPoint point;
@@ -2379,8 +2363,8 @@ ros::ServiceServer ss_robot_pose;
             point.request.point.src_robot = "robot_1";
         else
             ;  // ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        point.request.point.x = home_point_x;
-        point.request.point.y = home_point_y;
+        point.request.point.x = target_ds_x;
+        point.request.point.y = target_ds_y;
 
         ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
         if (!sc_trasform.call(point))
@@ -2584,7 +2568,7 @@ ros::ServiceServer ss_robot_pose;
 
     double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle;
 
-    double x_val, y_val, home_point_x, home_point_y;
+    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
     int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
     int counter;
     bool recharging;
