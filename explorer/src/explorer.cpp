@@ -414,11 +414,6 @@ ros::ServiceServer ss_robot_pose;
         robot_state_next = current_state;
     }
 
-    void update_optimal_ds()
-    {
-        ;
-    }
-
     void explore()
     {
         ROS_INFO("STARTING EXPLORATION");
@@ -456,8 +451,8 @@ ros::ServiceServer ss_robot_pose;
         ;  // F
         ros::Subscriber sub_ds =
             nh.subscribe("docking_station_detected", 1, &Explorer::docking_station_detected_callback, this);  // F
-        ros::Subscriber sub_new_best_ds = nh.subscribe(
-            "new_best_docking_station_selected", 1, &Explorer::new_best_docking_station_selected_callback, this);  // F
+        ros::Subscriber sub_new_target_ds = nh.subscribe(
+            "new_target_docking_station_selected", 1, &Explorer::new_target_docking_station_selected_callback, this);  // F
         ros::Subscriber sub_auction_participation =
             nh.subscribe("auction_participation", 1, &Explorer::auction_participation_callback, this);
 
@@ -472,9 +467,8 @@ ros::ServiceServer ss_robot_pose;
         /* Start main loop (it loops till the end of the exploration) */
         while (robot_state != finished)
         {
-            /* Update robot state and optimal DS */
+            /* Update robot state */
             update_robot_state();
-            update_optimal_ds();
 
             ROS_INFO("EXPLORING");  // TODO here???
 
@@ -544,20 +538,20 @@ ros::ServiceServer ss_robot_pose;
                 /*********** EXPLORATION STRATEGIES ************
                 * 0 ... Navigate to nearest frontier TRAVEL PATH
                 * 1 ... Navigate using auctioning with cluster selection using NEAREST
-                *selection (Kuhn-Munkres)
+                *       selection (Kuhn-Munkres)
                 * 2 ... Navigate to furthest frontier
                 * 3 ... Navigate to nearest frontier EUCLIDEAN DISTANCE
                 * 4 ... Navigate to random Frontier
                 * 5 ... Cluster frontiers, then navigate to nearest cluster using
-                *EUCLIDEAN DISTANCE (with and without negotiation)
+                *       EUCLIDEAN DISTANCE (with and without negotiation)
                 * 6 ... Cluster frontiers, then navigate to random cluster (with and
-                *without negotiation)
+                *       without negotiation)
                 *
                 * ENERGY AWARE STRATEGIES:
                 * 7 ... Navigate to frontier that satisfies energy efficient cost
-                *function with staying-alive path planning
+                *       function with staying-alive path planning
                 * 8 ... Navigate to leftmost frontier (Mei et al. 2006) with
-                *staying-alive path planning
+                *       staying-alive path planning
                 * 9 ... Just like strategy 0 but with staying-alive path planning
                 */
 
@@ -565,17 +559,15 @@ ros::ServiceServer ss_robot_pose;
                 * Choose which strategy to take.
                 * 1 ... Sort the buffer from furthest to nearest frontier
                 * 2 ... Sort the buffer from nearest to furthest frontier, normalized to
-                * the
-                *       robots actual position (EUCLIDEAN DISTANCE)
+                *       the robots actual position (EUCLIDEAN DISTANCE)
                 * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
                 * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN
-                * DISTANCE)
-                * 5 ...
-                * 6 ...
+                *       DISTANCE)
+                * 5 ... (missing)
+                * 6 ... (missing)
                 * 7 ... Sort frontiers in sensor range clock wise (starting from left of
-                * robot)
-                *       and sort the remaining frontiers from nearest to furthest
-                * (EUCLIDEAN DISTANCE)
+                *       robot) and sort the remaining frontiers from nearest to furthest
+                *       (EUCLIDEAN DISTANCE)
                 */
 
                 /* Compute next frontier toi be explored according to the selected
@@ -1175,7 +1167,7 @@ ros::ServiceServer ss_robot_pose;
             if (robot_state == going_in_queue || robot_state == going_checking_vacancy || robot_state == going_charging)
             {
                 if (robot_state == going_checking_vacancy)
-                    ROS_ERROR("Approaching DS to check if it is free");
+                    ROS_ERROR("Approaching ds%d (%f, %f) to check if it is free", -1, home_point_x, home_point_y);
                 else if (robot_state == going_in_queue)
                     ROS_ERROR("Travelling to DS to go in queue");
                 else
@@ -2072,14 +2064,14 @@ ros::ServiceServer ss_robot_pose;
             // robot_state = in_queue;
             std_msgs::Empty msg;
             pub_robot_in_queue.publish(msg);
-            ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
+            ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
             return true;
         }
         else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_checking_vacancy)
         {
             robot_state = checking_vacancy;
 
-            ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if "
+            ROS_ERROR("\n\t\e[1;34mSTOP!! let's check if "
                       "the Ds is free...\e[0m");
 
             return true;
@@ -2304,7 +2296,7 @@ ros::ServiceServer ss_robot_pose;
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_ERROR("\n\t\e[1;34m lost_other_robot_callback \e[0m");
-        robot_state_next == exploring_next;
+        robot_state_next = exploring_next;
     }
 
     void going_charging_callback(const std_msgs::Empty::ConstPtr &msg)
@@ -2371,16 +2363,15 @@ ros::ServiceServer ss_robot_pose;
         // message \e[0m");
     }
 
-    void new_best_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
+    void new_target_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
     {
-        // ROS_ERROR("4444444");
-        // ROS_ERROR("Storing new best DS position");
-        // ROS_ERROR("home_point_x = %f; home_point_y: %f", home_point_x,
-        // home_point_y);
+        ROS_INFO("Storing new target DS position");
+        ROS_ERROR("\n\t\e[1;34m Storing new target DS position \e[0m");
         home_point_x = msg.get()->point.x;
         home_point_y = msg.get()->point.y;
-        // ROS_ERROR("x = %f; y: %f", home_point_x, home_point_y);
+        ROS_ERROR("New target DS is placed at (%f, %f)", home_point_x, home_point_y);
 
+        /*
         map_merger::TransformPoint point;
         if (robot_prefix == "/robot_1")
             point.request.point.src_robot = "robot_0";
@@ -2400,6 +2391,7 @@ ros::ServiceServer ss_robot_pose;
                // point.request.point.x, point.request.point.y);
                // ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m",
                // point.response.point.x, point.response.point.y);
+               */
     }
 
     void bat_callback(const energy_mgmt::battery_state::ConstPtr &msg)

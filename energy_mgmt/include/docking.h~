@@ -218,7 +218,7 @@ private:
     double w1, w2, w3, w4;
     
     //F
-    ros::Publisher pub_ds, pub_new_best_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser, pub_abort_charging;
+    ros::Publisher pub_ds, pub_new_target_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser, pub_abort_charging;
     bool test;
     ds_t best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc, sub_in_queue;
@@ -300,6 +300,8 @@ private:
     
     ros::Subscriber sub_robot_pose;
     ros::ServiceClient sc_robot_pose;
+    
+    ds_t next_optimal_ds, target_ds;
 
 };
 

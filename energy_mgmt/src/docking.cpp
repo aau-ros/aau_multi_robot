@@ -101,7 +101,7 @@ docking::docking()
 
     // F
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1);
-    pub_new_best_ds = nh.advertise<geometry_msgs::PointStamped>("new_best_docking_station_selected", 1);
+    pub_new_target_ds = nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 1); //TODO bad name
     test = true;
     sub_robot_position = nh.subscribe("goalPoint/goalPoint", 1, &docking::robot_position_callback, this);
     pub_adhoc_new_best_ds =
@@ -223,7 +223,7 @@ void docking::preload_docking_stations()
     geometry_msgs::PointStamped msg;
     msg.point.x = best_ds.x;
     msg.point.y = best_ds.y;
-    pub_new_best_ds.publish(msg);  // TODO //F here is too early!!! explorer has not the corresponding subscriber yet!!!
+    //pub_new_target_ds.publish(msg);  // TODO //F here is too early!!! explorer has not the corresponding subscriber yet!!!
 
     for (; it != ds.end(); it++)
         ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
@@ -279,16 +279,16 @@ void docking::detect_ds()
 
             msg2.point.x = new_ds.x;
             msg2.point.y = new_ds.y;
-            pub_new_best_ds.publish(msg2);
+            //pub_new_target_ds.publish(msg2);
             sc_send_docking_station.call(srv);
 
             msg2.point.x = new_ds2.x;
             msg2.point.y = new_ds2.y;
-            pub_new_best_ds.publish(msg2);
+            //pub_new_target_ds.publish(msg2);
             sc_send_docking_station.call(srv);
 
             best_ds = new_ds2;
-            pub_new_best_ds.publish(msg2);
+            //pub_new_target_ds.publish(msg2);
 
             // ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
             sc_send_docking_station.call(srv);
@@ -322,7 +322,7 @@ void docking::compute_optimal_ds()
     geometry_msgs::PointStamped msg1;
     msg1.point.x = best_ds.x;
     msg1.point.y = best_ds.y;
-    pub_new_best_ds.publish(msg1);
+    //pub_new_target_ds.publish(msg1);
 
     double x = robot_x;
     double y = robot_y;
@@ -367,14 +367,14 @@ void docking::compute_optimal_ds()
     //}
 
    if(computed_new_optimal_ds)
-       if(participating_to_auction == 0) {
+       if(participating_to_auction == 0 && !update_state_required) {
             ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", next_optimal_ds.id, next_optimal_ds.x,
    next_optimal_ds.y);
             best_ds = next_optimal_ds;
             geometry_msgs::PointStamped msg1;
             msg1.point.x = best_ds.x;
             msg1.point.y = best_ds.y;
-            pub_new_best_ds.publish(msg1);
+            //pub_new_target_ds.publish(msg1);
         }
         else
             ROS_ERROR("\e[1;34mNext optimal DS: ds%d (%f, %f)\e[0m", next_optimal_ds.id, next_optimal_ds.x,
@@ -384,8 +384,9 @@ void docking::compute_optimal_ds()
     */
 
     /* VERSION 2 */
+    
     if (participating_to_auction == 0) {
-        bool computed_new_optimal_ds = false;
+        bool found_new_optimal_ds = false;
         std::vector<ds_t>::iterator it = ds.begin();
         for (; it != ds.end(); it++)
             // if(optimal_ds_computed_once) {
@@ -394,7 +395,7 @@ void docking::compute_optimal_ds()
             if ((best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) >
                 ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y))
             {
-                computed_new_optimal_ds = true;
+                found_new_optimal_ds = true;
                 best_ds = *it;
             }
             else
@@ -406,20 +407,22 @@ void docking::compute_optimal_ds()
                    //    best_ds = *it;
                    //}
 
-        if (computed_new_optimal_ds)
+        if (found_new_optimal_ds)
         {
-            ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", next_optimal_ds.id, next_optimal_ds.x,
-                      next_optimal_ds.y);
+            ROS_DEBUG("New optimal DS: ds%d (%f, %f)", best_ds.id, best_ds.x, best_ds.y);
             geometry_msgs::PointStamped msg1;
             msg1.point.x = best_ds.x;
             msg1.point.y = best_ds.y;
-            pub_new_best_ds.publish(msg1);
+            //pub_new_target_ds.publish(msg1);
         }
         else
             ROS_DEBUG("Optimal DS unchanged");
     } else
         ROS_DEBUG("There are some pending auctions, so the currently optimal DS cannot be updated");
-
+    
+    
+    
+    
     /*
     if (computed_new_optimal_ds)
     {
@@ -428,7 +431,7 @@ void docking::compute_optimal_ds()
         geometry_msgs::PointStamped msg;
         msg.point.x = best_ds.x;
         msg.point.y = best_ds.y;
-        pub_new_best_ds.publish(msg);
+        pub_new_target_ds.publish(msg);
 
         adhoc_communication::SendEmDockingStation srv;
         srv.request.topic = "adhoc_communication/send_em_docking_station";
@@ -1066,8 +1069,10 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 void docking::cb_recharge(const std_msgs::Empty &msg)
 {
     ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
-    recharging = true;  // reduntant...
+    recharging = true;
     need_to_charge = false;
+    going_to_ds = false;
+    going_to_check_if_ds_is_free = false;
 }
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -1163,7 +1168,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     }
 
     // ???
-    if (auction_bids.size() < 3)
+    if (auction_bids.size() < 3 && ds.size() == 1)
         ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
 
     // ROS_DEBUG("The winner is robot %d", winner);
@@ -1176,6 +1181,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     {
         /* The robot won its own auction */
         ROS_ERROR("\n\t\e[1;34mI won my own auction!\e[0m");
+        next_target_ds = best_ds;
         // going_to_ds = true;
         // going_to_check_if_ds_is_free = true;
         in_queue = false;
@@ -1345,16 +1351,15 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 
     std_msgs::Empty msg2;
 
-    /* Since the robot received the result if an auction, explorer node must be informed of a possible change in the
-     * robot state */
-    update_state_required = true;
-
     /* Check if the robot is interested in the docking station that was object of the auction whose result has been just
      * received */
     if (msg.get()->docking_station == best_ds.id)
     {
-        // ROS_INFO("Received auction result");
+        // ROS_INFO("Received result of an auction to which the robot participated");
         // participating_to_auction--; //TODO here OR in the timer to force auction conclusion!!!
+
+        /* Since the robot received the result of an auction to which it took part, explorer node must be informed of a possible change in the robot state */
+        update_state_required = true;
 
         /* Check if the robot is the winner of the auction */
         if (robot_id == msg.get()->robot)
@@ -1362,10 +1367,14 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             /* The robot won the auction */
             ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m");
             auction_winner = true;
+            
+            next_target_ds = best_ds; //TODO this is safe if the best_ds is not modified during auctions!!!
+                                      //TODO and what if best_ds is updated just a moment before starting the auction??? it shoul be ok because the if above would be false
             // going_to_check_if_ds_is_free = true;  // TODO hmm... not here...
             // robot_state_next = going_charging_next;
             // pub_auction_winner.publish(msg2);
             // recharging = true; //TODO not here...
+            
             timer_restart_auction.stop();  // TODO  i'm not sure that this follows the idea in the paper... but probably
                                            // this is needed otherwise when i have many pendning auction and with a
                                            // timeout enough high, i could have an inifite loop of restarting
@@ -1407,6 +1416,8 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             */
         }
     }
+    else
+        ROS_DEBUG("Received result of an auction the robot was not interested in: ignoring");
 }
 
 void docking::translate_coordinates(double starting_x, double starting_y, double *relative_x, double *relative_y)
@@ -1447,26 +1458,26 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg)
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
     // ROS_ERROR("\n\t\e[1;34mReceived request for vacancy check\e[0m");
-    if (msg.get()->id == best_ds.id && (recharging || going_to_ds || going_to_check_if_ds_is_free))
-    {
-        ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
-        adhoc_communication::SendEmDockingStation srv_msg;
-        srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
-        srv_msg.request.docking_station.id = best_ds.id;
-        sc_send_docking_station.call(srv_msg);
-    }
+    if (msg.get()->id == target_ds.id)
+        if (recharging || going_to_ds || going_to_check_if_ds_is_free)
+        {
+            ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
+            adhoc_communication::SendEmDockingStation srv_msg;
+            srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
+            srv_msg.request.docking_station.id = best_ds.id;
+            sc_send_docking_station.call(srv_msg);
+        }
+        else
+            ROS_ERROR("\n\t\e[1;34m target ds, but currently not used by the robot \e[0m");
     else
-    {
-        ;
-        ROS_ERROR("\n\t\e[1;34mfree?\e[0m");
-    }
+        ROS_ERROR("\n\t\e[1;34m robot is not targetting that ds\e[0m");
 }
 
 void docking::really_going_charging_callback(const std_msgs::Empty::ConstPtr &msg)
 {
     going_to_ds = true;
     going_to_check_if_ds_is_free = false;
-    recharging = true;  // TODO false?
+    recharging = false;  // TODO false?
 }
 
 void docking::robot_in_queue_callback(const std_msgs::Empty::ConstPtr &msg)
@@ -1504,20 +1515,43 @@ void docking::update_robot_state()
 
         /* If the robot is not the winner of the most recent auction (notice that for sure it took part to at least one
          * auction, of update_state_required would be false) and if it needs to charge, notify explorer */
-        if (need_to_charge && !auction_winner)
+        if (need_to_charge && !auction_winner) {
+            target_ds = next_target_ds;
+            geometry_msgs::PointStamped msg1;
+            msg1.point.x = target_ds.x;
+            msg1.point.y = target_ds.y;
+            //pub_new_target_ds.publish(msg1); //TODO necessary??
+            
             pub_lost_own_auction.publish(msg);
+            
+        }
 
         /* If the robot is the winner of at least one auction, notify explorer */
-        else if (auction_winner)
-        {
-            pub_won_auction.publish(msg);
-            going_to_check_if_ds_is_free = true;  // TODO not here!!!!
-        }
+        else if (auction_winner) {
+            if( !recharging && !going_to_ds && !going_to_check_if_ds_is_free)  //TODO really necessary??? i don't think so...
+            {
+                target_ds = next_target_ds; //TODO but what if the robot is already charging at a certain DS which is different from next_target_ds ??????????
+                geometry_msgs::PointStamped msg1;
+                msg1.point.x = target_ds.x;
+                msg1.point.y = target_ds.y;
+                pub_new_target_ds.publish(msg1);
+                going_to_check_if_ds_is_free = true;  // TODO not here!!!!
+                
+                pub_won_auction.publish(msg); //TODO it is important that this is after the other pub!!!!
+            }
 
         /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was
          * recharging, it has to leave the docking station) */
-        else if (lost_other_robot_auction)
+        } else if (lost_other_robot_auction) {
+            target_ds = next_target_ds;
+            geometry_msgs::PointStamped msg1;
+            msg1.point.x = target_ds.x;
+            msg1.point.y = target_ds.y;
+            //pub_new_target_ds.publish(msg1); //TODO necessary??
+            
             pub_lost_other_robot_auction.publish(msg);
+        
+        }
 
         /* Reset all the variables that are used to keep information about the auctions results (i.e., about the next
          * robot state) */
