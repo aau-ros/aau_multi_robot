@@ -3845,7 +3845,8 @@ double ExplorationPlanner::my_distance(double x, double y) {
 }
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) {
-    return costmap_global_ros_->getRobotPose(robotPose);
+    //return costmap_global_ros_->getRobotPose(robotPose);
+    return true;
 }
 
 /**

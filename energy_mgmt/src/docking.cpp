@@ -176,6 +176,15 @@ docking::docking()
 
     sub_robot_in_queue = nh.subscribe("explorer/robot_in_queue", 1, &docking::robot_in_queue_callback, this);
     sub_abort_charging = nh.subscribe("explorer/abort_charging", 1, &docking::abort_charging_callback, this);
+    
+    sub_robot_pose = nh.subscribe("amcl_pose", 1, &docking::robot_pose_callback, this);
+    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>("explorer/robot_pose");
+}
+
+void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {
+    ROS_ERROR("\e[1;34mROBOT POSE!!!!!!!!!!!!!!!!!!!!\e[0m");
+    robot_x = pose->pose.pose.position.x;
+    robot_y = pose->pose.pose.position.y;
 }
 
 void docking::abort_charging_callback(const std_msgs::Empty &msg)
@@ -218,7 +227,7 @@ void docking::preload_docking_stations()
     pub_new_best_ds.publish(msg);  // TODO //F here is too early!!! explorer has not the corresponding subscriber yet!!!
 
     for (; it != ds.end(); it++)
-        ;  // ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
+        ROS_ERROR("\e[1;34mds%d: (%f, %f)\e[0m", (*it).id, (*it).x, (*it).y);
 }
 
 void docking::detect_ds()
@@ -318,15 +327,33 @@ void docking::compute_optimal_ds()
 
     double x = robot_x;
     double y = robot_y;
-    bool computed_new_optimal_ds = false;
+    
+    ros::service::waitForService("explorer/robot_pose");
+    explorer::RobotPosition srv_msg;
+    //ROS_ERROR("\e[1;34m%s\e[0m", sc_robot_pose.getService().c_str());
+    if(ros::service::exists("explorer/robot_pose", true))
+        if(sc_robot_pose.call(srv_msg)) {
+            //ROS_INFO("Call to service %s successful", sc_robot_pose.getService().c_str());
+            x = srv_msg.response.x;
+            y = srv_msg.response.y;
+            //ROS_ERROR("\e[1;34mRobot position: (%f, %f)\e[0m", x, y);
+        }
+        else
+            ROS_ERROR("Call to service %s failed", sc_robot_pose.getService().c_str());
+    else
+        ROS_ERROR("Service %s is not ready yet!", sc_robot_pose.getService().c_str());
+    
+    
+    //bool computed_new_optimal_ds = false;
     std::vector<ds_t>::iterator it = ds.begin();
     for (; it != ds.end(); it++)
         // if(optimal_ds_computed_once) {
         if ((best_ds.x - x) * (best_ds.x - x) + (best_ds.y - y) * (best_ds.y - y) >
             ((*it).x - x) * ((*it).x - x) + ((*it).y - y) * ((*it).y - y))
         {
-            computed_new_optimal_ds = true;
+            //computed_new_optimal_ds = true;
             best_ds = *it;
+            ROS_ERROR("\e[1;34mOPTIMAL DS: ds%d (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
         }
         else
             ;  // ROS_ERROR("\e[1;34m!!!!\e[0m");
@@ -336,7 +363,8 @@ void docking::compute_optimal_ds()
     //    optimal_ds_computed_once = true;
     //    best_ds = *it;
     //}
-
+    
+    /*
     if (computed_new_optimal_ds)
     {
         ROS_ERROR("\e[1;34mNew optimal DS computed: ds %d at (%f, %f)\e[0m", best_ds.id, best_ds.x, best_ds.y);
@@ -351,6 +379,7 @@ void docking::compute_optimal_ds()
         sc_send_docking_station.call(srv);
         // ROS_ERROR("%s", sc_send_docking_station.getService().c_str());
 
+    
         map_merger::TransformPoint point;
         // ROS_ERROR("\e[1;34mCaller robot: %s\e[0m", robot_prefix.c_str());
         if (robot_prefix == "/robot_0")
@@ -386,12 +415,13 @@ void docking::compute_optimal_ds()
         }
         else
             ROS_ERROR("\e[1;34m!!!!!!!!!!!!!!!!!!!!\e[0m");
-
+        
         // ROS_ERROR("\e[1;34mPoint to transform is of robot %s\e[0m", point.request.point.src_robot.c_str());
 
         // ROS_ERROR("\e[1;34mCalling: %s\e[0m", sc_trasform.getService().c_str());
         // else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
     }
+    */
 }
 
 void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
@@ -667,7 +697,8 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 void docking::robot_position_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
 {
-    //ROS_DEBUG("Received robot position");
+    //ROS_ERROR("ROBOT POSITION!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    ROS_DEBUG("Received robot position");
     robot_x = msg.get()->point.x;
     robot_y = msg.get()->point.y;
 }

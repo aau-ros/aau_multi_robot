@@ -17,6 +17,8 @@
 #include <map_merger/TransformPoint.h>
 #include <energy_mgmt/battery_state.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <explorer/RobotPosition.h>
 #include <sstream>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
@@ -287,7 +289,7 @@ private:
     ros::Publisher pub_going_charging, pub_going_queue, pub_exploring, pub_fully_charged;
     
     
-    
+    void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     
     
     ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction;
@@ -295,6 +297,9 @@ private:
     void robot_in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
     ros::Subscriber sub_robot_in_queue, sub_abort_charging ;
     void abort_charging_callback(const std_msgs::Empty &msg);
+    
+    ros::Subscriber sub_robot_pose;
+    ros::ServiceClient sc_robot_pose;
 
 };
 

@@ -28,6 +28,7 @@
 #include "nav_msgs/GetMap.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
+#include <explorer/RobotPosition.h>
 
 //#define PROFILE
 
@@ -58,6 +59,12 @@ void sleepok(int t, ros::NodeHandle &nh)
 class Explorer
 {
   public:
+    
+    bool ready;
+    int my_counter;
+
+ros::ServiceServer ss_robot_pose;
+  
     Explorer(tf::TransformListener &tf)
       : counter(0),
         rotation_counter(0),
@@ -92,6 +99,7 @@ class Explorer
         // F
         test = true;
         vacant_ds = true;
+        ready = false;
 
         /* Initial robot state */
         robot_state = fully_charged;
@@ -122,6 +130,8 @@ class Explorer
         sub_vacant_ds =
             nh.subscribe("adhoc_communication/vacant_ds", 1, &Explorer::vacant_ds_callback, this);  // TODO ???
         sub_occupied_ds = nh.subscribe("adhoc_communication/occupied_ds", 1, &Explorer::occupied_ds_callback, this);
+        
+        
 
         /* Load parameters */
         nh.param("frontier_selection", frontier_selection, 1);
@@ -291,6 +301,24 @@ class Explorer
 
         ROS_INFO("                                             ");
         ROS_INFO("************* INITIALIZING DONE *************");
+        
+        ready = true;
+        //TODO here because it must be after exploration is ready
+        my_counter = 5;
+        ss_robot_pose = nh.advertiseService("robot_pose", &Explorer::robot_pose_callback, this);
+    }
+    
+    
+    bool robot_pose_callback(explorer::RobotPosition::Request  &req, explorer::RobotPosition::Response &res)
+    {
+        my_counter--;
+        tf::Stamped < tf::Pose > robotPose;
+        if(my_counter > 0)
+            return false;
+        exploration->getRobotPose(robotPose);
+        res.x = robotPose.getOrigin().getX();
+        res.y = robotPose.getOrigin().getY();
+        return true;
     }
 
     void update_robot_state()
@@ -2072,7 +2100,7 @@ class Explorer
             {
                 stuck_countdown--;
                 // if(stuck_countdown <= 5){
-
+                
                 // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is
                 // computing the frontier, it is believed to be stucked...
                 if (stuck_countdown <= 10)
@@ -2092,6 +2120,7 @@ class Explorer
             }
             else
             {
+                ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y, pose_angle);
                 stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
                 prev_pose_x = pose_x;
                 prev_pose_y = pose_y;
@@ -2395,6 +2424,8 @@ class Explorer
 
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
     {
+        ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! ROBOT POSE \e[0m");
+    
         /* Get rotation of robot relative to starting position */
         tf::Quaternion orientation = tf::Quaternion(pose->pose.pose.orientation.x, pose->pose.pose.orientation.y,
                                                     pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);

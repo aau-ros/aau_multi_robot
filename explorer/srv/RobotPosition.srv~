@@ -1,0 +1,4 @@
+---
+uint8 status
+float32 x
+float32 y

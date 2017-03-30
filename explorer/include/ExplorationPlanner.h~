@@ -16,6 +16,7 @@
 #include <adhoc_communication/MmPoint.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <map_merger/TransformPoint.h>
+#include <explorer/RobotPosition.h>
 
 namespace explorationPlanner
 {
