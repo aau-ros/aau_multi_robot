@@ -54,7 +54,7 @@
             <arg name="x" value="-2.0" />
             <arg name="y" value=" 3.5" />
         </include>
-        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />-->
+        <node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />
     </group>
     <group ns="robot_1">
         <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
@@ -106,7 +106,7 @@
             <arg name="x" value="-1.0" />
             <arg name="y" value=" 3.5" />
         </include>
-        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_1.rviz" />-->
+        <node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_1.rviz" />
     </group>
     <group ns="robot_2">
         <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
@@ -158,6 +158,6 @@
             <arg name="x" value=" 0.0" />
             <arg name="y" value=" 3.5" />
         </include>
-        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />-->
+        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_2.rviz" />-->
     </group>
 </launch>

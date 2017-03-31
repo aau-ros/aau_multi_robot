@@ -29,6 +29,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
 #include <explorer/RobotPosition.h>
+#include <adhoc_communication/EmRobot.h>
 
 //#define PROFILE
 
@@ -62,6 +63,10 @@ class Explorer
     
     bool ready;
     int my_counter;
+    ros::Publisher pub_robot;
+    
+    //enum state_for_docking_t {active, going_charging, charging, idle};
+    
 
 ros::ServiceServer ss_robot_pose;
   
@@ -115,10 +120,10 @@ ros::ServiceServer ss_robot_pose;
         pub_abort_charging = nh.advertise<std_msgs::Empty>("abort_charging", 1);
 
         /* Robot state subscribers */
-        sub_going_charging = nh.subscribe("going_charging", 1, &Explorer::going_charging_callback, this);
-        sub_going_queue = nh.subscribe("going_queue", 1, &Explorer::going_queue_callback, this);
-        sub_exploring = nh.subscribe("exploring", 1, &Explorer::exploring_callback, this);
-        sub_exploring = nh.subscribe("fully_charged", 1, &Explorer::fully_charged_callback, this);
+        sub_going_charging = nh.subscribe("going_charging", 1, &Explorer::going_charging_callback, this); //TODO
+        sub_going_queue = nh.subscribe("going_queue", 1, &Explorer::going_queue_callback, this); //TODO
+        sub_exploring = nh.subscribe("exploring", 1, &Explorer::exploring_callback, this); //TODO
+        sub_exploring = nh.subscribe("fully_charged", 1, &Explorer::fully_charged_callback, this);  //TODO
 
         sub_check_vacancy =
             nh.subscribe("adhoc_communication/reply_for_vacancy", 1, &Explorer::reply_for_vacancy_callback, this);
@@ -131,6 +136,7 @@ ros::ServiceServer ss_robot_pose;
             nh.subscribe("adhoc_communication/vacant_ds", 1, &Explorer::vacant_ds_callback, this);  // TODO ???
         sub_occupied_ds = nh.subscribe("adhoc_communication/occupied_ds", 1, &Explorer::occupied_ds_callback, this);
         
+        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);
         
 
         /* Load parameters */
@@ -1364,7 +1370,14 @@ ros::ServiceServer ss_robot_pose;
             exploration->publish_visited_frontier_list();
 
             costmap_mutex.unlock();
-
+            
+            adhoc_communication::EmRobot msg;
+            if(robot_state == exploring || robot_state == moving_to_frontier)
+                msg.state = 0; //TODO
+            else
+                msg.state = 3; //TODO
+            pub_robot.publish(msg);
+            
             r.sleep();
         }
     }

@@ -170,7 +170,7 @@ private:
      * A vector of all robots with their current state.
      */
     int num_robots; // number of robots is known in simulations
-    enum state_t {active, going_charging, charging, idle, in_queue_state};
+    enum state_t {active, going_charging, charging, idle};
     struct robot_t{
         int id;
         state_t state;
@@ -294,10 +294,12 @@ private:
     ros::Subscriber sub_robot_in_queue, sub_abort_charging ;
     void abort_charging_callback(const std_msgs::Empty &msg);
     
-    ros::Subscriber sub_robot_pose;
+    ros::Subscriber sub_robot_pose, sub_robot;
     ros::ServiceClient sc_robot_pose;
     
     ds_t next_optimal_ds, target_ds, next_target_ds;
+    
+    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 
 };
 

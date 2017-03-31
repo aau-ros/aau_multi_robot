@@ -74,8 +74,8 @@ docking::docking()
     sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(
         "adhoc_communication/send_em_docking_station");  // F
 
-    sc_send_robot =
-        nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name + "adhoc_communication/send_em_robot");
+    //sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(robot_name + "adhoc_communication/send_em_robot");
+    sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>("adhoc_communication/send_em_robot");
 
     // subscribe to topics
     // sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
@@ -85,6 +85,9 @@ docking::docking()
     //sub_jobs = nh.subscribe(robot_name + "/frontiers", 10000, &docking::cb_jobs, this);
     sub_jobs = nh.subscribe("frontiers", 10000, &docking::cb_jobs, this);
     //sub_jobs = nh.subscribe("frontiers", 10000, &docking::cb_jobs, this);
+    
+    
+    sub_robot = nh.subscribe("explorer/robot", 100, &docking::cb_robot, this);
 
     // sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_docking_stations =
@@ -770,6 +773,16 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     update_l2();
 }
 
+
+void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
+    adhoc_communication::SendEmRobot srv_msg;
+    srv_msg.request.topic = "robots";
+    srv_msg.request.robot.id = robot_id;
+    srv_msg.request.robot.state = msg.get()->state;
+    sc_send_robot.call(srv_msg);
+
+}
+
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
     // check if robot is in list already
@@ -798,6 +811,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
     // update charging likelihood
     update_l1();
+    
 }
 
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)

@@ -70,6 +70,22 @@ Visualization Manager:
       Topic: /robot_1/map_merger/global_map
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /robot_1/frontierPoints
+      Name: MarkerArray
+      Namespaces:
+      my_namespace: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /robot_1/visitedfrontierPoints
+      Name: MarkerArray
+      Namespaces:
+      my_namespace: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

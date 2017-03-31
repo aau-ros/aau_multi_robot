@@ -212,7 +212,7 @@ void ExplorationPlanner::Callbacks()
     {
 //        publish_subscribe_mutex.lock();
 
-        if(robot_name == 1)
+        if(robot_name == 1) //TODO
         {
                 sub_frontiers = nh_frontier.subscribe("/robot_0/frontiers", 10000, &ExplorationPlanner::frontierCallback, this);
                 sub_visited_frontiers = nh_visited_frontier.subscribe("/robot_0/visited_frontiers", 10000, &ExplorationPlanner::visited_frontierCallback, this);
@@ -2059,7 +2059,6 @@ void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier
 {
     // TODO: Allow only frontiers that are not too close to walls
 
-//    ROS_ERROR("FRONTIER RECEIVED!!!!!!!!!!!!!!!!!!!!!!!!");
     adhoc_communication::ExpFrontierElement frontier_element;
     for(int i = 0; i < msg.get()->frontier_element.size(); i++)
     {
@@ -5116,6 +5115,7 @@ void ExplorationPlanner::visualize_Frontiers()
             marker.id = frontier_seq_number;
             marker.type = visualization_msgs::Marker::SPHERE;
             marker.action = visualization_msgs::Marker::ADD;
+            marker.lifetime = ros::Duration(30); //TODO //F
             marker.pose.position.x = frontiers.at(i).x_coordinate;
             marker.pose.position.y = frontiers.at(i).y_coordinate;
             marker.pose.position.z = 0;

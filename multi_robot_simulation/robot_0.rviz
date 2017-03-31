@@ -7,9 +7,6 @@ Panels:
         - /Global Options1
         - /Status1
         - /Map2
-        - /Map2/Status1
-        - /Map3
-        - /Map3/Status1
       Splitter Ratio: 0.5
     Tree Height: 565
   - Class: rviz/Selection
@@ -70,6 +67,22 @@ Visualization Manager:
       Topic: /robot_0/map_merger/global_map
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /robot_0/frontierPoints
+      Name: MarkerArray
+      Namespaces:
+        my_namespace: true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /robot_0/visitedfrontierPoints
+      Name: MarkerArray
+      Namespaces:
+        my_namespace: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -94,22 +107,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 154.46
+      Distance: 51.6631
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 13.7193
-        Y: 8.87228
-        Z: -15.9747
+        X: 5.16143
+        Y: -2.34419
+        Z: -15.9613
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.785398
+      Pitch: 1.5698
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.785398
+      Yaw: 0.610398
     Saved: ~
 Window Geometry:
   Displays:
@@ -127,5 +140,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 55
-  Y: 16
+  X: 406
+  Y: 82
