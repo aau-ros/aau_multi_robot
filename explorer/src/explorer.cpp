@@ -29,6 +29,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
 #include <explorer/RobotPosition.h>
+#include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 
 //#define PROFILE
@@ -65,10 +66,10 @@ class Explorer
     int my_counter;
     ros::Publisher pub_robot;
     
-    //enum state_for_docking_t {active, going_charging, charging, idle};
+    //enum state_for_docking_t {active, going_charging, charging, idle}; //TODO
     
 
-ros::ServiceServer ss_robot_pose;
+ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
   
     Explorer(tf::TransformListener &tf)
       : counter(0),
@@ -310,8 +311,9 @@ ros::ServiceServer ss_robot_pose;
         
         ready = true;
         //TODO here because it must be after exploration is ready
-        my_counter = 5;
+        my_counter = 10;
         ss_robot_pose = nh.advertiseService("robot_pose", &Explorer::robot_pose_callback, this);
+        ss_distance_from_robot = nh.advertiseService("distance_from_robot", &Explorer::distance_from_robot_callback, this);
     }
     
     
@@ -324,6 +326,15 @@ ros::ServiceServer ss_robot_pose;
         exploration->getRobotPose(robotPose);
         res.x = robotPose.getOrigin().getX();
         res.y = robotPose.getOrigin().getY();
+        return true;
+    }
+    
+    bool distance_from_robot_callback(explorer::DistanceFromRobot::Request  &req, explorer::DistanceFromRobot::Response &res)
+    {
+        my_counter--;
+        if(my_counter > 0)
+            return false;
+        res.distance = exploration->my_distance(req.x, req.y);
         return true;
     }
 
@@ -414,6 +425,8 @@ ros::ServiceServer ss_robot_pose;
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 std_msgs::Empty msg;
                 pub_abort_charging.publish(msg);
+                
+                robot_state = exploring;
             }
         }
 

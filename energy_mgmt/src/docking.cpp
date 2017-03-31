@@ -154,6 +154,8 @@ docking::docking()
 
     sub_ask_for_vacancy =
         nh.subscribe("adhoc_communication/ask_for_vacancy", 1, &docking::ask_for_vacancy_callback, this);
+    
+    sub_ds_state_update = nh.subscribe("adhoc_communication/ds_state_update", 1, &docking::ds_state_update_callback, this);
 
     participating_to_auction = 0;
     managing_auction = false;
@@ -178,6 +180,9 @@ docking::docking()
 
     sub_robot_pose = nh.subscribe("amcl_pose", 1, &docking::robot_pose_callback, this);
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>("explorer/robot_pose");
+    sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>("explorer/distance_from_robot");
+    
+    llh = 0; //TODO 
 }
 
 void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
@@ -210,6 +215,7 @@ void docking::preload_docking_stations()
         nh.param("energy_mgmt/" + ds_prefix + "/y", y, 0.0);
         ds_t new_ds;
         new_ds.id = index;
+        new_ds.vacant = true;
         translate_coordinates(x, y, &(new_ds.x), &(new_ds.y));
         ds.push_back(new_ds);
         // n.deleteParam("my_param");
@@ -337,6 +343,8 @@ void docking::compute_optimal_ds()
             // ROS_INFO("Call to service %s successful", sc_robot_pose.getService().c_str());
             x = srv_msg.response.x;
             y = srv_msg.response.y;
+            robot_x = x;
+            robot_y = y;
             // ROS_ERROR("\e[1;34mRobot position: (%f, %f)\e[0m", x, y);
         }
         else
@@ -482,6 +490,10 @@ void docking::compute_optimal_ds()
         // else ROS_ERROR("\e[1;34mFAIL!!!!\e[0m");
     }
     */
+    
+    
+    update_l4();
+    
 }
 
 void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
@@ -496,7 +508,10 @@ void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &ms
 
 double docking::get_llh()
 {
-    return w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
+    /* The likelihood can be updated only if the robot is not participating to an auction */ //TODO explain better  
+   if(participating_to_auction ==  0)
+        llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
+   return llh;
 }
 
 void docking::update_l1()
@@ -579,6 +594,7 @@ void docking::update_l2()
 
 void docking::update_l3()
 {
+
     // count number of jobs: count frontiers and recheable frontiers
     int num_jobs = 0;
     int num_jobs_close = 0;
@@ -624,13 +640,15 @@ void docking::update_l3()
 
 void docking::update_l4()
 {
+
     // get distance to docking station
     int dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
         if (ds[i].id == target_ds.id)
         {
-            dist_ds = distance(ds[i].x, ds[i].y);
+            //dist_ds = distance(ds[i].x, ds[i].y);
+            dist_ds = distance(ds[i].x, ds[i].y, true); //TODO
             break;
         }
     }
@@ -639,7 +657,7 @@ void docking::update_l4()
     int dist_job = numeric_limits<int>::max();
     for (int i = 0; i < jobs.size(); ++i)
     {
-        int dist_job_temp = distance(jobs[i].x, jobs[i].y, true);  // use euclidean distance to make it faster
+        int dist_job_temp = distance(jobs[i].x, jobs[i].y, true);  // use euclidean distance to make it faster //TODO
         if (dist_job_temp < dist_job)
             dist_job = dist_job_temp;
     }
@@ -702,6 +720,14 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
 
 double docking::distance(double goal_x, double goal_y, bool euclidean)
 {
+    explorer::DistanceFromRobot srv_msg;
+    srv_msg.request.x = goal_x;
+    srv_msg.request.y = goal_y;    
+    
+    sc_distance_from_robot.call(srv_msg);
+
+    //TODO
+    /*
     tf::Stamped<tf::Pose> robotPose;
     if (!costmap->getRobotPose(robotPose))
     {
@@ -709,6 +735,8 @@ double docking::distance(double goal_x, double goal_y, bool euclidean)
         return -1;
     }
     return distance(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), goal_x, goal_y, euclidean);
+    */
+    return distance(robot_x, robot_y, goal_x, goal_y, euclidean);
 }
 
 double docking::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)
@@ -1000,7 +1028,7 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
     std_msgs::Empty empty_msg;
     pub_auction_participation.publish(empty_msg);
     */
-
+    
     /* Participating to an auction */
     participating_to_auction++;
 
@@ -1078,6 +1106,16 @@ void docking::cb_recharge(const std_msgs::Empty &msg)
     need_to_charge = false;
     going_to_ds = false;
     going_to_check_if_ds_is_free = false;
+    
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "adhoc_communication/ds_state_update";
+    srv_msg.request.docking_station.id = target_ds.id;
+    srv_msg.request.docking_station.vacant = false;
+
+    sc_send_docking_station.call(srv_msg);
+    
+    ds[target_ds.id].vacant = false;
+    
 }
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -1241,12 +1279,22 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)
 {
+    /*
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "vacant_docking_station";
     srv_msg.request.docking_station.id = best_ds.id;
     srv_msg.request.docking_station.vacant = true;
+    */
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "adhoc_communication/ds_state_update";
+    srv_msg.request.docking_station.id = best_ds.id;
+    srv_msg.request.docking_station.vacant = true;
+    
 
     sc_send_docking_station.call(srv_msg);
+    
+    ds[target_ds.id].vacant = true;
+    
 
     recharging = false;
     going_to_ds = false;                   // TODO but actually until the robot does not leave the ds, it is occupied!!!
@@ -1456,16 +1504,25 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg)
     sc_send_docking_station.call(srv_msg);
 }
 
+void docking::ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_ERROR("\n\t\e[1;34mDS new state: %d\e[0m", msg.get()->vacant);
+    ds[msg.get()->id].vacant = msg.get()->vacant;
+}
+
+
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
     // ROS_ERROR("\n\t\e[1;34mReceived request for vacancy check\e[0m");
     if (msg.get()->id == target_ds.id)
         if (recharging || going_to_ds || going_to_check_if_ds_is_free)
         {
-            ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
+            if(recharging)
+                ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
+            else if(going_to_ds || going_to_check_if_ds_is_free)
+                ROS_ERROR("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
-            srv_msg.request.docking_station.id = best_ds.id;
+            srv_msg.request.docking_station.id = target_ds.id;
             sc_send_docking_station.call(srv_msg);
         }
         else
@@ -1491,6 +1548,15 @@ void docking::robot_in_queue_callback(const std_msgs::Empty::ConstPtr &msg)
     timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
     // timer_restart_auction.setPeriod(ros::Duration(10), true);
     timer_restart_auction.start();
+    
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "adhoc_communication/ds_state_update";
+    srv_msg.request.docking_station.id = target_ds.id;
+    srv_msg.request.docking_station.vacant = true;
+    sc_send_docking_station.call(srv_msg);
+    
+    ds[target_ds.id].vacant = true;
+    
 }
 
 void docking::update_robot_state()

@@ -58,6 +58,7 @@ add_message_files(
 add_service_files(
    FILES
    RobotPosition.srv
+   DistanceFromRobot.srv
 )
 
 ## Generate actions in the 'action' folder

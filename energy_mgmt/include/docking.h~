@@ -19,6 +19,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <explorer/RobotPosition.h>
+#include <explorer/DistanceFromRobot.h>
 #include <sstream>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
@@ -48,7 +49,6 @@ public:
     void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
     
     void update_robot_state();
-    
 
 private:
     /**
@@ -123,7 +123,7 @@ private:
      * Compute the length of the trajectory from the robots current position to a given goal.
      * @param double goal_x: The x-coordinate of the goal (in meters).
      * @param double goal_y: The y-coordinate of the goal (in meters).
-     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the acutal path is calculated using Dijkstra's algorithm.
+     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the actual path is calculated using Dijkstra's algorithm.
      * @return double: The distance between the robots current position and the goal (in meters).
      */
     double distance(double goal_x, double goal_y, bool euclidean=false);
@@ -291,13 +291,18 @@ private:
     ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction;
     bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
     void robot_in_queue_callback(const std_msgs::Empty::ConstPtr &msg);
-    ros::Subscriber sub_robot_in_queue, sub_abort_charging ;
+    ros::Subscriber sub_robot_in_queue, sub_abort_charging, sub_ds_state_update ;
     void abort_charging_callback(const std_msgs::Empty &msg);
     
     ros::Subscriber sub_robot_pose, sub_robot;
     ros::ServiceClient sc_robot_pose;
     
     ds_t next_optimal_ds, target_ds, next_target_ds;
+    
+    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
+    void ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    
+    double llh;
 
 };
 
