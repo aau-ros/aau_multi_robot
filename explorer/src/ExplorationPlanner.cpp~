@@ -112,6 +112,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 
 //    pub_frontiers = nh_frontier.advertise <adhoc_communication::Frontier> ("frontiers", 10000);
 //    pub_visited_frontiers = nh_visited_frontier.advertise <adhoc_communication::Frontier> ("visited_frontiers", 10000);
+    pub_frontiers = nh_frontier.advertise <adhoc_communication::ExpFrontier> ("frontiers", 10000);
+    pub_visited_frontiers = nh_visited_frontier.advertise <adhoc_communication::ExpFrontier> ("visited_frontiers", 10000);
 
     pub_visited_frontiers_points = nh_visited_Point.advertise <visualization_msgs::MarkerArray> ("visitedfrontierPoints", 2000, true);
 
@@ -2176,8 +2178,8 @@ bool ExplorationPlanner::publish_frontier_list()
         frontier_msg.frontier_element.push_back(frontier_element);
     }
 
-//    pub_frontiers.publish(frontier_msg);
-    sendToMulticast("mc_",frontier_msg, "frontiers");
+    pub_frontiers.publish(frontier_msg);
+    //sendToMulticast("mc_",frontier_msg, "frontiers");
 
     publish_subscribe_mutex.unlock();
 }
@@ -2204,8 +2206,8 @@ bool ExplorationPlanner::publish_visited_frontier_list()
         visited_frontier_msg.frontier_element.push_back(visited_frontier_element);
     }
 
-//    pub_visited_frontiers.publish(visited_frontier_msg);
-    sendToMulticast("mc_",visited_frontier_msg, "visited_frontiers");
+    pub_visited_frontiers.publish(visited_frontier_msg);
+    //sendToMulticast("mc_",visited_frontier_msg, "visited_frontiers");
 
     publish_subscribe_mutex.unlock();
 }
@@ -3845,8 +3847,7 @@ double ExplorationPlanner::my_distance(double x, double y) {
 }
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) {
-    //return costmap_global_ros_->getRobotPose(robotPose);
-    return true;
+    return costmap_global_ros_->getRobotPose(robotPose);
 }
 
 /**

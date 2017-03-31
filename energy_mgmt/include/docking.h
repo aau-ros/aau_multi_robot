@@ -283,10 +283,7 @@ private:
     
     std::vector<ros::Timer> timers;
     
-    void end_auction_participation_timer_callback(const ros::TimerEvent &event);
-    
-    ros::Publisher pub_going_charging, pub_going_queue, pub_exploring, pub_fully_charged;
-    
+    void end_auction_participation_timer_callback(const ros::TimerEvent &event); 
     
     void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     

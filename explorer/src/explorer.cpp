@@ -400,14 +400,15 @@ ros::ServiceServer ss_robot_pose;
         /* */
         else if (robot_state_next == exploring_next)
         {
-            ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+            
+            /* If the robot is recharing, it must stop */
             if (robot_state == charging)
             {
+                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 std_msgs::Empty msg;
                 pub_abort_charging.publish(msg);
             }
-            robot_state = exploring;
         }
 
         /* Reset next state */
@@ -1349,7 +1350,8 @@ ros::ServiceServer ss_robot_pose;
 
     void frontiers()
     {
-        ros::Rate r(5);
+        ros::Rate r(0.5);
+        
         while (ros::ok())
         {
             costmap_mutex.lock();
@@ -2609,6 +2611,9 @@ int main(int argc, char **argv)
      * Otherwise it produces unused output.
      */
     boost::thread thr_map(boost::bind(&Explorer::map_info, &simple));
+    
+    /* */
+    boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &simple));
 
     /*
      * FIXME
@@ -2628,6 +2633,8 @@ int main(int argc, char **argv)
     thr_map.interrupt();
     thr_explore.join();
     thr_map.join();
+    
+    //TODO thr_frontiers...
 
 #ifdef PROFILE
     HeapProfilerStop();

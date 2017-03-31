@@ -80,8 +80,11 @@ docking::docking()
     // subscribe to topics
     // sub_battery = nh.subscribe(robot_name+"/battery_state", 1, &docking::cb_battery, this);
     sub_battery = nh.subscribe("battery_state", 1, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(robot_name + "/robots", 100, &docking::cb_robots, this);
-    sub_jobs = nh.subscribe(robot_name + "/frontiers", 10000, &docking::cb_jobs, this);
+    //sub_robots = nh.subscribe(robot_name + "/robots", 100, &docking::cb_robots, this);
+    sub_robots = nh.subscribe("robots", 100, &docking::cb_robots, this);
+    //sub_jobs = nh.subscribe(robot_name + "/frontiers", 10000, &docking::cb_jobs, this);
+    sub_jobs = nh.subscribe("frontiers", 10000, &docking::cb_jobs, this);
+    //sub_jobs = nh.subscribe("frontiers", 10000, &docking::cb_jobs, this);
 
     // sub_docking_stations = nh.subscribe(robot_name+"/docking_stations", 100, &docking::cb_docking_stations, this);
     sub_docking_stations =
@@ -155,11 +158,6 @@ docking::docking()
     going_to_check_if_ds_is_free = false;
 
     need_to_charge = false;
-
-    pub_going_charging = nh.advertise<std_msgs::Empty>("explorer/going_charging", 1);
-    pub_going_queue = nh.advertise<std_msgs::Empty>("explorer/going_queue", 1);
-    pub_exploring = nh.advertise<std_msgs::Empty>("explorer/exploring", 1);
-    pub_fully_charged = nh.advertise<std_msgs::Empty>("explorer/fully_charged", 1);
 
     robot_state_next = stay;
     charging_completed = false;
@@ -578,13 +576,13 @@ void docking::update_l2()
 
 void docking::update_l3()
 {
-    // count number of jobs
+    // count number of jobs: count frontiers and recheable frontiers
     int num_jobs = 0;
     int num_jobs_close = 0;
     for (int i = 0; i < jobs.size(); ++i)
     {
         ++num_jobs;
-        if (distance(jobs[i].x, jobs[i].y, true) <= distance_close)  // use euclidean distance to make it faster
+        if (distance(jobs[i].x, jobs[i].y, true) <= distance_close)  // use euclidean distance to make it faster //TODO
             ++num_jobs_close;
     }
 
@@ -1036,9 +1034,8 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
             srv.request.auction.auction = msg.get()->auction;
             srv.request.auction.robot = robot_id;
             srv.request.auction.docking_station = best_ds.id;
-            // srv.request.auction.bid = get_llh(); //TODO
-            // srv.request.auction.bid = robot_id;
-            srv.request.auction.bid = -remaining_time;
+            srv.request.auction.bid = get_llh(); //TODO
+            //srv.request.auction.bid = -remaining_time;
             ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
             sc_send_auction.call(srv);
         }
@@ -1149,11 +1146,11 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
     /* Compute auction winner: loop through all the received bids and find the robot that sent the highest one */
     int winner;  // the id of thw winner
-    float winner_bid = -10000000000;
+    float winner_bid = numeric_limits<int>::min();
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for (; it != auction_bids.end(); it++)
     {
-        // ROS_DEBUG("Robot %d replied with %f", (*it).robot_id, (*it).bid);
+        ROS_DEBUG("Robot %d placed %f", (*it).robot_id, (*it).bid);
         if ((*it).bid > winner_bid)
         {
             winner = (*it).robot_id;
@@ -1217,8 +1214,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
     srv_mgs.request.auction.robot = winner;
 
     srv_mgs.request.auction.docking_station = best_ds.id;
-    // srv_mgs.request.auction.bid = get_llh();
-    srv_mgs.request.auction.bid = -remaining_time;
+    srv_mgs.request.auction.bid = get_llh();
+    //srv_mgs.request.auction.bid = -remaining_time;
 
     // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv_mgs);
@@ -1269,17 +1266,15 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
     srv.request.auction.auction = auction_id;
     srv.request.auction.robot = robot_id;
     srv.request.auction.docking_station = best_ds.id;
-    // srv.request.auction.bid = get_llh(); //TODO
-    // srv.request.auction.bid = robot_id; //TODO
-    srv.request.auction.bid = -remaining_time;
+    srv.request.auction.bid = get_llh(); //TODO
+    //srv.request.auction.bid = -remaining_time;
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
 
     auction_bid_t bid;
     bid.robot_id = robot_id;
-    // bid.bid = get_llh();
-    // bid.bid = robot_id;
-    bid.bid = -remaining_time;
+    bid.bid = get_llh();
+    //bid.bid = -remaining_time;
     auction_bids.push_back(bid);
 
     timer_finish_auction.setPeriod(ros::Duration(AUCTION_TIMEOUT), true);
@@ -1306,18 +1301,16 @@ void docking::cb_need_charging(const std_msgs::Empty &msg)
     srv.request.auction.auction = auction_id;
     srv.request.auction.robot = robot_id;
     srv.request.auction.docking_station = best_ds.id;
-    // srv.request.auction.bid = get_llh();
-    // srv.request.auction.bid = robot_id;
-    srv.request.auction.bid = -remaining_time;
+    srv.request.auction.bid = get_llh();
+    //srv.request.auction.bid = -remaining_time;
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
 
     /* Keep track of robot bid */
     auction_bid_t bid;
     bid.robot_id = robot_id;
-    // bid.bid = get_llh(); //TODO
-    // bid.bid = robot_id; //TODO
-    bid.bid = -remaining_time;
+    bid.bid = get_llh(); //TODO
+    //bid.bid = -remaining_time;
     auction_bids.push_back(bid);
 }
 

@@ -400,14 +400,15 @@ ros::ServiceServer ss_robot_pose;
         /* */
         else if (robot_state_next == exploring_next)
         {
-            ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+            
+            /* If the robot was recharing, it must stop */
             if (robot_state == charging)
             {
+                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 std_msgs::Empty msg;
                 pub_abort_charging.publish(msg);
             }
-            robot_state = exploring;
         }
 
         /* Reset next state */
@@ -1349,7 +1350,8 @@ ros::ServiceServer ss_robot_pose;
 
     void frontiers()
     {
-        ros::Rate r(5);
+        ros::Rate r(0.5);
+        
         while (ros::ok())
         {
             costmap_mutex.lock();
@@ -1553,18 +1555,18 @@ ros::ServiceServer ss_robot_pose;
         fs << "time_file_written    			= " << asctime(timeinfo);  // << std::endl;
         fs << "start_time           			= " << time_start << std::endl;
         fs << "end_time             			= " << ros::Time::now() << std::endl;
-        fs << "exploration_time    			= " << exploration_time << std::endl;
-        fs << "required_goals       			= " << navigation_goals_required << std::endl;
-        fs << "unreachable_goals                       = " << exploration->unreachable_frontiers.size() << std::endl;
-        fs << "travel_path_overall  			= " << exploration_travel_path << std::endl;
-        fs << "number_of_completed_auctions            = " << exploration->number_of_completed_auctions << std::endl;
-        fs << "number_of_uncompleted_auctions          = " << exploration->number_of_uncompleted_auctions << std::endl;
-        fs << "frontier_selection_strategy             = " << frontier_selection << std::endl;
-        fs << "costmap_size                            = " << costmap_width << std::endl;
-        fs << "global costmap iterations               = " << global_costmap_iteration << std::endl;
-        fs << "number of recharges                     = " << recharge_cycles << std::endl;
-        fs << "energy_consumption                      = " << energy_consumption << std::endl;
-        fs << "available_distance                      = " << available_distance << std::endl;
+        fs << "exploration_time    	            = " << exploration_time << std::endl;
+        fs << "required_goals                   = " << navigation_goals_required << std::endl;
+        fs << "unreachable_goals                = " << exploration->unreachable_frontiers.size() << std::endl;
+        fs << "travel_path_overall  	        = " << exploration_travel_path << std::endl;
+        fs << "number_of_completed_auctions     = " << exploration->number_of_completed_auctions << std::endl;
+        fs << "number_of_uncompleted_auctions   = " << exploration->number_of_uncompleted_auctions << std::endl;
+        fs << "frontier_selection_strategy      = " << frontier_selection << std::endl;
+        fs << "costmap_size                     = " << costmap_width << std::endl;
+        fs << "global costmap iterations        = " << global_costmap_iteration << std::endl;
+        fs << "number of recharges              = " << recharge_cycles << std::endl;
+        fs << "energy_consumption               = " << energy_consumption << std::endl;
+        fs << "available_distance               = " << available_distance << std::endl;
 
         double param_double;
         int param_int;
@@ -2609,6 +2611,9 @@ int main(int argc, char **argv)
      * Otherwise it produces unused output.
      */
     boost::thread thr_map(boost::bind(&Explorer::map_info, &simple));
+    
+    /* */
+    boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &simple));
 
     /*
      * FIXME
@@ -2628,6 +2633,8 @@ int main(int argc, char **argv)
     thr_map.interrupt();
     thr_explore.join();
     thr_map.join();
+    
+    //TODO thr_frontiers...
 
 #ifdef PROFILE
     HeapProfilerStop();
