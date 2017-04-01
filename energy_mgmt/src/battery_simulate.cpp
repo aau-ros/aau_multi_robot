@@ -65,10 +65,24 @@ battery_simulate::battery_simulate()
     //TODO: do we need this?
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
     
+    sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);
+    
     
     state.remaining_time_run = VALUE_FOR_FULL_BATTERY;
     state.remaining_distance = VALUE_FOR_FULL_BATTERY;
 
+}
+
+void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
+    if(msg.get()->state == charging) {
+        //ROS_INFO("Starting to recharge");
+        state.charging = true;
+        //remaining_power = total_power / 2;
+        //state.soc = remaining_power / total_power;
+        state.remaining_time_run = state.soc * total_power;
+        state.remaining_distance = state.remaining_time_run;
+    }
+        
 }
 
 void battery_simulate::cb_abort_charging(const std_msgs::Empty::ConstPtr &msg) {

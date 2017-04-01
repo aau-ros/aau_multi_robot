@@ -87,7 +87,6 @@ docking::docking()
         nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 100, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
         nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 100, &docking::cb_auction_result, this);
-    sub_recharge = nh.subscribe(my_prefix + "going_to_recharge", 100, &docking::cb_recharge, this); //TODO bad name
 
     // F
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1);
@@ -108,30 +107,13 @@ docking::docking()
     sub_need_charging = nh.subscribe("need_charging", 100, &docking::cb_need_charging, this);
 
     sub_translate = nh.subscribe("translate", 100, &docking::cb_translate, this);
-
     
-
-    pub_auction_completed = nh.advertise<std_msgs::Empty>("auction_completed", 1);
-    pub_auction_winner = nh.advertise<std_msgs::Empty>("auction_winner", 1);
-    pub_auction_loser = nh.advertise<std_msgs::Empty>("auction_loser", 1);
-    pub_auction_participation = nh.advertise<std_msgs::Empty>("auction_participation", 1);
-
-    pub_abort_charging = nh.advertise<std_msgs::Empty>("charging_aborted", 1);
-
-
-
-
 
     timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
     timer_restart_auction =
         nh.createTimer(ros::Duration(10), &docking::timer_callback_schedure_auction_restarting, this, true, false);
 
-    sub_vacant_ds = nh.subscribe("explorer/vacant_ds", 1, &docking::vacant_ds_callback, this);
-    sub_occupied_ds = nh.subscribe("occupied_ds", 1, &docking::occupied_ds_callback, this);
-
     sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 1, &docking::check_vacancy_callback, this);
-    sub_really_going_charging =
-        nh.subscribe("explorer/really_going_charging", 1, &docking::really_going_charging_callback, this);
 
     sub_ask_for_vacancy =
         nh.subscribe("adhoc_communication/ask_for_vacancy", 1, &docking::ask_for_vacancy_callback, this);
@@ -142,8 +124,6 @@ docking::docking()
     pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 1);
     pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 1);
 
-
-    sub_robot_in_queue = nh.subscribe("explorer/robot_in_queue", 1, &docking::robot_in_queue_callback, this);
     sub_abort_charging = nh.subscribe("explorer/abort_charging", 1, &docking::abort_charging_callback, this);
 
     sub_robot_pose = nh.subscribe("amcl_pose", 1, &docking::robot_pose_callback, this); //TODO not used
@@ -637,6 +617,53 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = msg.get()->state;
     sc_send_robot.call(srv_msg);
+    
+    //TODO correctly update the state!!!!
+    if(msg.get()-> state == active)
+        robots[robot_id].state = active;
+    else
+        robots[robot_id].state = idle;
+    
+    if(msg.get()->state == in_queue_enum) {        
+        // ROS_INFO("Robot in queue");
+        ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
+        going_to_check_if_ds_is_free = false;
+        recharging = false;
+        going_to_ds = false;
+        in_queue = true;
+        timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+        // timer_restart_auction.setPeriod(ros::Duration(10), true);
+        timer_restart_auction.start();
+        
+        adhoc_communication::SendEmDockingStation srv_msg;
+        srv_msg.request.topic = "adhoc_communication/ds_state_update";
+        srv_msg.request.docking_station.id = target_ds.id;
+        srv_msg.request.docking_station.vacant = true;
+        sc_send_docking_station.call(srv_msg);
+        
+        ds[target_ds.id].vacant = true;
+    } else if(msg.get()->state == going_charging) {
+        ROS_ERROR("\n\t\e[1;34m Robo t going charging!!!\e[0m");
+        going_to_ds = true;
+        going_to_check_if_ds_is_free = false;
+        recharging = false;
+    } else if(msg.get()->state == charging) {
+        ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
+        recharging = true;
+        need_to_charge = false;
+        going_to_ds = false;
+        going_to_check_if_ds_is_free = false;
+        
+        adhoc_communication::SendEmDockingStation srv_msg;
+        srv_msg.request.topic = "adhoc_communication/ds_state_update";
+        srv_msg.request.docking_station.id = target_ds.id;
+        srv_msg.request.docking_station.vacant = false;
+
+        sc_send_docking_station.call(srv_msg);
+        
+        ds[target_ds.id].vacant = false;
+    
+    }
 
 }
 
@@ -879,25 +906,6 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
     
 }
 
-void docking::cb_recharge(const std_msgs::Empty &msg)
-{
-    ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
-    recharging = true;
-    need_to_charge = false;
-    going_to_ds = false;
-    going_to_check_if_ds_is_free = false;
-    
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "adhoc_communication/ds_state_update";
-    srv_msg.request.docking_station.id = target_ds.id;
-    srv_msg.request.docking_station.vacant = false;
-
-    sc_send_docking_station.call(srv_msg);
-    
-    ds[target_ds.id].vacant = false;
-    
-}
-
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     // ROS_INFO("Received reply to auction");
@@ -966,8 +974,6 @@ void docking::timerCallback(const ros::TimerEvent &event)
     // ???
     managing_auction = false;
     // ROS_ERROR("\n\t\e[1;34mdecrementing\e[0m");
-    std_msgs::Empty msg;
-    pub_auction_completed.publish(msg);
 
     /* Compute auction winner: loop through all the received bids and find the robot that sent the highest one */
     int winner;  // the id of thw winner
@@ -984,8 +990,10 @@ void docking::timerCallback(const ros::TimerEvent &event)
     }
 
     // ???
+    /*
     if (auction_bids.size() < 3 && ds.size() == 1)
         ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
+        */
 
     // ROS_DEBUG("The winner is robot %d", winner);
 
@@ -996,7 +1004,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     if (winner == robot_id)
     {
         /* The robot won its own auction */
-        ROS_ERROR("\n\t\e[1;34mI won my own auction!\e[0m");
+        //ROS_INFO("Winner of the auction"); //TODO specify which auction
         next_target_ds = best_ds;
         // going_to_ds = true;
         // going_to_check_if_ds_is_free = true;
@@ -1004,8 +1012,6 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
         auction_winner = true;
         lost_other_robot_auction = false;
-
-        // pub_auction_winner.publish(msg);
         robot_state_next = going_charging_next;
 
         timer_restart_auction.stop();  // F i'm not sure that this follows the idea in the paper...
@@ -1013,19 +1019,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
     else
     {
         /* The robot lost its own auction */
-        ROS_ERROR("\n\t\e[1;34mI lost won my own auction...\e[0m");
+        //ROS_ERROR("\n\t\e[1;34mI lost won my own auction...\e[0m");
         auction_winner = false;
-        // going_to_check_if_ds_is_free = false;
-
-        /*
-        if(!in_queue) {
-            //in_queue = true;
-
-            //pub_auction_loser.publish(msg);
-            robot_state_next = going_queue;
-
-        }
-        */
 
         /* Schedule next auction */
         // timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
@@ -1178,16 +1173,11 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
         if (robot_id == msg.get()->robot)
         {
             /* The robot won the auction */
-            ROS_ERROR("\n\t\e[1;34mI'm a winner!!!\e[0m");
+            //ROS_INFO("Winner of the auction");
             auction_winner = true;
             
             next_target_ds = best_ds; //TODO this is safe if the best_ds is not modified during auctions!!!
                                       //TODO and what if best_ds is updated just a moment before starting the auction??? it shoul be ok because the if above would be false
-            // going_to_check_if_ds_is_free = true;  // TODO hmm... not here...
-            // robot_state_next = going_charging_next;
-            // pub_auction_winner.publish(msg2);
-            // recharging = true; //TODO not here...
-            
             timer_restart_auction.stop();  // TODO  i'm not sure that this follows the idea in the paper... but probably
                                            // this is needed otherwise when i have many pendning auction and with a
                                            // timeout enough high, i could have an inifite loop of restarting
@@ -1197,7 +1187,8 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
         {
             /* The robot has lost an auction started by another robot (because the robot that starts an auction does not
              * receive the result of that auction with this callback */
-            ROS_ERROR("\n\t\e[1;34mlost other robot auction...\e[0m");
+             //TODO should check if the robto took part to the auction
+            //ROS_INFO("Robot didn't win this auction"); 
             auction_winner = false;
             lost_other_robot_auction = true;
             // going_to_check_if_ds_is_free = false;
@@ -1215,24 +1206,6 @@ void docking::translate_coordinates(double starting_x, double starting_y, double
     *relative_y = starting_y - origin_absolute_y;
 }
 
-void docking::vacant_ds_callback(const std_msgs::Empty::ConstPtr &msg)
-{
-    // ROS_ERROR("\n\t\e[1;34mdocking::vacant_ds_callback\e[0m");
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "explorer/adhoc_communication/vacant_ds";
-    srv_msg.request.docking_station.id = best_ds.id;
-    sc_send_docking_station.call(srv_msg);
-}
-
-void docking::occupied_ds_callback(const std_msgs::Empty::ConstPtr &msg)
-{
-    // ROS_ERROR("\n\t\e[1;34mdocking::occupied_ds_callback\e[0m");
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "explorer/adhoc_communication/occupied_ds";
-    srv_msg.request.docking_station.id = best_ds.id;
-    sc_send_docking_station.call(srv_msg);
-}
-
 void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg)
 {
     // ROS_ERROR("\n\t\e[1;34mCHECKING!!!!\e[0m");
@@ -1245,7 +1218,7 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg)
 }
 
 void docking::ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-    ROS_ERROR("\n\t\e[1;34mDS new state: %d\e[0m", msg.get()->vacant);
+    //ROS_INFO("New state for ds%d: %s", msg.get()->id, (msg.get()->vacant ? "occupied" : "vacant") );
     ds[msg.get()->id].vacant = msg.get()->vacant;
 }
 
@@ -1253,7 +1226,7 @@ void docking::ds_state_update_callback(const adhoc_communication::EmDockingStati
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
     // ROS_ERROR("\n\t\e[1;34mReceived request for vacancy check\e[0m");
-    if (msg.get()->id == target_ds.id)
+    if (msg.get()->id == target_ds.id) //TODO at the beginning no robot has already target_ds set, since it is set only after the end of all auctions!!!!!
         if (recharging || going_to_ds || going_to_check_if_ds_is_free)
         {
             if(recharging)
@@ -1269,35 +1242,6 @@ void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStati
             ROS_ERROR("\n\t\e[1;34m target ds, but currently not used by the robot \e[0m");
     else
         ROS_ERROR("\n\t\e[1;34m robot is not targetting that ds\e[0m");
-}
-
-void docking::really_going_charging_callback(const std_msgs::Empty::ConstPtr &msg)
-{
-    going_to_ds = true;
-    going_to_check_if_ds_is_free = false;
-    recharging = false;  // TODO false?
-}
-
-void docking::robot_in_queue_callback(const std_msgs::Empty::ConstPtr &msg)
-{
-    // ROS_INFO("Robot in queue");
-    ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
-    going_to_check_if_ds_is_free = false;
-    recharging = false;
-    going_to_ds = false;
-    in_queue = true;
-    timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
-    // timer_restart_auction.setPeriod(ros::Duration(10), true);
-    timer_restart_auction.start();
-    
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "adhoc_communication/ds_state_update";
-    srv_msg.request.docking_station.id = target_ds.id;
-    srv_msg.request.docking_station.vacant = true;
-    sc_send_docking_station.call(srv_msg);
-    
-    ds[target_ds.id].vacant = true;
-    
 }
 
 void docking::update_robot_state()

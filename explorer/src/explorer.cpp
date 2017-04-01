@@ -66,8 +66,7 @@ class Explorer
     int my_counter;
     ros::Publisher pub_robot;
     
-    //enum state_for_docking_t {active, going_charging, charging, idle}; //TODO
-    
+    enum state_for_docking_t {active_d, going_charging_d, charging_d, in_queue_d, idle_d};
 
 ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
   
@@ -115,27 +114,24 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         /* Robot state publishers */
         pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);
-        pub_really_going_charging = nh.advertise<std_msgs::Empty>("really_going_charging", 1);
-        pub_robot_in_queue = nh.advertise<std_msgs::Empty>("robot_in_queue", 1);
-
         pub_abort_charging = nh.advertise<std_msgs::Empty>("abort_charging", 1);
 
         /* Robot state subscribers */
+        /*
         sub_going_charging = nh.subscribe("going_charging", 1, &Explorer::going_charging_callback, this); //TODO
         sub_going_queue = nh.subscribe("going_queue", 1, &Explorer::going_queue_callback, this); //TODO
         sub_exploring = nh.subscribe("exploring", 1, &Explorer::exploring_callback, this); //TODO
-        sub_exploring = nh.subscribe("fully_charged", 1, &Explorer::fully_charged_callback, this);  //TODO
-
+        sub_fully_charged = nh.subscribe("fully_charged", 1, &Explorer::fully_charged_callback, this);  //TODO
+        */
+        
         sub_check_vacancy =
             nh.subscribe("adhoc_communication/reply_for_vacancy", 1, &Explorer::reply_for_vacancy_callback, this);
+        
+        
         sub_lost_own_auction = nh.subscribe("lost_own_auction", 1, &Explorer::lost_own_auction_callback, this);
         sub_won_auction = nh.subscribe("won_auction", 1, &Explorer::won_callback, this);
         sub_lost_other_robot_auction =
             nh.subscribe("lost_other_robot_auction", 1, &Explorer::lost_other_robot_callback, this);
-
-        sub_vacant_ds =
-            nh.subscribe("adhoc_communication/vacant_ds", 1, &Explorer::vacant_ds_callback, this);  // TODO ???
-        sub_occupied_ds = nh.subscribe("adhoc_communication/occupied_ds", 1, &Explorer::occupied_ds_callback, this);
         
         pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);
         
@@ -317,122 +313,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     }
     
     
-    bool robot_pose_callback(explorer::RobotPosition::Request  &req, explorer::RobotPosition::Response &res)
-    {
-        my_counter--;
-        tf::Stamped < tf::Pose > robotPose;
-        if(my_counter > 0)
-            return false;
-        exploration->getRobotPose(robotPose);
-        res.x = robotPose.getOrigin().getX();
-        res.y = robotPose.getOrigin().getY();
-        return true;
-    }
-    
-    bool distance_from_robot_callback(explorer::DistanceFromRobot::Request  &req, explorer::DistanceFromRobot::Response &res)
-    {
-        my_counter--;
-        if(my_counter > 0)
-            return false;
-        res.distance = exploration->my_distance(req.x, req.y);
-        return true;
-    }
 
-    void update_robot_state()
-    {
-        // TODO ???
-        ros::spinOnce();
-
-        /* If the next state is equal to the current one, do nothing */
-        if (robot_state_next == current_state)
-            ROS_DEBUG("Next state is equal to the current state: do nothing");
-
-        /* If a robot has already begun charging, and then discover that it has lost
-         * its own auction (which means that meanwhile the auction of another player
-         * was going on, it started its own auction, but before taht its own auction
-         * was concluded, he discovered itself winner of the other auction and went
-         * to occupy the DS; of course this could happen only if the auction timeout
-         * is quite high: with a low timeout this scenario is not possible */
-        // TODO the robot after having discovered that the DS is free should check
-        // its state to see if instead it shouldn't put itself in in_queue state
-        // maybe...
-        else if (robot_state_next == going_queue_next && robot_state == charging)
-        {
-            robot_state = exploring;
-            ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
-            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-            std_msgs::Empty msg;
-            pub_abort_charging.publish(msg);
-        }
-
-        /* If the robot has completed the recharging process, set it to
-           fully_charged */
-        else if (robot_state_next == fully_charged_next)
-        {
-            ROS_ERROR("\n\t\e[1;34m fully_charged \e[0m");
-            robot_state = fully_charged;
-        }
-
-        /* */
-        else if (robot_state_next == going_charging_next)
-        {
-            if(robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy && robot_state != checking_vacancy) {
-                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
-                // robot_state = going_charging;
-                robot_state = going_checking_vacancy;
-            }
-            else
-                ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
-        }
-
-        /* Check if the robot should go in a queue */
-        else if (robot_state_next == going_queue_next)
-        {
-            /* If it is already in a queue, just signal that it is in a queue, to make
-             * the rescheduling timer in docking restart */
-            // TODO hmm... if the timer instead is not blocked in docking, it is not
-            // necessary...
-            if (robot_state == in_queue)
-            {
-                ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
-                std_msgs::Empty msg;
-                pub_robot_in_queue.publish(msg);
-
-                /* If the robot is already preparing to enter in a queue, do nothing */
-            }
-            else if (robot_state == going_in_queue)
-            {
-                robot_state = going_in_queue;
-                ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
-
-                /* Otherwise, really prepare the robot to go in queue */
-            }
-            else
-            {
-                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
-                robot_state = going_in_queue;
-            }
-        }
-
-        /* */
-        else if (robot_state_next == exploring_next)
-        {
-            
-            /* If the robot is recharing, it must stop */
-            if (robot_state == charging)
-            {
-                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
-                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-                std_msgs::Empty msg;
-                pub_abort_charging.publish(msg);
-                
-                robot_state = exploring;
-            }
-        }
-
-        /* Reset next state */
-        robot_state_next = current_state;
-    }
 
     void explore()
     {
@@ -462,7 +343,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         ros::NodeHandle nh;
         std_msgs::Empty msg;
-        ros::Publisher publisher_re = nh.advertise<std_msgs::Empty>("going_to_recharge", 1);  // TODO bad names...
         ros::Publisher pub_need_charging = nh.advertise<std_msgs::Empty>("need_charging", 1);
         ros::Subscriber sub, sub2, sub3, pose_sub;
 
@@ -470,9 +350,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);
         ;  // F
         ros::Subscriber sub_new_target_ds = nh.subscribe(
-            "new_target_docking_station_selected", 1, &Explorer::new_target_docking_station_selected_callback, this);  // F
-        ros::Subscriber sub_auction_participation =
-            nh.subscribe("auction_participation", 1, &Explorer::auction_participation_callback, this);
+            "new_target_docking_station_selected", 1, &Explorer::new_target_docking_station_selected_callback, this);
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
 
@@ -1247,10 +1125,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                 /* Result of navigation successful */
 
                 if (robot_state == going_in_queue)
-                {
-                    robot_state = in_queue;
-                    std_msgs::Empty msg;
-                    pub_robot_in_queue.publish(msg);
+                {        
+                    update_robot_state_2(in_queue);
                 }
 
                 if (robot_state == going_charging)
@@ -1258,11 +1134,10 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     /* Robot reached DS: it can start recharging */
                     ROS_ERROR("Reached DS for recharging");
 
-                    pub_occupied_ds.publish(msg);
+                    pub_occupied_ds.publish(msg); //TODO
 
                     number_of_recharges++;
-                    robot_state = charging;     // F
-                    publisher_re.publish(msg);  // F
+                    update_robot_state_2(charging);                             
 
                     // compute path length
                     exploration->trajectory_plan_store(target_ds_x, target_ds_y);
@@ -1310,21 +1185,14 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     }
                     if (occupied_ds)
                     {
+                        /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
                         ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
-                        robot_state = in_queue;
-                        std_msgs::Empty queue_msg;
-                        pub_robot_in_queue.publish(queue_msg);
+                        update_robot_state_2(in_queue);
                     }
                     else
                     {
                         ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
-                        robot_state = going_charging;
-
-                        // TODO publish!!!
-                        std_msgs::Empty really_msg;
-                        // pub_really_going_charging.publish(really_msg);
-
-                        robot_state = going_charging;
+                        update_robot_state_2(going_charging);
                     }
                 }
             }
@@ -1386,9 +1254,9 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             
             adhoc_communication::EmRobot msg;
             if(robot_state == exploring || robot_state == moving_to_frontier)
-                msg.state = 0; //TODO
+                msg.state = active_d;
             else
-                msg.state = 3; //TODO
+                msg.state = idle_d;
             pub_robot.publish(msg);
             
             r.sleep();
@@ -2088,11 +1956,10 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         if (remaining_distance < QUEUE_DISTANCE && robot_state == going_in_queue)
         {
-            // robot_state = in_queue;
-            std_msgs::Empty msg;
-            pub_robot_in_queue.publish(msg);
+    
             ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
             return true;
+            
         }
         else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_checking_vacancy)
         {
@@ -2170,50 +2037,12 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
                 return true;
 
-                // robot_state = checking_vacancy;
-
-                /*
-                std_msgs::Empty check_vacancy_msg;
-                occupied_ds = false;
-                pub_check_vacancy.publish(check_vacancy_msg);
-                int i = 10;
-                while(i > 0) {
-                    ros::Duration(1).sleep();
-                    ros::spinOnce();
-                    i--;
-                }
-                if(occupied_ds) {
-                    ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
-                    robot_state = in_queue;
-                }
-                else {
-                    ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
-                    robot_state = going_charging;
-                    //robot_state = in_queue;
-
-
-                    //TODO publish!!!
-                    std_msgs::Empty really_msg;
-                    pub_really_going_charging.publish(really_msg);
-
-                    ac.sendGoal(goal_msgs);
-                    ac.waitForResult(ros::Duration(waitForResult));
-                    while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
-                    {
-                        ros::Duration(0.5).sleep();
-                    }
-                    ROS_ERROR("Not longer PENDING");
-                }
-                */
             }
             // else if(remaining_distance < 100 && robot_state == going_in_queue) {
             else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_in_queue)
             {
                 ac.cancelGoal();
-                robot_state = in_queue;
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
-                std_msgs::Empty msg;
-                pub_robot_in_queue.publish(msg);
                 return true;
             }
 
@@ -2326,6 +2155,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         robot_state_next = exploring_next;
     }
 
+    //TODO
+    /*
     void going_charging_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_ERROR("\n\t\e[1;34m going_charging_callback \e[0m");
@@ -2349,36 +2180,22 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         ROS_ERROR("\n\t\e[1;34m fully_callback \e[0m");
         robot_state_next = fully_charged_next;
     }
-
-    void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
-    {
-        ROS_INFO("Recharging complete!");
-        robot_state_next = fully_charged_next;
-    }
-
+    */
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-        ROS_INFO("Received information about my target DS: it is occupied");
+        ROS_INFO("Target DS is occupied");
         occupied_ds = true;
     }
 
-    void vacant_ds_callback(const adhoc_communication::EmDockingStation &msg)
+    void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        vacant_ds = true;
-        // ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! Received vacant ds signal \e[0m");
-    }
-
-    void occupied_ds_callback(const adhoc_communication::EmDockingStation msg)
-    {
-        vacant_ds = false;
-        // ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!!!!!!!!!!!!!!Received occupied ds
-        // message \e[0m");
+        ROS_INFO("Recharging completed");
+        robot_state_next = fully_charged_next;
     }
 
     void new_target_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
     {
         ROS_INFO("Storing new target DS position");
-        ROS_ERROR("\n\t\e[1;34m Storing new target DS position \e[0m");
         target_ds_x = msg.get()->point.x;
         target_ds_y = msg.get()->point.y;
         ROS_ERROR("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
@@ -2426,6 +2243,138 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         }
     }
 
+    bool robot_pose_callback(explorer::RobotPosition::Request  &req, explorer::RobotPosition::Response &res)
+    {
+        my_counter--;
+        tf::Stamped < tf::Pose > robotPose;
+        if(my_counter > 0)
+            return false;
+        exploration->getRobotPose(robotPose);
+        res.x = robotPose.getOrigin().getX();
+        res.y = robotPose.getOrigin().getY();
+        return true;
+    }
+
+    bool distance_from_robot_callback(explorer::DistanceFromRobot::Request  &req, explorer::DistanceFromRobot::Response &res)
+    {
+        my_counter--;
+        if(my_counter > 0)
+            return false;
+        res.distance = exploration->my_distance(req.x, req.y);
+        return true;
+    }
+
+    void update_robot_state_2(int new_state) {
+        adhoc_communication::EmRobot msg;
+        if(new_state == in_queue) {
+            msg.state = in_queue_d;
+            robot_state = in_queue;
+        } else if(new_state == going_charging) {
+            msg.state = going_charging_d;
+            robot_state = going_charging;
+        } else if(new_state == charging) {
+            msg.state = charging_d;
+            robot_state = charging;
+        }
+        pub_robot.publish(msg);
+    }
+
+
+    void update_robot_state()
+    {
+        // TODO ???
+        ros::spinOnce();
+
+        /* If the next state is equal to the current one, do nothing */
+        if (robot_state_next == current_state)
+            ROS_DEBUG("Next state is equal to the current state: do nothing");
+
+        /* If a robot has already begun charging, and then discover that it has lost
+         * its own auction (which means that meanwhile the auction of another player
+         * was going on, it started its own auction, but before taht its own auction
+         * was concluded, he discovered itself winner of the other auction and went
+         * to occupy the DS; of course this could happen only if the auction timeout
+         * is quite high: with a low timeout this scenario is not possible */
+        // TODO the robot after having discovered that the DS is free should check
+        // its state to see if instead it shouldn't put itself in in_queue state
+        // maybe...
+        else if (robot_state_next == going_queue_next && robot_state == charging)
+        {
+            robot_state = exploring;
+            ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+            std_msgs::Empty msg;
+            pub_abort_charging.publish(msg);
+        }
+
+        /* If the robot has completed the recharging process, set it to
+           fully_charged */
+        else if (robot_state_next == fully_charged_next)
+        {
+            ROS_ERROR("\n\t\e[1;34m fully_charged \e[0m");
+            robot_state = fully_charged;
+        }
+
+        /* */
+        else if (robot_state_next == going_charging_next)
+        {
+            if(robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy && robot_state != checking_vacancy) {
+                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
+                // robot_state = going_charging;
+                robot_state = going_checking_vacancy;
+            }
+            else
+                ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
+        }
+
+        /* Check if the robot should go in a queue */
+        else if (robot_state_next == going_queue_next)
+        {
+            /* If it is already in a queue, just signal that it is in a queue, to make
+             * the rescheduling timer in docking restart */
+            // TODO hmm... if the timer instead is not blocked in docking, it is not
+            // necessary...
+            if (robot_state == in_queue)
+            {
+                ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
+                update_robot_state_2(in_queue);
+            }
+
+            /* If the robot is already preparing to enter in a queue, do nothing */
+            else if (robot_state == going_in_queue)
+            {
+                robot_state = going_in_queue;
+                ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
+
+                /* Otherwise, really prepare the robot to go in queue */
+            }
+            else
+            {
+                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
+                robot_state = going_in_queue;
+            }
+        }
+
+        /* */
+        else if (robot_state_next == exploring_next)
+        {
+
+            /* If the robot is recharing, it must stop */
+            if (robot_state == charging)
+            {
+                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+                std_msgs::Empty msg;
+                pub_abort_charging.publish(msg);
+
+                robot_state = exploring;
+            }
+        }
+
+        /* Reset next state */
+        robot_state_next = current_state;
+    }
+
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
     {
         ROS_ERROR("\n\t\e[1;34m !!!!!!!!!!!!! ROBOT POSE \e[0m");
@@ -2455,12 +2404,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             ;
 
         return true;
-    }
-
-    void auction_participation_callback(const std_msgs::Empty::ConstPtr &msg)
-    {
-        // ROS_ERROR("\n\t\e[1;34mparticipating to auction!\e[0m");
-        // auction_participation = participating;
     }
 
     struct map_progress_t
@@ -2514,12 +2457,12 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     int number_of_recharges = 0;
 
     bool test, occupied_ds;
-    ros::Publisher pub_robot_pos, pub_check_vacancy, pub_really_going_charging;
+    ros::Publisher pub_robot_pos, pub_check_vacancy;
     ros::Subscriber sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
 
     ros::Subscriber sub_going_charging, sub_going_queue, sub_exploring;
     ros::Subscriber sub_lost_own_auction, sub_won_auction, sub_lost_other_robot_auction;
-    ros::Publisher pub_robot_in_queue, pub_abort_charging;
+    ros::Publisher pub_abort_charging;
 
     enum state_t
     {

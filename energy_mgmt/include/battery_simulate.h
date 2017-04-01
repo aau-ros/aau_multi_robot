@@ -15,6 +15,7 @@ public:
 #include <energy_mgmt/battery_state.h>
 #include <explorer/Speed.h>
 #include "std_msgs/Float32.h"
+#include <adhoc_communication/EmRobot.h>
 
 class battery_simulate
 {
@@ -151,9 +152,13 @@ private:
     double remaining_power, total_power;
     
     ros::Publisher pub_charging_completed;
-    ros::Subscriber sub_abort_charging;
+    ros::Subscriber sub_abort_charging, sub_robot;
     
     void cb_abort_charging(const std_msgs::Empty::ConstPtr &msg);
+    
+    enum state_t {active, going_charging, charging, in_queue_enum, idle};
+    
+    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 };
 
 
