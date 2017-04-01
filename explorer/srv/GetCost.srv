@@ -1,0 +1,5 @@
+int32 x
+int32 y
+---
+uint8 status
+uint8 cost

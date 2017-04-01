@@ -258,7 +258,6 @@ private:
     void preload_docking_stations();
     
     bool recharging, in_queue;
-    double remaining_time;
   
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);
@@ -295,7 +294,7 @@ private:
     void abort_charging_callback(const std_msgs::Empty &msg);
     
     ros::Subscriber sub_robot_pose, sub_robot;
-    ros::ServiceClient sc_robot_pose;
+    ros::ServiceClient sc_robot_pose, sc_distance_from_robot;
     
     ds_t next_optimal_ds, target_ds, next_target_ds;
     
@@ -303,6 +302,8 @@ private:
     void ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     
     double llh;
+    
+    string my_prefix;
 
 };
 

@@ -39,7 +39,6 @@ public:
     docking();
     
     //F
-    void detect_ds();
     void compute_optimal_ds();
     
     void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg);
@@ -258,7 +257,6 @@ private:
     void preload_docking_stations();
     
     bool recharging, in_queue;
-    double remaining_time;
   
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);
@@ -303,6 +301,8 @@ private:
     void ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     
     double llh;
+    
+    string my_prefix;
 
 };
 
