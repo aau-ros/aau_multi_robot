@@ -33,7 +33,7 @@ battery_simulate::battery_simulate()
     speed_linear = max_speed_linear;
     power_standing = 1;
     power_moving = 10;
-    power_charging = 50;
+    power_charging = 30;
     
     
     
@@ -55,18 +55,14 @@ battery_simulate::battery_simulate()
     pub_charging_completed = nh.advertise<std_msgs::Empty>("charging_completed", 1);
 
     // subscribe to topics
-    sub_charge = nh.subscribe("going_to_recharge", 1, &battery_simulate::cb_charge, this);
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
-    
-    //sub_abort_charging = nh.subscribe("charging_aborted", 1, &battery_simulate::cb_abort_charging, this);
-    sub_abort_charging = nh.subscribe("explorer/abort_charging", 1, &battery_simulate::cb_abort_charging, this);
 
     //TODO: do we need this?
     sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
     
     sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);
-    
+
     
     state.remaining_time_run = VALUE_FOR_FULL_BATTERY;
     state.remaining_distance = VALUE_FOR_FULL_BATTERY;
@@ -75,18 +71,18 @@ battery_simulate::battery_simulate()
 
 void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
     if(msg.get()->state == charging) {
-        //ROS_INFO("Starting to recharge");
+        ROS_ERROR("Start recharging");
         state.charging = true;
         //remaining_power = total_power / 2;
         //state.soc = remaining_power / total_power;
         state.remaining_time_run = state.soc * total_power;
         state.remaining_distance = state.remaining_time_run;
+    } else {
+        if(state.charging == true)
+            ROS_ERROR("\n\t\e[1;34mcharging aborted!!!!\e[0m");
+        state.charging = false;
     }
         
-}
-
-void battery_simulate::cb_abort_charging(const std_msgs::Empty::ConstPtr &msg) {
-    state.charging = false;
 }
 
 void battery_simulate::compute()
@@ -166,16 +162,6 @@ void battery_simulate::output()
 void battery_simulate::publish()
 {
     pub_battery.publish(state);
-}
-
-void battery_simulate::cb_charge(const std_msgs::Empty::ConstPtr &msg)
-{
-    //ROS_INFO("Starting to recharge");
-    state.charging = true;
-    //remaining_power = total_power / 2;
-    //state.soc = remaining_power / total_power;
-    state.remaining_time_run = state.soc * total_power;
-    state.remaining_distance = state.remaining_time_run;
 }
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)

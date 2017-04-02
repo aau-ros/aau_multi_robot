@@ -65,8 +65,6 @@ class Explorer
     bool ready;
     int my_counter;
     ros::Publisher pub_robot;
-    
-    enum state_for_docking_t {active_d, going_charging_d, charging_d, in_queue_d, idle_d};
 
 ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
   
@@ -114,7 +112,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         /* Robot state publishers */
         pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);
-        pub_abort_charging = nh.advertise<std_msgs::Empty>("abort_charging", 1);
 
         /* Robot state subscribers */
         /*
@@ -310,6 +307,21 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         my_counter = 10;
         ss_robot_pose = nh.advertiseService("robot_pose", &Explorer::robot_pose_callback, this);
         ss_distance_from_robot = nh.advertiseService("distance_from_robot", &Explorer::distance_from_robot_callback, this);
+        
+        enum_string.push_back("exploring");
+        enum_string.push_back("going_charging");
+        enum_string.push_back("charging");
+        enum_string.push_back("finished");
+        enum_string.push_back("fully_charged");
+        enum_string.push_back("stuck");
+        enum_string.push_back("in_queue");
+        enum_string.push_back("auctioning");
+        enum_string.push_back("going_in_queue");
+        enum_string.push_back("going_checking_vacancy");
+        enum_string.push_back("checking_vacancy");
+        enum_string.push_back("moving_to_frontier_before_going_charging");
+        enum_string.push_back("moving_to_frontier");
+        
     }
     
     
@@ -850,7 +862,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     {
                         /* The robot has found a recheable frontier: it can move toward it
                          */
-                        robot_state = moving_to_frontier;
+                        update_robot_state_2(moving_to_frontier);
 
                         // TODO ...
                         if (exit_countdown != EXIT_COUNTDOWN)
@@ -887,7 +899,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     {
                         ROS_ERROR("Robot cannot reach any frontier: starting auction to "
                                   "acquire access to a DS to recharge");
-                        robot_state = auctioning;
+                        update_robot_state_2(auctioning);
                         std_msgs::Empty msg;              // TODO bad name...
                         pub_need_charging.publish(msg);
                     }
@@ -1148,13 +1160,9 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                 else if (robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
                 {
                     if (robot_state == moving_to_frontier)
-                        robot_state = exploring;
+                        update_robot_state_2(exploring);
                     
                     //TODO hmm... going_checking_vacancy
-                    /*
-                    else
-                        robot_state = going_charging;
-                    */
                     ROS_INFO("STORING PATH");
                     // compute path length
                     exploration->trajectory_plan_store(
@@ -1215,11 +1223,11 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                 {
                     if (robot_state == moving_to_frontier)
                     {
-                        robot_state = exploring;
+                        update_robot_state_2(exploring);
                         ROS_ERROR("Robot could not reach goal - explore again");
                     }
                     else
-                        robot_state = going_charging;
+                        update_robot_state_2(going_charging);
                     ROS_INFO("Storing unreachable...");
 
                     exploration->storeUnreachableFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
@@ -1251,13 +1259,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             exploration->publish_visited_frontier_list();
 
             costmap_mutex.unlock();
-            
-            adhoc_communication::EmRobot msg;
-            if(robot_state == exploring || robot_state == moving_to_frontier)
-                msg.state = active_d;
-            else
-                msg.state = idle_d;
-            pub_robot.publish(msg);
             
             r.sleep();
         }
@@ -1529,7 +1530,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     void finalize_exploration()
     {
         // finished exploration
-        robot_state = finished;
+        update_robot_state_2(finished);
 
         // finish log files
         exploration_has_finished();
@@ -1963,7 +1964,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         }
         else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_checking_vacancy)
         {
-            robot_state = checking_vacancy;
+            update_robot_state_2(checking_vacancy);
 
             ROS_ERROR("\n\t\e[1;34mSTOP!! let's check if "
                       "the Ds is free...\e[0m");
@@ -2030,7 +2031,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             if (remaining_distance < QUEUE_DISTANCE && robot_state == going_checking_vacancy)
             {
                 ac.cancelGoal();
-                robot_state = checking_vacancy;
+                update_robot_state_2(checking_vacancy);
 
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if "
                           "the Ds is free...\e[0m");
@@ -2183,7 +2184,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     */
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-        ROS_INFO("Received information about target DS: it is occupied");
+        ROS_INFO("Target DS is occupied");
         occupied_ds = true;
     }
 
@@ -2198,7 +2199,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         ROS_INFO("Storing new target DS position");
         target_ds_x = msg.get()->point.x;
         target_ds_y = msg.get()->point.y;
-        ROS_ERROR("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
+        //ROS_ERROR("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
 
         /*
         map_merger::TransformPoint point;
@@ -2265,18 +2266,64 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     }
 
     void update_robot_state_2(int new_state) {
+        ROS_DEBUG("State transiction: %s -> %s", get_text_for_enum(robot_state).c_str(), get_text_for_enum(new_state).c_str());
+        ROS_ERROR("\e[1;34m State transiction: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(), get_text_for_enum(new_state).c_str());
+        adhoc_communication::EmRobot msg;
+        msg.state = static_cast<state_t>(new_state);
+        robot_state = static_cast<state_t>(new_state);
+        pub_robot.publish(msg);
+        
+        /*
         adhoc_communication::EmRobot msg;
         if(new_state == in_queue) {
-            msg.state = in_queue_d;
+            msg.state = in_queue;
             robot_state = in_queue;
+            ROS_ERROR("\e[1;34m in_queue \e[0m");
         } else if(new_state == going_charging) {
-            msg.state = going_charging_d;
+            msg.state = going_charging;
             robot_state = going_charging;
+            ROS_ERROR("\e[1;34m going_charging \e[0m");
         } else if(new_state == charging) {
-            msg.state = charging_d;
+            msg.state = charging;
             robot_state = charging;
-        }
+            ROS_ERROR("\e[1;34m charging \e[0m");
+        } else if(new_state == moving_to_frontier) {
+            robot_state = moving_to_frontier;
+            msg.state = moving_to_frontier;
+            ROS_ERROR("\e[1;34m moving_to_frontier \e[0m");
+        } else if(new_state == exploring) {
+            robot_state = exploring;
+            msg.state = exploring;
+            ROS_ERROR("\e[1;34m exploring \e[0m");
+        } else if(new_state == checking_vacancy) {
+            robot_state = checking_vacancy;
+            msg.state = checking_vacancy; 
+            ROS_ERROR("\e[1;34m checking_vacancy \e[0m");
+        } else if(new_state == auctioning) {
+            robot_state = auctioning;
+            msg.state = auctioning;
+            ROS_ERROR("\e[1;34m auctioning \e[0m");
+        } else if(new_state == finished) {
+            robot_state = finished;
+            msg.state = finished;
+            ROS_ERROR("\e[1;34m finished \e[0m");
+        } else if(new_state == fully_charged) {
+            robot_state = fully_charged;
+            msg.state = fully_charged;
+            ROS_ERROR("\e[1;34m fully_charged \e[0m");
+        } else if(new_state == going_in_queue) {
+            robot_state = going_in_queue;
+            msg.state = going_in_queue;
+            ROS_ERROR("\e[1;34m going_in_queue \e[0m");
+        } else if(new_state == going_checking_vacancy) {
+            robot_state = going_checking_vacancy;
+            msg.state = going_checking_vacancy;
+            ROS_ERROR("\e[1;34m going_checking_vacancy \e[0m");
+        } else
+            ROS_ERROR("The next robot state is not going to be properly handled");
         pub_robot.publish(msg);
+        */
+  
     }
 
 
@@ -2300,11 +2347,9 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
-            robot_state = exploring;
+            update_robot_state_2(exploring);
             ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
             ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-            std_msgs::Empty msg;
-            pub_abort_charging.publish(msg);
         }
 
         /* If the robot has completed the recharging process, set it to
@@ -2312,7 +2357,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         else if (robot_state_next == fully_charged_next)
         {
             ROS_ERROR("\n\t\e[1;34m fully_charged \e[0m");
-            robot_state = fully_charged;
+            update_robot_state_2(fully_charged);
         }
 
         /* */
@@ -2321,10 +2366,10 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             if(robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy && robot_state != checking_vacancy) {
                 ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
                 // robot_state = going_charging;
-                robot_state = going_checking_vacancy;
+                update_robot_state_2(going_checking_vacancy);
             }
             else
-                ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
+                ; //ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
         }
 
         /* Check if the robot should go in a queue */
@@ -2343,7 +2388,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             /* If the robot is already preparing to enter in a queue, do nothing */
             else if (robot_state == going_in_queue)
             {
-                robot_state = going_in_queue;
+                update_robot_state_2(going_in_queue);
                 ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
 
                 /* Otherwise, really prepare the robot to go in queue */
@@ -2351,7 +2396,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             else
             {
                 ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
-                robot_state = going_in_queue;
+                update_robot_state_2(going_in_queue);
             }
         }
 
@@ -2364,10 +2409,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             {
                 ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-                std_msgs::Empty msg;
-                pub_abort_charging.publish(msg);
 
-                robot_state = exploring;
+                update_robot_state_2(exploring);
             }
         }
 
@@ -2462,7 +2505,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
     ros::Subscriber sub_going_charging, sub_going_queue, sub_exploring;
     ros::Subscriber sub_lost_own_auction, sub_won_auction, sub_lost_other_robot_auction;
-    ros::Publisher pub_abort_charging;
 
     enum state_t
     {
@@ -2495,6 +2537,15 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                                                    // reached, and it is moving toward it
     };
     state_t robot_state;
+    
+    //TODO
+    
+    std::vector<std::string> enum_string;
+
+    std::string get_text_for_enum( int enumVal )
+    {
+      return enum_string[enumVal];
+    }
 
     bool vacant_ds;
     bool need_to_recahrge;

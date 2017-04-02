@@ -169,15 +169,47 @@ private:
      * A vector of all robots with their current state.
      */
     int num_robots; // number of robots is known in simulations
-    enum state_t {active, going_charging, charging, in_queue_enum, idle};
+    
+    enum state_t
+    {
+        exploring,       // the robot is computing which is the next frontier to be
+                         // explored
+        going_charging,  // the robot has the right to occupy a DS to recharge
+        charging,        // the robot is charging at a DS
+        finished,        // the robot has finished the exploration
+        fully_charged,   // the robot has recently finished a charging process; notice
+                         // that the robot is in this state even if it is not really
+                         // fully charged (since just after a couple of seconds after
+                         // the end of the recharging process the robot has already
+                         // lost some battery energy, since it consumes power even
+                         // when it stays still
+        stuck,
+        in_queue_enum,                                  // the robot is in a queue, waiting for a DS to be vacant
+        auctioning,                                // auctioning: the robot has started an auction; notice that if
+                                                   // the robot is aprticipating to an auction that it was not
+                                                   // started by it, its state is not equal to auctioning!!!
+        going_in_queue,                            // the robot is moving near a DS to later put itself in
+                                                   // in_queue state
+        going_checking_vacancy,                    // the robot is moving near a DS to check if it
+                                                   // vacant, so that it can occupy it and start
+                                                   // recharging
+        checking_vacancy,                          // the robot is currently checking if the DS is vacant,
+                                                   // i.e., it is waiting information from the other robots
+                                                   // about the state of the DS
+        moving_to_frontier_before_going_charging,  // TODO hmm...
+        moving_to_frontier                         // the robot has selected the next frontier to be
+                                                   // reached, and it is moving toward it
+    };
+    
+    state_t robot_state;
+    
+    enum simple_state_t {active, idle};
+    
     struct robot_t{
         int id;
-        state_t state;
+        simple_state_t state;
     };
     vector<robot_t> robots;
-    
-    enum state_next_t {going_charging_next, going_queue, exploring, stay};
-    state_next_t robot_state_next;
 
     /**
      * A vector of all docking stations with coordinates and vacancy.
@@ -216,7 +248,7 @@ private:
     double w1, w2, w3, w4;
     
     //F
-    ros::Publisher pub_ds, pub_new_target_ds, pub_auction_completed, pub_auction_winner, pub_auction_loser;
+    ros::Publisher pub_ds, pub_new_target_ds;
     bool test;
     ds_t best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc, sub_in_queue;
@@ -243,9 +275,7 @@ private:
     void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void cb_need_charging(const std_msgs::Empty& msg);
     void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    
-    state_t robot_state;
-    
+
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
     
     void translate_coordinates(double a, double b, double*c, double*d);
@@ -256,7 +286,7 @@ private:
     
     void preload_docking_stations();
     
-    bool recharging, in_queue;
+    bool recharging, in_queue_bool;
   
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);

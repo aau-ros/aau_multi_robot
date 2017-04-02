@@ -132,9 +132,8 @@ docking::docking()
 
 
     recharging = false;
-    in_queue = false;
-    robot_state = active;
-    robot_state_next = stay;
+    in_queue_bool = false;
+    robot_state = fully_charged;
     charging_completed = false;
     going_charging_bool = false;
         auction_winner = false;
@@ -619,20 +618,21 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
     sc_send_robot.call(srv_msg);
     
     //TODO correctly update the state!!!!
-    if(msg.get()-> state == active)
+    if(msg.get()-> state == exploring || msg.get()-> state ==  fully_charged || msg.get()-> state == moving_to_frontier )
         robots[robot_id].state = active;
     else
         robots[robot_id].state = idle;
     
-    if(msg.get()->state == in_queue_enum) {        
-        // ROS_INFO("Robot in queue");
+    
+    if(msg.get()->state == in_queue) {        
         ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
         going_to_check_if_ds_is_free = false;
         recharging = false;
         going_to_ds = false;
-        in_queue = true;
+        in_queue_bool = true;
+        
+        /* Schedule next auction (a robot goes in queue only if it has lost an auction started by itself) */
         timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
-        // timer_restart_auction.setPeriod(ros::Duration(10), true);
         timer_restart_auction.start();
         
         adhoc_communication::SendEmDockingStation srv_msg;
@@ -642,11 +642,14 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
         sc_send_docking_station.call(srv_msg);
         
         ds[target_ds.id].vacant = true;
+        
     } else if(msg.get()->state == going_charging) {
         ROS_ERROR("\n\t\e[1;34m Robo t going charging!!!\e[0m");
         going_to_ds = true;
         going_to_check_if_ds_is_free = false;
         recharging = false;
+        in_queue_bool = false;
+        
     } else if(msg.get()->state == charging) {
         ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         recharging = true;
@@ -663,10 +666,30 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
         
         ds[target_ds.id].vacant = false;
     
+    } else if(msg.get()->state == going_checking_vacancy || msg.get()->state == checking_vacancy) {
+        ROS_ERROR("\n\t\e[1;34mi (going) checking vacancy!!!\e[0m");
+        in_queue_bool = false;
+        recharging = false;
+        going_to_ds = false;
+        going_to_check_if_ds_is_free = true;
+    
+    } else if(msg.get()->state == fully_charged || msg.get()->state == auctioning || msg.get()->state == moving_to_frontier || msg.get()->state == exploring || msg.get()->state == going_in_queue || msg.get()->state == finished) {
+        //ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
+        in_queue_bool = false;
+        recharging = false;
+        going_to_ds = false;
+        going_to_check_if_ds_is_free = false;
+        
+    } else {
+        ROS_ERROR("\n\t\e[1;34m none of the above!!!\e[0m");
+        return;
     }
+    
+    robot_state = static_cast<state_t>(msg.get()->state);
 
 }
 
+//TODO
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
     // check if robot is in list already
@@ -677,8 +700,9 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         if (robots[i].id == msg.get()->id)
         {
             // update state
-            robots[i].state = (state_t)msg.get()->state;
-
+            //robots[i].state = (state_t)msg.get()->state; //TODO
+            robots[i].state = idle;
+            
             new_robot = false;
             break;
         }
@@ -689,7 +713,10 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     {
         robot_t robot;
         robot.id = msg.get()->id;
-        robot.state = (state_t)msg.get()->state;
+        
+        //robot.state = (state_t)msg.get()->state; //TODO
+        robot.state = idle;
+        
         robots.push_back(robot);
     }
 
@@ -1006,13 +1033,9 @@ void docking::timerCallback(const ros::TimerEvent &event)
         /* The robot won its own auction */
         //ROS_INFO("Winner of the auction"); //TODO specify which auction
         next_target_ds = best_ds;
-        // going_to_ds = true;
-        // going_to_check_if_ds_is_free = true;
-        in_queue = false;
 
         auction_winner = true;
         lost_other_robot_auction = false;
-        robot_state_next = going_charging_next;
 
         timer_restart_auction.stop();  // F i'm not sure that this follows the idea in the paper...
     }
@@ -1021,11 +1044,6 @@ void docking::timerCallback(const ros::TimerEvent &event)
         /* The robot lost its own auction */
         //ROS_ERROR("\n\t\e[1;34mI lost won my own auction...\e[0m");
         auction_winner = false;
-
-        /* Schedule next auction */
-        // timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
-        // timer_restart_auction.setPeriod(ros::Duration(10), true);
-        // timer_restart_auction.start();
     }
 
     adhoc_communication::SendEmAuction srv_mgs;
@@ -1191,7 +1209,6 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             //ROS_INFO("Robot didn't win this auction"); 
             auction_winner = false;
             lost_other_robot_auction = true;
-            // going_to_check_if_ds_is_free = false;
 
            
         }
@@ -1287,7 +1304,6 @@ void docking::update_robot_state()
                 msg1.point.x = target_ds.x;
                 msg1.point.y = target_ds.y;
                 pub_new_target_ds.publish(msg1);
-                going_to_check_if_ds_is_free = true;  // TODO not here!!!!
                 
                 pub_won_auction.publish(msg); //TODO it is important that this is after the other pub!!!!
             }

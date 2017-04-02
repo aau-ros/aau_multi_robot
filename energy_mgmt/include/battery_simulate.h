@@ -152,11 +152,39 @@ private:
     double remaining_power, total_power;
     
     ros::Publisher pub_charging_completed;
-    ros::Subscriber sub_abort_charging, sub_robot;
+    ros::Subscriber sub_robot;
     
-    void cb_abort_charging(const std_msgs::Empty::ConstPtr &msg);
     
-    enum state_t {active, going_charging, charging, in_queue_enum, idle};
+    enum state_t
+    {
+        exploring,       // the robot is computing which is the next frontier to be
+                         // explored
+        going_charging,  // the robot has the right to occupy a DS to recharge
+        charging,        // the robot is charging at a DS
+        finished,        // the robot has finished the exploration
+        fully_charged,   // the robot has recently finished a charging process; notice
+                         // that the robot is in this state even if it is not really
+                         // fully charged (since just after a couple of seconds after
+                         // the end of the recharging process the robot has already
+                         // lost some battery energy, since it consumes power even
+                         // when it stays still
+        stuck,
+        in_queue,                                  // the robot is in a queue, waiting for a DS to be vacant
+        auctioning,                                // auctioning: the robot has started an auction; notice that if
+                                                   // the robot is aprticipating to an auction that it was not
+                                                   // started by it, its state is not equal to auctioning!!!
+        going_in_queue,                            // the robot is moving near a DS to later put itself in
+                                                   // in_queue state
+        going_checking_vacancy,                    // the robot is moving near a DS to check if it
+                                                   // vacant, so that it can occupy it and start
+                                                   // recharging
+        checking_vacancy,                          // the robot is currently checking if the DS is vacant,
+                                                   // i.e., it is waiting information from the other robots
+                                                   // about the state of the DS
+        moving_to_frontier_before_going_charging,  // TODO hmm...
+        moving_to_frontier                         // the robot has selected the next frontier to be
+                                                   // reached, and it is moving toward it
+    };
     
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 };
