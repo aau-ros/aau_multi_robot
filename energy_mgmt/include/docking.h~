@@ -184,7 +184,7 @@ private:
                          // lost some battery energy, since it consumes power even
                          // when it stays still
         stuck,
-        in_queue_enum,                                  // the robot is in a queue, waiting for a DS to be vacant
+        in_queue,                                  // the robot is in a queue, waiting for a DS to be vacant
         auctioning,                                // auctioning: the robot has started an auction; notice that if
                                                    // the robot is aprticipating to an auction that it was not
                                                    // started by it, its state is not equal to auctioning!!!
@@ -285,8 +285,6 @@ private:
     bool optimal_ds_computed_once;
     
     void preload_docking_stations();
-    
-    bool recharging, in_queue_bool;
   
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);

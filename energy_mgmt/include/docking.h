@@ -285,8 +285,6 @@ private:
     bool optimal_ds_computed_once;
     
     void preload_docking_stations();
-    
-    bool recharging, in_queue_bool;
   
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);
@@ -317,7 +315,7 @@ private:
     
     ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction;
     bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
-    ros::Subscriber sub_robot_in_queue, sub_abort_charging, sub_ds_state_update ;
+    ros::Subscriber sub_ds_state_update ;
     void abort_charging_callback(const std_msgs::Empty &msg);
     
     ros::Subscriber sub_robot_pose, sub_robot;

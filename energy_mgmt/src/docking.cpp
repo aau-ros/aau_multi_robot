@@ -124,15 +124,10 @@ docking::docking()
     pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 1);
     pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 1);
 
-    sub_abort_charging = nh.subscribe("explorer/abort_charging", 1, &docking::abort_charging_callback, this);
-
     sub_robot_pose = nh.subscribe("amcl_pose", 1, &docking::robot_pose_callback, this); //TODO not used
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>("explorer/robot_pose");
     sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>("explorer/distance_from_robot");
 
-
-    recharging = false;
-    in_queue_bool = false;
     robot_state = fully_charged;
     charging_completed = false;
     going_charging_bool = false;
@@ -160,15 +155,6 @@ void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStamped
     ROS_DEBUG("Received robot position");
     robot_x = pose->pose.pose.position.x;
     robot_y = pose->pose.pose.position.y;
-}
-
-void docking::abort_charging_callback(const std_msgs::Empty &msg)
-{
-    // ROS_INFO("Charging aborted");
-    ROS_ERROR("\e[1;34mABORTED CHARGING!!!!!!!!!!!!!!!!!!!!\e[0m");
-    recharging = false;
-    going_to_ds = false;
-    going_to_check_if_ds_is_free = false;  // TODO hmm...
 }
 
 void docking::preload_docking_stations()
@@ -617,6 +603,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
     srv_msg.request.robot.state = msg.get()->state;
     sc_send_robot.call(srv_msg);
     
+    robot_state = static_cast<state_t>(msg.get()->state);
+    
     //TODO correctly update the state!!!!
     if(msg.get()-> state == exploring || msg.get()-> state ==  fully_charged || msg.get()-> state == moving_to_frontier )
         robots[robot_id].state = active;
@@ -626,10 +614,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
     
     if(msg.get()->state == in_queue) {        
         ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
-        going_to_check_if_ds_is_free = false;
-        recharging = false;
-        going_to_ds = false;
-        in_queue_bool = true;
         
         /* Schedule next auction (a robot goes in queue only if it has lost an auction started by itself) */
         timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
@@ -645,17 +629,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
         
     } else if(msg.get()->state == going_charging) {
         ROS_ERROR("\n\t\e[1;34m Robo t going charging!!!\e[0m");
-        going_to_ds = true;
-        going_to_check_if_ds_is_free = false;
-        recharging = false;
-        in_queue_bool = false;
         
     } else if(msg.get()->state == charging) {
         ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
-        recharging = true;
-        need_to_charge = false;
-        going_to_ds = false;
-        going_to_check_if_ds_is_free = false;
+        need_to_charge = false; //TODO???
         
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/ds_state_update";
@@ -667,18 +644,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) {
         ds[target_ds.id].vacant = false;
     
     } else if(msg.get()->state == going_checking_vacancy || msg.get()->state == checking_vacancy) {
-        ROS_ERROR("\n\t\e[1;34mi (going) checking vacancy!!!\e[0m");
-        in_queue_bool = false;
-        recharging = false;
-        going_to_ds = false;
-        going_to_check_if_ds_is_free = true;
+        ROS_ERROR("\n\t\e[1;34m (going) checking vacancy!!!\e[0m");
     
     } else if(msg.get()->state == fully_charged || msg.get()->state == auctioning || msg.get()->state == moving_to_frontier || msg.get()->state == exploring || msg.get()->state == going_in_queue || msg.get()->state == finished) {
         //ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
-        in_queue_bool = false;
-        recharging = false;
-        going_to_ds = false;
-        going_to_check_if_ds_is_free = false;
         
     } else {
         ROS_ERROR("\n\t\e[1;34m none of the above!!!\e[0m");
@@ -1075,12 +1044,6 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)
     
     ds[target_ds.id].vacant = true;
     
-
-    recharging = false;
-    going_to_ds = false;                   // TODO but actually until the robot does not leave the ds, it is occupied!!!
-    going_to_check_if_ds_is_free = false;  // TODO not here!!!!
-
-    charging_completed = true;
 }
 
 void docking::cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg)
@@ -1244,11 +1207,26 @@ void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStati
 {
     // ROS_ERROR("\n\t\e[1;34mReceived request for vacancy check\e[0m");
     if (msg.get()->id == target_ds.id) //TODO at the beginning no robot has already target_ds set, since it is set only after the end of all auctions!!!!!
+        /*
         if (recharging || going_to_ds || going_to_check_if_ds_is_free)
         {
             if(recharging)
                 ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
             else if(going_to_ds || going_to_check_if_ds_is_free)
+                ROS_ERROR("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
+            adhoc_communication::SendEmDockingStation srv_msg;
+            srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
+            srv_msg.request.docking_station.id = target_ds.id;
+            sc_send_docking_station.call(srv_msg);
+        }
+        else
+            ROS_ERROR("\n\t\e[1;34m target ds, but currently not used by the robot \e[0m");
+        */
+        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == checking_vacancy)
+        {
+            if(robot_state == charging)
+                ROS_ERROR("\n\t\e[1;34mI'm using that DS!!!!\e[0m");
+            else if(robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == checking_vacancy)
                 ROS_ERROR("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
@@ -1297,7 +1275,7 @@ void docking::update_robot_state()
 
         /* If the robot is the winner of at least one auction, notify explorer */
         else if (auction_winner) {
-            if( !recharging && !going_to_ds && !going_to_check_if_ds_is_free)  //TODO really necessary??? i don't think so...
+            if( robot_state != charging || robot_state != going_charging || robot_state != going_checking_vacancy || robot_state != checking_vacancy )  //TODO really necessary??? i don't think so...
             {
                 target_ds = next_target_ds; //TODO but what if the robot is already charging at a certain DS which is different from next_target_ds ??????????
                 geometry_msgs::PointStamped msg1;
