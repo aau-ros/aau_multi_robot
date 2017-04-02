@@ -4,9 +4,48 @@
 #include <battery_simulate.h>
 #include <docking.h>
 
+std::string log_path;
+ros::NodeHandle nh;
+
+void initLogPath()
+{
+    /*
+     * CREATE LOG PATH
+     * Following code enables to write the output to a file
+     * which is localized at the log_path
+     */
+
+    nh.param<std::string>("log_path", log_path, "");
+
+    std::stringstream robot_number;
+    robot_number << robot_id;
+    std::string prefix = "/robot_";
+    std::string robo_name = prefix.append(robot_number.str());
+
+    log_path = log_path.append("/explorer");
+    log_path = log_path.append(robo_name);
+    ROS_INFO("Logging files to %s", log_path.c_str());
+
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+                ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %s.", log_path.c_str());
+        }
+
+    log_path = log_path.append("/");
+}
+
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "energy_mgmt");
+    nh = ros::NodeHandle();
 
     // handle battery management for different robot platforms
     string platform;
@@ -33,6 +72,8 @@ int main(int argc, char** argv)
     // Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
+    
+    initLogPath();
 
     while(ros::ok()){
         // get updates from subscriptions
@@ -53,7 +94,7 @@ int main(int argc, char** argv)
         //doc.detect_ds();
         
         //
-        doc.compute_best_ds();
+        doc.compute_optimal_ds();
         
         doc.update_robot_state();
 

@@ -1185,7 +1185,8 @@ bool ExplorationPlanner::storeUnreachableFrontier(double x, double y, int detect
         unreachable_frontier.x_coordinate = x;
         unreachable_frontier.y_coordinate = y;
 
-        frontiers.push_back(unreachable_frontier);
+        //frontiers.push_back(unreachable_frontier);
+        unreachable_frontiers.push_back(unreachable_frontier); //F
     }
 
 

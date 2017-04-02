@@ -16,6 +16,7 @@
 //#include <adhoc_communication/SendMmPoint.h>
 #include <map_merger/TransformPoint.h>
 #include <energy_mgmt/battery_state.h>
+#include <energy_mgmt/AuctionResult.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <explorer/RobotPosition.h>
@@ -174,29 +175,41 @@ private:
     {
         exploring,       // the robot is computing which is the next frontier to be
                          // explored
+                         
         going_charging,  // the robot has the right to occupy a DS to recharge
+        
         charging,        // the robot is charging at a DS
+        
         finished,        // the robot has finished the exploration
+        
         fully_charged,   // the robot has recently finished a charging process; notice
                          // that the robot is in this state even if it is not really
                          // fully charged (since just after a couple of seconds after
                          // the end of the recharging process the robot has already
                          // lost some battery energy, since it consumes power even
                          // when it stays still
+                         
         stuck,
-        in_queue,                                  // the robot is in a queue, waiting for a DS to be vacant
-        auctioning,                                // auctioning: the robot has started an auction; notice that if
-                                                   // the robot is aprticipating to an auction that it was not
-                                                   // started by it, its state is not equal to auctioning!!!
+        
+        in_queue, // the robot is in a queue, waiting for a DS to be vacant
+        
+        auctioning, // auctioning: the robot has started an auction; notice that if
+                    // the robot is aprticipating to an auction that it was not
+                    // started by it, its state is not equal to auctioning!!!
+                                                   
         going_in_queue,                            // the robot is moving near a DS to later put itself in
                                                    // in_queue state
+                                                   
         going_checking_vacancy,                    // the robot is moving near a DS to check if it
                                                    // vacant, so that it can occupy it and start
                                                    // recharging
+                                                   
         checking_vacancy,                          // the robot is currently checking if the DS is vacant,
                                                    // i.e., it is waiting information from the other robots
                                                    // about the state of the DS
+                                                   
         moving_to_frontier_before_going_charging,  // TODO hmm...
+        
         moving_to_frontier                         // the robot has selected the next frontier to be
                                                    // reached, and it is moving toward it
     };
@@ -247,11 +260,14 @@ private:
      */
     double w1, w2, w3, w4;
     
+    
+    
+    
     //F
     ros::Publisher pub_ds, pub_new_target_ds;
     bool test;
     ds_t best_ds;
-    ros::Subscriber sub_robot_position, sub_auction_winner_adhoc, sub_in_queue;
+    ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
@@ -269,11 +285,9 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_need_charging, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
-    void cb_vacant_docking_station(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    void cb_need_charging(const std_msgs::Empty& msg);
     void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
@@ -313,7 +327,7 @@ private:
     void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     
     
-    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction;
+    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result;
     bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
     ros::Subscriber sub_ds_state_update ;
     void abort_charging_callback(const std_msgs::Empty &msg);
@@ -329,6 +343,12 @@ private:
     double llh;
     
     string my_prefix;
+    
+    void initLogpath();
+    
+    std::string log_path;
+    
+    void start_new_auction();
 
 };
 

@@ -355,7 +355,6 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         ros::NodeHandle nh;
         std_msgs::Empty msg;
-        ros::Publisher pub_need_charging = nh.advertise<std_msgs::Empty>("need_charging", 1);
         ros::Subscriber sub, sub2, sub3, pose_sub;
 
         ros::Subscriber my_sub =
@@ -899,9 +898,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     {
                         ROS_ERROR("Robot cannot reach any frontier: starting auction to "
                                   "acquire access to a DS to recharge");
+                        //need_to_charge = true;
                         update_robot_state_2(auctioning);
-                        std_msgs::Empty msg;              // TODO bad name...
-                        pub_need_charging.publish(msg);
                     }
                 }
 
@@ -1227,12 +1225,13 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                         ROS_ERROR("Robot could not reach goal - explore again");
                     }
                     else
-                        update_robot_state_2(going_charging);
-                    ROS_INFO("Storing unreachable...");
+                        update_robot_state_2(going_charging); //TODO
+                        
+                    ROS_ERROR("Storing unreachable...");
 
                     exploration->storeUnreachableFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
                                                           robot_str.at(0), final_goal.at(3));
-                    ROS_DEBUG("Stored unreachable frontier");
+                    ROS_ERROR("Stored unreachable frontier");
                 }
             }
 
@@ -1382,7 +1381,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     void initLogPath()
     {
         /*
-         *  CREATE LOG PATH
+         * CREATE LOG PATH
          * Following code enables to write the output to a file
          * which is localized at the log_path
          */
@@ -1983,7 +1982,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
-            if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)
+            if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle) //TODO
             {
                 stuck_countdown--;
                 // if(stuck_countdown <= 5){

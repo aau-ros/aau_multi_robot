@@ -11,8 +11,6 @@
     <arg name="ymax" default="35" />
     <arg name="ymin" default="-35" />
 
-    <param name="use_sim_time"  value="$(arg use_sim_time)"/>
-
     <node pkg="gmapping" type="slam_gmapping" name="mapping">
         <param name="base_frame" value="$(arg robot_prefix)/base_footprint" />
         <param name="odom_frame" value="$(arg robot_prefix)/odom" />
@@ -30,6 +28,4 @@
 
         <remap from="scan" to="base_scan" />
     </node>
-    
 </launch>
-
