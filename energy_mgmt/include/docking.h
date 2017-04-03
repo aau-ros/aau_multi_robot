@@ -28,6 +28,7 @@
 #define AUCTION_TIMEOUT             5
 #define FORCED_AUCTION_END_TIMEOUT  (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME   (AUCTION_TIMEOUT * 3)
+#define LASER_RANGE                 10
 
 using namespace std;
 
@@ -234,6 +235,7 @@ private:
         bool vacant;
     };
     vector<ds_t> ds;
+    vector<ds_t> undiscovered_ds;
 
     /**
      * The battery state containing time needed to fully charge the battery and time left until battery depletion.

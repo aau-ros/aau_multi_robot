@@ -166,6 +166,7 @@ void docking::preload_docking_stations()
         new_ds.vacant = true;
         translate_coordinates(x, y, &(new_ds.x), &(new_ds.y));
         ds.push_back(new_ds);
+        undiscovered_ds.push_back(new_ds);
 
         /* Delete the loaded parameters (since they are not used anymore) and prepare to search for next DS */
         nh.deleteParam("energy_mgmt/d" + SSTR(index) + "/x");
@@ -183,15 +184,19 @@ void docking::preload_docking_stations()
     std::vector<ds_t>::iterator it;
     for (it = ds.begin(); it != ds.end(); it++)
         ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
+        
+        //TODO
+  ds_t new_ds;
+    new_ds.id = 10;
+    new_ds.vacant = true;
+    translate_coordinates(-7, -7, &(new_ds.x), &(new_ds.y));
+    ds.push_back(new_ds);
+    undiscovered_ds.push_back(new_ds);  
+    
 }
 
 void docking::compute_optimal_ds()
 {
-    // Just to force updating best_ds at the beginning... //TODO useless
-    geometry_msgs::PointStamped msg1;
-    msg1.point.x = best_ds.x;
-    msg1.point.y = best_ds.y;
-    // pub_new_target_ds.publish(msg1);
 
     /* Get current robot position */
     ros::service::waitForService("explorer/robot_pose");
@@ -203,10 +208,29 @@ void docking::compute_optimal_ds()
             robot_y = srv_msg.response.y;
             ROS_DEBUG("Robot position: (%f, %f)", robot_x, robot_y);
         }
-        else
+        else {
             ROS_ERROR("Call to service %s failed", sc_robot_pose.getService().c_str());
-    else
+            return;  //TODO do better
+        }
+    else {
         ROS_ERROR("Service %s is not ready yet", sc_robot_pose.getService().c_str());
+        return;    //TODO
+   }
+
+    /* Check if a new DS can be discovered */
+    std::vector<ds_t>::iterator it;
+    double dist;
+    for(it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++) {
+        //dist = distance((*it).x, (*it).y);
+        dist = ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y);
+        if( dist > 0 && dist < LASER_RANGE ) {
+            ROS_ERROR("\e[1;34m FOUND DS%d at distance %f \e[0m", (*it).id, dist);
+            undiscovered_ds.erase(it);
+            it--;
+        } else
+            ; //ROS_ERROR("\e[1;34m dsS%d still unknown (%f) \e[0m", (*it).id, dist);
+    }
+
 
     /* VERSION 1 */
     /*
@@ -615,7 +639,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
         srv_msg.request.docking_station.vacant = true;
         sc_send_docking_station.call(srv_msg);
 
-        ds[target_ds.id].vacant = true;
+        ds[target_ds.id].vacant = true; //TODO NO!!! we are not sure that DS are inserted in order of ID!!!!
     }
     else if (msg.get()->state == going_charging)
     {
@@ -633,7 +657,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
 
         sc_send_docking_station.call(srv_msg);
 
-        ds[target_ds.id].vacant = false;
+        ds[target_ds.id].vacant = false; //TODO NO!!! we are not sure that DS are inserted in order of ID!!!!
     }
     else if (msg.get()->state == going_checking_vacancy || msg.get()->state == checking_vacancy)
     {
@@ -1035,7 +1059,7 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)
 
     sc_send_docking_station.call(srv_msg);
 
-    ds[target_ds.id].vacant = true;
+    ds[target_ds.id].vacant = true; //TODO NO!!! we are not sure that DS are inserted in order of ID!!!!
 }
 
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
@@ -1155,7 +1179,7 @@ void docking::check_vacancy_callback(const std_msgs::Empty::ConstPtr &msg) //TOD
 void docking::ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
     ROS_INFO("New state for ds%d: %s", msg.get()->id, (msg.get()->vacant ? "occupied" : "vacant") );
-    ds[msg.get()->id].vacant = msg.get()->vacant;
+    ds[msg.get()->id].vacant = msg.get()->vacant; //TODO NO!!! we are not sure that DS are inserted in order of ID!!!!
 }
 
 void docking::ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)

@@ -28,6 +28,7 @@
 #define AUCTION_TIMEOUT             5
 #define FORCED_AUCTION_END_TIMEOUT  (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME   (AUCTION_TIMEOUT * 3)
+#define LASER_RANGE                 5
 
 using namespace std;
 
@@ -234,6 +235,7 @@ private:
         bool vacant;
     };
     vector<ds_t> ds;
+    vector<ds_t> undiscovered_ds;
 
     /**
      * The battery state containing time needed to fully charge the battery and time left until battery depletion.
@@ -320,7 +322,7 @@ private:
     
     bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed, going_charging_bool;
     
-    std::list<ros::Timer> timers;
+    std::vector<ros::Timer> timers;
     
     void end_auction_participation_timer_callback(const ros::TimerEvent &event); 
     
