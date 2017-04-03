@@ -285,7 +285,7 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_need_charging, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
     void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
@@ -320,7 +320,7 @@ private:
     
     bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed, going_charging_bool;
     
-    std::vector<ros::Timer> timers;
+    std::list<ros::Timer> timers;
     
     void end_auction_participation_timer_callback(const ros::TimerEvent &event); 
     

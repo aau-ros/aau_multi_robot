@@ -866,11 +866,12 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
         participating_to_auction++;
 
         /* Start timer to force the robot to consider the auction concluded after some time, even in case it does not
-         * receive the result of the auction */
+         * receive the result of the auction.
+         * To keep the timer active, we must store it on the heap; the timer is just pushed back in vector 'timers', which is cleared when no auction is pending (and so no timer is active). A better management should be possible for instance using insert(), at(), etc., but in previous tries the node always crash when using these functions... */
         ros::Timer timer = nh.createTimer(ros::Duration(FORCED_AUCTION_END_TIMEOUT),
                                           &docking::end_auction_participation_timer_callback, this, true, false);
         timer.start();
-        timers.push_back(timer);  // TODO
+        timers.push_back(timer);  // TODO instead of recreating the timer, just reset it (but it is possible in real exp?)
 
         // if(-remaining_time > bid) //TODO
         {
@@ -903,7 +904,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
     //ROS_INFO("Received reply to auction");
 
     // TODO //F probably in this version doesn't work with multi-hoop replies!!!!!
-    // ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     // if(msg.get()->robot == robot_id) {
 
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
@@ -1258,6 +1259,7 @@ void docking::update_robot_state() //TODO simplify here...
         update_state_required = false;
         auction_winner = false;
         lost_other_robot_auction = false;
+        timers.clear(); //TODO inefficient!!
     }
     else
     {
