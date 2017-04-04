@@ -802,11 +802,11 @@ bool isReachable(unsigned char mac[6])
     {
         PositionSubscriber other_robot;
         other_robot.robot_name_ = getHostnameFromMac(mac);
-
         for (std::list<PositionSubscriber*>::iterator it = robot_positions_l.begin(); it != robot_positions_l.end(); ++it)
         {
             if (other_robot.robot_name_.compare((*it)->robot_name_) == 0)
             {
+                //ROS_ERROR("YESSS");
                 double d = my_sim_position->calcDistance(*it);
 
                 //ROS_ERROR("d: %f",d);

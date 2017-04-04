@@ -931,7 +931,7 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
     }
     else
     {
-        ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         return -1;
     }
 }
@@ -1080,6 +1080,7 @@ bool ExplorationPlanner::storeVisitedFrontier(double x, double y, int detected_b
            visited_frontier.id = (robot_name * 10000) + visited_frontier_id_count++;
         }
 
+        //ROS_ERROR("STORING %f, %f", x, y);
         visited_frontier.detected_by_robot = detected_by_robot;
         visited_frontier.x_coordinate = x;
         visited_frontier.y_coordinate = y;
@@ -2099,11 +2100,11 @@ void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier
 
             if(robot_prefix_empty_param == true)
             {
-                ROS_DEBUG("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
+                ROS_ERROR("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
                 storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
             }else
             {
-                ROS_DEBUG("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
+                ROS_ERROR("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
                 if(frontier_element.detected_by_robot != robot_name)
                 {
                     storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
@@ -2163,6 +2164,7 @@ bool ExplorationPlanner::publish_frontier_list()
     publish_subscribe_mutex.lock();
 
     adhoc_communication::ExpFrontier frontier_msg;
+    //ROS_ERROR("%lu", frontiers.size());
     for(int i = 0; i<frontiers.size(); i++)
     {
         adhoc_communication::ExpFrontierElement frontier_element;
@@ -2195,13 +2197,15 @@ bool ExplorationPlanner::publish_visited_frontier_list()
     for(int i = 0; i<visited_frontiers.size(); i++)
     {
         adhoc_communication::ExpFrontierElement visited_frontier_element;
-//        visited_frontier_element.id = frontiers.at(i).id;
+        visited_frontier_element.id = visited_frontiers.at(i).id;
         visited_frontier_element.detected_by_robot = visited_frontiers.at(i).detected_by_robot;
         visited_frontier_element.detected_by_robot_str = visited_frontiers.at(i).detected_by_robot_str;
         visited_frontier_element.robot_home_position_x = visited_frontiers.at(i).robot_home_x;
         visited_frontier_element.robot_home_position_y = visited_frontiers.at(i).robot_home_y;
         visited_frontier_element.x_coordinate = visited_frontiers.at(i).x_coordinate;
         visited_frontier_element.y_coordinate = visited_frontiers.at(i).y_coordinate;
+        
+        //ROS_ERROR("PUBLISHING %f, %f", visited_frontier_element.x_coordinate, visited_frontier_element.y_coordinate);
 
         visited_frontier_msg.frontier_element.push_back(visited_frontier_element);
     }
@@ -5116,7 +5120,7 @@ void ExplorationPlanner::visualize_Frontiers()
             marker.id = frontier_seq_number;
             marker.type = visualization_msgs::Marker::SPHERE;
             marker.action = visualization_msgs::Marker::ADD;
-            marker.lifetime = ros::Duration(15); //TODO //F
+            marker.lifetime = ros::Duration(2); //TODO //F
             marker.pose.position.x = frontiers.at(i).x_coordinate;
             marker.pose.position.y = frontiers.at(i).y_coordinate;
             marker.pose.position.z = 0;

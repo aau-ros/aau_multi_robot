@@ -3126,6 +3126,8 @@ void processRouteResponse(RouteResponse rr)
             ROS_INFO("I SENT ALREADY A RESPONSE: ID[%u] SOURCE HOST[%s]", rr.request_id_, rr.hostname_source_.c_str());
         else if (compareMac(rr.mac_current_hop_, src_mac) == false)
             ROS_ERROR("I AM NOT THE CURRENT HOP[%s] TO FORWARD THE RESPONSE!", getMacAsStr(rr.mac_current_hop_).c_str());
+        else
+            ROS_ERROR("OK!!!");
 
         if (enable_cooperative_relaying)// && rr.mc_flag_ == false)todo
         {

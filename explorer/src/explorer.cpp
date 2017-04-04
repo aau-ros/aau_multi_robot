@@ -270,6 +270,10 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             ROS_ERROR("Failed to get RobotPose");
         }
         visualize_goal_point(robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+        
+        //ROS_ERROR("\n!!!!!!!!!!!!!!!!!!!!!\n %f, %f", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+        
+        
 
         // transmit three times, since rviz need at least 1 to buffer before
         // visualizing the point
@@ -896,10 +900,14 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                        recharging is in order */
                     else
                     {
-                        ROS_ERROR("Robot cannot reach any frontier: starting auction to "
-                                  "acquire access to a DS to recharge");
-                        //need_to_charge = true;
-                        update_robot_state_2(auctioning);
+                        //check if the robot has not just won an auction meanwhile...
+                        //TODO call udpate_robot_state() instead!!!
+                        if(robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
+                            ROS_ERROR("Robot cannot reach any frontier: starting auction to "
+                                      "acquire access to a DS to recharge");
+                            //need_to_charge = true;
+                            update_robot_state_2(auctioning);
+                        }
                     }
                 }
 
@@ -1168,6 +1176,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                         exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);
 
                     ROS_DEBUG("Storing visited...");
+                    //ROS_ERROR("2 - %f, %f, %f", final_goal.at(0), final_goal.at(1), final_goal.at(2));
                     exploration->storeVisitedFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
                                                       robot_str.at(0), final_goal.at(3));
                     ROS_DEBUG("Stored Visited frontier");
@@ -1177,9 +1186,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                 {
                     ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
 
-                    std_msgs::Empty check_vacancy_msg;
                     occupied_ds = false;
-                    pub_check_vacancy.publish(check_vacancy_msg);
 
                     // TODO use a bterr way!!!
                     int i = 10;
@@ -1256,6 +1263,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
             exploration->publish_frontier_list();
             exploration->publish_visited_frontier_list();
+            
+            exploration->visualize_Frontiers();
 
             costmap_mutex.unlock();
             
@@ -1664,7 +1673,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
 
         costmap_mutex.unlock();
 
-        exploration->visualize_Frontiers();
+        //exploration->visualize_Frontiers();
 
         if (frontier_selection < 5 && frontier_selection != 1)
         {
@@ -1839,6 +1848,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                                     .y_coordinate);
 
                             ROS_INFO("Storing visited...");
+                            ROS_ERROR("%f, %f, %f", global_goal.at(0), global_goal.at(1), global_goal.at(2));
                             exploration->storeVisitedFrontier(global_goal.at(0), global_goal.at(1), global_goal.at(2),
                                                               robot_str.at(0), global_goal.at(3));
                             ROS_INFO("Stored Visited frontier");
@@ -2152,7 +2162,15 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_ERROR("\n\t\e[1;34m lost_other_robot_callback \e[0m");
-        robot_state_next = exploring_next;
+        if(robot_state_next != fully_charged_next)
+            robot_state_next = exploring_next;
+    }
+    
+    void lost_callback() {
+        if(need_to_recharge)
+            robot_state_next = going_queue_next;
+        else
+            robot_state_next = exploring_next;
     }
 
     //TODO
@@ -2190,7 +2208,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("Recharging completed");
-        robot_state_next = fully_charged_next;
+        if(robot_state != moving_to_frontier)
+            robot_state_next = fully_charged_next;
     }
 
     void new_target_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
@@ -2271,6 +2290,11 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         msg.state = new_state;
         robot_state = static_cast<state_t>(new_state);
         pub_robot.publish(msg);
+        
+        if(robot_state == auctioning)
+            need_to_recharge = true;
+        else if(robot_state == exploring || robot_state == fully_charged)
+            need_to_recharge = true;
         
         /*
         adhoc_communication::EmRobot msg;
@@ -2381,17 +2405,22 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             if (robot_state == in_queue)
             {
                 ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
-                update_robot_state_2(in_queue);
             }
 
             /* If the robot is already preparing to enter in a queue, do nothing */
             else if (robot_state == going_in_queue)
             {
-                update_robot_state_2(going_in_queue);
                 ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
-
-                /* Otherwise, really prepare the robot to go in queue */
             }
+            
+            /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new auction */
+            //TODO something probably went wrong in this case
+            else if(robot_state == going_charging)
+            {
+                ROS_ERROR("\n\t\e[1;34m i want to charge a little, first... \e[0m");
+            }
+            
+            /* Otherwise, really prepare the robot to go in queue */
             else
             {
                 ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
@@ -2547,7 +2576,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     }
 
     bool vacant_ds;
-    bool need_to_recahrge;
+    bool need_to_recharge;
 
     enum state_next_t
     {

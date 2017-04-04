@@ -28,7 +28,8 @@
 #define AUCTION_TIMEOUT             5
 #define FORCED_AUCTION_END_TIMEOUT  (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME   (AUCTION_TIMEOUT * 3)
-#define LASER_RANGE                 5
+#define LASER_RANGE                 10
+#define DS_SELECTION_POLICY         0
 
 using namespace std;
 
@@ -274,7 +275,7 @@ private:
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
     ros::Publisher pub_adhoc_new_best_ds;
-    ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge, sub_check_vacancy;
+    ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
     ros::ServiceClient sc_trasform;
     
     void timerCallback(const ros::TimerEvent&);
@@ -287,7 +288,7 @@ private:
     };
     vector<auction_bid_t> auction_bids;
     
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_ask_for_vacancy;
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
     
     void cb_charging_completed(const std_msgs::Empty& msg);
     void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
@@ -317,8 +318,7 @@ private:
     bool managing_auction;
     int participating_to_auction;
 
-    void check_vacancy_callback(const std_msgs::Empty::ConstPtr &);
-    void ask_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     
     bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed, going_charging_bool;
     
@@ -344,13 +344,15 @@ private:
     
     double llh;
     
-    string my_prefix;
+    string my_prefix, my_node;
     
     void initLogpath();
     
     std::string log_path;
     
     void start_new_auction();
+    
+    bool ds_count;
 
 };
 
