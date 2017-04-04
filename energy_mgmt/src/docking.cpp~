@@ -72,7 +72,7 @@ docking::docking()
     sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot");
 
     /* Subscribers */
-    sub_battery = nh.subscribe(my_prefix + "battery_state", 1, &docking::cb_battery, this);
+    sub_battery = nh.subscribe(my_prefix + "battery_state", 100, &docking::cb_battery, this);
     sub_robots = nh.subscribe(my_prefix + "robots", 100, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 10000, &docking::cb_jobs, this);
     sub_robot = nh.subscribe(my_prefix + "explorer/robot", 100, &docking::cb_robot, this);
@@ -86,32 +86,32 @@ docking::docking()
         nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 100, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
         nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 100, &docking::cb_auction_result, this);
-    sub_robot_position = nh.subscribe("goalPoint/goalPoint", 1, &docking::robot_position_callback, this);  // TODO
-    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 1, &docking::adhoc_ds, this);
+    sub_robot_position = nh.subscribe("goalPoint/goalPoint", 100, &docking::robot_position_callback, this);  // TODO
+    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 100, &docking::adhoc_ds, this);
 
     sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
 
     sub_translate = nh.subscribe("translate", 100, &docking::cb_translate, this);
-    sub_all_points = nh.subscribe("all_positions", 1, &docking::points, this);
-    sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 1, &docking::check_vacancy_callback, this);
+    sub_all_points = nh.subscribe("all_positions", 100, &docking::points, this);
+    sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 100, &docking::check_vacancy_callback, this);
 
     sub_check_vacancy =
-        nh.subscribe("adhoc_communication/check_vacancy", 1, &docking::check_vacancy_callback, this);
+        nh.subscribe("adhoc_communication/check_vacancy", 100, &docking::check_vacancy_callback, this);
 
     sub_ds_state_update =
-        nh.subscribe("adhoc_communication/ds_state_update", 1, &docking::ds_state_update_callback, this);
-    sub_robot_pose = nh.subscribe("amcl_pose", 1, &docking::robot_pose_callback, this);  // TODO not used
+        nh.subscribe("adhoc_communication/ds_state_update", 100, &docking::ds_state_update_callback, this);
+    sub_robot_pose = nh.subscribe("amcl_pose", 100, &docking::robot_pose_callback, this);  // TODO not used
 
     /* Publishers */
-    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1);
-    pub_new_target_ds = nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 1);
+    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 100);
+    pub_new_target_ds = nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 100);
     pub_adhoc_new_best_ds =
-        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 1);
-    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 1);
-    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 1);
-    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 1);
+        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 100);
+    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 100);
+    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 100);
+    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 100);
     
-    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 1);
+    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 100);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
@@ -232,8 +232,11 @@ void docking::compute_optimal_ds()
             //TODO call service to call cb_ds
             
             /* If it is the first DS that is encountered, set it as the currently optimal DS: this is just to initialize variable 'best_ds', so that the can compute the distance from the robot and the currently selected DS and compare it with the distance from the other DSs also when the node starts */
-            if(ds_count == 1)
-                    best_ds = ds.at(0);
+            if(ds_count == 1) {
+                best_ds = ds.at(0);
+                target_ds = best_ds;
+                next_target_ds = target_ds;
+            }
             
             /* Since an element from 'undiscovered-ds' was removed, we have to decrease 'it' by one to compensate the increment of the for loop, since, after the deletion of the element, all the elemtns are shifted by one position, and so we are already pointing to the next element, even without the +1 increment */
             it--;
@@ -953,7 +956,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    // ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
 
     // TODO
     /*
@@ -995,8 +998,7 @@ void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
             srv.request.auction.auction = msg.get()->auction;
             srv.request.auction.robot = robot_id;
             srv.request.auction.docking_station = best_ds.id;
-            srv.request.auction.bid = get_llh();  // TODO
-            // srv.request.auction.bid = -remaining_time;
+            srv.request.auction.bid = get_llh();
             ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
             sc_send_auction.call(srv);
         }
@@ -1094,10 +1096,9 @@ void docking::timerCallback(const ros::TimerEvent &event)
     }
 
     // TODO
-    /*
+    
     if (auction_bids.size() < 3 && ds.size() == 1)
         ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
-        */
 
     ROS_DEBUG("The winner is robot %d", winner);
 
@@ -1121,6 +1122,14 @@ void docking::timerCallback(const ros::TimerEvent &event)
         /* The robot lost its own auction */
         ROS_ERROR("Robot lost its own auction");
         auction_winner = false;
+        
+        //TODO do better
+        //TODO check also where this timer is stopped...
+        /* If a robot is already in queue, the rescheduling timer must be started now (whereas if the robot is not already in queue, it could */
+        if(robot_state == in_queue) {
+            timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+            timer_restart_auction.start();
+        }
     }
 
     adhoc_communication::SendEmAuction srv_mgs;
