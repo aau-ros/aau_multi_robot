@@ -145,6 +145,15 @@ docking::docking()
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = fully_charged;
     sc_send_robot.call(srv_msg);
+    
+    int graph[V][V] = {{0, 1, 0, 6, 0},
+                       {1, 0, 1, 8, 5},
+                       {0, 1, 0, 1, 7},
+                       {6, 8, 1, 0, 1},
+                       {0, 5, 7, 1, 0},
+                      };
+                     
+    compute_MST(graph);
 }
 
 void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
@@ -338,6 +347,62 @@ void docking::compute_optimal_ds()
         }
         else if(DS_SELECTION_POLICY == 2) //opportune
         {
+        /*
+            int index_best_ds;
+            for(int i=0, count_max=0; i < ds.size(); i++) {
+                for(int j=0, count=0; j < jobs.size(); j++) {
+                    int dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                    if(dist < MAX_DISTANCE)
+                        count++;
+                 }
+                if(count > count_max)    
+            }
+        */
+            ds_t best_ds_opp;
+            bool found_ds = true;
+            int dist_min=100000; //TODO
+            for(int i=0, count_max=0; i < ds.size(); i++) {
+                for(int j=0, count=0; j < jobs.size(); j++) {
+                    dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                    if(dist < MAX_DISTANCE) {
+                        found_ds = true;
+                        if(distance(ds.at(i).x, ds.at(i).y) < dist_min) {
+                            dist_min = distance(ds.at(i).x, ds.at(i).y);
+                            
+                        }
+                     }
+                 }
+            }
+            if(!found_ds) {
+                ; //spanning true
+                
+                int ds_graph[V][V];
+                for(int i=0; i < ds.size(); i++)
+                    for(int j=0; j<ds.size(); j++)
+                        if(i == j)
+                            ds_graph[i][j] = 0;
+                        else {
+                            int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                            if(dist < MAX_DISTANCE) {
+                                ds_graph[i][j] = dist;
+                                ds_graph[j][i] = dist;
+                            }
+                        }
+                
+                bool ds_found_with_mst=false;
+                
+
+                
+                
+                
+                if(!ds_found_with_mst)
+                ; //closest policy
+            }
+
+            
+
+
+                            
             
         }
         else if(DS_SELECTION_POLICY == 3) //current
@@ -388,8 +453,11 @@ void docking::compute_optimal_ds()
     }
     else
         ROS_DEBUG("There are still some pending auctions: cannot update optimal DS");
-        
-        
+
+
+    
+
+    
 
 }
 
@@ -956,7 +1024,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
 void docking::cb_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    //ROS_ERROR("\n\t\e[1;34mBid received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
 
     // TODO
     /*
@@ -1019,7 +1087,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
     //ROS_INFO("Received reply to auction");
 
     // TODO //F probably in this version doesn't work with multi-hoop replies!!!!!
-    ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    //ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     // if(msg.get()->robot == robot_id) {
 
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
@@ -1232,7 +1300,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
         if (robot_id == msg.get()->robot)
         {
             /* The robot won the auction */
-            // ROS_INFO("Winner of the auction");
+            ROS_ERROR("Winner of the auction started by another robot");
             auction_winner = true;
 
             next_target_ds = best_ds;  // TODO this is safe if the best_ds is not modified during auctions!!!
@@ -1248,7 +1316,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             /* The robot has lost an auction started by another robot (because the robot that starts an auction does not
              * receive the result of that auction with this callback */
             // TODO should check if the robto took part to the auction
-            // ROS_INFO("Robot didn't win this auction");
+            ROS_ERROR("Robot didn't win this auction started by another robot");
             auction_winner = false;
             lost_other_robot_auction = true;
         }
@@ -1331,8 +1399,16 @@ void docking::update_robot_state() //TODO simplify here (auction management and 
             /* Since there are no more pending auction, we can update the DS that is targetted by the robot */
             target_ds = next_target_ds;
 
-            /* Notify explorer node about the lost auction */
-            pub_lost_own_auction.publish(msg);
+            //TODO this if very bad way to avoid that a robot that lost an auction that was not its own rescheduled auiction think that, since a robot that is waiting in queue may either loose it own rescheduled auction or loose the auction of another robot!!
+            if(robot_state != in_queue) {
+                /* Notify explorer node about the lost auction */
+                pub_lost_own_auction.publish(msg);
+            }
+            else {
+            //TODO very bad also here...
+                timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true); 
+                timer_restart_auction.start();
+            }
         }
 
         /* If the robot is the winner of at least one auction, notify explorer */
@@ -1436,4 +1512,106 @@ void docking::set_target_ds_vacant(bool vacant) {
             (*it).vacant = vacant;
             break;
         }
+}
+
+void docking::compute_MST(int graph[V][V])
+{
+     int parent[V]; // Array to store constructed MST
+     int key[V];   // Key values used to pick minimum weight edge in cut
+     bool mstSet[V];  // To represent set of vertices not yet included in MST
+ 
+     // Initialize all keys as INFINITE
+     for (int i = 0; i < V; i++)
+        key[i] = INT_MAX, mstSet[i] = false;
+ 
+     // Always include first 1st vertex in MST.
+     key[0] = 0;     // Make key 0 so that this vertex is picked as first vertex
+     parent[0] = -1; // First node is always root of MST 
+ 
+     // The MST will have V vertices
+     for (int count = 0; count < V-1; count++)
+     {
+        // Pick the minimum key vertex from the set of vertices
+        // not yet included in MST
+        int u = minKey(key, mstSet);
+ 
+        // Add the picked vertex to the MST Set
+        mstSet[u] = true;
+ 
+        // Update key value and parent index of the adjacent vertices of
+        // the picked vertex. Consider only those vertices which are not yet
+        // included in MST
+        for (int v = 0; v < V; v++)
+ 
+           // graph[u][v] is non zero only for adjacent vertices of m
+           // mstSet[v] is false for vertices not yet included in MST
+           // Update the key only if graph[u][v] is smaller than key[v]
+          if (graph[u][v] && mstSet[v] == false && graph[u][v] <  key[v])
+             parent[v]  = u, key[v] = graph[u][v];
+     }
+ 
+     // print the constructed MST
+     printMST(parent, V, graph);
+     
+     
+    int mst[V][V];
+    for(int i=0; i<V; i++)
+        for(int j=0; j<V; j++)
+            mst[i][j] = 0;
+            
+    //TODO does not work if a DS is not connected to any other DS
+    for(int i=1; i<V; i++) {
+        mst[i][parent[i]] = 1; //parent[i] is the node closest to node i
+        mst[parent[i]][i] = 1;
+    }
+    
+    for(int i=0; i<V; i++) {
+        for(int j=0; j<V; j++)
+            ROS_ERROR("(%d, %d): %d ", i, j, mst[i][j]);         
+    }
+    
+    int k = 0; //index of the closest recheable DS
+    int target = 4; //the id of the DS that we want to reach
+    std::vector<int> path; //sequence of nodes that from target leads to k; i.e., if the vector is traversed in the inverse order (from end to begin), it contains the path to go from k to target
+    
+    find_path(mst, k, target, path, -1);
+    path.push_back(k);
+    
+    std::vector<int>::iterator it;
+    for(it = path.begin(); it != path.end(); it++)
+        ROS_ERROR("%d - ", *it);
+    
+}
+
+// A utility function to find the vertex with minimum key value, from
+// the set of vertices not yet included in MST
+int docking::minKey(int key[], bool mstSet[])
+{
+   // Initialize min value
+   int min = INT_MAX, min_index;
+ 
+   for (int v = 0; v < V; v++)
+     if (mstSet[v] == false && key[v] < min)
+         min = key[v], min_index = v;
+ 
+   return min_index;
+}
+ 
+// A utility function to print the constructed MST stored in parent[]
+int docking::printMST(int parent[], int n, int graph[V][V])
+{
+   printf("Edge   Weight\n");
+   for (int i = 1; i < V; i++)
+      ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
+}
+
+bool docking::find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node) {
+    for(int j=0; j < V; j++) 
+        if(mst[start][j] == 1 && j != prev_node) {
+            if(j == target || find_path(mst, j, target, path, start)) {
+                path.push_back(j);
+                return true; 
+            }
+        }
+     return false;
 }

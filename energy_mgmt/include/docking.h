@@ -30,6 +30,8 @@
 #define AUCTION_RESCHEDULING_TIME   (AUCTION_TIMEOUT * 3)
 #define LASER_RANGE                 10
 #define DS_SELECTION_POLICY         0
+#define MAX_DISTANCE                50
+#define V                           5
 
 using namespace std;
 
@@ -355,6 +357,14 @@ private:
     bool ds_count;
     
     void set_target_ds_vacant(bool vacant);
+    
+    void compute_MST(int graph[V][V]);
+    
+    int minKey(int key[], bool mstSet[]);
+
+    int printMST(int parent[], int n, int graph[V][V]);
+    
+    bool find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node);
 
 };
 
