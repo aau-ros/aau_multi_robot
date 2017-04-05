@@ -13,6 +13,7 @@
 #include <adhoc_communication/SendEmAuction.h>
 #include <adhoc_communication/SendEmDockingStation.h>
 #include <adhoc_communication/SendEmRobot.h>
+#include <adhoc_communication/MmListOfPoints.h>
 //#include <adhoc_communication/SendMmPoint.h>
 #include <map_merger/TransformPoint.h>
 #include <energy_mgmt/battery_state.h>
@@ -337,9 +338,9 @@ private:
     void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     
     
-    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result;
+    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result, pub_moving_along_path;
     bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
-    ros::Subscriber sub_ds_state_update ;
+    ros::Subscriber sub_ds_state_update, sub_moving_along_path ;
     void abort_charging_callback(const std_msgs::Empty &msg);
     
     ros::Subscriber sub_robot_pose, sub_robot;
@@ -372,7 +373,9 @@ private:
     
     bool find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node);
     
-    int mst[V][V];;
+    int mst[V][V];
+    
+    bool moving_along_path;
 
 };
 

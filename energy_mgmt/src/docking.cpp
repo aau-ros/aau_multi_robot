@@ -112,6 +112,9 @@ docking::docking()
     pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 100);
     
     pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 100);
+    
+    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 100);
+    sub_moving_along_path = nh.subscribe("explorer/moving_along_path", 1, &docking::moving_along_path_callback, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
@@ -133,6 +136,7 @@ docking::docking()
     test = true;
     llh = 0;
     auction_id = 0;
+    moving_along_path = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -153,7 +157,7 @@ docking::docking()
                        {0, 5, 7, 1, 0},
                       };
                      
-    compute_MST(graph);
+    //compute_MST(graph);
 }
 
 void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
@@ -376,9 +380,12 @@ void docking::compute_optimal_ds()
                  }
             }
             if(!found_ds) {
+                bool ds_found_with_mst=false;
+            
+                /*
                 ; //spanning tree
                 
-                /* construct ds graph */
+                // construct ds graph
                 int ds_graph[V][V];
                 for(int i=0; i < ds.size(); i++)
                     for(int j=0; j<ds.size(); j++)
@@ -392,8 +399,10 @@ void docking::compute_optimal_ds()
                             }
                         }
                 
-                /* construct MST starting from ds graph */
+                // construct MST starting from ds graph
                 compute_MST(ds_graph);
+                
+                //TODO path to wich frontier???
                 
                 //TODO
                 //find DS
@@ -401,20 +410,53 @@ void docking::compute_optimal_ds()
                 //if found DS with spanning tree
                     //moving_along_path = true;
                 
-                bool ds_found_with_mst=false;
-                
-                
-
                 
                 
                 
-                if(!ds_found_with_mst)
-                ; //closest policy
+                */
+                
+                if(!moving_along_path) {
+                    int first_step_x, first_step_y, second_step_x, second_step_y;
+                    for(int i=0; i < ds.size(); i++) {
+                        bool existing_eo;
+                        for(int j=0; j < jobs.size(); j++)
+                            if(distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE) {
+                                existing_eo = true;
+                                for(int k=0; k < ds.size(); k++)
+                                    if(k != i && distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE )
+                                        if( distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE) {//TODO no MAX_DISTANCE, but available_distance
+                                            moving_along_path = true;
+                                            ds_found_with_mst = true;
+                                            first_step_x = ds.at(k).x;
+                                            first_step_y = ds.at(k).y;
+                                            second_step_x = ds.at(i).x;
+                                            second_step_y = ds.at(i).y;
+                                        }
+                            }
+                    }
+                }
+                
+                
+                
+                
+                if(ds_found_with_mst) {
+                    adhoc_communication::MmListOfPoints msg_path; //publish list of DS
+                    msg_path.positions[0].x = 0;
+                    msg_path.positions[0].y = 0;
+                    msg_path.positions[1].x = 0;
+                    msg_path.positions[1].y = 0;
+                }else
+                    ; //closest policy
+            
+            
             }
 
             
 
-
+            
+            
+            
+            
                             
             
         }
@@ -533,6 +575,9 @@ void docking::compute_optimal_ds()
             }  
             
         }
+        
+        //adhoc_communication::MmListOfPoints msg_points;
+        //pub_moving_along_path.publish(msg_points);
         
         //ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
         
@@ -1740,4 +1785,8 @@ bool docking::find_path(int mst[][V], int start, int target, std::vector<int> &p
             }
         }
      return false;
+}
+
+void docking::moving_along_path_callback(std_msgs::Empty msg) {
+    moving_along_path = false;
 }

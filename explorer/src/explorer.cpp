@@ -31,6 +31,7 @@
 #include <explorer/RobotPosition.h>
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
+#include <adhoc_communication/MmListOfPoints.h>
 
 //#define PROFILE
 
@@ -49,6 +50,7 @@
 #define SAFETY_COEFF 0.013
 #define INCR 2
 #define QUEUE_DISTANCE 5
+#define DS_SELECTION_POLICY 0
 
 boost::mutex costmap_mutex;
 
@@ -62,9 +64,10 @@ class Explorer
 {
   public:
     
-    bool ready;
-    int my_counter;
-    ros::Publisher pub_robot;
+    bool ready, moving_along_path;
+    int my_counter, ds_path_counter;
+    ros::Publisher pub_robot, pub_moving_along_path;
+    int path[2][2];
 
 ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
   
@@ -103,6 +106,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         test = true;
         vacant_ds = true;
         ready = false;
+        moving_along_path = false;
 
         /* Initial robot state */
         robot_state = fully_charged;
@@ -131,6 +135,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             nh.subscribe("lost_other_robot_auction", 1, &Explorer::lost_other_robot_callback, this);
         
         pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);
+        
+        pub_moving_along_path = nh.advertise<std_msgs::Empty>("moving_along_path", 100);
         
 
         /* Load parameters */
@@ -366,6 +372,8 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         ;  // F
         ros::Subscriber sub_new_target_ds = nh.subscribe(
             "new_target_docking_station_selected", 1, &Explorer::new_target_docking_station_selected_callback, this);
+            
+        ros::Subscriber sub_moving_along_path = nh.subscribe("moving_along_path", 1, &Explorer::moving_along_path_callback, this);
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
 
@@ -1198,16 +1206,7 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     }
                     if (occupied_ds)
                     {
-                        //TODO opportune
-                        /*
-                        if(DS_SELECTION_POLICY == 2 && moving_along_path)
-                            if can reach next DS in path without recharging {
-                                target_ds = next_ds_in_path;
-                                update_robot_state_2(going_checking_vacancy); //TODO going_checking_vacancy? actually the robot didn't win any auction to gain access to this Ds, is it ok anyway?
-                            } else
-                                in queue
-                        
-                        */
+                        //TODO opportune? no because if I ahve this DS in the path, it's because I need to recharge here
                     
                         /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
                         ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
@@ -2252,6 +2251,16 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                // point.response.point.x, point.response.point.y);
                */
     }
+    
+    void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr & msg) {
+        ROS_ERROR("MOVING!!!!!!!!!!!!");
+        moving_along_path = true;
+        ds_path_counter = 0;
+        path[0][0] = msg.get()->positions[0].x;
+        path[0][1] = msg.get()->positions[0].y;
+        path[1][0] = msg.get()->positions[1].x;
+        path[1][1] = msg.get()->positions[1].y;
+    }
 
     void bat_callback(const energy_mgmt::battery_state::ConstPtr &msg)
     {
@@ -2384,9 +2393,21 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
-            //TODO opportune           
-            update_robot_state_2(exploring);
-            ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+            //TODO opportune 
+            if(DS_SELECTION_POLICY == 2 && moving_along_path)
+                if(ds_path_counter < 2) { 
+                    target_ds_x = path[ds_path_counter][0];
+                    target_ds_y = path[ds_path_counter][1];
+                    ds_path_counter++;
+                    update_robot_state_2(going_checking_vacancy);
+                } else {
+                    moving_along_path = false;
+                    update_robot_state_2(exploring);
+                }
+            else {          
+                update_robot_state_2(exploring);
+                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+            }
             ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
             
         }
@@ -2395,11 +2416,21 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
            fully_charged */
         else if (robot_state_next == fully_charged_next)
         {
-            //TODO opportune        
-            
             ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
-            ROS_ERROR("\n\t\e[1;34m fully_charged \e[0m");
-            update_robot_state_2(fully_charged);
+            //TODO opportune        
+            if(DS_SELECTION_POLICY == 2 && moving_along_path)
+                if(ds_path_counter < 2) { 
+                    target_ds_x = path[ds_path_counter][0];
+                    target_ds_y = path[ds_path_counter][1];
+                    ds_path_counter++;
+                    update_robot_state_2(going_checking_vacancy);
+                } else {
+                    moving_along_path = false;
+                    update_robot_state_2(fully_charged);
+                }
+            else {
+                update_robot_state_2(fully_charged);
+           }
         }
 
         /* */
@@ -2454,22 +2485,29 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
             if (robot_state == charging)
             {
                 //TODO opportune
-                /*
-                if(DS_SELECTION_POLICY == 2 && moving_along_path) {
-                    /*  
-                    if(target_ds != last_ds_in_path) { 
+                
+                if(DS_SELECTION_POLICY == 2 && moving_along_path)
+                    if(ds_path_counter < 2) { 
+                        target_ds_x = path[ds_path_counter][0];
+                        target_ds_y = path[ds_path_counter][1];
+                        ds_path_counter++;
+                        ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                         update_robot_state_2(going_checking_vacancy);
-                        target_ds = next_ds_in_path;
-                        update(next_ds_in_path);
+                    } else {
+                        moving_along_path = false;
+                        std_msgs::Empty path_msg;
+                        pub_moving_along_path.publish(path_msg);
+                        ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+                        ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+                        update_robot_state_2(exploring);
                     }
-                } else {
-                    ...
-                }
-                */
-                ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
-                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+                else {
+                
+                    ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
+                    ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
 
-                update_robot_state_2(exploring);
+                    update_robot_state_2(exploring);
+                }
             }
         }
 
