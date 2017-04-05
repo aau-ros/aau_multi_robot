@@ -22,6 +22,10 @@
 #include <explorer/RobotPosition.h>
 #include <explorer/DistanceFromRobot.h>
 #include <sstream>
+#include <math.h>
+#include <stdlib.h>
+
+#define PI 3.14159265
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
@@ -225,6 +229,8 @@ private:
     struct robot_t{
         int id;
         simple_state_t state;
+        double x, y;
+        int target_ds;
     };
     vector<robot_t> robots;
 

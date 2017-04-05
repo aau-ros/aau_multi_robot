@@ -209,6 +209,7 @@ void docking::compute_optimal_ds()
             robot_x = srv_msg.response.x;
             robot_y = srv_msg.response.y;
             ROS_DEBUG("Robot position: (%f, %f)", robot_x, robot_y);
+                     
         }
         else {
             ROS_ERROR("Call to service %s failed", sc_robot_pose.getService().c_str());
@@ -433,8 +434,95 @@ void docking::compute_optimal_ds()
         }
         else if(DS_SELECTION_POLICY == 4) //flocking
         {
+            for(int d=0, min_cost=numeric_limits<int>::max(); d < ds.size(); d++) {
+                
+    
+                int count=0;
+                for(int i=0; i < robots.size(); i++)
+                    if(robots.at(i).target_ds == best_ds.id) //TODO best_ds or target_ds???
+                        count++;
+                double n_r = (double)count / num_robots;
+                
+                
+                
+                int sum_x = 0, sum_y = 0;
+                for(int i=0; i < robots.size(); i++) {
+                    sum_x += robots.at(i).x;
+                    sum_y += robots.at(i).y;
+                }
+                double flock_x = sum_x / num_robots;
+                double flock_y = sum_y / num_robots;
+                double d_s = distance(ds.at(d).x, ds.at(d).y, flock_x, flock_y); //TODO normalization
+                
+                
+                
+                double swarm_direction_x = 0, swarm_direction_y = 0;
+                for(int i=0; i < robots.size(); i++) {
+                    double robot_i_target_ds_x, robot_i_target_ds_y;
+                    
+                    for(int k=0; k < ds.size(); k++)
+                        if(robots.at(i).target_ds == ds.at(k).id) {
+                            robot_i_target_ds_x = ds.at(k).x;
+                            robot_i_target_ds_y = ds.at(k).y;
+                        }
+                            
+                    
+                    swarm_direction_x += robot_i_target_ds_x - robots.at(i).x; //TODO
+                    swarm_direction_y += robot_i_target_ds_y - robots.at(i).y;
+                }
+                // tan ( param * PI / 180.0 );
+                double alpha, rho, theta;
+                
+                /*
+                if(swarm_direction_x == 0)
+                    if(swarm_direction_y == 0)
+                        ROS_ERROR("Degenerate case");
+                    else if(swarm_direction_y > 0)
+                        rho = 90;
+                    else
+                        rho = 270;
+                else {
+                    double atan_val = atan( abs(swarm_direction_y) / abs(swarm_direction_x) * 180.0 / PI);
+                    if(swarm_direction_y >= 0 && swarm_direction_x > 0)
+                        rho = atan;
+                    else if(swarm_direction_y >= 0 && swarm_direction_x < 0)
+                        rho = 360 - atan;
+                    else if(swarm_direction_y <= 0 && swarm_direction_x > 0)
+                        rho = 360 - atan;
+                    else if(swarm_direction_y <= 0 && swarm_direction_x < 0)
+                        rho = atan;
+                }
+                alpha = atan( abs(ds.at(d).y - robot_y) / abs(ds.at(d).x - robot_x) );
+                */
+                
+                rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI;
+                alpha = atan2( (ds.at(d).y - robot_y) , (ds.at(d).x - robot_x) ) * 180 / PI;
+                
+                if(alpha > rho)
+                    theta = alpha - rho;
+                else
+                    theta = rho - alpha;
+                
+                double theta_s = theta / 180;
+                
+                
+                
+                double d_f = 0.0; //TODO
+                
+                
+                
+                double cost = n_r + d_s + theta_s + d_f;
+                if(cost < min_cost) {
+                    found_new_optimal_ds = true;
+                    min_cost = cost;
+                    best_ds = ds.at(d);
+                }   
+            
+            }  
             
         }
+        
+        ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
         
 
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated */
@@ -455,7 +543,13 @@ void docking::compute_optimal_ds()
         ROS_DEBUG("There are still some pending auctions: cannot update optimal DS");
 
 
-    
+     adhoc_communication::SendEmRobot robot_msg;
+     robot_msg.request.topic = "adhoc_communication/send_em_robot";
+     robot_msg.request.robot.id = robot_id;
+     robot_msg.request.robot.x = robot_x;
+     robot_msg.request.robot.y = robot_y;
+     robot_msg.request.robot.selected_ds = best_ds.id;
+     sc_send_robot.call(robot_msg);
 
     
 
@@ -840,6 +934,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
 // TODO
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
+
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)
@@ -847,9 +942,14 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         // robot is in list, update
         if (robots[i].id == msg.get()->id)
         {
-            // update state
-            // robots[i].state = (state_t)msg.get()->state; //TODO
-            robots[i].state = idle;
+            // update state //TODO
+            if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier)
+                robots[i].state = active;
+            else
+                robots[i].state = idle;
+            robots[i].x = msg.get()->x;
+            robots[i].y = msg.get()->y;
+            robots[i].target_ds = msg.get()->selected_ds;
 
             new_robot = false;
             break;
@@ -862,10 +962,24 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         robot_t robot;
         robot.id = msg.get()->id;
 
-        // robot.state = (state_t)msg.get()->state; //TODO
-        robot.state = idle;
+         // update state //TODO
+        if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier)
+            robot.state = active;
+        else
+            robot.state = idle;
+        
+        robot.x = msg.get()->x;
+        robot.y = msg.get()->y;
+        robot.target_ds = msg.get()->selected_ds;
 
         robots.push_back(robot);
+        
+        
+        int count=0;
+        for(int i=0; i < robots.size(); i++)
+                count++;
+                
+        num_robots = count; //TODO also works for simulation? isn't this already known?
     }
 
     // update charging likelihood
@@ -1578,7 +1692,7 @@ void docking::compute_MST(int graph[V][V])
     path.push_back(k);
     
     std::vector<int>::iterator it;
-    for(it = path.rbegin(); it != path.rend(); it++)
+    for(it = path.begin(); it != path.end(); it++)
         ROS_ERROR("%d - ", *it);
     
 }
