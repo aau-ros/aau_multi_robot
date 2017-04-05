@@ -25,6 +25,8 @@
 #include <math.h>
 #include <stdlib.h>
 
+#define PI 3.14159265
+
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
 #define AUCTION_TIMEOUT             5
@@ -369,6 +371,8 @@ private:
     int printMST(int parent[], int n, int graph[V][V]);
     
     bool find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node);
+    
+    int mst[V][V];;
 
 };
 

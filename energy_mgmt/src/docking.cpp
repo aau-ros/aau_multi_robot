@@ -369,14 +369,16 @@ void docking::compute_optimal_ds()
                         found_ds = true;
                         if(distance(ds.at(i).x, ds.at(i).y) < dist_min) {
                             dist_min = distance(ds.at(i).x, ds.at(i).y);
-                            
+                            best_ds = ds.at(i);
+                            found_new_optimal_ds = true;            
                         }
                      }
                  }
             }
             if(!found_ds) {
-                ; //spanning true
+                ; //spanning tree
                 
+                /* construct ds graph */
                 int ds_graph[V][V];
                 for(int i=0; i < ds.size(); i++)
                     for(int j=0; j<ds.size(); j++)
@@ -390,7 +392,17 @@ void docking::compute_optimal_ds()
                             }
                         }
                 
+                /* construct MST starting from ds graph */
+                compute_MST(ds_graph);
+                
+                //TODO
+                //find DS
+                //find path
+                //if found DS with spanning tree
+                    //moving_along_path = true;
+                
                 bool ds_found_with_mst=false;
+                
                 
 
                 
@@ -522,7 +534,7 @@ void docking::compute_optimal_ds()
             
         }
         
-        ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
+        //ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
         
 
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated */
@@ -1668,7 +1680,7 @@ void docking::compute_MST(int graph[V][V])
      printMST(parent, V, graph);
      
      
-    int mst[V][V];
+    
     for(int i=0; i<V; i++)
         for(int j=0; j<V; j++)
             mst[i][j] = 0;

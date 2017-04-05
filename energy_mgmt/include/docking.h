@@ -371,6 +371,8 @@ private:
     int printMST(int parent[], int n, int graph[V][V]);
     
     bool find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node);
+    
+    int mst[V][V];
 
 };
 

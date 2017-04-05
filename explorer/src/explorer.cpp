@@ -1198,6 +1198,17 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
                     }
                     if (occupied_ds)
                     {
+                        //TODO opportune
+                        /*
+                        if(DS_SELECTION_POLICY == 2 && moving_along_path)
+                            if can reach next DS in path without recharging {
+                                target_ds = next_ds_in_path;
+                                update_robot_state_2(going_checking_vacancy); //TODO going_checking_vacancy? actually the robot didn't win any auction to gain access to this Ds, is it ok anyway?
+                            } else
+                                in queue
+                        
+                        */
+                    
                         /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
                         ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
                         update_robot_state_2(in_queue);
@@ -2284,6 +2295,9 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     }
 
     void update_robot_state_2(int new_state) {
+    
+        
+    
         ROS_DEBUG("State transiction: %s -> %s", get_text_for_enum(robot_state).c_str(), get_text_for_enum(new_state).c_str());
         ROS_ERROR("\e[1;34m State transiction: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(), get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
@@ -2370,15 +2384,20 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
+            //TODO opportune           
             update_robot_state_2(exploring);
             ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
             ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+            
         }
 
         /* If the robot has completed the recharging process, set it to
            fully_charged */
         else if (robot_state_next == fully_charged_next)
         {
+            //TODO opportune        
+            
+            ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
             ROS_ERROR("\n\t\e[1;34m fully_charged \e[0m");
             update_robot_state_2(fully_charged);
         }
@@ -2431,10 +2450,22 @@ ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
         /* */
         else if (robot_state_next == exploring_next)
         {
-
             /* If the robot is recharing, it must stop */
             if (robot_state == charging)
             {
+                //TODO opportune
+                /*
+                if(DS_SELECTION_POLICY == 2 && moving_along_path) {
+                    /*  
+                    if(target_ds != last_ds_in_path) { 
+                        update_robot_state_2(going_checking_vacancy);
+                        target_ds = next_ds_in_path;
+                        update(next_ds_in_path);
+                    }
+                } else {
+                    ...
+                }
+                */
                 ROS_ERROR("\n\t\e[1;34m exploring \e[0m");
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
 
