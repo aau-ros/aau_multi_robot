@@ -32,6 +32,7 @@
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
+#include <robot_state/GetRobotState.h>
 
 //#define PROFILE
 
@@ -70,6 +71,7 @@ class Explorer
     ros::Publisher pub_robot, pub_moving_along_path;
     int path[2][2];
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
+    ros::ServiceClient sc_get_robot_state;
   
     /*******************
      * CLASS FUNCTIONS *
@@ -135,6 +137,8 @@ class Explorer
         
         pub_moving_along_path = nh.advertise<std_msgs::Empty>("moving_along_path", 100); // to publish when the path to reach a far DS has been completed travelled
         
+        ros::NodeHandle n;
+        sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
         /* Load parameters */ 
         nh.param("frontier_selection", frontier_selection, 1);
@@ -2230,6 +2234,9 @@ class Explorer
             need_to_recharge = true;
         else if(robot_state == exploring || robot_state == fully_charged)
             need_to_recharge = true;
+            
+        robot_state::GetRobotState srv;
+        sc_get_robot_state.call(srv);
   
     }
 

@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="stage" pkg ="stage_ros" type="stageros" args="$(find multi_robot_simulation)/world/world.world" />
+</launch>

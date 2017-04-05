@@ -5,6 +5,7 @@
     <param name="p_tx" value="1" />
     <param name="tx_power" value="1" />
     <group ns="robot_0">
+        <node name="robot_state" pkg="robot_state" type="robot_state" />
         <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">
             <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
             <arg name="robot_name" value="robot_0" />
