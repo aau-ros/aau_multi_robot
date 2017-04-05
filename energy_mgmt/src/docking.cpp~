@@ -157,7 +157,7 @@ docking::docking()
                        {0, 5, 7, 1, 0},
                       };
                      
-    compute_MST(graph);
+    //compute_MST(graph);
 }
 
 void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
@@ -1571,12 +1571,14 @@ void docking::update_robot_state() //TODO simplify here (auction management and 
             target_ds = next_target_ds;
 
             //TODO this if very bad way to avoid that a robot that lost an auction that was not its own rescheduled auiction think that, since a robot that is waiting in queue may either loose it own rescheduled auction or loose the auction of another robot!!
+            //TODO moreover this not solve the problem...
             if(robot_state != in_queue) {
                 /* Notify explorer node about the lost auction */
                 pub_lost_own_auction.publish(msg);
             }
             else {
             //TODO very bad also here...
+                ROS_ERROR("lost: reset periodic timer");
                 timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true); 
                 timer_restart_auction.start();
             }
