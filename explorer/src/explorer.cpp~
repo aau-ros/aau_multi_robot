@@ -137,7 +137,8 @@ class Explorer
         
         pub_moving_along_path = nh.advertise<std_msgs::Empty>("moving_along_path", 100); // to publish when the path to reach a far DS has been completed travelled
         
-        sc_get_robot_state = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+        ros::NodeHandle n;
+        sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
         /* Load parameters */ 
         nh.param("frontier_selection", frontier_selection, 1);
@@ -1062,6 +1063,7 @@ class Explorer
                 ROS_INFO("Starting owm auction...");
                 while (robot_state == auctioning) //TODO(minor) better management of the while loop
                 {
+                    //TODO(IMPORTANT) check if the robot has not arleady won an auction meanwhile!!!!!
                     // ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
                     ros::Duration(0.1).sleep();
                     ros::spinOnce(); //TODO(minor) is spin necessary? isn't it called by update_robot_State already?

@@ -361,7 +361,7 @@ private:
     
     void start_new_auction();
     
-    bool ds_count;
+    bool num_ds;
     
     void set_target_ds_vacant(bool vacant);
     
@@ -378,6 +378,8 @@ private:
     bool moving_along_path;
     
     void moving_along_path_callback(std_msgs::Empty msg);
+    
+    enum ds_state_t {vacant, occupied, assigned};
 
 };
 
