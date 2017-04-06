@@ -219,8 +219,9 @@ private:
                                                    
         moving_to_frontier_before_going_charging,  // TODO hmm...
         
-        moving_to_frontier                         // the robot has selected the next frontier to be
+        moving_to_frontier,                         // the robot has selected the next frontier to be
                                                    // reached, and it is moving toward it
+        leaving_ds                                 //the robot was recharging, but another robot stopped
     };
     
     state_t robot_state;

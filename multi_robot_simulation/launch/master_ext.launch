@@ -57,7 +57,7 @@
             <arg name="y" value=" 3.5" />
             <arg name="log_path" value="logs/15-11-20/14-06-42/1" />
         </include>
-        <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />-->
+        <node name="rviz" pkg="rviz" type="rviz" args="-d $(find multi_robot_simulation)/robot_0.rviz" />
     </group>
     <group ns="robot_1">
         <include file="$(find adhoc_communication)/launch/adhoc_communication.launch">

@@ -1,4 +1,5 @@
 #include <docking.h>
+#define OPP_ONLY_TWO_DS true
 
 using namespace std;
 
@@ -168,16 +169,16 @@ void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStamped
     robot_y = pose->pose.pose.position.y;
 }
 
-void docking::preload_docking_stations()
+void docking::preload_docking_stations() //TODO only for simulation
 {
     int index = 0;  // index of the DS: used to loop above all the docking stations inserted in the file
-    double x, y;  // DS coordinates
+    double x, y;    // DS coordinates
 
     /* If the x-coordinate of DS with index <index> is found, it means that that DS is present in the file and must be
      * loaded */
     while (nh.hasParam("energy_mgmt/d" + SSTR(index) + "/x"))
     {
-        /* Load coordinates */
+        /* Load coordinates of the new DS */
         nh.param("energy_mgmt/d" + SSTR(index) + "/x", x, 0.0);
         nh.param("energy_mgmt/d" + SSTR(index) + "/y", y, 0.0);
 
@@ -339,71 +340,110 @@ void docking::compute_optimal_ds()
             if(!found_ds) {
                 bool ds_found_with_mst=false;
             
-                /*
-                ; //spanning tree
-                
-                // construct ds graph
-                int ds_graph[V][V];
-                for(int i=0; i < ds.size(); i++)
-                    for(int j=0; j<ds.size(); j++)
-                        if(i == j)
-                            ds_graph[i][j] = 0;
-                        else {
-                            int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                            if(dist < MAX_DISTANCE) {
-                                ds_graph[i][j] = dist;
-                                ds_graph[j][i] = dist;
+                if(!OPP_ONLY_TWO_DS) {
+                    
+                    // construct ds graph //TODO construct graph only when a new DS is found
+                    int ds_graph[V][V]; //TODO remove V
+                    for(int i=0; i < ds.size(); i++)
+                        for(int j=0; j<ds.size(); j++)
+                            if(i == j)
+                                ds_graph[i][j] = 0;
+                            else {
+                                int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                                if(dist < MAX_DISTANCE) {
+                                    ds_graph[i][j] = dist;
+                                    ds_graph[j][i] = dist;
+                                }
                             }
-                        }
-                
-                // construct MST starting from ds graph
-                compute_MST(ds_graph);
-                
-                //TODO path to wich frontier???
-                
-                //TODO
-                //find DS
-                //find path
-                //if found DS with spanning tree
-                    //moving_along_path = true;
-                
-                
-                
-                
-                */
-                
-                if(!moving_along_path) {
-                    int first_step_x, first_step_y, second_step_x, second_step_y;
-                    for(int i=0; i < ds.size(); i++) {
-                        bool existing_eo;
+                    
+                    // construct MST starting from ds graph
+                    compute_MST(ds_graph);
+                    
+                    int index_best_ds;
+                    bool found_new_best = false;
+                   for(int i=0; i < ds.size(); i++)
                         for(int j=0; j < jobs.size(); j++)
                             if(distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE) {
-                                existing_eo = true;
-                                for(int k=0; k < ds.size(); k++)
-                                    if(k != i && distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE )
-                                        if( distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE) {//TODO no MAX_DISTANCE, but available_distance
-                                            moving_along_path = true;
-                                            ds_found_with_mst = true;
-                                            first_step_x = ds.at(k).x;
-                                            first_step_y = ds.at(k).y;
-                                            second_step_x = ds.at(i).x;
-                                            second_step_y = ds.at(i).y;
-                                        }
-                            }
-                    }
+                                ds_found_with_mst = true;
+                                if(found_new_best)  {
+                                   if(distance(ds.at(i).x, ds.at(i).y) < distance(ds.at(index_best_ds).x , ds.at(index_best_ds).y) )
+                                        index_best_ds; 
+                                } else {
+                                    found_new_best = true;
+                                    index_best_ds = i;
+                                } 
+                                break;
+                            }    
+
+                        
+                    //TODO path to wich frontier???
+
+                
+                    if(ds_found_with_mst) {
+                        if(found_new_best) {
+                            best_ds = ds.at(index_best_ds);
+                            
+                            int closest_ds_id;
+                            
+                            std::vector<int> path;
+                            find_path(ds_graph, closest_ds_id, best_ds.id, path, -1);
+                            moving_along_path = true;  
+                            
+                            //publish list of DSs
+                            
+                        }
+                        else
+                            ; //optimal ds is the old one
+                        
+                    } else
+                        ; //closest policy
+                
                 }
                 
+                else {
                 
+                    if(!moving_along_path) {
+                        int first_step_x, first_step_y, second_step_x, second_step_y;
+                        for(int i=0; i < ds.size(); i++) {
+                            bool existing_eo;
+                            for(int j=0; j < jobs.size(); j++)
+                                if(distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE) {
+                                    existing_eo = true;
+                                    for(int k=0; k < ds.size(); k++)
+                                        if(k != i && distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE )
+                                            if( distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE) {//TODO no MAX_DISTANCE, but available_distance
+                                                moving_along_path = true;
+                                                ds_found_with_mst = true;
+                                                first_step_x = ds.at(k).x;
+                                                first_step_y = ds.at(k).y;
+                                                second_step_x = ds.at(i).x;
+                                                second_step_y = ds.at(i).y;
+                                            }
+                                }
+                        }
+                    
+                    if(ds_found_with_mst) {
+                        moving_along_path = true;  
+                    
+                        adhoc_communication::MmListOfPoints msg_path; //publish list of DS
+                        msg_path.positions[0].x = 0;
+                        msg_path.positions[0].y = 0;
+                        msg_path.positions[1].x = 0;
+                        msg_path.positions[1].y = 0;
+                        
+                        //TODO publish
+                        
+                    } else
+                        ; //closest policy
+                    
+                    }
+
+
+               
                 
+                }
                 
-                if(ds_found_with_mst) {
-                    adhoc_communication::MmListOfPoints msg_path; //publish list of DS
-                    msg_path.positions[0].x = 0;
-                    msg_path.positions[0].y = 0;
-                    msg_path.positions[1].x = 0;
-                    msg_path.positions[1].y = 0;
-                }else
-                    ; //closest policy
+
             
             
             }
@@ -930,7 +970,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) //TODO
                              //TODO(improv) only if the robot is not already taking part to an auction...
     }
     else if (msg.get()->state == fully_charged ||
-             msg.get()->state == exploring)
+             msg.get()->state == exploring ||
+             msg.get()->state == leaving_ds)
     {
         if(robot_state == charging)
             set_target_ds_vacant(true);
@@ -1477,7 +1518,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
 
         /* If the robot is going to or already charging, or if it is going to check already checking for vacancy, it is (or may be, or will be) occupying the DS */ 
         if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-            robot_state == checking_vacancy)
+            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         {
         
             /* Print some debut text */
@@ -1485,6 +1526,8 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
                 ROS_ERROR("\n\t\e[1;34mI'm using / going to use that DS!!!!\e[0m");
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
                 ROS_ERROR("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
+            else if (robot_state == fully_charged || robot_state == leaving_ds)
+                 ROS_ERROR("\n\t\e[1;34mI'm leaving the DS, jsut wait a sec...\e[0m");
             
             /* Reply to the robot that asked for the check, telling it that the DS is occupied */
             adhoc_communication::SendEmDockingStation srv_msg;
@@ -1531,20 +1574,25 @@ void docking::update_robot_state() //TODO(minor) simplify
             if(lost_own_auction) {
                 /* Notify explorer node about the lost auction */
                 pub_lost_own_auction.publish(msg);
-            }
-            else {
-            //TODO(minor) very bad also here...
+
                 ROS_ERROR("\n\t\e[1;34m lost: reset periodic timer \e[0m");
                 timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true); 
                 timer_restart_auction.start();
             }
+            
+            /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was recharging, it has to leave the docking station) */
+            else
+                pub_lost_other_robot_auction.publish(msg);
         }
 
-        /* If the robot is the winner of at least one auction, notify explorer */
-        else if (auction_winner)
+        /* Robot is the winner of at least one auction, notify explorer */
+        else
         {
+            /* If the robot is already approaching a DS to recharge, if it is already charging, etc., ignore the fact that meanwhile it has won another auction. 
+             *
+             * This check (i.e., the if condition) is necessary because, while moving toward the DS, the robot could have changed its currently optimal DS and it could have also taken part to an auction for this new DS and won it; without the check the explorer node would be notified for a change of target DS even if the robot is still approaching the old one, which could cause problems when the robot state changes from checking_vacancy to going_charging, since it would move to the new DS without doing again the vacancy check (this is because the move_robot() function in explorer node uses the coordinates of the currently set target DS when the robot wants to reach a DS). */
             if (robot_state != charging || robot_state != going_charging || robot_state != going_checking_vacancy ||
-                robot_state != checking_vacancy)  // TODO really necessary??? i don't think so...
+                robot_state != checking_vacancy)
             {
                 /* Since there are no more pending auction, we can update the DS that is targetted by the robot */
                 target_ds = next_target_ds;  // TODO but what if the robot is already charging at a certain DS which is
@@ -1558,21 +1606,9 @@ void docking::update_robot_state() //TODO(minor) simplify
                 
                 /* Notify explorer node about the victory */
                 pub_won_auction.publish(msg);  // TODO it is important that this is after the other pub!!!!
-            }
+            } 
             else
-                ROS_ERROR("Robot is already approaching DS to recharge/check vacancy");
-
-        /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was
-         * recharging, it has to leave the docking station) */
-        }
-        else if (lost_other_robot_auction)
-        {
-            /* Since there are no more pending auction, we can update the DS that is targetted by the robot */
-            target_ds = next_target_ds;
-            
-            /* Notify explorer node about the lost auction */
-            pub_lost_other_robot_auction.publish(msg);
-            
+                ROS_ERROR("The robot has already won an auction: ignore the result of the most recent auction");
         }
 
         /* Reset all the variables that are used to keep information about the auctions results (i.e., about the next
@@ -1737,17 +1773,28 @@ int docking::printMST(int parent[], int n, int graph[V][V])
       ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
 }
 
+/* Recursive version of depth-first search for undirected trees. 
+Since the tree is undirected, the algorithm needs to pass to the recursive call the node of the tree on which it is at the moment, to avoid that the recursive call will "backtrack" by selecting this node. 
+*/
 bool docking::find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node) {
+    
+    /* Loop on all the node of the tree */
     for(int j=0; j < V; j++) 
-        if(mst[start][j] == 1 && j != prev_node) {
+    
+        /* Check if there is an edge from node 'start' to node 'j', and check if node 'j' is not the node just visited in the previous step of the recursive descending */
+        if(mst[start][j] == 1 && j != prev_node)
+        
+            /* If 'j' is the searched node ('target'), or if from 'j' there is a path that leads to 'target', we have to store 'j' as one of the node that must be visited to reach 'target' ('j' could be 'target' itself, but of course this is not a problem, since we have to visit 'target' to reach it), and then return true to tell the caller that a path to 'target' was found */
             if(j == target || find_path(mst, j, target, path, start)) {
                 path.push_back(j);
                 return true; 
             }
-        }
+        
+     /* If, even after considering all the node of the tree, we have not been able to find one that is connected to 'start' and from which it is possible to find a path leading to 'target', it means that no path from 'start' to 'target' exists: return false */
      return false;
 }
 
+/* Callback function to notify docking that explorer has travelled the whole path that leads to the target DS */ //TODO(minor) this is not really necessary, since we can check when the robot state becomes exploring/fully_charged/leaving_ds again...
 void docking::moving_along_path_callback(std_msgs::Empty msg) { //TODO(minor) better management of the opportune strategy
     moving_along_path = false;
 }

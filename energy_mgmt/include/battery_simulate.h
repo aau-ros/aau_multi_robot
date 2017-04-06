@@ -182,8 +182,9 @@ private:
                                                    // i.e., it is waiting information from the other robots
                                                    // about the state of the DS
         moving_to_frontier_before_going_charging,  // TODO hmm...
-        moving_to_frontier                         // the robot has selected the next frontier to be
+        moving_to_frontier,                         // the robot has selected the next frontier to be
                                                    // reached, and it is moving toward it
+        leaving_ds                                 //the robot was recharging, but another robot stopped                                           
     };
     
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
