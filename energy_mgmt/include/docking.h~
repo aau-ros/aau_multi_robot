@@ -379,9 +379,7 @@ private:
     
     void moving_along_path_callback(std_msgs::Empty msg);
     
-    enum ds_state_t {
-        
-    }
+    enum ds_state_t {vacant, occupied, assigned};
 
 };
 

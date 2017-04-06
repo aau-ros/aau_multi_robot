@@ -82,7 +82,7 @@ private:
     void cb_robots(const adhoc_communication::EmRobot::ConstPtr& msg);
     void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg);
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg);
-    void cb_auction(const adhoc_communication::EmAuction::ConstPtr& msg);
+    void cb_new_auction(const adhoc_communication::EmAuction::ConstPtr& msg);
 
     /**
      * Get the likelihood value as a linear combination of the values l1 to l4.

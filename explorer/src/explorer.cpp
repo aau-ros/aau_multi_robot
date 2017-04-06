@@ -2237,7 +2237,7 @@ class Explorer
             need_to_recharge = true;
             
         robot_state::GetRobotState srv;
-        sc_get_robot_state.call(srv);
+        //sc_get_robot_state.call(srv);
   
     }
 
