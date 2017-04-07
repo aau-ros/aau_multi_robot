@@ -22,8 +22,8 @@
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
   <!-- Authors do not have to be maintianers, but could be -->
-  <author email="micha.rappaport@aau.at">Micha Rappaport</author>
   <author email="fabrizio1.casati@mail.polimi.it">Fabrizio Casati</author>
+  <author email="micha.rappaport@aau.at">Micha Rappaport</author>
   <author email="sfillafe@edu.aau.at">Stefan Fillafer</author>
 
   <!-- The *_depend tags are used to specify dependencies -->

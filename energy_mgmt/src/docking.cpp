@@ -272,21 +272,16 @@ void docking::compute_optimal_ds()
         {
             bool found_vacant_ds = false;
             std::vector<ds_t>::iterator it;
-            
             double min_dist = distance(best_ds->x, best_ds->y);
-            //ROS_ERROR("current best_ds: ds%d with distance %f", best_ds->id, min_dist);
-            //ROS_ERROR("size: %lu", ds.size());
             for (it = ds.begin(); it != ds.end(); it++) {
                 if ((*it).vacant)
                 {
                     found_vacant_ds = true;
-                    //ROS_ERROR("ds%d is vacant!", (*it).id);
                     
                     if(best_ds->vacant)
                     {
     
                         double dist = distance((*it).x, (*it).y);
-                        //ROS_ERROR("%f", dist);
                         if ( dist < min_dist )
                         {
                             found_new_optimal_ds = true;
