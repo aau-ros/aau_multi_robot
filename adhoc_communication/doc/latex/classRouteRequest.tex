@@ -1,0 +1,66 @@
+\hypertarget{classRouteRequest}{\section{Route\-Request Class Reference}
+\label{classRouteRequest}\index{Route\-Request@{Route\-Request}}
+}
+Inheritance diagram for Route\-Request\-:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classRouteRequest}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classRouteRequest_a69e3830a1c98ff890d1b0363410ef324}{{\bfseries Route\-Request} (std\-::string my\-\_\-hostname, std\-::string destination, uint16\-\_\-t max\-\_\-hops, bool is\-\_\-multicast)}\label{classRouteRequest_a69e3830a1c98ff890d1b0363410ef324}
+
+\item 
+\hypertarget{classRouteRequest_a523ea5e1698dfa54e63ec833054b3bf5}{{\bfseries Route\-Request} (\hyperlink{structroute__request}{route\-\_\-request} req)}\label{classRouteRequest_a523ea5e1698dfa54e63ec833054b3bf5}
+
+\item 
+\hypertarget{classRouteRequest_a6841472de2ea7b9059dc95ddda875ec5}{{\bfseries Route\-Request} (unsigned char $\ast$buffer)}\label{classRouteRequest_a6841472de2ea7b9059dc95ddda875ec5}
+
+\item 
+\hypertarget{classRouteRequest_a524f45788b485bfaf71b4fd6547d8843}{std\-::string {\bfseries get\-Request\-As\-Network\-String} (unsigned char source\-\_\-mac\mbox{[}6\mbox{]})}\label{classRouteRequest_a524f45788b485bfaf71b4fd6547d8843}
+
+\item 
+\hypertarget{classRouteRequest_abf39fb926d81d1070db943578f704c2b}{bool {\bfseries is\-Mac\-In\-Path} (unsigned char \hyperlink{structmac}{mac}\mbox{[}$\,$\mbox{]})}\label{classRouteRequest_abf39fb926d81d1070db943578f704c2b}
+
+\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classRouteRequest_a5325f0e37ac4e6098ee927c7a1db944e}{struct \hyperlink{structrreq__header}{rreq\-\_\-header} {\bfseries header\-\_\-}}\label{classRouteRequest_a5325f0e37ac4e6098ee927c7a1db944e}
+
+\item 
+\hypertarget{classRouteRequest_a3c7155a0b285f8d2d39b77f76ec3994b}{std\-::string {\bfseries hostname\-\_\-destination\-\_\-}}\label{classRouteRequest_a3c7155a0b285f8d2d39b77f76ec3994b}
+
+\item 
+\hypertarget{classRouteRequest_aadb0eeab91313d8bef7b79c847536a03}{std\-::string {\bfseries hostname\-\_\-source\-\_\-}}\label{classRouteRequest_aadb0eeab91313d8bef7b79c847536a03}
+
+\item 
+\hypertarget{classRouteRequest_a341660de5ede7819f90ddbeb846a8cd0}{std\-::list$<$ \hyperlink{structmac}{mac} $>$ {\bfseries path\-\_\-l\-\_\-}}\label{classRouteRequest_a341660de5ede7819f90ddbeb846a8cd0}
+
+\item 
+\hypertarget{classRouteRequest_a767c5db1ea47707a51ddd74ffed3a6d5}{uint16\-\_\-t {\bfseries buffer\-\_\-str\-\_\-len\-\_\-}}\label{classRouteRequest_a767c5db1ea47707a51ddd74ffed3a6d5}
+
+\item 
+\hypertarget{classRouteRequest_ad62235536e529c13904144dc7f9316d2}{bool {\bfseries correct\-\_\-crc\-\_\-}}\label{classRouteRequest_ad62235536e529c13904144dc7f9316d2}
+
+\item 
+\hypertarget{classRouteRequest_a76b50927e13bde35727f9bc1ecdd43d6}{bool {\bfseries mc\-\_\-flag\-\_\-}}\label{classRouteRequest_a76b50927e13bde35727f9bc1ecdd43d6}
+
+\end{DoxyCompactItemize}
+\subsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classRouteRequest_a7bde218383ec21dac94325fb38ccfc63}{static uint32\-\_\-t {\bfseries req\-\_\-count\-\_\-stat} = 0}\label{classRouteRequest_a7bde218383ec21dac94325fb38ccfc63}
+
+\item 
+\hypertarget{classRouteRequest_a974eb2a919005fb4e76ebd0697f77740}{static uint32\-\_\-t {\bfseries H\-E\-A\-D\-E\-R\-\_\-\-F\-I\-X\-E\-D\-\_\-\-L\-E\-N} = sizeof(\hyperlink{structeh__header}{eh\-\_\-header}) + sizeof(\hyperlink{structrreq__header}{rreq\-\_\-header})}\label{classRouteRequest_a974eb2a919005fb4e76ebd0697f77740}
+
+\end{DoxyCompactItemize}
+
+
+The documentation for this class was generated from the following files\-:\begin{DoxyCompactItemize}
+\item 
+src/Route\-Request.\-h\item 
+src/Route\-Request.\-cpp\end{DoxyCompactItemize}

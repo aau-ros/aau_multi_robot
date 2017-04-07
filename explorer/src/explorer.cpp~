@@ -1071,7 +1071,7 @@ class Explorer
                 {
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
                         QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
                     // TODO(IMPORTANT) check if the robot has not arleady won an auction meanwhile!!!!! I can do it in
                     // docking (in cb_robot) probably, and then use update inside the while loop to immediately change
                     // the state
@@ -1096,7 +1096,7 @@ class Explorer
 
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
                         QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
 
                     update_robot_state();
                 }

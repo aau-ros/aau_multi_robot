@@ -1,0 +1,125 @@
+\hypertarget{classPositionSubscriber}{\section{Position\-Subscriber Class Reference}
+\label{classPositionSubscriber}\index{Position\-Subscriber@{Position\-Subscriber}}
+}
+
+
+Subscripes to the position of the stage simulation.  
+
+
+
+
+{\ttfamily \#include $<$Position\-Subscriber.\-h$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classPositionSubscriber_acf731b94616fdc07d628d1a3da1c6e32}{Position\-Subscriber} ()
+\begin{DoxyCompactList}\small\item\em \hyperlink{classPacket}{Packet} constructor. \end{DoxyCompactList}\item 
+double \hyperlink{classPositionSubscriber_ad73f603c8e788b80f118621508371c79}{get\-Y\-Pos} ()
+\item 
+double \hyperlink{classPositionSubscriber_a60befd06f8e484b908062bef88826f24}{get\-X\-Pos} ()
+\item 
+double \hyperlink{classPositionSubscriber_af5a5c86914ccb4142d311e6af6eaa984}{calc\-Distance} (\hyperlink{classPositionSubscriber}{Position\-Subscriber} $\ast$other)
+\begin{DoxyCompactList}\small\item\em Calculates the distance between a other robot and this instance in stage. \end{DoxyCompactList}\item 
+void \hyperlink{classPositionSubscriber_a33e393de2b4a646a75898d0b84758ff9}{Subscribe} (const nav\-\_\-msgs\-::\-Odometry\-::\-Const\-Ptr \&\hyperlink{classPositionSubscriber_a6294488a471fddf065020e42d0671a23}{position})
+\begin{DoxyCompactList}\small\item\em callback method of the subscribed topic. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classPositionSubscriber_ae81bd51f15be89dab69a1c08f78d75de}{bool \hyperlink{classPositionSubscriber_ae81bd51f15be89dab69a1c08f78d75de}{initialized}}\label{classPositionSubscriber_ae81bd51f15be89dab69a1c08f78d75de}
+
+\begin{DoxyCompactList}\small\item\em Defines if the robot position has been initialized. \end{DoxyCompactList}\item 
+\hypertarget{classPositionSubscriber_a7c455ff17b92a26ca0e9d68067d5a96c}{std\-::string \hyperlink{classPositionSubscriber_a7c455ff17b92a26ca0e9d68067d5a96c}{robot\-\_\-name\-\_\-}}\label{classPositionSubscriber_a7c455ff17b92a26ca0e9d68067d5a96c}
+
+\begin{DoxyCompactList}\small\item\em Name of the robot in stage. e.\-g\-: \char`\"{}robot\-\_\-0\char`\"{}. \end{DoxyCompactList}\item 
+\hypertarget{classPositionSubscriber_a265369dc434d3fc7133eee13058db036}{uint32\-\_\-t \hyperlink{classPositionSubscriber_a265369dc434d3fc7133eee13058db036}{robot\-\_\-number\-\_\-}}\label{classPositionSubscriber_a265369dc434d3fc7133eee13058db036}
+
+\begin{DoxyCompactList}\small\item\em Number of the robot in stage. e.\-g\-: number of \char`\"{}robot\-\_\-0\char`\"{} would be \char`\"{}0\char`\"{}. \end{DoxyCompactList}\item 
+\hypertarget{classPositionSubscriber_a6294488a471fddf065020e42d0671a23}{nav\-\_\-msgs\-::\-Odometry \hyperlink{classPositionSubscriber_a6294488a471fddf065020e42d0671a23}{position}}\label{classPositionSubscriber_a6294488a471fddf065020e42d0671a23}
+
+\begin{DoxyCompactList}\small\item\em Latest position of the specific robot. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Subscripes to the position of the stage simulation. 
+
+The Position\-Subscripe class implements all function to build up a channel model in the stage simulation 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classPositionSubscriber_acf731b94616fdc07d628d1a3da1c6e32}{\index{Position\-Subscriber@{Position\-Subscriber}!Position\-Subscriber@{Position\-Subscriber}}
+\index{Position\-Subscriber@{Position\-Subscriber}!PositionSubscriber@{Position\-Subscriber}}
+\subsubsection[{Position\-Subscriber}]{\setlength{\rightskip}{0pt plus 5cm}Position\-Subscriber\-::\-Position\-Subscriber (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classPositionSubscriber_acf731b94616fdc07d628d1a3da1c6e32}
+
+
+\hyperlink{classPacket}{Packet} constructor. 
+
+Constructor without parametes. 
+
+\subsection{Member Function Documentation}
+\hypertarget{classPositionSubscriber_af5a5c86914ccb4142d311e6af6eaa984}{\index{Position\-Subscriber@{Position\-Subscriber}!calc\-Distance@{calc\-Distance}}
+\index{calc\-Distance@{calc\-Distance}!PositionSubscriber@{Position\-Subscriber}}
+\subsubsection[{calc\-Distance}]{\setlength{\rightskip}{0pt plus 5cm}double Position\-Subscriber\-::calc\-Distance (
+\begin{DoxyParamCaption}
+\item[{{\bf Position\-Subscriber} $\ast$}]{other}
+\end{DoxyParamCaption}
+)}}\label{classPositionSubscriber_af5a5c86914ccb4142d311e6af6eaa984}
+
+
+Calculates the distance between a other robot and this instance in stage. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em other} & Position\-Subscribe of the other robot \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the calculated distance 
+\end{DoxyReturn}
+\hypertarget{classPositionSubscriber_a60befd06f8e484b908062bef88826f24}{\index{Position\-Subscriber@{Position\-Subscriber}!get\-X\-Pos@{get\-X\-Pos}}
+\index{get\-X\-Pos@{get\-X\-Pos}!PositionSubscriber@{Position\-Subscriber}}
+\subsubsection[{get\-X\-Pos}]{\setlength{\rightskip}{0pt plus 5cm}double Position\-Subscriber\-::get\-X\-Pos (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classPositionSubscriber_a60befd06f8e484b908062bef88826f24}
+\begin{DoxyReturn}{Returns}
+the X coordinate of the specific robot in stage 
+\end{DoxyReturn}
+\hypertarget{classPositionSubscriber_ad73f603c8e788b80f118621508371c79}{\index{Position\-Subscriber@{Position\-Subscriber}!get\-Y\-Pos@{get\-Y\-Pos}}
+\index{get\-Y\-Pos@{get\-Y\-Pos}!PositionSubscriber@{Position\-Subscriber}}
+\subsubsection[{get\-Y\-Pos}]{\setlength{\rightskip}{0pt plus 5cm}double Position\-Subscriber\-::get\-Y\-Pos (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}\label{classPositionSubscriber_ad73f603c8e788b80f118621508371c79}
+\begin{DoxyReturn}{Returns}
+the Y coordinate of the specific robot in stage 
+\end{DoxyReturn}
+\hypertarget{classPositionSubscriber_a33e393de2b4a646a75898d0b84758ff9}{\index{Position\-Subscriber@{Position\-Subscriber}!Subscribe@{Subscribe}}
+\index{Subscribe@{Subscribe}!PositionSubscriber@{Position\-Subscriber}}
+\subsubsection[{Subscribe}]{\setlength{\rightskip}{0pt plus 5cm}void Position\-Subscriber\-::\-Subscribe (
+\begin{DoxyParamCaption}
+\item[{const nav\-\_\-msgs\-::\-Odometry\-::\-Const\-Ptr \&}]{position}
+\end{DoxyParamCaption}
+)}}\label{classPositionSubscriber_a33e393de2b4a646a75898d0b84758ff9}
+
+
+callback method of the subscribed topic. 
+
+Refreshes the robot position of the instance.
+
+
+\begin{DoxyParams}{Parameters}
+{\em position} & Current robot position \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\-:\begin{DoxyCompactItemize}
+\item 
+src/\hyperlink{PositionSubscriber_8h}{Position\-Subscriber.\-h}\item 
+src/Position\-Subscriber.\-cpp\end{DoxyCompactItemize}

@@ -22,7 +22,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     /* Initialize robot name */
     if (robot_prefix.empty())
     {
-        /* Empty_prefix: hardware platform (i.e., real experiment) */
+        /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
         char hostname[1024];
         hostname[1023] = '\0';
         gethostname(hostname, 1023);
@@ -33,7 +33,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     }
     else
     {
-        /* Prefix is set: simulation */
+        /* Prefix is set: we are in a simulation */
         robot_name = robot_prefix;  // TODO(minor) we need this? and are we use taht it must be equal to robot_refix
                                     // (there is an unwanted '/' maybe...)
 
@@ -225,11 +225,10 @@ void docking::compute_optimal_ds()
 
     /* Check if a new DS can be discovered */
     std::vector<ds_t>::iterator it;
-    double dist;
     for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
         /* Compute distance from robot */
-        dist = distance((*it).x, (*it).y);
+        double dist = distance((*it).x, (*it).y);
 
         /* If the DS is inside a fiducial laser range, it can be considered discovered */
         if (dist > 0 && dist < LASER_RANGE)
@@ -315,27 +314,47 @@ void docking::compute_optimal_ds()
                     if(count > count_max)
                 }
             */
-            ds_t best_ds_opp;
-            bool found_ds = true;
-            int dist_min = 100000;  // TODO
-            for (int i = 0, count_max = 0; i < ds.size(); i++)
-            {
-                for (int j = 0, count = 0; j < jobs.size(); j++)
+            
+            ds_t *best_ds_opp;
+            
+            double min_dist;            
+            bool current_optimal_ds_has_eo = false;
+            for (int j = 0; j < jobs.size(); j++)
                 {
-                    dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    if (dist < MAX_DISTANCE)
+                    double dist = distance(best_ds->x, best_ds->y, jobs.at(j).x, jobs.at(j).y);
+                    if (dist < MAX_DISTANCE) //TODO not MAX_DIST
                     {
-                        found_ds = true;
-                        if (distance(ds.at(i).x, ds.at(i).y) < dist_min)
+                        min_dist = distance(best_ds->x, best_ds->y);
+                        current_optimal_ds_has_eo = true;
+                        break;
+                    
+                    }
+            }
+                    
+            if(!current_optimal_ds_has_eo)
+                min_dist = numeric_limits<int>::max();
+            
+            bool found_reachable_ds_with_eo = false;
+            for (int i = 0; i < ds.size(); i++)
+            {
+                for (int j = 0; j < jobs.size(); j++)
+                {
+                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                    double dist2 = distance(ds.at(i).x, ds.at(i).y);
+                    if (dist < MAX_DISTANCE && dist2 < MAX_DISTANCE) //TODO not MAX_DIST
+                    {
+                        found_reachable_ds_with_eo = true;
+                        
+                        if( dist < min_dist) //TODO is what the paper ask?
                         {
-                            dist_min = distance(ds.at(i).x, ds.at(i).y);
+                            min_dist = distance(ds.at(i).x, ds.at(i).y);
                             best_ds = &ds.at(i);
                             found_new_optimal_ds = true;
                         }
                     }
                 }
             }
-            if (!found_ds)
+            if (!found_reachable_ds_with_eo)
             {
                 bool ds_found_with_mst = false;
 
@@ -366,7 +385,6 @@ void docking::compute_optimal_ds()
                         for (int j = 0; j < jobs.size(); j++)
                             if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
                             {
-                                ds_found_with_mst = true;
                                 if (found_new_best)
                                 {
                                     if (distance(ds.at(i).x, ds.at(i).y) <
@@ -381,27 +399,50 @@ void docking::compute_optimal_ds()
                                 break;
                             }
 
-                    // TODO path to wich frontier???
+                    // TODO path to wich frontier??? closest DS with EOs
+                    double min_dist = numeric_limits<int>::max();
+                    ds_t *min_ds;
+                    for (int i = 0; i < ds.size(); i++)
+                    {
+                        for (int j = 0; j < jobs.size(); j++)
+                        {
+                            double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                            
+                            if (dist < MAX_DISTANCE) //TODO not MAX_DIST
+                            {
+                                double dist2 = distance(ds.at(i).x, ds.at(i).y);
+                                
+                                if( dist2 < min_dist) //TODO is what the paper ask?
+                                {
+                                    min_dist = dist2;
+                                    min_ds = &ds.at(i);
+                                    found_new_optimal_ds = true;
+                                }
+                            }
+                        }
+                    }
+                    
+                    std::vector<int> path;
+                    std::vector<std::vector<bool> > tree;
+                    ds_found_with_mst = find_path(tree, 1, 1, path);
+                            
 
                     if (ds_found_with_mst)
                     {
                         if (found_new_best)
                         {
-                            best_ds = &ds.at(index_best_ds);
+                            best_ds = min_ds;
 
                             int closest_ds_id;
 
-                            std::vector<int> path;
-                            // find_path(ds_graph, closest_ds_id, best_ds->id, path);
                             moving_along_path = true;
 
                             // publish list of DSs
                         }
-                        else
-                            ;  // optimal ds is the old one
                     }
                     else
-                        ;  // closest policy
+                        // closest policy
+                        found_new_optimal_ds = compute_closest_ds();
                 }
 
                 else
@@ -453,27 +494,15 @@ void docking::compute_optimal_ds()
         {
             bool existing_eo = false;
             for (int i = 0; i < jobs.size(); i++)
-                // TODO use disjkstra and not use distance_close
-                if ((best_ds->x - jobs.at(i).x) * (best_ds->x - jobs.at(i).x) +
-                        (best_ds->y - jobs.at(i).y) * (best_ds->y - jobs.at(i).y) <
-                    distance_close)
+                if ( distance(best_ds->x, best_ds->y, jobs.at(i).x, jobs.at(i).y) < distance_close)
                 {
                     existing_eo = true;
                     break;
                 }
             if (!existing_eo)
             {
-                // closest //TODO use function
-                std::vector<ds_t>::iterator it = ds.begin();
-                for (; it != ds.end(); it++)
-
-                    // TODO Disjkstra!!!
-                    if ((best_ds->x - robot_x) * (best_ds->x - robot_x) + (best_ds->y - robot_y) * (best_ds->y - robot_y) >
-                        ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y))
-                    {
-                        found_new_optimal_ds = true;
-                        best_ds = &(*it);
-                    }
+                //closest
+                found_new_optimal_ds = compute_closest_ds();
             }
         }
         else if (ds_selection_policy == 4)  // flocking //TODO check and complete
@@ -567,10 +596,8 @@ void docking::compute_optimal_ds()
         if (found_new_optimal_ds)
         {
             ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", best_ds->id, best_ds->x, best_ds->y);
-            geometry_msgs::PointStamped msg1;
-            msg1.point.x = best_ds->x;
-            msg1.point.y = best_ds->y;
-            // pub_new_target_ds.publish(msg1); //TODO
+            ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x, best_ds->y);
+
 
             update_l4();
         }
@@ -733,14 +760,15 @@ void docking::update_l3()
 
 void docking::update_l4()
 {
+    ROS_ERROR("UPDATING l4");
+
     // get distance to docking station
-    int dist_ds = -1;
+    double dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
         if (ds[i].id == target_ds->id)
         {
-            // dist_ds = distance(ds[i].x, ds[i].y);
-            dist_ds = distance(ds[i].x, ds[i].y, true);  // TODO
+            dist_ds = distance(ds[i].x, ds[i].y);
             break;
         }
     }

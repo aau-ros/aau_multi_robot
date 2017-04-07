@@ -1,0 +1,105 @@
+\hypertarget{classMcRouteActivationFrame}{\section{Mc\-Route\-Activation\-Frame Class Reference}
+\label{classMcRouteActivationFrame}\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}}
+}
+Inheritance diagram for Mc\-Route\-Activation\-Frame\-:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classMcRouteActivationFrame}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classMcRouteActivationFrame_a2a6ad3848eb8318aa6eb332552cc4f9a}{Mc\-Route\-Activation\-Frame} (unsigned char $\ast$next\-\_\-hop, std\-::string mc\-\_\-g, uint32\-\_\-t route\-\_\-id, std\-::string source)
+\begin{DoxyCompactList}\small\item\em Constructs the Mc\-Maintenance\-Frame on the sender side. \end{DoxyCompactList}\item 
+\hyperlink{classMcRouteActivationFrame_af5a50874d6ad2a5c28546fff47b5f35b}{Mc\-Route\-Activation\-Frame} (unsigned char $\ast$buffer)
+\begin{DoxyCompactList}\small\item\em Constructs the Mc\-Maintenance\-Frame on the receiver side. \end{DoxyCompactList}\item 
+std\-::string \hyperlink{classMcRouteActivationFrame_ad06e4b44308c0bdc6af1709665ecf4bf}{get\-Frame\-As\-Network\-String} (unsigned char source\mbox{[}6\mbox{]})
+\begin{DoxyCompactList}\small\item\em Returns a Mc\-Maintenance\-Frame as a C++ string. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classMcRouteActivationFrame_a40acfccedd076c1be9f923a8f4dbee78}{struct \hyperlink{structmc__act__header}{mc\-\_\-act\-\_\-header} \hyperlink{classMcRouteActivationFrame_a40acfccedd076c1be9f923a8f4dbee78}{header\-\_\-}}\label{classMcRouteActivationFrame_a40acfccedd076c1be9f923a8f4dbee78}
+
+\begin{DoxyCompactList}\small\item\em Struct which stores all fixed length header information of the Mc\-Maintenance\-Frame. \end{DoxyCompactList}\item 
+\hypertarget{classMcRouteActivationFrame_a5e542ea32c6d081c567ecae45b5f1412}{std\-::string \hyperlink{classMcRouteActivationFrame_a5e542ea32c6d081c567ecae45b5f1412}{mc\-\_\-group\-\_\-}}\label{classMcRouteActivationFrame_a5e542ea32c6d081c567ecae45b5f1412}
+
+\begin{DoxyCompactList}\small\item\em Name of the multicast group. \end{DoxyCompactList}\item 
+\hypertarget{classMcRouteActivationFrame_a81d1b380baec0e1f99972fadc1850643}{std\-::string \hyperlink{classMcRouteActivationFrame_a81d1b380baec0e1f99972fadc1850643}{hostname\-\_\-source\-\_\-}}\label{classMcRouteActivationFrame_a81d1b380baec0e1f99972fadc1850643}
+
+\begin{DoxyCompactList}\small\item\em Name of the multicast group. \end{DoxyCompactList}\item 
+\hypertarget{classMcRouteActivationFrame_aedadc5847e3cfa92f24aef02b019c5f1}{uint16\-\_\-t {\bfseries buffer\-\_\-str\-\_\-len\-\_\-}}\label{classMcRouteActivationFrame_aedadc5847e3cfa92f24aef02b019c5f1}
+
+\end{DoxyCompactItemize}
+\subsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classMcRouteActivationFrame_a73efc6b0a072676334b1a1336bf121b2}{static uint32\-\_\-t \hyperlink{classMcRouteActivationFrame_a73efc6b0a072676334b1a1336bf121b2}{H\-E\-A\-D\-E\-R\-\_\-\-F\-I\-X\-E\-D\-\_\-\-L\-E\-N} = sizeof (\hyperlink{structeh__header}{eh\-\_\-header}) + sizeof (\hyperlink{structmc__act__header}{mc\-\_\-act\-\_\-header})}\label{classMcRouteActivationFrame_a73efc6b0a072676334b1a1336bf121b2}
+
+\begin{DoxyCompactList}\small\item\em The length of the beacon header (34 bytes) \end{DoxyCompactList}\item 
+\hypertarget{classMcRouteActivationFrame_a768920bc0f5d945068dc85ab3d3c8747}{static uint32\-\_\-t {\bfseries stat\-\_\-id\-\_\-count} = 0}\label{classMcRouteActivationFrame_a768920bc0f5d945068dc85ab3d3c8747}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classMcRouteActivationFrame_a2a6ad3848eb8318aa6eb332552cc4f9a}{\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}!Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}}
+\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}!McRouteActivationFrame@{Mc\-Route\-Activation\-Frame}}
+\subsubsection[{Mc\-Route\-Activation\-Frame}]{\setlength{\rightskip}{0pt plus 5cm}Mc\-Route\-Activation\-Frame\-::\-Mc\-Route\-Activation\-Frame (
+\begin{DoxyParamCaption}
+\item[{unsigned char $\ast$}]{next\-\_\-hop, }
+\item[{std\-::string}]{mc\-\_\-g, }
+\item[{uint32\-\_\-t}]{route\-\_\-id, }
+\item[{std\-::string}]{source}
+\end{DoxyParamCaption}
+)}}\label{classMcRouteActivationFrame_a2a6ad3848eb8318aa6eb332552cc4f9a}
+
+
+Constructs the Mc\-Maintenance\-Frame on the sender side. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em route} & The route the frame will take \\
+\hline
+{\em activate\textbackslash{}xrefitem} & todo 1. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classMcRouteActivationFrame_af5a50874d6ad2a5c28546fff47b5f35b}{\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}!Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}}
+\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}!McRouteActivationFrame@{Mc\-Route\-Activation\-Frame}}
+\subsubsection[{Mc\-Route\-Activation\-Frame}]{\setlength{\rightskip}{0pt plus 5cm}Mc\-Route\-Activation\-Frame\-::\-Mc\-Route\-Activation\-Frame (
+\begin{DoxyParamCaption}
+\item[{unsigned char $\ast$}]{buffer}
+\end{DoxyParamCaption}
+)}}\label{classMcRouteActivationFrame_af5a50874d6ad2a5c28546fff47b5f35b}
+
+
+Constructs the Mc\-Maintenance\-Frame on the receiver side. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em buffer} & The received network buffer \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classMcRouteActivationFrame_ad06e4b44308c0bdc6af1709665ecf4bf}{\index{Mc\-Route\-Activation\-Frame@{Mc\-Route\-Activation\-Frame}!get\-Frame\-As\-Network\-String@{get\-Frame\-As\-Network\-String}}
+\index{get\-Frame\-As\-Network\-String@{get\-Frame\-As\-Network\-String}!McRouteActivationFrame@{Mc\-Route\-Activation\-Frame}}
+\subsubsection[{get\-Frame\-As\-Network\-String}]{\setlength{\rightskip}{0pt plus 5cm}std\-::string Mc\-Route\-Activation\-Frame\-::get\-Frame\-As\-Network\-String (
+\begin{DoxyParamCaption}
+\item[{unsigned char}]{source\mbox{[}6\mbox{]}}
+\end{DoxyParamCaption}
+)}}\label{classMcRouteActivationFrame_ad06e4b44308c0bdc6af1709665ecf4bf}
+
+
+Returns a Mc\-Maintenance\-Frame as a C++ string. 
+
+Converts the Maintenence\-Frame into a C++ string to be written to the socket. \begin{DoxyReturn}{Returns}
+Mc\-Maintenance\-Frame as C++ string. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\-:\begin{DoxyCompactItemize}
+\item 
+src/Mc\-Route\-Activation\-Frame.\-h\item 
+src/Mc\-Route\-Activation\-Frame.\-cpp\end{DoxyCompactItemize}

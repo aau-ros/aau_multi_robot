@@ -1,0 +1,46 @@
+\hypertarget{classEthernetFrame}{\section{Ethernet\-Frame Class Reference}
+\label{classEthernetFrame}\index{Ethernet\-Frame@{Ethernet\-Frame}}
+}
+Inheritance diagram for Ethernet\-Frame\-:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=12.000000cm]{classEthernetFrame}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{classEthernetFrame_a2645ddba8bd1082d6386d77b124da9d3}{Get\-Crc32} (const std\-::string \&string)
+\begin{DoxyCompactList}\small\item\em Calculates the Crc32 of the Mc\-Maintenance\-Frame Is needed to detect corrupt frames caused by transmission errors. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\hypertarget{classEthernetFrame_a04714f785da3194515926cf43625c0f5}{struct \hyperlink{structeh__header}{eh\-\_\-header} \hyperlink{classEthernetFrame_a04714f785da3194515926cf43625c0f5}{eh\-\_\-h\-\_\-}}\label{classEthernetFrame_a04714f785da3194515926cf43625c0f5}
+
+\begin{DoxyCompactList}\small\item\em Struct of the layer 2 Ethernet header. Includes\-: source mac, destination mac an protocol type. \end{DoxyCompactList}\item 
+\hypertarget{classEthernetFrame_a80d45f84327aba98dc33618c5774e345}{bool {\bfseries correct\-\_\-crc\-\_\-}}\label{classEthernetFrame_a80d45f84327aba98dc33618c5774e345}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classEthernetFrame_a2645ddba8bd1082d6386d77b124da9d3}{\index{Ethernet\-Frame@{Ethernet\-Frame}!Get\-Crc32@{Get\-Crc32}}
+\index{Get\-Crc32@{Get\-Crc32}!EthernetFrame@{Ethernet\-Frame}}
+\subsubsection[{Get\-Crc32}]{\setlength{\rightskip}{0pt plus 5cm}int Ethernet\-Frame\-::\-Get\-Crc32 (
+\begin{DoxyParamCaption}
+\item[{const std\-::string \&}]{string}
+\end{DoxyParamCaption}
+)}}\label{classEthernetFrame_a2645ddba8bd1082d6386d77b124da9d3}
+
+
+Calculates the Crc32 of the Mc\-Maintenance\-Frame Is needed to detect corrupt frames caused by transmission errors. 
+
+\begin{DoxyReturn}{Returns}
+the Crc32 checksum of a Mc\-Maintenance\-Frame. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files\-:\begin{DoxyCompactItemize}
+\item 
+src/Ethernet\-Frame.\-h\item 
+src/Ethernet\-Frame.\-cpp\end{DoxyCompactItemize}

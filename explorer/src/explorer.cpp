@@ -1459,7 +1459,7 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,exploration_travel_path_global,available_distance,global_"
-                  "map_progress,locbal_map_progress,battery_state,recharge_cycles,"
+                  "map_progress,local_map_progress,battery_state,recharge_cycles,"
                   "energy_consumption,frontier_selection_strategy" << std::endl;
         fs_csv.close();
 
