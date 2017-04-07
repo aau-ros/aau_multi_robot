@@ -32,7 +32,7 @@
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
-#include <robot_state/GetRobotState.h>
+//#include <robot_state/GetRobotState.h>
 
 //#define PROFILE
 
@@ -67,7 +67,7 @@ class Explorer
     // TODO(minor) move in better place
     bool ready, moving_along_path;
     int my_counter, ds_path_counter;
-    ros::Publisher pub_robot, pub_moving_along_path;
+    ros::Publisher pub_robot;
     int path[2][2];
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     ros::ServiceClient sc_get_robot_state;
@@ -135,11 +135,8 @@ class Explorer
 
         pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);  // to publish robot state updates
 
-        pub_moving_along_path = nh.advertise<std_msgs::Empty>(
-            "moving_along_path", 100);  // to publish when the path to reach a far DS has been completed travelled
-
         ros::NodeHandle n;
-        sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+        //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
         /* Load parameters */
         nh.param("frontier_selection", frontier_selection, 1);
@@ -1243,6 +1240,189 @@ class Explorer
             ROS_INFO("DONE EXPLORING");
         }
     }
+    
+    void update_robot_state_2(int new_state)
+    {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
+
+        ROS_DEBUG("State transiction: %s -> %s", get_text_for_enum(robot_state).c_str(),
+                  get_text_for_enum(new_state).c_str());
+        ROS_ERROR("\e[1;34m State transiction: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(),
+                  get_text_for_enum(new_state).c_str());
+        adhoc_communication::EmRobot msg;
+        msg.state = new_state;
+        robot_state = static_cast<state_t>(new_state);
+        pub_robot.publish(msg);
+
+        if (robot_state == auctioning)
+            need_to_recharge = true;
+        // else if(robot_state == exploring || robot_state == fully_charged)
+        else if (robot_state == leaving_ds || robot_state == fully_charged)
+            need_to_recharge = false;
+
+        //robot_state::GetRobotState srv;
+        // sc_get_robot_state.call(srv);
+    }
+
+    void update_robot_state()
+    {
+        // TODO ???
+        ros::spinOnce();
+
+        /* If the next state is equal to the current one, do nothing */
+        if (robot_state_next == current_state)
+            ROS_DEBUG("Next state is equal to the current state: do nothing");
+
+        // TODO(IMPORTANT) does this works???
+        /* If a robot has already begun charging, and then discover that it has lost
+         * its own auction (which means that meanwhile the auction of another player
+         * was going on, it started its own auction, but before taht its own auction
+         * was concluded, he discovered itself winner of the other auction and went
+         * to occupy the DS; of course this could happen only if the auction timeout
+         * is quite high: with a low timeout this scenario is not possible */
+        // TODO the robot after having discovered that the DS is free should check
+        // its state to see if instead it shouldn't put itself in in_queue state
+        // maybe...
+        else if (robot_state_next == going_queue_next && robot_state == charging)
+        {
+            ROS_ERROR("STRANGE CASE!!!!!!!!!!");
+            // TODO opportune
+            if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
+                                                                // reach the next DS with the current state of charge???
+                if (ds_path_counter < 2)
+                {
+                    target_ds_x = path[ds_path_counter][0];
+                    target_ds_y = path[ds_path_counter][1];
+                    ds_path_counter++;
+                    update_robot_state_2(going_checking_vacancy);
+                }
+                else
+                {
+                    moving_along_path = false;
+                    // update_robot_state_2(exploring);
+                    update_robot_state_2(leaving_ds);
+                }
+            else
+            {
+                // update_robot_state_2(exploring);
+                update_robot_state_2(leaving_ds);
+            }
+            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+        }
+
+        /* If the robot has completed the recharging process, set it to
+           fully_charged */
+        else if (robot_state_next == fully_charged_next)
+        {
+            ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
+            // TODO opportune
+            if (DS_SELECTION_POLICY == 2 && moving_along_path)
+                if (ds_path_counter < 2)
+                {
+                    target_ds_x = path[ds_path_counter][0];
+                    target_ds_y = path[ds_path_counter][1];
+                    ds_path_counter++;
+                    update_robot_state_2(going_checking_vacancy);
+                }
+                else
+                {
+                    moving_along_path = false;
+                    update_robot_state_2(fully_charged);
+                }
+            else
+            {
+                update_robot_state_2(fully_charged);
+            }
+        }
+
+        /* */
+        else if (robot_state_next == going_charging_next)
+        {
+            if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
+                robot_state != checking_vacancy)
+            {
+                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
+                // robot_state = going_charging;
+                update_robot_state_2(going_checking_vacancy);
+            }
+            else
+                ;  // ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
+        }
+
+        /* Check if the robot should go in a queue */
+        else if (robot_state_next == going_queue_next)
+        {
+            /* If it is already in a queue, just signal that it is in a queue, to make
+             * the rescheduling timer in docking restart */
+            // TODO hmm... if the timer instead is not blocked in docking, it is not
+            // necessary...
+            if (robot_state == in_queue)
+            {
+                ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
+            }
+
+            /* If the robot is already preparing to enter in a queue, do nothing */
+            else if (robot_state == going_in_queue)
+            {
+                ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
+            }
+
+            /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new
+             * auction */
+            // TODO something probably went wrong in this case
+            else if (robot_state == going_charging)
+            {
+                ROS_ERROR("\n\t\e[1;34m i want to charge a little, first... \e[0m");
+            }
+
+            /* Otherwise, really prepare the robot to go in queue */
+            else
+            {
+                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
+                update_robot_state_2(going_in_queue);
+            }
+        }
+
+        /* */
+        else if (robot_state_next == exploring_next)
+        {
+            /* If the robot is recharing, it must stop */
+            if (robot_state == charging)
+            {
+                // TODO opportune
+                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+                if (DS_SELECTION_POLICY == 2 && moving_along_path)
+                    if (ds_path_counter < 2)
+                    {
+                        if (exploration->distance_from_robot(path[ds_path_counter + 1][0],
+                                                             path[ds_path_counter + 1][1]) <
+                            available_distance)  // TODO(IMPORTANT) safety coefficient
+                        {
+                            ds_path_counter++;
+                            target_ds_x = path[ds_path_counter][0];
+                            target_ds_y = path[ds_path_counter][1];
+                            update_robot_state_2(going_checking_vacancy);
+                        }
+                        else
+                            update_robot_state_2(going_in_queue);  // TODO going_in_queue or in_queue
+                    }
+                    else
+                    {
+                        moving_along_path = false;
+                        std_msgs::Empty path_msg;
+                        // update_robot_state_2(exploring);
+                        update_robot_state_2(leaving_ds);
+                    }
+                else
+                {
+                    // update_robot_state_2(exploring);
+                    update_robot_state_2(leaving_ds);
+                }
+            }
+        }
+
+        /* Reset next state */
+        robot_state_next = current_state;
+    }
 
     void frontiers()
     {
@@ -2248,190 +2428,6 @@ class Explorer
             return false;
         res.distance = exploration->distance_from_robot(req.x, req.y);
         return true;
-    }
-
-    void update_robot_state_2(int new_state)
-    {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-
-        ROS_DEBUG("State transiction: %s -> %s", get_text_for_enum(robot_state).c_str(),
-                  get_text_for_enum(new_state).c_str());
-        ROS_ERROR("\e[1;34m State transiction: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(),
-                  get_text_for_enum(new_state).c_str());
-        adhoc_communication::EmRobot msg;
-        msg.state = new_state;
-        robot_state = static_cast<state_t>(new_state);
-        pub_robot.publish(msg);
-
-        if (robot_state == auctioning)
-            need_to_recharge = true;
-        // else if(robot_state == exploring || robot_state == fully_charged)
-        else if (robot_state == leaving_ds || robot_state == fully_charged)
-            need_to_recharge = false;
-
-        robot_state::GetRobotState srv;
-        // sc_get_robot_state.call(srv);
-    }
-
-    void update_robot_state()
-    {
-        // TODO ???
-        ros::spinOnce();
-
-        /* If the next state is equal to the current one, do nothing */
-        if (robot_state_next == current_state)
-            ROS_DEBUG("Next state is equal to the current state: do nothing");
-
-        // TODO(IMPORTANT) does this works???
-        /* If a robot has already begun charging, and then discover that it has lost
-         * its own auction (which means that meanwhile the auction of another player
-         * was going on, it started its own auction, but before taht its own auction
-         * was concluded, he discovered itself winner of the other auction and went
-         * to occupy the DS; of course this could happen only if the auction timeout
-         * is quite high: with a low timeout this scenario is not possible */
-        // TODO the robot after having discovered that the DS is free should check
-        // its state to see if instead it shouldn't put itself in in_queue state
-        // maybe...
-        else if (robot_state_next == going_queue_next && robot_state == charging)
-        {
-            ROS_ERROR("STRANGE CASE!!!!!!!!!!");
-            // TODO opportune
-            if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
-                                                                // reach the next DS with the current state of charge???
-                if (ds_path_counter < 2)
-                {
-                    target_ds_x = path[ds_path_counter][0];
-                    target_ds_y = path[ds_path_counter][1];
-                    ds_path_counter++;
-                    update_robot_state_2(going_checking_vacancy);
-                }
-                else
-                {
-                    moving_along_path = false;
-                    // update_robot_state_2(exploring);
-                    update_robot_state_2(leaving_ds);
-                }
-            else
-            {
-                // update_robot_state_2(exploring);
-                update_robot_state_2(leaving_ds);
-            }
-            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-        }
-
-        /* If the robot has completed the recharging process, set it to
-           fully_charged */
-        else if (robot_state_next == fully_charged_next)
-        {
-            ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
-            // TODO opportune
-            if (DS_SELECTION_POLICY == 2 && moving_along_path)
-                if (ds_path_counter < 2)
-                {
-                    target_ds_x = path[ds_path_counter][0];
-                    target_ds_y = path[ds_path_counter][1];
-                    ds_path_counter++;
-                    update_robot_state_2(going_checking_vacancy);
-                }
-                else
-                {
-                    moving_along_path = false;
-                    update_robot_state_2(fully_charged);
-                }
-            else
-            {
-                update_robot_state_2(fully_charged);
-            }
-        }
-
-        /* */
-        else if (robot_state_next == going_charging_next)
-        {
-            if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
-                robot_state != checking_vacancy)
-            {
-                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
-                // robot_state = going_charging;
-                update_robot_state_2(going_checking_vacancy);
-            }
-            else
-                ;  // ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
-        }
-
-        /* Check if the robot should go in a queue */
-        else if (robot_state_next == going_queue_next)
-        {
-            /* If it is already in a queue, just signal that it is in a queue, to make
-             * the rescheduling timer in docking restart */
-            // TODO hmm... if the timer instead is not blocked in docking, it is not
-            // necessary...
-            if (robot_state == in_queue)
-            {
-                ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
-            }
-
-            /* If the robot is already preparing to enter in a queue, do nothing */
-            else if (robot_state == going_in_queue)
-            {
-                ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
-            }
-
-            /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new
-             * auction */
-            // TODO something probably went wrong in this case
-            else if (robot_state == going_charging)
-            {
-                ROS_ERROR("\n\t\e[1;34m i want to charge a little, first... \e[0m");
-            }
-
-            /* Otherwise, really prepare the robot to go in queue */
-            else
-            {
-                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
-                update_robot_state_2(going_in_queue);
-            }
-        }
-
-        /* */
-        else if (robot_state_next == exploring_next)
-        {
-            /* If the robot is recharing, it must stop */
-            if (robot_state == charging)
-            {
-                // TODO opportune
-                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
-                if (DS_SELECTION_POLICY == 2 && moving_along_path)
-                    if (ds_path_counter < 2)
-                    {
-                        if (exploration->distance_from_robot(path[ds_path_counter + 1][0],
-                                                             path[ds_path_counter + 1][1]) <
-                            available_distance)  // TODO(IMPORTANT) safety coefficient
-                        {
-                            ds_path_counter++;
-                            target_ds_x = path[ds_path_counter][0];
-                            target_ds_y = path[ds_path_counter][1];
-                            update_robot_state_2(going_checking_vacancy);
-                        }
-                        else
-                            update_robot_state_2(going_in_queue);  // TODO going_in_queue or in_queue
-                    }
-                    else
-                    {
-                        moving_along_path = false;
-                        std_msgs::Empty path_msg;
-                        pub_moving_along_path.publish(path_msg);
-                        // update_robot_state_2(exploring);
-                        update_robot_state_2(leaving_ds);
-                    }
-                else
-                {
-                    // update_robot_state_2(exploring);
-                    update_robot_state_2(leaving_ds);
-                }
-            }
-        }
-
-        /* Reset next state */
-        robot_state_next = current_state;
     }
 
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)

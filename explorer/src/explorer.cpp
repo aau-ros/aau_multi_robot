@@ -32,7 +32,7 @@
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
-#include <robot_state/GetRobotState.h>
+//#include <robot_state/GetRobotState.h>
 
 //#define PROFILE
 
@@ -67,7 +67,7 @@ class Explorer
     // TODO(minor) move in better place
     bool ready, moving_along_path;
     int my_counter, ds_path_counter;
-    ros::Publisher pub_robot, pub_moving_along_path;
+    ros::Publisher pub_robot;
     int path[2][2];
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     ros::ServiceClient sc_get_robot_state;
@@ -135,11 +135,8 @@ class Explorer
 
         pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);  // to publish robot state updates
 
-        pub_moving_along_path = nh.advertise<std_msgs::Empty>(
-            "moving_along_path", 100);  // to publish when the path to reach a far DS has been completed travelled
-
         ros::NodeHandle n;
-        sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+        //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
         /* Load parameters */
         nh.param("frontier_selection", frontier_selection, 1);
@@ -1074,7 +1071,7 @@ class Explorer
                 {
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
                         QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
                     // TODO(IMPORTANT) check if the robot has not arleady won an auction meanwhile!!!!! I can do it in
                     // docking (in cb_robot) probably, and then use update inside the while loop to immediately change
                     // the state
@@ -1099,7 +1096,7 @@ class Explorer
 
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
                         QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
 
                     update_robot_state();
                 }
@@ -1262,7 +1259,7 @@ class Explorer
         else if (robot_state == leaving_ds || robot_state == fully_charged)
             need_to_recharge = false;
 
-        robot_state::GetRobotState srv;
+        //robot_state::GetRobotState srv;
         // sc_get_robot_state.call(srv);
     }
 
@@ -1412,7 +1409,6 @@ class Explorer
                     {
                         moving_along_path = false;
                         std_msgs::Empty path_msg;
-                        pub_moving_along_path.publish(path_msg);
                         // update_robot_state_2(exploring);
                         update_robot_state_2(leaving_ds);
                     }

@@ -30,36 +30,36 @@
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
-#define AUCTION_TIMEOUT             5
-#define FORCED_AUCTION_END_TIMEOUT  (AUCTION_TIMEOUT + 2)
-#define AUCTION_RESCHEDULING_TIME   (AUCTION_TIMEOUT * 3)
-#define LASER_RANGE                 10
-#define DS_SELECTION_POLICY         0
-#define MAX_DISTANCE                50
-#define V                           5
+#define AUCTION_TIMEOUT 5
+#define FORCED_AUCTION_END_TIMEOUT (AUCTION_TIMEOUT + 2)
+#define AUCTION_RESCHEDULING_TIME (AUCTION_TIMEOUT * 3)
+#define LASER_RANGE 10
+#define DS_SELECTION_POLICY 0
+#define MAX_DISTANCE 50
+#define V 5
 
 using namespace std;
 
 class docking
 {
-public:
+  public:
     /**
      * Constructor.
      */
     docking();
-    
-    //F
+
+    // F
     void compute_optimal_ds();
-    
-    void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr& msg);
-    void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr& msg);
-    void points(const adhoc_communication::MmListOfPoints::ConstPtr& msg);
-    void cb_recharge(const std_msgs::Empty& msg);
+
+    void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr &msg);
+    void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void points(const adhoc_communication::MmListOfPoints::ConstPtr &msg);
+    void cb_recharge(const std_msgs::Empty &msg);
     void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
-    
+
     void update_robot_state();
 
-private:
+  private:
     /**
      * The node handle.
      */
@@ -78,11 +78,11 @@ private:
     /**
      * Callbacks for the subscribed topics.
      */
-    void cb_battery(const energy_mgmt::battery_state::ConstPtr& msg);
-    void cb_robots(const adhoc_communication::EmRobot::ConstPtr& msg);
-    void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr& msg);
-    void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr& msg);
-    void cb_new_auction(const adhoc_communication::EmAuction::ConstPtr& msg);
+    void cb_battery(const energy_mgmt::battery_state::ConstPtr &msg);
+    void cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg);
+    void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg);
+    void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg);
 
     /**
      * Get the likelihood value as a linear combination of the values l1 to l4.
@@ -113,7 +113,8 @@ private:
     /**
      * Start or respond to an auction for a docking station.
      * @param int docking_station: The docking station that this robot wants to charge at.
-     * @param int id: The ID of the auction. If it is left to default (i.e. 0), then a new auction is started. Otherwise this robot participates at the given auction.
+     * @param int id: The ID of the auction. If it is left to default (i.e. 0), then a new auction is started. Otherwise
+     * this robot participates at the given auction.
      * @return bool: Success of auction.
      */
     bool auction(int docking_station, int id, int bid);
@@ -127,15 +128,15 @@ private:
      */
     bool auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic);
 
-
     /**
      * Compute the length of the trajectory from the robots current position to a given goal.
      * @param double goal_x: The x-coordinate of the goal (in meters).
      * @param double goal_y: The y-coordinate of the goal (in meters).
-     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the actual path is calculated using Dijkstra's algorithm.
+     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false),
+     * then the actual path is calculated using Dijkstra's algorithm.
      * @return double: The distance between the robots current position and the goal (in meters).
      */
-    double distance(double goal_x, double goal_y, bool euclidean=false);
+    double distance(double goal_x, double goal_y, bool euclidean = false);
 
     /**
      * Compute the length of the trajectory from a given start to a given goal.
@@ -143,15 +144,16 @@ private:
      * @param double start_y: The y-coordinate of the start (in meters).
      * @param double goal_x: The x-coordinate of the goal (in meters).
      * @param double goal_y: The y-coordinate of the goal (in meters).
-     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false), then the acutal path is calculated using Dijkstra's algorithm.
+     * @param bool euclidean: Whether or not to use euclidean distance. If it is left to default (i.e. euclidean=false),
+     * then the acutal path is calculated using Dijkstra's algorithm.
      * @return double: The distance between the robots current position and the goal (in meters).
      */
-    double distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean=false);
+    double distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean = false);
 
     /**
      * Navigation function and costmap for calculating paths.
      */
-    //navfn::NavfnROS nav;
+    // navfn::NavfnROS nav;
     costmap_2d::Costmap2DROS *costmap;
 
     /**
@@ -178,57 +180,62 @@ private:
     /**
      * A vector of all robots with their current state.
      */
-    int num_robots; // number of robots is known in simulations
-    
+    int num_robots;  // number of robots is known in simulations
+
     enum state_t
     {
-        exploring,       // the robot is computing which is the next frontier to be
-                         // explored
-                         
+        exploring,  // the robot is computing which is the next frontier to be
+                    // explored
+
         going_charging,  // the robot has the right to occupy a DS to recharge
-        
-        charging,        // the robot is charging at a DS
-        
-        finished,        // the robot has finished the exploration
-        
-        fully_charged,   // the robot has recently finished a charging process; notice
-                         // that the robot is in this state even if it is not really
-                         // fully charged (since just after a couple of seconds after
-                         // the end of the recharging process the robot has already
-                         // lost some battery energy, since it consumes power even
-                         // when it stays still
-                         
+
+        charging,  // the robot is charging at a DS
+
+        finished,  // the robot has finished the exploration
+
+        fully_charged,  // the robot has recently finished a charging process; notice
+                        // that the robot is in this state even if it is not really
+                        // fully charged (since just after a couple of seconds after
+                        // the end of the recharging process the robot has already
+                        // lost some battery energy, since it consumes power even
+                        // when it stays still
+
         stuck,
-        
-        in_queue, // the robot is in a queue, waiting for a DS to be vacant
-        
-        auctioning, // auctioning: the robot has started an auction; notice that if
-                    // the robot is aprticipating to an auction that it was not
-                    // started by it, its state is not equal to auctioning!!!
-                                                   
-        going_in_queue,                            // the robot is moving near a DS to later put itself in
-                                                   // in_queue state
-                                                   
-        going_checking_vacancy,                    // the robot is moving near a DS to check if it
-                                                   // vacant, so that it can occupy it and start
-                                                   // recharging
-                                                   
-        checking_vacancy,                          // the robot is currently checking if the DS is vacant,
-                                                   // i.e., it is waiting information from the other robots
-                                                   // about the state of the DS
-                                                   
+
+        in_queue,  // the robot is in a queue, waiting for a DS to be vacant
+
+        auctioning,  // auctioning: the robot has started an auction; notice that if
+                     // the robot is aprticipating to an auction that it was not
+                     // started by it, its state is not equal to auctioning!!!
+
+        going_in_queue,  // the robot is moving near a DS to later put itself in
+                         // in_queue state
+
+        going_checking_vacancy,  // the robot is moving near a DS to check if it
+                                 // vacant, so that it can occupy it and start
+                                 // recharging
+
+        checking_vacancy,  // the robot is currently checking if the DS is vacant,
+                           // i.e., it is waiting information from the other robots
+                           // about the state of the DS
+
         moving_to_frontier_before_going_charging,  // TODO hmm...
-        
-        moving_to_frontier,                         // the robot has selected the next frontier to be
-                                                   // reached, and it is moving toward it
-        leaving_ds                                 //the robot was recharging, but another robot stopped
+
+        moving_to_frontier,  // the robot has selected the next frontier to be
+                             // reached, and it is moving toward it
+        leaving_ds           // the robot was recharging, but another robot stopped
     };
-    
+
     state_t robot_state;
-    
-    enum simple_state_t {active, idle};
-    
-    struct robot_t{
+
+    enum simple_state_t
+    {
+        active,
+        idle
+    };
+
+    struct robot_t
+    {
         int id;
         simple_state_t state;
         double x, y;
@@ -239,7 +246,8 @@ private:
     /**
      * A vector of all docking stations with coordinates and vacancy.
      */
-    struct ds_t{
+    struct ds_t
+    {
         int id;
         double x;
         double y;
@@ -256,7 +264,8 @@ private:
     /**
      * A vector of all currently available jobs (e.g. frontiers for exploration).
      */
-    struct job_t{
+    struct job_t
+    {
         int id;
         double x;
         double y;
@@ -272,116 +281,166 @@ private:
      * The weights for the weighted sum of the likelihood values l1,...,l4.
      */
     double w1, w2, w3, w4;
-    
-    
-    
-    
-    //F
+
+    // F
     ros::Publisher pub_ds, pub_new_target_ds;
     bool test;
-    ds_t best_ds;
+    ds_t* best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
-    bool foo(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res);
+    bool foo(adhoc_communication::SendEmDockingStation::Request &req,
+             adhoc_communication::SendEmDockingStation::Response &res);
     ros::Publisher pub_adhoc_new_best_ds;
     ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
     ros::ServiceClient sc_trasform;
-    
-    void timerCallback(const ros::TimerEvent&);
-    
+
+    void timerCallback(const ros::TimerEvent &);
+
     ros::Timer timer_restart_auction, timer_finish_auction, timer2;
-    
-    struct auction_bid_t{
+
+    struct auction_bid_t
+    {
         int robot_id;
         float bid;
     };
     vector<auction_bid_t> auction_bids;
-    
-    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
-    
-    void cb_charging_completed(const std_msgs::Empty& msg);
+
+    ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds,
+        sub_check_vacancy;
+
+    void cb_charging_completed(const std_msgs::Empty &msg);
     void cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
-    
-    void translate_coordinates(double a, double b, double*c, double*d);
-    
+
+    void translate_coordinates(double a, double b, double *c, double *d);
+
     double origin_absolute_x, origin_absolute_y;
-    
+
     bool optimal_ds_computed_once;
-    
+
     void preload_docking_stations();
-  
-    void vacant_ds_callback(const std_msgs::Empty::ConstPtr&);
-    void occupied_ds_callback(const std_msgs::Empty::ConstPtr&);
-    
-    struct auction_t {
+
+    void vacant_ds_callback(const std_msgs::Empty::ConstPtr &);
+    void occupied_ds_callback(const std_msgs::Empty::ConstPtr &);
+
+    struct auction_t
+    {
         int robot_id;
         int auction_id;
     };
-    
+
     vector<auction_t> auctions;
-    
-    void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr&);
-    
+
+    void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
+
     bool managing_auction;
     int participating_to_auction;
 
     void check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    
+
     bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed, going_charging_bool;
-    
+
     std::vector<ros::Timer> timers;
-    
-    void end_auction_participation_timer_callback(const ros::TimerEvent &event); 
-    
+
+    void end_auction_participation_timer_callback(const ros::TimerEvent &event);
+
     void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
-    
-    
-    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result, pub_moving_along_path;
+
+    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result,
+        pub_moving_along_path;
     bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
-    ros::Subscriber sub_ds_state_update, sub_moving_along_path ;
     void abort_charging_callback(const std_msgs::Empty &msg);
-    
+
     ros::Subscriber sub_robot_pose, sub_robot;
     ros::ServiceClient sc_robot_pose, sc_distance_from_robot;
-    
-    ds_t next_optimal_ds, target_ds, next_target_ds;
-    
+
+    ds_t *next_optimal_ds, *target_ds, *next_target_ds;
+
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
-    void ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    
+
     double llh;
-    
+
     string my_prefix, my_node;
-    
+
     void initLogpath();
-    
+
     std::string log_path;
-    
+
     void start_new_auction();
-    
+
     bool num_ds;
-    
+
     void set_target_ds_vacant(bool vacant);
-    
+
     void compute_MST(int graph[V][V]);
-    
+
     int minKey(int key[], bool mstSet[]);
 
     int printMST(int parent[], int n, int graph[V][V]);
-    
-    bool find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node);
-    
+
+    /*!
+     * \brief Search for a path connecting the given nodes in an undirected tree
+     *
+     * The function checks if it is possible to find a path from node 'start' to node 'end' in the (possibly) undirected
+     *tree 'tree': if a path is found, the nodes that compose the path are stored in 'path', i.e., 'path' contains the
+     *sequence of nodes that form the path going from 'start' to 'end' ('start' and 'end' are the first and last node,
+     *respectively); if such path is found, the function returns \c true, otherwise it returns \c false.
+     *
+     * 'tree' is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
+     *false otherwise.
+     *
+     * \param tree the undirected tree where to search for a path, represented with an adiacency matrix
+     * \param start index of the starting node of the path
+     * \param end index of the ending node of the path
+     * \param path the sequence of nodes composing the path (if a path exists)
+     * \return \c true if a path was found, \c false otherwise
+     */
+    bool find_path(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path);
+
+    /**
+     * \brief Auxiliary function to find a path in an undirected tree
+     *
+     * This function is called by find_path() to search for a path in a tree. It uses a depth-first search approach to
+     *find the path, with recursive calls: it checks if there is a node (possibly more than one) connected to 'start' in
+     *'tree', and when such a node is found, it recursively calls itself on 'tree' passing as parameter 'start' the node
+     *just found. The recursion successfully ends if an edge from 'start' to 'end' is found.
+     *
+     * Since the tree can be undirected, the function needs to specify when it recursively calls itself the node of the
+     *tree that is the current start of the path, to avoid that the recursive call will "backtrack" by selecting this
+     *node.
+     *
+     * \p tree is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
+     *false otherwise.
+     *
+     * \param tree the undirected tree where to search for a path, represented with ad adiacency matrix
+     * \param start index of the starting node of the path
+     * \param end index of the ending node of the path
+     * \param path the path going from 'target' to 'start' (i.e., it is the reversed path w.r.t. the path that is
+     *             actually requested)
+     * \param prev_node index of the node on which the caller of this function was positioned when perfoming the
+     *                  recursive call
+     * \return \c true if a path was found, \c false otherwise
+     */
+    bool find_path_aux(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path,
+                       int prev_node);
+
     int mst[V][V];
-    
+
     bool moving_along_path;
     
-    void moving_along_path_callback(std_msgs::Empty msg);
+    int ds_selection_policy;
     
-    enum ds_state_t {vacant, occupied, assigned};
+    bool compute_closest_ds();
 
+
+    enum ds_state_t
+    {
+        vacant,
+        occupied,
+        assigned
+    };
 };
 
-#endif  /* DOCKING_H */
+#endif /* DOCKING_H */

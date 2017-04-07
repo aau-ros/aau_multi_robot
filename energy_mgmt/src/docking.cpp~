@@ -3,7 +3,7 @@
 
 using namespace std;
 
-docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
+docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 {
     /* Read parameters */
     nh.param("energy_mgmt/num_robots", num_robots, 1);
@@ -16,6 +16,7 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     nh.param("energy_mgmt/distance_close", distance_close, 8.0);
     nh.param<string>("energy_mgmt/move_base_frame", move_base_frame, "map");
     nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
+    nh.param("energy_mgmt/ds_selection_policy", ds_selection_policy, 1); //TODO add this parameter
     nh.param<std::string>("log_path", log_path, "");
 
     /* Initialize robot name */
@@ -28,12 +29,13 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
         robot_name = string(hostname);
         robot_id = 0;
         exit(0);
-        my_prefix = "robot_" + SSTR(robot_id) + "/"; //TODO(minor)
+        my_prefix = "robot_" + SSTR(robot_id) + "/";  // TODO(minor)
     }
     else
     {
         /* Prefix is set: simulation */
-        robot_name = robot_prefix; //TODO(minor) we need this? and are we use taht it must be equal to robot_refix (there is an unwanted '/' maybe...)
+        robot_name = robot_prefix;  // TODO(minor) we need this? and are we use taht it must be equal to robot_refix
+                                    // (there is an unwanted '/' maybe...)
 
         /* Read robot ID number: to do this, it is required that the robot_prefix is in the form "/robot_<id>", where
          * <id> is the ID of the robot */
@@ -45,7 +47,7 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
          * added: there is no need to manually specify robot_prefix in the topic name */
         // my_prefix = "docking/"; //TODO(minor)
         my_prefix = "";
-        //my_node = "energy_mgmt/"
+        // my_node = "energy_mgmt/"
         my_node = "";
     }
 
@@ -57,7 +59,7 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
 
     // initialize service clients
     // TODO(minor) names (robot_0 end dockign)
-    //TODO(minor) save names in variables
+    // TODO(minor) save names in variables
 
     /* SERVICE CLIENTS */
     /* Adhoc communication services */
@@ -66,7 +68,7 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(
         my_prefix + "adhoc_communication/send_em_docking_station");
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(my_prefix + "adhoc_communication/send_em_robot");
-    
+
     /* General services */
     sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
@@ -79,15 +81,15 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     sub_robot = nh.subscribe(my_prefix + "explorer/robot", 100, &docking::cb_robot, this);
     sub_docking_stations = nh.subscribe(my_prefix + "adhoc_communication/send_em_docking_station", 100,
                                         &docking::cb_docking_stations, this);
-                                        
-    
-    sub_auction_starting =
-        nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 100, &docking::cb_new_auction, this);
+
+    sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 100,
+                                        &docking::cb_new_auction, this);
     sub_auction_reply =
         nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 100, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
         nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 100, &docking::cb_auction_result, this);
-    sub_robot_position = nh.subscribe("goalPoint/goalPoint", 100, &docking::robot_position_callback, this);  // TODO(minor)
+    sub_robot_position =
+        nh.subscribe("goalPoint/goalPoint", 100, &docking::robot_position_callback, this);  // TODO(minor)
     sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 100, &docking::adhoc_ds, this);
 
     sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
@@ -96,11 +98,8 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     sub_all_points = nh.subscribe("all_positions", 100, &docking::points, this);
     sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 100, &docking::check_vacancy_callback, this);
 
-    sub_check_vacancy =
-        nh.subscribe("adhoc_communication/check_vacancy", 100, &docking::check_vacancy_callback, this);
+    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 100, &docking::check_vacancy_callback, this);
 
-    sub_ds_state_update =
-        nh.subscribe("adhoc_communication/ds_state_update", 100, &docking::ds_state_update_callback, this);
     sub_robot_pose = nh.subscribe("amcl_pose", 100, &docking::robot_pose_callback, this);  // TODO(minor) not used
 
     /* Publishers */
@@ -111,11 +110,10 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 100);
     pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 100);
     pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 100);
-    
+
     pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 100);
-    
+
     pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 100);
-    sub_moving_along_path = nh.subscribe("explorer/moving_along_path", 1, &docking::moving_along_path_callback, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
@@ -134,7 +132,7 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
     managing_auction = false;
     going_to_ds = false;
     going_to_check_if_ds_is_free = false;
-    need_to_charge = false; //TODO(minor) useless variable
+    need_to_charge = false;  // TODO(minor) useless variable
     test = true;
     llh = 0;
     auction_id = 0;
@@ -142,24 +140,21 @@ docking::docking() //TODO(minor) comments //TODO(minor) comments in .h file
 
     /* Function calls */
     preload_docking_stations();
-    initLogpath(); //TODO(minor)
-    
-    //TODO(minor)
+    initLogpath();  // TODO(minor)
+
+    // TODO(minor)
     // force sending a broadcast message
     adhoc_communication::SendEmRobot srv_msg;
-    srv_msg.request.topic = "robots"; //TODO should this service be called also somewhere else?
+    srv_msg.request.topic = "robots";  // TODO should this service be called also somewhere else?
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = fully_charged;
     sc_send_robot.call(srv_msg);
-    
-    int graph[V][V] = {{0, 1, 0, 6, 0},
-                       {1, 0, 1, 8, 5},
-                       {0, 1, 0, 1, 7},
-                       {6, 8, 1, 0, 1},
-                       {0, 5, 7, 1, 0},
-                      };
-                     
-    //compute_MST(graph);
+
+    int graph[V][V] = {
+        { 0, 1, 0, 6, 0 }, { 1, 0, 1, 8, 5 }, { 0, 1, 0, 1, 7 }, { 6, 8, 1, 0, 1 }, { 0, 5, 7, 1, 0 },
+    };
+
+    // compute_MST(graph);
 }
 
 void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
@@ -169,7 +164,7 @@ void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStamped
     robot_y = pose->pose.pose.position.y;
 }
 
-void docking::preload_docking_stations() //TODO only for simulation
+void docking::preload_docking_stations()  // TODO only for simulation
 {
     int index = 0;  // index of the DS: used to loop above all the docking stations inserted in the file
     double x, y;    // DS coordinates
@@ -192,16 +187,16 @@ void docking::preload_docking_stations() //TODO only for simulation
         /* Delete the loaded parameters (since they are not used anymore) */
         nh.deleteParam("energy_mgmt/d" + SSTR(index) + "/x");
         nh.deleteParam("energy_mgmt/d" + SSTR(index) + "/y");
-        
+
         /* Prepare to search for next DS (if it exists) in the file */
         index++;
     }
 
-    /* Print loaded DSs with their coordinates relative to the local reference system of the robot; only for debugging */
+    /* Print loaded DSs with their coordinates relative to the local reference system of the robot; only for debugging
+     */
     std::vector<ds_t>::iterator it;
     for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
-        ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y); 
-    
+        ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
 }
 
 void docking::compute_optimal_ds()
@@ -216,202 +211,221 @@ void docking::compute_optimal_ds()
             robot_x = srv_msg.response.x;
             robot_y = srv_msg.response.y;
             ROS_DEBUG("Robot position: (%f, %f)", robot_x, robot_y);
-                     
         }
-        else {
+        else
+        {
             ROS_ERROR("Call to service %s failed", sc_robot_pose.getService().c_str());
-            return;  //TODO do better
+            return;  // TODO do better
         }
-    else {
+    else
+    {
         ROS_ERROR("Service %s is not ready yet", sc_robot_pose.getService().c_str());
-        return;    //TODO
-   }
+        return;  // TODO
+    }
 
     /* Check if a new DS can be discovered */
     std::vector<ds_t>::iterator it;
     double dist;
-    for(it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++) {
-    
+    for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
+    {
         /* Compute distance from robot */
-        //dist = distance((*it).x, (*it).y);
-        dist = ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y); //TODO
-        
+        dist = distance((*it).x, (*it).y);
+
         /* If the DS is inside a fiducial laser range, it can be considered discovered */
-        if( dist > 0 && dist < LASER_RANGE ) {
-        
+        if (dist > 0 && dist < LASER_RANGE)
+        {
             /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
-            ROS_DEBUG("Found new DS: ds%d", (*it).id); //TODO index make sense only in simulation
-            undiscovered_ds.erase(it);
+            ROS_DEBUG("Found new DS: ds%d", (*it).id);  // TODO index make sense only in simulation
             ds.push_back(*it);
-            num_ds++;
-            
+            undiscovered_ds.erase(it);
+
             /* Inform other robots about the new DS */
-            //TODO call service to call cb_ds
-            
-            /* If it is the first DS that is encountered, set it as the currently optimal DS: this is just to initialize variable 'best_ds', so that we can compute the distance from the robot and the currently selected DS and compare it with the distance from other DSs also when the node has just started */
-            if(num_ds == 1) {
-                best_ds = ds.at(0);
+            // TODO call service to call cb_ds
+
+            /* If it is the first DS that is encountered, set it as the currently optimal DS: this is just to initialize
+             * variable 'best_ds', so that we can compute the distance from the robot and the currently selected DS and
+             * compare it with the distance from other DSs also when the node has just started */
+            if (ds.size() == 1)
+            {
+                best_ds = &ds.at(0);
                 target_ds = best_ds;
-                next_target_ds = target_ds; //TODO are all this best_ds, target_ds, etc. really necessary?
+                next_target_ds = target_ds;  // TODO are all this best_ds, target_ds, etc. really necessary?
             }
-            
-            /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to compensate the future increment of the for loop, since, after the deletion of the element, all the elements are shifted by one position, and so we are already pointing to the next element, even without the future increment of the for loop */
+
+            /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to
+             * compensate the future increment of the for loop, since, after the deletion of the element, all the
+             * elements are shifted by one position, and so we are already pointing to the next element, even without
+             * the future increment of the for loop */
             it--;
-            
-        } else
+        }
+        else
             ROS_DEBUG("No new DS was encountered");
     }
 
-    if (participating_to_auction == 0) //TODO is it a good idea?
+    if (participating_to_auction == 0)  // TODO is it a good idea?
     {
         bool found_new_optimal_ds = false;
-        if(DS_SELECTION_POLICY == 0) //TODO param, switch-case
-        // closest
-        {
-            
-            std::vector<ds_t>::iterator it;
-            for (it = ds.begin(); it != ds.end(); it++)
+        if (ds_selection_policy == 0)  // TODO(minor) switch-case
+            found_new_optimal_ds = compute_closest_ds();
 
-                // TODO Disjkstra!!!
-                if ((best_ds.x - robot_x) * (best_ds.x - robot_x) + (best_ds.y - robot_y) * (best_ds.y - robot_y) >
-                    ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y))
-                {
-                    found_new_optimal_ds = true;
-                    best_ds = *it;
-                }
-        }
-        
-        else if(DS_SELECTION_POLICY == 1) // vacant
+        else if (ds_selection_policy == 1)  // vacant
         {
             bool found_vacant_ds = false;
             std::vector<ds_t>::iterator it;
-            for (it = ds.begin(); it != ds.end(); it++)
-                if((*it).vacant) {
+            
+            double min_dist = distance(best_ds->x, best_ds->y);
+            //ROS_ERROR("current best_ds: ds%d with distance %f", best_ds->id, min_dist);
+            //ROS_ERROR("size: %lu", ds.size());
+            for (it = ds.begin(); it != ds.end(); it++) {
+                if ((*it).vacant)
+                {
                     found_vacant_ds = true;
-                    // TODO Disjkstra!!!
-                    if ((best_ds.x - robot_x) * (best_ds.x - robot_x) + (best_ds.y - robot_y) * (best_ds.y - robot_y) >
-                        ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y))
+                    //ROS_ERROR("ds%d is vacant!", (*it).id);
+                    
+                    if(best_ds->vacant)
                     {
+    
+                        double dist = distance((*it).x, (*it).y);
+                        //ROS_ERROR("%f", dist);
+                        if ( dist < min_dist )
+                        {
+                            found_new_optimal_ds = true;
+                            best_ds = &(*it);
+                        } else
+                            ; //ROS_ERROR("but it is not closest than best_ds!");
+                    } else {
                         found_new_optimal_ds = true;
-                        best_ds = *it;
+                        best_ds = &(*it);
                     }
-                }
-            if(!found_vacant_ds)
-                // closest //TODO use a function to call closest policy
-                std::vector<ds_t>::iterator it;
-                for (it = ds.begin(); it != ds.end(); it++)
-                    // TODO Disjkstra!!!
-                    if ((best_ds.x - robot_x) * (best_ds.x - robot_x) + (best_ds.y - robot_y) * (best_ds.y - robot_y) >
-                        ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y))
-                    {
-                        found_new_optimal_ds = true;
-                        best_ds = *it;
-                    }
-        }
-        else if(DS_SELECTION_POLICY == 2) //opportune //TODO check and complete
-        {
-        /*
-            int index_best_ds;
-            for(int i=0, count_max=0; i < ds.size(); i++) {
-                for(int j=0, count=0; j < jobs.size(); j++) {
-                    int dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    if(dist < MAX_DISTANCE)
-                        count++;
-                 }
-                if(count > count_max)    
+
+
+                } else
+                    ROS_ERROR("ds%d is NOT vacant...", (*it).id);
             }
-        */
+            if (!found_vacant_ds) 
+                // closest
+               found_new_optimal_ds = compute_closest_ds();
+        }
+        
+        else if (ds_selection_policy == 2)  // opportune //TODO check and complete
+        {
+            /*
+                int index_best_ds;
+                for(int i=0, count_max=0; i < ds.size(); i++) {
+                    for(int j=0, count=0; j < jobs.size(); j++) {
+                        int dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                        if(dist < MAX_DISTANCE)
+                            count++;
+                     }
+                    if(count > count_max)
+                }
+            */
             ds_t best_ds_opp;
             bool found_ds = true;
-            int dist_min=100000; //TODO
-            for(int i=0, count_max=0; i < ds.size(); i++) {
-                for(int j=0, count=0; j < jobs.size(); j++) {
+            int dist_min = 100000;  // TODO
+            for (int i = 0, count_max = 0; i < ds.size(); i++)
+            {
+                for (int j = 0, count = 0; j < jobs.size(); j++)
+                {
                     dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    if(dist < MAX_DISTANCE) {
+                    if (dist < MAX_DISTANCE)
+                    {
                         found_ds = true;
-                        if(distance(ds.at(i).x, ds.at(i).y) < dist_min) {
+                        if (distance(ds.at(i).x, ds.at(i).y) < dist_min)
+                        {
                             dist_min = distance(ds.at(i).x, ds.at(i).y);
-                            best_ds = ds.at(i);
-                            found_new_optimal_ds = true;            
+                            best_ds = &ds.at(i);
+                            found_new_optimal_ds = true;
                         }
-                     }
-                 }
+                    }
+                }
             }
-            if(!found_ds) {
-                bool ds_found_with_mst=false;
-            
-                if(!OPP_ONLY_TWO_DS) {
-                    
+            if (!found_ds)
+            {
+                bool ds_found_with_mst = false;
+
+                if (!OPP_ONLY_TWO_DS)
+                {
                     // construct ds graph //TODO construct graph only when a new DS is found
-                    int ds_graph[V][V]; //TODO remove V
-                    for(int i=0; i < ds.size(); i++)
-                        for(int j=0; j<ds.size(); j++)
-                            if(i == j)
+                    int ds_graph[V][V];  // TODO remove V
+                    for (int i = 0; i < ds.size(); i++)
+                        for (int j = 0; j < ds.size(); j++)
+                            if (i == j)
                                 ds_graph[i][j] = 0;
-                            else {
+                            else
+                            {
                                 int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                                if(dist < MAX_DISTANCE) {
+                                if (dist < MAX_DISTANCE)
+                                {
                                     ds_graph[i][j] = dist;
                                     ds_graph[j][i] = dist;
                                 }
                             }
-                    
+
                     // construct MST starting from ds graph
                     compute_MST(ds_graph);
-                    
+
                     int index_best_ds;
                     bool found_new_best = false;
-                   for(int i=0; i < ds.size(); i++)
-                        for(int j=0; j < jobs.size(); j++)
-                            if(distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE) {
+                    for (int i = 0; i < ds.size(); i++)
+                        for (int j = 0; j < jobs.size(); j++)
+                            if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
+                            {
                                 ds_found_with_mst = true;
-                                if(found_new_best)  {
-                                   if(distance(ds.at(i).x, ds.at(i).y) < distance(ds.at(index_best_ds).x , ds.at(index_best_ds).y) )
-                                        index_best_ds; 
-                                } else {
+                                if (found_new_best)
+                                {
+                                    if (distance(ds.at(i).x, ds.at(i).y) <
+                                        distance(ds.at(index_best_ds).x, ds.at(index_best_ds).y))
+                                        index_best_ds;
+                                }
+                                else
+                                {
                                     found_new_best = true;
                                     index_best_ds = i;
-                                } 
+                                }
                                 break;
-                            }    
+                            }
 
-                        
-                    //TODO path to wich frontier???
+                    // TODO path to wich frontier???
 
-                
-                    if(ds_found_with_mst) {
-                        if(found_new_best) {
-                            best_ds = ds.at(index_best_ds);
-                            
+                    if (ds_found_with_mst)
+                    {
+                        if (found_new_best)
+                        {
+                            best_ds = &ds.at(index_best_ds);
+
                             int closest_ds_id;
-                            
+
                             std::vector<int> path;
-                            find_path(ds_graph, closest_ds_id, best_ds.id, path, -1);
-                            moving_along_path = true;  
-                            
-                            //publish list of DSs
-                            
+                            // find_path(ds_graph, closest_ds_id, best_ds->id, path);
+                            moving_along_path = true;
+
+                            // publish list of DSs
                         }
                         else
-                            ; //optimal ds is the old one
-                        
-                    } else
-                        ; //closest policy
-                
+                            ;  // optimal ds is the old one
+                    }
+                    else
+                        ;  // closest policy
                 }
-                
-                else {
-                
-                    if(!moving_along_path) {
+
+                else
+                {
+                    if (!moving_along_path)
+                    {
                         int first_step_x, first_step_y, second_step_x, second_step_y;
-                        for(int i=0; i < ds.size(); i++) {
+                        for (int i = 0; i < ds.size(); i++)
+                        {
                             bool existing_eo;
-                            for(int j=0; j < jobs.size(); j++)
-                                if(distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE) {
+                            for (int j = 0; j < jobs.size(); j++)
+                                if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
+                                {
                                     existing_eo = true;
-                                    for(int k=0; k < ds.size(); k++)
-                                        if(k != i && distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE )
-                                            if( distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE) {//TODO no MAX_DISTANCE, but available_distance
+                                    for (int k = 0; k < ds.size(); k++)
+                                        if (k != i &&
+                                            distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
+                                            if (distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
+                                            {  // TODO no MAX_DISTANCE, but available_distance
                                                 moving_along_path = true;
                                                 ds_found_with_mst = true;
                                                 first_step_x = ds.at(k).x;
@@ -421,108 +435,90 @@ void docking::compute_optimal_ds()
                                             }
                                 }
                         }
-                    
-                    if(ds_found_with_mst) {
-                        moving_along_path = true;  
-                    
-                        adhoc_communication::MmListOfPoints msg_path; //publish list of DS
-                        msg_path.positions[0].x = 0;
-                        msg_path.positions[0].y = 0;
-                        msg_path.positions[1].x = 0;
-                        msg_path.positions[1].y = 0;
-                        
-                        //TODO publish
-                        
-                    } else
-                        ; //closest policy
-                    
+
+                        if (ds_found_with_mst)
+                        {
+                            moving_along_path = true;
+
+                            adhoc_communication::MmListOfPoints msg_path;  // publish list of DS
+                            msg_path.positions[0].x = 0;
+                            msg_path.positions[0].y = 0;
+                            msg_path.positions[1].x = 0;
+                            msg_path.positions[1].y = 0;
+
+                            // TODO publish
+                        }
+                        else
+                            ;  // closest policy
                     }
-
-
-               
-                
                 }
-                
-
-            
-            
             }
-
-            
-
-            
-            
-            
-            
-                            
-            
         }
-        else if(DS_SELECTION_POLICY == 3) //current
+        else if (ds_selection_policy == 3)  // current
         {
             bool existing_eo = false;
-            for(int i=0; i < jobs.size(); i++)
-                //TODO use disjkstra and not use distance_close
-                if((best_ds.x - jobs.at(i).x) * (best_ds.x - jobs.at(i).x) + (best_ds.y - jobs.at(i).y) * (best_ds.y - jobs.at(i).y) < distance_close) {
+            for (int i = 0; i < jobs.size(); i++)
+                // TODO use disjkstra and not use distance_close
+                if ((best_ds->x - jobs.at(i).x) * (best_ds->x - jobs.at(i).x) +
+                        (best_ds->y - jobs.at(i).y) * (best_ds->y - jobs.at(i).y) <
+                    distance_close)
+                {
                     existing_eo = true;
                     break;
                 }
-            if(!existing_eo) {
-                //closest //TODO use function
+            if (!existing_eo)
+            {
+                // closest //TODO use function
                 std::vector<ds_t>::iterator it = ds.begin();
                 for (; it != ds.end(); it++)
 
                     // TODO Disjkstra!!!
-                    if ((best_ds.x - robot_x) * (best_ds.x - robot_x) + (best_ds.y - robot_y) * (best_ds.y - robot_y) >
+                    if ((best_ds->x - robot_x) * (best_ds->x - robot_x) + (best_ds->y - robot_y) * (best_ds->y - robot_y) >
                         ((*it).x - robot_x) * ((*it).x - robot_x) + ((*it).y - robot_y) * ((*it).y - robot_y))
                     {
                         found_new_optimal_ds = true;
-                        best_ds = *it;
+                        best_ds = &(*it);
                     }
-            
             }
-             
         }
-        else if(DS_SELECTION_POLICY == 4) //flocking //TODO check and complete
+        else if (ds_selection_policy == 4)  // flocking //TODO check and complete
         {
-            for(int d=0, min_cost=numeric_limits<int>::max(); d < ds.size(); d++) {
-                
-    
-                int count=0;
-                for(int i=0; i < robots.size(); i++)
-                    if(robots.at(i).target_ds == best_ds.id) //TODO best_ds or target_ds???
+            for (int d = 0, min_cost = numeric_limits<int>::max(); d < ds.size(); d++)
+            {
+                int count = 0;
+                for (int i = 0; i < robots.size(); i++)
+                    if (robots.at(i).target_ds == best_ds->id)  // TODO best_ds or target_ds???
                         count++;
                 double n_r = (double)count / num_robots;
-                
-                
-                
+
                 int sum_x = 0, sum_y = 0;
-                for(int i=0; i < robots.size(); i++) {
+                for (int i = 0; i < robots.size(); i++)
+                {
                     sum_x += robots.at(i).x;
                     sum_y += robots.at(i).y;
                 }
                 double flock_x = sum_x / num_robots;
                 double flock_y = sum_y / num_robots;
-                double d_s = distance(ds.at(d).x, ds.at(d).y, flock_x, flock_y); //TODO normalization
-                
-                
-                
+                double d_s = distance(ds.at(d).x, ds.at(d).y, flock_x, flock_y);  // TODO normalization
+
                 double swarm_direction_x = 0, swarm_direction_y = 0;
-                for(int i=0; i < robots.size(); i++) {
+                for (int i = 0; i < robots.size(); i++)
+                {
                     double robot_i_target_ds_x, robot_i_target_ds_y;
-                    
-                    for(int k=0; k < ds.size(); k++)
-                        if(robots.at(i).target_ds == ds.at(k).id) {
+
+                    for (int k = 0; k < ds.size(); k++)
+                        if (robots.at(i).target_ds == ds.at(k).id)
+                        {
                             robot_i_target_ds_x = ds.at(k).x;
                             robot_i_target_ds_y = ds.at(k).y;
                         }
-                            
-                    
+
                     swarm_direction_x += robot_i_target_ds_x - robots.at(i).x;
                     swarm_direction_y += robot_i_target_ds_y - robots.at(i).y;
                 }
                 // tan ( param * PI / 180.0 );
                 double alpha, rho, theta;
-                
+
                 /*
                 if(swarm_direction_x == 0)
                     if(swarm_direction_y == 0)
@@ -544,47 +540,41 @@ void docking::compute_optimal_ds()
                 }
                 alpha = atan( abs(ds.at(d).y - robot_y) / abs(ds.at(d).x - robot_x) );
                 */
-                
+
                 rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI;
-                alpha = atan2( (ds.at(d).y - robot_y) , (ds.at(d).x - robot_x) ) * 180 / PI;
-                
-                if(alpha > rho)
+                alpha = atan2((ds.at(d).y - robot_y), (ds.at(d).x - robot_x)) * 180 / PI;
+
+                if (alpha > rho)
                     theta = alpha - rho;
                 else
                     theta = rho - alpha;
-                
+
                 double theta_s = theta / 180;
-                
-                
-                
-                double d_f = 0.0; //TODO
-                
-                
-                
+
+                double d_f = 0.0;  // TODO
+
                 double cost = n_r + d_s + theta_s + d_f;
-                if(cost < min_cost) {
+                if (cost < min_cost)
+                {
                     found_new_optimal_ds = true;
                     min_cost = cost;
-                    best_ds = ds.at(d);
-                }   
-            
-            }  
-            
+                    best_ds = &ds.at(d);
+                }
+            }
         }
-        
-        //adhoc_communication::MmListOfPoints msg_points;
-        //pub_moving_along_path.publish(msg_points);
-        
-        //ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
-        
+
+        // adhoc_communication::MmListOfPoints msg_points;
+        // pub_moving_along_path.publish(msg_points);
+
+        // ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
 
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated */
         if (found_new_optimal_ds)
         {
-            ROS_ERROR("New optimal DS: ds%d (%f, %f)", best_ds.id, best_ds.x, best_ds.y);
+            ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", best_ds->id, best_ds->x, best_ds->y);
             geometry_msgs::PointStamped msg1;
-            msg1.point.x = best_ds.x;
-            msg1.point.y = best_ds.y;
+            msg1.point.x = best_ds->x;
+            msg1.point.y = best_ds->y;
             // pub_new_target_ds.publish(msg1); //TODO
 
             update_l4();
@@ -595,17 +585,13 @@ void docking::compute_optimal_ds()
     else
         ROS_DEBUG("There are still some pending auctions: cannot update optimal DS");
 
-
-     adhoc_communication::SendEmRobot robot_msg;
-     robot_msg.request.topic = "adhoc_communication/send_em_robot";
-     robot_msg.request.robot.id = robot_id;
-     robot_msg.request.robot.x = robot_x;
-     robot_msg.request.robot.y = robot_y;
-     robot_msg.request.robot.selected_ds = best_ds.id;
-     sc_send_robot.call(robot_msg);
-
-    
-
+    adhoc_communication::SendEmRobot robot_msg;
+    robot_msg.request.topic = "adhoc_communication/send_em_robot";
+    robot_msg.request.robot.id = robot_id;
+    robot_msg.request.robot.x = robot_x;
+    robot_msg.request.robot.y = robot_y;
+    robot_msg.request.robot.selected_ds = best_ds->id;
+    sc_send_robot.call(robot_msg);
 }
 
 void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr &msg)  // TODO(minor)
@@ -620,13 +606,14 @@ void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &ms
 
 double docking::get_llh()
 {
-    /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) explain better
+    /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) explain
+                                                                                              // better
     if (participating_to_auction == 0)
         llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
     return llh;
 }
 
-void docking::update_l1() //TODO(minor) comments
+void docking::update_l1()  // TODO(minor) comments
 {
     // count vacant docking stations
     int num_ds_vacant = 0;
@@ -678,7 +665,7 @@ void docking::update_l1() //TODO(minor) comments
 void docking::update_l2()
 {
     double time_run = battery.remaining_time_run;
-    double time_charge = battery.remaining_time_charge; //TODO
+    double time_charge = battery.remaining_time_charge;  // TODO
 
     // sanity checks
     if (time_charge < 0)
@@ -706,7 +693,6 @@ void docking::update_l2()
 
 void docking::update_l3()
 {
-    
     // count number of jobs: count frontiers and reachable frontiers
     int num_jobs = 0;
     int num_jobs_close = 0;
@@ -748,7 +734,6 @@ void docking::update_l3()
     {
         l3 = (num_jobs - num_jobs_close) / num_jobs;
     }
-    
 }
 
 void docking::update_l4()
@@ -757,7 +742,7 @@ void docking::update_l4()
     int dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
-        if (ds[i].id == target_ds.id)
+        if (ds[i].id == target_ds->id)
         {
             // dist_ds = distance(ds[i].x, ds[i].y);
             dist_ds = distance(ds[i].x, ds[i].y, true);  // TODO
@@ -831,13 +816,13 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
     }
 }
 
-double docking::distance(double goal_x, double goal_y, bool euclidean) //TODO
+double docking::distance(double goal_x, double goal_y, bool euclidean)  // TODO
 {
     explorer::DistanceFromRobot srv_msg;
     srv_msg.request.x = goal_x;
     srv_msg.request.y = goal_y;
 
-    //sc_distance_from_robot.call(srv_msg); 
+    // sc_distance_from_robot.call(srv_msg);
 
     /*
     tf::Stamped<tf::Pose> robotPose;
@@ -848,7 +833,7 @@ double docking::distance(double goal_x, double goal_y, bool euclidean) //TODO
     }
     return distance(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), goal_x, goal_y, euclidean);
     */
-    return distance(robot_x, robot_y, goal_x, goal_y, euclidean);
+    return distance(robot_x, robot_y, goal_x, goal_y, true);
 }
 
 double docking::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)  // TODO
@@ -911,18 +896,12 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     update_l2();
 }
 
-void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) //TODO(minor) better name
+void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TODO(minor) better name
 {
-    adhoc_communication::SendEmRobot srv_msg;
-    srv_msg.request.topic = "robots"; //TODO should this service be called also somewhere else?
-    srv_msg.request.robot.id = robot_id;
-    srv_msg.request.robot.state = msg.get()->state;
-    sc_send_robot.call(srv_msg);
-
-    robot_state = static_cast<state_t>(msg.get()->state);
 
     // TODO correctly update the state!!!!
-    if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier)
+    if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier ||
+        msg.get()->state == leaving_ds)
         robots[robot_id].state = active;
     else
         robots[robot_id].state = idle;
@@ -934,10 +913,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) //TODO
         /* Schedule next auction (a robot goes in queue only if it has lost an auction started by itself) */
         timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
         timer_restart_auction.start();
-        
-        //set_target_ds_vacant(true); //TODO(IMPORTANT) what if another robot sent an "occupied" message???
 
-
+        // set_target_ds_vacant(true); //TODO(IMPORTANT) what if another robot sent an "occupied" message???
     }
     else if (msg.get()->state == going_charging)
     {
@@ -948,7 +925,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) //TODO
         ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         need_to_charge = false;  // TODO ???
 
-        set_target_ds_vacant(false); //TODO(IMPORTANT) when to communicate that the DS is vacant againt, instead???
+        set_target_ds_vacant(false);  // TODO(IMPORTANT) when to communicate that the DS is vacant againt, instead???
     }
     else if (msg.get()->state == going_checking_vacancy)
     {
@@ -959,41 +936,46 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg) //TODO
         ROS_ERROR("\n\t\e[1;34m checking vacancy!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/check_vacancy";
-        srv_msg.request.docking_station.id = best_ds.id;
+        srv_msg.request.docking_station.id = best_ds->id;
         sc_send_docking_station.call(srv_msg);
-    } 
+    }
     else if (msg.get()->state == auctioning)
     {
         ROS_INFO("Robot need to recharge");
         need_to_charge = true;
-        start_new_auction(); //TODO(IMPORTANT) only if the robot has not just won another auction
-                             //TODO(improv) only if the robot is not already taking part to an auction...
+        start_new_auction();  // TODO(IMPORTANT) only if the robot has not just won another auction
+        // TODO(improv) only if the robot is not already taking part to an auction...
     }
-    else if (msg.get()->state == fully_charged ||
-             msg.get()->state == exploring ||
-             msg.get()->state == leaving_ds)
+    else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
-        if(robot_state == charging)
-            set_target_ds_vacant(true);
+        set_target_ds_vacant(true);
+        if (moving_along_path)
+            moving_along_path = false;
     }
-    else if (msg.get()->state == moving_to_frontier ||
-             msg.get()->state == going_in_queue ||
-             msg.get()->state == finished)
+    else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue ||
+             msg.get()->state == finished || msg.get()->state == exploring)
     {
-        ; // ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
+        ;  // ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
     }
     else
     {
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");
         return;
     }
+    
+    
+    adhoc_communication::SendEmRobot srv_msg;
+    srv_msg.request.topic = "robots";  // TODO should this service be called also somewhere else?
+    srv_msg.request.robot.id = robot_id;
+    srv_msg.request.robot.state = msg.get()->state;
+    sc_send_robot.call(srv_msg);
+
 
     robot_state = static_cast<state_t>(msg.get()->state);
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)
@@ -1002,11 +984,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         if (robots[i].id == msg.get()->id)
         {
             // update state
-            if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier)
+            if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
+                msg.get()->state == moving_to_frontier)
                 robots[i].state = active;
             else
                 robots[i].state = idle;
-                
+
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].target_ds = msg.get()->selected_ds;
@@ -1022,24 +1005,24 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         robot_t robot;
         robot.id = msg.get()->id;
 
-         // update state
-        if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier)
+        // update state
+        if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
+            msg.get()->state == moving_to_frontier)
             robot.state = active;
         else
             robot.state = idle;
-        
+
         robot.x = msg.get()->x;
         robot.y = msg.get()->y;
         robot.target_ds = msg.get()->selected_ds;
 
         robots.push_back(robot);
-        
-        
-        int count=0;
-        for(int i=0; i < robots.size(); i++)
-                count++;
-                
-        num_robots = count; //TODO also works for simulation? isn't this already known?
+
+        int count = 0;
+        for (int i = 0; i < robots.size(); i++)
+            count++;
+
+        num_robots = count;  // TODO also works for simulation? isn't this already known?
     }
 
     // update charging likelihood
@@ -1049,7 +1032,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 {
     adhoc_communication::ExpFrontierElement frontier_element;
-    
+
     jobs.clear();
 
     // add new jobs
@@ -1081,77 +1064,76 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
         }
     }
 
-/*
-    // remove completed jobs / frontiers
-    for (int i = 0; i < jobs.size(); ++i)
-    {
-        // convert coordinates to cell indices
-        unsigned int mx = 0;
-        unsigned int my = 0;
-        if (false)
+    /*
+        // remove completed jobs / frontiers
+        for (int i = 0; i < jobs.size(); ++i)
         {
-            // if(costmap->getCostmap()->worldToMap(jobs[i].x, jobs[i].y, mx, my) == false){
-            ROS_ERROR("Could not convert job coordinates: %.2f, %.2f.", jobs[i].x, jobs[i].y);
-            continue;
-        }
-
-        // get the 4-cell neighborhood with range 6
-        vector<int> neighbors_x;
-        vector<int> neighbors_y;
-        for (int j = 0; j < 6; ++j)
-        {
-            neighbors_x.push_back(mx + i + 1);
-            neighbors_y.push_back(my);
-            neighbors_x.push_back(mx - i - 1);
-            neighbors_y.push_back(my);
-            neighbors_x.push_back(mx);
-            neighbors_y.push_back(my + i + 1);
-            neighbors_x.push_back(mx);
-            neighbors_y.push_back(my - i - 1);
-        }
-
-        // check the cost of each neighbor
-        bool unknown_found = false;
-        bool obstacle_found = false;
-        bool freespace_found = false;
-        for (int j = 0; j < neighbors_x.size(); ++j)
-        {
-            int cost = 0;
-            // unsigned char cost = costmap->getCostmap()->getCost(neighbors_x[j], neighbors_y[j]);
-            if (cost == costmap_2d::NO_INFORMATION)
+            // convert coordinates to cell indices
+            unsigned int mx = 0;
+            unsigned int my = 0;
+            if (false)
             {
-                unknown_found = true;
+                // if(costmap->getCostmap()->worldToMap(jobs[i].x, jobs[i].y, mx, my) == false){
+                ROS_ERROR("Could not convert job coordinates: %.2f, %.2f.", jobs[i].x, jobs[i].y);
+                continue;
             }
-            else if (cost == costmap_2d::FREE_SPACE)
+
+            // get the 4-cell neighborhood with range 6
+            vector<int> neighbors_x;
+            vector<int> neighbors_y;
+            for (int j = 0; j < 6; ++j)
             {
-                freespace_found = true;
+                neighbors_x.push_back(mx + i + 1);
+                neighbors_y.push_back(my);
+                neighbors_x.push_back(mx - i - 1);
+                neighbors_y.push_back(my);
+                neighbors_x.push_back(mx);
+                neighbors_y.push_back(my + i + 1);
+                neighbors_x.push_back(mx);
+                neighbors_y.push_back(my - i - 1);
             }
-            else if (cost == costmap_2d::LETHAL_OBSTACLE)
+
+            // check the cost of each neighbor
+            bool unknown_found = false;
+            bool obstacle_found = false;
+            bool freespace_found = false;
+            for (int j = 0; j < neighbors_x.size(); ++j)
             {
-                obstacle_found = true;
+                int cost = 0;
+                // unsigned char cost = costmap->getCostmap()->getCost(neighbors_x[j], neighbors_y[j]);
+                if (cost == costmap_2d::NO_INFORMATION)
+                {
+                    unknown_found = true;
+                }
+                else if (cost == costmap_2d::FREE_SPACE)
+                {
+                    freespace_found = true;
+                }
+                else if (cost == costmap_2d::LETHAL_OBSTACLE)
+                {
+                    obstacle_found = true;
+                }
+            }
+
+            // delete frontier if either condition holds
+            //  * no neighbor is unknown
+            //  * at least one neighbor is an obstacle
+            //  * no neighbor is free space
+            if (unknown_found == false || obstacle_found == true || freespace_found == false)
+            {
+                jobs.erase(jobs.begin() + i);
+                --i;
             }
         }
 
-        // delete frontier if either condition holds
-        //  * no neighbor is unknown
-        //  * at least one neighbor is an obstacle
-        //  * no neighbor is free space
-        if (unknown_found == false || obstacle_found == true || freespace_found == false)
-        {
-            jobs.erase(jobs.begin() + i);
-            --i;
-        }
-    }
-
-    // update charging likelihood
-    update_l3();
-    */
+        // update charging likelihood
+        update_l3();
+        */
     update_l3();
 }
 
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
-
     // check if docking station is in list already
     bool new_ds = true;
     for (int i = 0; i < ds.size(); ++i)
@@ -1165,7 +1147,12 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                           ds[i].x, ds[i].y, msg.get()->x, msg.get()->y);
 
             // update vacancy
-            ds[i].vacant = msg.get()->vacant;
+            if(ds[i].vacant != msg.get()->vacant) {
+                ds[i].vacant = msg.get()->vacant;
+                ROS_ERROR("!!!!!!!!!!!New state for ds%d: %s", msg.get()->id, (msg.get()->vacant ? "vacant" : "occupied"));
+            }
+            else
+                ROS_ERROR("!!!!!!!!!!!State of ds%d unchanged (%s)", msg.get()->id, (msg.get()->vacant ? "vacant" : "occupied"));
 
             new_ds = false;
             break;
@@ -1196,7 +1183,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     update_l1();
 }
 
-void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg) //TODO multihoop
+void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)  // TODO multihoop
 {
     ROS_INFO("Bid received: robot %d bidded %d", msg.get()->robot, msg.get()->auction);
 
@@ -1212,10 +1199,10 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     else                // it is a new auction by this robot
         ; //++auction_id; //TODO //F
     */
-    
-    
-    /* Check if the robot has some interested in participating to this auction, i.e., if the auctioned DS is the one currently targetted by the robot */
-    if (msg.get()->docking_station != best_ds.id)
+
+    /* Check if the robot has some interested in participating to this auction, i.e., if the auctioned DS is the one
+     * currently targetted by the robot */
+    if (msg.get()->docking_station != best_ds->id)
     {
         /* Robot received a bid of an auction whose auctioned docking station is not the one the robot is interested in
          * at the moment, so it won't participate to the auction */
@@ -1228,14 +1215,17 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 
         /* Start timer to force the robot to consider the auction concluded after some time, even in case it does not
          * receive the result of the auction.
-         * To keep the timer active, we must store it on the heap; the timer is just pushed back in vector 'timers', which is cleared when no auction is pending (and so no timer is active). A better management should be possible, for instance using insert(), at(), etc., but in previous tries the node always crashed when using these functions... */
+         * To keep the timer active, we must store it on the heap; the timer is just pushed back in vector 'timers',
+         * which is cleared when no auction is pending (and so no timer is active). A better management should be
+         * possible, for instance using insert(), at(), etc., but in previous tries the node always crashed when using
+         * these functions... */
         ros::Timer timer = nh.createTimer(ros::Duration(FORCED_AUCTION_END_TIMEOUT),
                                           &docking::end_auction_participation_timer_callback, this, true, false);
         timer.start();
         timers.push_back(timer);
 
-        //if(get_llh() > msg.get()->bid)
-        if(true) //TODO
+        // if(get_llh() > msg.get()->bid)
+        if (true)  // TODO
         {
             ROS_INFO("The robot can bet an higher bid than the one received, so it will participate to the auction");
             adhoc_communication::SendEmAuction srv;
@@ -1243,12 +1233,13 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             srv.request.topic = "adhoc_communication/send_em_auction/reply";
             srv.request.auction.auction = msg.get()->auction;
             srv.request.auction.robot = robot_id;
-            srv.request.auction.docking_station = best_ds.id;
+            srv.request.auction.docking_station = best_ds->id;
             srv.request.auction.bid = get_llh();
             ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
             sc_send_auction.call(srv);
         }
-        else {
+        else
+        {
             ROS_INFO("The robot has no chance to win, so it won't place its own bid");
             participating_to_auction--;
         }
@@ -1257,12 +1248,12 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     // TODO multi-hoop??
 }
 
-void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg) //TODO check
+void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)  // TODO check
 {
-    //ROS_INFO("Received reply to auction");
+    // ROS_INFO("Received reply to auction");
 
     // TODO //F probably in this version doesn't work with multi-hoop replies!!!!!
-    //ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
+    // ROS_ERROR("\n\t\e[1;34mReply received: (%d, %d)\e[0m", msg.get()->robot, msg.get()->auction);
     // if(msg.get()->robot == robot_id) {
 
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
@@ -1309,13 +1300,17 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
     */
 }
 
-void docking::end_auction_participation_timer_callback(const ros::TimerEvent &event) //TODO what if instead the auction result are received after this timer? what if instead it is received a lot early?
+void docking::end_auction_participation_timer_callback(const ros::TimerEvent &event)  // TODO what if instead the
+                                                                                      // auction result are received
+                                                                                      // after this timer? what if
+                                                                                      // instead it is received a lot
+                                                                                      // early?
 {
     ROS_DEBUG("Force to consider auction concluded");
     participating_to_auction--;
 }
 
-void docking::timerCallback(const ros::TimerEvent &event) //TODO check
+void docking::timerCallback(const ros::TimerEvent &event)  // TODO check
 {
     /* The auction is concluded; the robot that started it has to compute who is the winner and must inform all the
      * other robots */
@@ -1339,7 +1334,7 @@ void docking::timerCallback(const ros::TimerEvent &event) //TODO check
     }
 
     // TODO
-    
+
     if (auction_bids.size() < 3 && ds.size() == 1)
         ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
 
@@ -1352,14 +1347,14 @@ void docking::timerCallback(const ros::TimerEvent &event) //TODO check
     if (winner == robot_id)
     {
         /* The robot won its own auction */
-        ROS_ERROR("Winner of the auction"); //TODO specify which auction
+        ROS_ERROR("Winner of the auction");  // TODO specify which auction
         next_target_ds = best_ds;
 
         auction_winner = true;
-        lost_own_auction = false; //TODO(minor) redundant
-        lost_other_robot_auction = false; //TODO(minor) probably here is redundant
+        lost_own_auction = false;          // TODO(minor) redundant
+        lost_other_robot_auction = false;  // TODO(minor) probably here is redundant
 
-        timer_restart_auction.stop();  //TODO i'm not sure that this follows the idea in the paper...
+        timer_restart_auction.stop();  // TODO i'm not sure that this follows the idea in the paper...
     }
     else
     {
@@ -1367,11 +1362,13 @@ void docking::timerCallback(const ros::TimerEvent &event) //TODO check
         ROS_ERROR("Robot lost its own auction");
         auction_winner = false;
         lost_own_auction = true;
-        
-        //TODO do better
-        //TODO check also where this timer is stopped...
-        /* If a robot is already in queue, the rescheduling timer must be started now (whereas if the robot is not already in queue, it should reach the queue before starting this timer) */
-        if(robot_state == in_queue) {
+
+        // TODO do better
+        // TODO check also where this timer is stopped...
+        /* If a robot is already in queue, the rescheduling timer must be started now (whereas if the robot is not
+         * already in queue, it should reach the queue before starting this timer) */
+        if (robot_state == in_queue)
+        {
             timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
             timer_restart_auction.start();
         }
@@ -1382,7 +1379,7 @@ void docking::timerCallback(const ros::TimerEvent &event) //TODO check
     srv_mgs.request.auction.auction = auction_id;
     srv_mgs.request.auction.robot = winner;
 
-    srv_mgs.request.auction.docking_station = best_ds.id;
+    srv_mgs.request.auction.docking_station = best_ds->id;
     srv_mgs.request.auction.bid = get_llh();
 
     // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
@@ -1393,7 +1390,7 @@ void docking::timerCallback(const ros::TimerEvent &event) //TODO check
     update_state_required = true;
 }
 
-void docking::cb_charging_completed(const std_msgs::Empty &msg) //TODO(minor)
+void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 {
     ;
 }
@@ -1404,11 +1401,12 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
     start_new_auction();
 }
 
-void docking::start_new_auction() {
+void docking::start_new_auction()
+{
     ROS_INFO("Starting new auction");
-    
+
     /* The robot is starting an auction */
-    managing_auction = true; //TODO(minor)
+    managing_auction = true;  // TODO(minor)
     auction_id++;
     participating_to_auction++;
 
@@ -1421,7 +1419,7 @@ void docking::start_new_auction() {
     srv.request.topic = "adhoc_communication/send_em_auction/new_auction";
     srv.request.auction.auction = auction_id;
     srv.request.auction.robot = robot_id;
-    srv.request.auction.docking_station = best_ds.id;
+    srv.request.auction.docking_station = best_ds->id;
     srv.request.auction.bid = get_llh();
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
@@ -1433,7 +1431,7 @@ void docking::start_new_auction() {
     auction_bids.push_back(bid);
 }
 
-void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg) //TODO(minor)
+void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg)  // TODO(minor)
 {
     if (robot_prefix == "/robot_1")  // TODO ...
     {
@@ -1449,7 +1447,7 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
     }
 }
 
-void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg) 
+void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     // TODO the robot must check for its participation to the auction!!!
 
@@ -1457,10 +1455,12 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 
     /* Check if the robot is interested in the docking station that was object of the auction whose result has been just
      * received */
-     //TODO(minor) use multicast instead!!!
-    if (msg.get()->docking_station == best_ds.id)
+    // TODO(minor) use multicast instead!!!
+    if (msg.get()->docking_station == best_ds->id)
     {
-        ROS_INFO("Received result of an auction to which the robot participated"); //TODO(minor) acutally maybe it didn't participate because its bid was lost...
+        ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor) acutally maybe it
+                                                                                    // didn't participate because its
+                                                                                    // bid was lost...
 
         /* Since the robot received the result of an auction to which it took part, explorer node must be informed of a
          * possible change in the robot state */
@@ -1472,7 +1472,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             /* The robot won the auction */
             ROS_ERROR("Winner of the auction started by another robot");
             auction_winner = true;
-            lost_other_robot_auction = false; //TODO(minor) redundant?
+            lost_other_robot_auction = false;  // TODO(minor) redundant?
 
             next_target_ds = best_ds;  // TODO this is safe only if the best_ds is not modified during auctions!!!
             // TODO and what if best_ds is updated just a moment before starting the auction??? it shoul be ok because
@@ -1502,39 +1502,35 @@ void docking::translate_coordinates(double starting_x, double starting_y, double
     *relative_y = starting_y - origin_absolute_y;
 }
 
-void docking::ds_state_update_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
+void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)  // TODO(minor) explain
+                                                                                                  // very well the
+                                                                                                  // choices
 {
-    ROS_INFO("New state for ds%d: %s", msg.get()->id, (msg.get()->vacant ? "occupied" : "vacant") );
-    ds[msg.get()->id].vacant = msg.get()->vacant; //TODO NO!!! we are not sure that DS are inserted in order of ID!!!!
-}
+    // ROS_INFO("Received request for vacancy check for "); //TODO(minor) complete
 
-void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) //TODO(minor) explain very well the choices
-{
-    //ROS_INFO("Received request for vacancy check for "); //TODO(minor) complete
-    
-    /* If the request for vacancy check is not about the target DS of the robot, for sure the robot is not occupying it */
-    if (msg.get()->id == target_ds.id)  // TODO at the beginning no robot has already target_ds set, since it is set
+    /* If the request for vacancy check is not about the target DS of the robot, for sure the robot is not occupying it
+     */
+    if (msg.get()->id == target_ds->id)  // TODO at the beginning no robot has already target_ds set, since it is set
                                         // only after the end of all auctions!!!!!
 
-        /* If the robot is going to or already charging, or if it is going to check already checking for vacancy, it is (or may be, or will be) occupying the DS */ 
+        /* If the robot is going to or already charging, or if it is going to check already checking for vacancy, it is
+         * (or may be, or will be) occupying the DS */
         if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
             robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         {
-        
             /* Print some debut text */
             if (robot_state == charging || robot_state == going_charging)
                 ROS_ERROR("\n\t\e[1;34mI'm using / going to use that DS!!!!\e[0m");
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
                 ROS_ERROR("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
             else if (robot_state == fully_charged || robot_state == leaving_ds)
-                 ROS_ERROR("\n\t\e[1;34mI'm leaving the DS, jsut wait a sec...\e[0m");
-            
+                ROS_ERROR("\n\t\e[1;34mI'm leaving the DS, jsut wait a sec...\e[0m");
+
             /* Reply to the robot that asked for the check, telling it that the DS is occupied */
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
-            srv_msg.request.docking_station.id = target_ds.id;
+            srv_msg.request.docking_station.id = target_ds->id;
             sc_send_docking_station.call(srv_msg);
-            
         }
         else
             ROS_DEBUG("\n\t\e[1;34m target ds, but currently not used by the robot \e[0m");
@@ -1542,7 +1538,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         ROS_DEBUG("\n\t\e[1;34m robot is not targetting that ds\e[0m");
 }
 
-void docking::update_robot_state() //TODO(minor) simplify
+void docking::update_robot_state()  // TODO(minor) simplify
 {
     /*
      * Check if:
@@ -1565,22 +1561,25 @@ void docking::update_robot_state() //TODO(minor) simplify
         std_msgs::Empty msg;
 
         /* If the robot is not the winner of the most recent auction, notify explorer.
-         * Notice that for sure it took part to at least one auction, or 'update_state_required' would be false and we wouldn't be in this then-branch */
+         * Notice that for sure it took part to at least one auction, or 'update_state_required' would be false and we
+         * wouldn't be in this then-branch */
         if (!auction_winner)
         {
             /* Since there are no more pending auction, we can update the DS that is targetted by the robot */
             target_ds = next_target_ds;
 
-            if(lost_own_auction) {
+            if (lost_own_auction)
+            {
                 /* Notify explorer node about the lost auction */
                 pub_lost_own_auction.publish(msg);
 
                 ROS_ERROR("\n\t\e[1;34m lost: reset periodic timer \e[0m");
-                timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true); 
+                timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
                 timer_restart_auction.start();
             }
-            
-            /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was recharging, it has to leave the docking station) */
+
+            /* If the robot has lost an auction that was not started by it, notify explorer (because if the robot was
+             * recharging, it has to leave the docking station) */
             else
                 pub_lost_other_robot_auction.publish(msg);
         }
@@ -1588,25 +1587,32 @@ void docking::update_robot_state() //TODO(minor) simplify
         /* Robot is the winner of at least one auction, notify explorer */
         else
         {
-            /* If the robot is already approaching a DS to recharge, if it is already charging, etc., ignore the fact that meanwhile it has won another auction. 
+            /* If the robot is already approaching a DS to recharge, if it is already charging, etc., ignore the fact
+             *that meanwhile it has won another auction.
              *
-             * This check (i.e., the if condition) is necessary because, while moving toward the DS, the robot could have changed its currently optimal DS and it could have also taken part to an auction for this new DS and won it; without the check the explorer node would be notified for a change of target DS even if the robot is still approaching the old one, which could cause problems when the robot state changes from checking_vacancy to going_charging, since it would move to the new DS without doing again the vacancy check (this is because the move_robot() function in explorer node uses the coordinates of the currently set target DS when the robot wants to reach a DS). */
+             * This check (i.e., the if condition) is necessary because, while moving toward the DS, the robot could
+             *have changed its currently optimal DS and it could have also taken part to an auction for this new DS and
+             *won it; without the check the explorer node would be notified for a change of target DS even if the robot
+             *is still approaching the old one, which could cause problems when the robot state changes from
+             *checking_vacancy to going_charging, since it would move to the new DS without doing again the vacancy
+             *check (this is because the move_robot() function in explorer node uses the coordinates of the currently
+             *set target DS when the robot wants to reach a DS). */
             if (robot_state != charging || robot_state != going_charging || robot_state != going_checking_vacancy ||
                 robot_state != checking_vacancy)
             {
                 /* Since there are no more pending auction, we can update the DS that is targetted by the robot */
                 target_ds = next_target_ds;  // TODO but what if the robot is already charging at a certain DS which is
                                              // different from next_target_ds ??????????
-                
-                /* Notify explorer node about the new target DS */            
+
+                /* Notify explorer node about the new target DS */
                 geometry_msgs::PointStamped msg1;
-                msg1.point.x = target_ds.x;
-                msg1.point.y = target_ds.y;
+                msg1.point.x = target_ds->x;
+                msg1.point.y = target_ds->y;
                 pub_new_target_ds.publish(msg1);
-                
+
                 /* Notify explorer node about the victory */
                 pub_won_auction.publish(msg);  // TODO it is important that this is after the other pub!!!!
-            } 
+            }
             else
                 ROS_ERROR("The robot has already won an auction: ignore the result of the most recent auction");
         }
@@ -1617,7 +1623,7 @@ void docking::update_robot_state() //TODO(minor) simplify
         auction_winner = false;
         lost_own_auction = false;
         lost_other_robot_auction = false;
-        timers.clear(); //TODO(minor) inefficient!!
+        timers.clear();  // TODO(minor) inefficient!!
     }
     else
     {
@@ -1667,134 +1673,179 @@ void docking::initLogpath()
         */
 }
 
-void docking::set_target_ds_vacant(bool vacant) {
+void docking::set_target_ds_vacant(bool vacant)
+{
     adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "adhoc_communication/ds_state_update";
-    srv_msg.request.docking_station.id = target_ds.id;
+    srv_msg.request.topic = "adhoc_communication/send_em_docking_station";
+    srv_msg.request.docking_station.id = target_ds->id;
     srv_msg.request.docking_station.vacant = vacant;
     sc_send_docking_station.call(srv_msg);
+
+    /*
+    std::vector<ds_t>::iterator it;
+    for (it = ds.begin(); it != ds.end(); it++)
+        if ((*it).id == target_ds->id)
+        {
+            (*it).vacant = vacant;
+            break;
+        }
+    */
+    target_ds->vacant = vacant;
+    ROS_ERROR("!!!!! %d", vacant);
     
     std::vector<ds_t>::iterator it;
-    for(it = ds.begin(); it != ds.end(); it++)
-        if((*it).id == target_ds.id) {
-            (*it).vacant = vacant;
+    for (it = ds.begin(); it != ds.end(); it++)
+        if ((*it).id == target_ds->id)
+        {
+            ROS_ERROR("!!!!! %d", (*it).vacant);
             break;
         }
 }
 
-void docking::compute_MST(int graph[V][V]) //TODO(minor) check all functions related to MST
+void docking::compute_MST(int graph[V][V])  // TODO(minor) check all functions related to MST
 {
-     int parent[V]; // Array to store constructed MST
-     int key[V];   // Key values used to pick minimum weight edge in cut
-     bool mstSet[V];  // To represent set of vertices not yet included in MST
- 
-     // Initialize all keys as INFINITE
-     for (int i = 0; i < V; i++)
+    int parent[V];   // Array to store constructed MST
+    int key[V];      // Key values used to pick minimum weight edge in cut
+    bool mstSet[V];  // To represent set of vertices not yet included in MST
+
+    // Initialize all keys as INFINITE
+    for (int i = 0; i < V; i++)
         key[i] = INT_MAX, mstSet[i] = false;
- 
-     // Always include first 1st vertex in MST.
-     key[0] = 0;     // Make key 0 so that this vertex is picked as first vertex
-     parent[0] = -1; // First node is always root of MST 
- 
-     // The MST will have V vertices
-     for (int count = 0; count < V-1; count++)
-     {
+
+    // Always include first 1st vertex in MST.
+    key[0] = 0;      // Make key 0 so that this vertex is picked as first vertex
+    parent[0] = -1;  // First node is always root of MST
+
+    // The MST will have V vertices
+    for (int count = 0; count < V - 1; count++)
+    {
         // Pick the minimum key vertex from the set of vertices
         // not yet included in MST
         int u = minKey(key, mstSet);
- 
+
         // Add the picked vertex to the MST Set
         mstSet[u] = true;
- 
+
         // Update key value and parent index of the adjacent vertices of
         // the picked vertex. Consider only those vertices which are not yet
         // included in MST
         for (int v = 0; v < V; v++)
- 
-           // graph[u][v] is non zero only for adjacent vertices of m
-           // mstSet[v] is false for vertices not yet included in MST
-           // Update the key only if graph[u][v] is smaller than key[v]
-          if (graph[u][v] && mstSet[v] == false && graph[u][v] <  key[v])
-             parent[v]  = u, key[v] = graph[u][v];
-     }
- 
-     // print the constructed MST
-     printMST(parent, V, graph);
-     
-     
-    
-    for(int i=0; i<V; i++)
-        for(int j=0; j<V; j++)
+
+            // graph[u][v] is non zero only for adjacent vertices of m
+            // mstSet[v] is false for vertices not yet included in MST
+            // Update the key only if graph[u][v] is smaller than key[v]
+            if (graph[u][v] && mstSet[v] == false && graph[u][v] < key[v])
+                parent[v] = u, key[v] = graph[u][v];
+    }
+
+    // print the constructed MST
+    printMST(parent, V, graph);
+
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
             mst[i][j] = 0;
-            
-    //TODO does not work if a DS is not connected to any other DS
-    for(int i=1; i<V; i++) {
-        mst[i][parent[i]] = 1; //parent[i] is the node closest to node i
+
+    // TODO does not work if a DS is not connected to any other DS
+    for (int i = 1; i < V; i++)
+    {
+        mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
         mst[parent[i]][i] = 1;
     }
-    
-    for(int i=0; i<V; i++) {
-        for(int j=0; j<V; j++)
-            ROS_ERROR("(%d, %d): %d ", i, j, mst[i][j]);         
+
+    for (int i = 0; i < V; i++)
+    {
+        for (int j = 0; j < V; j++)
+            ROS_ERROR("(%d, %d): %d ", i, j, mst[i][j]);
     }
-    
-    int k = 0; //index of the closest recheable DS
-    int target = 4; //the id of the DS that we want to reach
-    std::vector<int> path; //sequence of nodes that from target leads to k; i.e., if the vector is traversed in the inverse order (from end to begin), it contains the path to go from k to target
-    
-    find_path(mst, k, target, path, -1);
+
+    int k = 0;              // index of the closest recheable DS
+    int target = 4;         // the id of the DS that we want to reach
+    std::vector<int> path;  // sequence of nodes that from target leads to k; i.e., if the vector is traversed in the
+                            // inverse order (from end to begin), it contains the path to go from k to target
+
+    // find_path(mst, k, target, path);
     path.push_back(k);
-    
+
     std::vector<int>::iterator it;
-    for(it = path.begin(); it != path.end(); it++)
+    for (it = path.begin(); it != path.end(); it++)
         ROS_ERROR("%d - ", *it);
-    
 }
 
 // A utility function to find the vertex with minimum key value, from
 // the set of vertices not yet included in MST
 int docking::minKey(int key[], bool mstSet[])
 {
-   // Initialize min value
-   int min = INT_MAX, min_index;
- 
-   for (int v = 0; v < V; v++)
-     if (mstSet[v] == false && key[v] < min)
-         min = key[v], min_index = v;
- 
-   return min_index;
+    // Initialize min value
+    int min = INT_MAX, min_index;
+
+    for (int v = 0; v < V; v++)
+        if (mstSet[v] == false && key[v] < min)
+            min = key[v], min_index = v;
+
+    return min_index;
 }
- 
+
 // A utility function to print the constructed MST stored in parent[]
 int docking::printMST(int parent[], int n, int graph[V][V])
 {
-   printf("Edge   Weight\n");
-   for (int i = 1; i < V; i++)
-      ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
+    printf("Edge   Weight\n");
+    for (int i = 1; i < V; i++)
+        ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
 }
 
-/* Recursive version of depth-first search for undirected trees. 
-Since the tree is undirected, the algorithm needs to pass to the recursive call the node of the tree on which it is at the moment, to avoid that the recursive call will "backtrack" by selecting this node. 
-*/
-bool docking::find_path(int mst[][V], int start, int target, std::vector<int> &path, int prev_node) {
-    
-    /* Loop on all the node of the tree */
-    for(int j=0; j < V; j++) 
-    
-        /* Check if there is an edge from node 'start' to node 'j', and check if node 'j' is not the node just visited in the previous step of the recursive descending */
-        if(mst[start][j] == 1 && j != prev_node)
-        
-            /* If 'j' is the searched node ('target'), or if from 'j' there is a path that leads to 'target', we have to store 'j' as one of the node that must be visited to reach 'target' ('j' could be 'target' itself, but of course this is not a problem, since we have to visit 'target' to reach it), and then return true to tell the caller that a path to 'target' was found */
-            if(j == target || find_path(mst, j, target, path, start)) {
+bool docking::find_path(std::vector<std::vector<bool> > tree, int start, int end, std::vector<int> &path)
+{
+    /* Temporary variable to store the path from 'end' to 'start' */
+    std::vector<int> inverse_path;
+
+    /* Call auxiliary function find_path_aux to perform the search */
+    bool path_found = find_path_aux(tree, start, end, inverse_path, start);
+
+    /* If a path was found, reverse the constructed path to obtain the real path that goes from 'start' to 'end' */
+    if (path_found)
+        for (int i = inverse_path.size(); i >= 0; i--)
+            path.push_back(inverse_path.at(i));
+
+    /* Tell the caller if a path was found or not */
+    return path_found;
+}
+
+bool docking::find_path_aux(std::vector<std::vector<bool> > tree, int start, int end, std::vector<int> &path,
+                            int prev_node)
+{
+    /* Loop on all tree nodes */
+    for (int j = 0; j < tree.size(); j++)
+
+        /* Check if there is an edge from node 'start' to node 'j', and check if node 'j' is not the node just visited
+         * in the previous step of the recursive descending */
+        if (tree[start][j] == true && j != prev_node)
+
+            /* If 'j' is the searched node ('end'), or if from 'j' there is a path that leads to 'end', we have to store
+             * 'j' as one of the node that must be visited to reach 'end' ('j' could be 'end' itself, but of course this
+             * is not a problem, since we have to visit 'end' to reach it), and then return true to tell the caller that
+             * a path to 'end' was found */
+            if (j == end || find_path_aux(tree, j, end, path, start))
+            {
                 path.push_back(j);
-                return true; 
+                return true;
             }
-        
-     /* If, even after considering all the node of the tree, we have not been able to find one that is connected to 'start' and from which it is possible to find a path leading to 'target', it means that no path from 'start' to 'target' exists: return false */
-     return false;
+
+    /* If, even after considering all the nodes of the tree, we have not found a node that is connected to 'start' and
+     * from which it is possible to find a path leading to 'end', it means that no path from 'start' to 'end' exists:
+     * return false */
+    return false;
 }
 
-/* Callback function to notify docking that explorer has travelled the whole path that leads to the target DS */ //TODO(minor) this is not really necessary, since we can check when the robot state becomes exploring again...
-void docking::moving_along_path_callback(std_msgs::Empty msg) { //TODO(minor) better management of the opportune strategy
-    moving_along_path = false;
+bool docking::compute_closest_ds() {
+    double min_dist = distance(best_ds->x, best_ds->y), dist;
+    bool found_new_closest_ds = false;
+    std::vector<ds_t>::iterator it;
+    for (it = ds.begin(); it != ds.end(); it++)
+        dist = distance( (*it).x, (*it).y );
+        if( dist < min_dist) {
+            min_dist = dist;
+            best_ds = &(*it);
+            found_new_closest_ds;
+        }
+    return found_new_closest_ds;
 }
