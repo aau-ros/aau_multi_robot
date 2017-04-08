@@ -437,7 +437,18 @@ void docking::compute_optimal_ds()
 
                             moving_along_path = true;
 
-                            // publish list of DSs
+                            adhoc_communication::MmListOfPoints msg_path;
+                            for(int i=0; i < path.size(); i++)
+                                for(int j=0; j<ds.size(); j++)
+                                    if(j == path[i]) {                                    
+                                        msg_path.positions[i].x = ds[j].x;
+                                        msg_path.positions[i].y = ds[j].y;
+                                    }
+                            
+                            pub_moving_along_path.publish(msg_path);
+                            
+                            
+                            
                         }
                     }
                     else
@@ -449,7 +460,7 @@ void docking::compute_optimal_ds()
                 {
                     if (!moving_along_path)
                     {
-                        int first_step_x, first_step_y, second_step_x, second_step_y;
+                        double first_step_x, first_step_y, second_step_x, second_step_y;
                         for (int i = 0; i < ds.size(); i++)
                         {
                             bool existing_eo;
@@ -477,10 +488,10 @@ void docking::compute_optimal_ds()
                             moving_along_path = true;
 
                             adhoc_communication::MmListOfPoints msg_path;  // publish list of DS
-                            msg_path.positions[0].x = 0;
-                            msg_path.positions[0].y = 0;
-                            msg_path.positions[1].x = 0;
-                            msg_path.positions[1].y = 0;
+                            msg_path.positions[0].x = first_step_x;
+                            msg_path.positions[0].y = first_step_y;
+                            msg_path.positions[1].x = second_step_x;
+                            msg_path.positions[1].y = second_step_y;
 
                             // TODO publish
                         }
@@ -598,6 +609,7 @@ void docking::compute_optimal_ds()
             ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", best_ds->id, best_ds->x, best_ds->y);
             ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x, best_ds->y);
 
+            target_ds = best_ds;
 
             update_l4();
         }

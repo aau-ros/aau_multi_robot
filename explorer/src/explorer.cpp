@@ -32,6 +32,7 @@
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
+#include <adhoc_communication/MmPoint.h>
 //#include <robot_state/GetRobotState.h>
 
 //#define PROFILE
@@ -52,6 +53,7 @@
 #define INCR 2
 #define QUEUE_DISTANCE 5.0
 #define DS_SELECTION_POLICY 0
+#define OPP_ONLY_TWO_DS false
 
 boost::mutex costmap_mutex;
 
@@ -66,9 +68,10 @@ class Explorer
   public:
     // TODO(minor) move in better place
     bool ready, moving_along_path;
-    int my_counter, ds_path_counter;
+    int my_counter, ds_path_counter, ds_path_size;
     ros::Publisher pub_robot;
     int path[2][2];
+    std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
     ros::ServiceClient sc_get_robot_state;
 
@@ -1288,19 +1291,35 @@ class Explorer
             // TODO opportune
             if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
                                                                 // reach the next DS with the current state of charge???
-                if (ds_path_counter < 2)
-                {
-                    target_ds_x = path[ds_path_counter][0];
-                    target_ds_y = path[ds_path_counter][1];
-                    ds_path_counter++;
-                    update_robot_state_2(going_checking_vacancy);
-                }
+                if(OPP_ONLY_TWO_DS)
+                    if (ds_path_counter < 2)
+                    {
+                        target_ds_x = path[ds_path_counter][0];
+                        target_ds_y = path[ds_path_counter][1];
+                        ds_path_counter++;
+                        update_robot_state_2(going_checking_vacancy);
+                    }
+                    else
+                    {
+                        moving_along_path = false;
+                        // update_robot_state_2(exploring);
+                        update_robot_state_2(leaving_ds);
+                    }
                 else
-                {
-                    moving_along_path = false;
-                    // update_robot_state_2(exploring);
-                    update_robot_state_2(leaving_ds);
-                }
+                    if(ds_path_counter < ds_path_size)
+                    {
+                        target_ds_x = path[ds_path_counter][0];
+                        target_ds_y = path[ds_path_counter][1];
+                        ds_path_counter++;
+                        update_robot_state_2(going_checking_vacancy);
+                    }
+                    else {
+                         moving_along_path = false;
+                        // update_robot_state_2(exploring);
+                        update_robot_state_2(leaving_ds);
+                    } 
+                    
+                    
             else
             {
                 // update_robot_state_2(exploring);
@@ -1315,19 +1334,34 @@ class Explorer
         {
             ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
             // TODO opportune
-            if (DS_SELECTION_POLICY == 2 && moving_along_path)
-                if (ds_path_counter < 2)
-                {
-                    target_ds_x = path[ds_path_counter][0];
-                    target_ds_y = path[ds_path_counter][1];
-                    ds_path_counter++;
-                    update_robot_state_2(going_checking_vacancy);
-                }
+             if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
+                                                                // reach the next DS with the current state of charge???
+                if(OPP_ONLY_TWO_DS)
+                    if (ds_path_counter < 2)
+                    {
+                        target_ds_x = path[ds_path_counter][0];
+                        target_ds_y = path[ds_path_counter][1];
+                        ds_path_counter++;
+                        update_robot_state_2(going_checking_vacancy);
+                    }
+                    else
+                    {
+                        moving_along_path = false;
+                        // update_robot_state_2(exploring);
+                        update_robot_state_2(leaving_ds);
+                    }
                 else
-                {
-                    moving_along_path = false;
-                    update_robot_state_2(fully_charged);
-                }
+                    if(ds_path_counter < ds_path_size) {
+                        target_ds_x = path[ds_path_counter][0];
+                        target_ds_y = path[ds_path_counter][1];
+                        ds_path_counter++;
+                        update_robot_state_2(going_checking_vacancy);
+                    }
+                    else {
+                         moving_along_path = false;
+                        update_robot_state_2(fully_charged);
+                    }               
+
             else
             {
                 update_robot_state_2(fully_charged);
@@ -2383,10 +2417,19 @@ class Explorer
         ROS_ERROR("MOVING!!!!!!!!!!!!");
         moving_along_path = true;
         ds_path_counter = 0;
-        path[0][0] = msg.get()->positions[0].x;
-        path[0][1] = msg.get()->positions[0].y;
-        path[1][0] = msg.get()->positions[1].x;
-        path[1][1] = msg.get()->positions[1].y;
+        
+        if(OPP_ONLY_TWO_DS) {
+            path[0][0] = msg.get()->positions[0].x;
+            path[0][1] = msg.get()->positions[0].y;
+            path[1][0] = msg.get()->positions[1].x;
+            path[1][1] = msg.get()->positions[1].y;
+        }
+        else {
+            complex_path.clear();
+            ds_path_size = msg.get()->positions.size();
+            for(int i=0; i < ds_path_size; i++)
+                complex_path.push_back(msg.get()->positions[i]);
+        }
     }
 
     void bat_callback(const energy_mgmt::battery_state::ConstPtr &msg)

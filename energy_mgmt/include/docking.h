@@ -37,6 +37,7 @@
 #define DS_SELECTION_POLICY 0
 #define MAX_DISTANCE 50
 #define V 5
+#define OPP_ONLY_TWO_DS false
 
 using namespace std;
 
@@ -394,7 +395,7 @@ class docking
      * \param tree the undirected tree where to search for a path, represented with an adiacency matrix
      * \param start index of the starting node of the path
      * \param end index of the ending node of the path
-     * \param path the sequence of nodes composing the path (if a path exists)
+     * \param path the sequence of nodes composing the path (if a path exists) //TODO list of indexes of DSs???
      * \return \c true if a path was found, \c false otherwise
      */
     bool find_path(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path);
