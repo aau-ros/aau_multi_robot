@@ -33,7 +33,7 @@
 #define AUCTION_TIMEOUT 5
 #define FORCED_AUCTION_END_TIMEOUT (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME (AUCTION_TIMEOUT * 3)
-#define LASER_RANGE 10
+#define FIDUCIAL_LASER_RANGE 10 //TODO meters???
 #define DS_SELECTION_POLICY 0
 #define MAX_DISTANCE 50
 #define V 5
@@ -49,16 +49,23 @@ class docking
      */
     docking();
 
-    // F
+    /**
+     * @brief Compute the optimal docking station for the robot
+     *
+     * Given a docking station selected policy, this function computes the dockign station that is currently the optimal one (according to the given policy) for recharging.
+     */
     void compute_optimal_ds();
 
-    void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr &msg);
-    void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    void points(const adhoc_communication::MmListOfPoints::ConstPtr &msg);
-    void cb_recharge(const std_msgs::Empty &msg);
-    void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
-
     void update_robot_state();
+
+    void map_info();
+    
+    /**
+     * @brief Check if there are docking stations close enough to the robot to be considered discovered 
+     *
+     * For each docking station D, the robot checks if the distance between it and D is less than a certain value: if it so, the docking station D can be considered discovered (i.e., it can be used to recharge from now on).
+     */
+    void discover_docking_stations();
 
   private:
     /**
@@ -112,15 +119,6 @@ class docking
     void update_l4();
 
     /**
-     * Start or respond to an auction for a docking station.
-     * @param int docking_station: The docking station that this robot wants to charge at.
-     * @param int id: The ID of the auction. If it is left to default (i.e. 0), then a new auction is started. Otherwise
-     * this robot participates at the given auction.
-     * @return bool: Success of auction.
-     */
-    bool auction(int docking_station, int id, int bid);
-
-    /**
      * Send an auction to a multicast group.
      * @param string multicast_group: The multicast group to send the auction to.
      * @param adhoc_communication::EmAuction auction: The auction that will be sent.
@@ -137,7 +135,7 @@ class docking
      * then the actual path is calculated using Dijkstra's algorithm.
      * @return double: The distance between the robots current position and the goal (in meters).
      */
-    double distance(double goal_x, double goal_y, bool euclidean = false);
+    double distance_from_robot(double goal_x, double goal_y, bool euclidean = false);
 
     /**
      * Compute the length of the trajectory from a given start to a given goal.
@@ -242,6 +240,7 @@ class docking
         double x, y;
         int target_ds;
     };
+    robot_t robot;
     vector<robot_t> robots;
 
     /**
@@ -286,7 +285,7 @@ class docking
     // F
     ros::Publisher pub_ds, pub_new_target_ds;
     bool test;
-    ds_t* best_ds;
+    ds_t *best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
@@ -321,6 +320,29 @@ class docking
 
     bool optimal_ds_computed_once;
 
+    /**
+     * @brief Preload_docking_stations from a file
+     *
+     * Since robots have no fiducial sensors to detect the presence of docking stations, we need to preload them from a
+     *file that stores the positions of all the docking stations in the environment. In particular, the idea is to store
+     *in this file the coordinates of each docking station with respect to an ideally global and fixed reference system;
+     *this of course requires that we have to specify somewhere also the original positiol of the robot in this global
+     *reference system (i.e., we have to specify how the local reference systems of the robots are collocated in this
+     *global reference system); this is done within the launch files.
+     *
+     * To simulate a real scenario where the docking stations should be discovered during the exploration and not been
+     *already known at the beginning, we store these docking station in a seperate vector from the one that stores the
+     *already discovered docking station.
+     *
+     * More precisely, we load the position of each docking station and we store it in a vector A; during its
+     *exploration, the robot checks (with a certain frequency) if there is a docking stations in the neighborhood, i.e.,
+     *given that it knows the positions of all the dockgin stations and it can compute at each instant its position in
+     *the global reference system, it can checks if the distance between it an a given docking station D is less than a
+     *certain value, so that we can simulated the range of a possible fiducial sensor to detect the docking station. If
+     *the distance is less than this "fake range", we move the docking station D from vector A of the currently unknown
+     *docking station position to vector B that keeps track of the docking stations that were alraedy discovered up to
+     *this instant.
+     */
     void preload_docking_stations();
 
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr &);
@@ -346,8 +368,6 @@ class docking
     std::vector<ros::Timer> timers;
 
     void end_auction_participation_timer_callback(const ros::TimerEvent &event);
-
-    void robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
 
     ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result,
         pub_moving_along_path;
@@ -381,8 +401,8 @@ class docking
 
     int printMST(int parent[], int n, int graph[V][V]);
 
-    /*!
-     * \brief Search for a path connecting the given nodes in an undirected tree
+    /**
+     * @brief Search for a path connecting the given nodes in an undirected tree
      *
      * The function checks if it is possible to find a path from node 'start' to node 'end' in the (possibly) undirected
      *tree 'tree': if a path is found, the nodes that compose the path are stored in 'path', i.e., 'path' contains the
@@ -392,16 +412,16 @@ class docking
      * 'tree' is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
      *false otherwise.
      *
-     * \param tree the undirected tree where to search for a path, represented with an adiacency matrix
-     * \param start index of the starting node of the path
-     * \param end index of the ending node of the path
-     * \param path the sequence of nodes composing the path (if a path exists) //TODO list of indexes of DSs???
-     * \return \c true if a path was found, \c false otherwise
+     * @param tree the undirected tree where to search for a path, represented with an adiacency matrix
+     * @param start index of the starting node of the path
+     * @param end index of the ending node of the path
+     * @param path the sequence of nodes composing the path (if a path exists) //TODO list of indexes of DSs???
+     * @return \c true if a path was found, \c false otherwise
      */
     bool find_path(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path);
 
     /**
-     * \brief Auxiliary function to find a path in an undirected tree
+     * @brief Auxiliary function to find a path in an undirected tree
      *
      * This function is called by find_path() to search for a path in a tree. It uses a depth-first search approach to
      *find the path, with recursive calls: it checks if there is a node (possibly more than one) connected to 'start' in
@@ -415,14 +435,14 @@ class docking
      * \p tree is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
      *false otherwise.
      *
-     * \param tree the undirected tree where to search for a path, represented with ad adiacency matrix
-     * \param start index of the starting node of the path
-     * \param end index of the ending node of the path
-     * \param path the path going from 'target' to 'start' (i.e., it is the reversed path w.r.t. the path that is
+     * @param tree the undirected tree where to search for a path, represented with ad adiacency matrix
+     * @param start index of the starting node of the path
+     * @param end index of the ending node of the path
+     * @param path the path going from 'target' to 'start' (i.e., it is the reversed path w.r.t. the path that is
      *             actually requested)
-     * \param prev_node index of the node on which the caller of this function was positioned when perfoming the
+     * @param prev_node index of the node on which the caller of this function was positioned when perfoming the
      *                  recursive call
-     * \return \c true if a path was found, \c false otherwise
+     * @return \c true if a path was found, \c false otherwise
      */
     bool find_path_aux(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path,
                        int prev_node);
@@ -430,11 +450,10 @@ class docking
     int mst[V][V];
 
     bool moving_along_path;
-    
-    int ds_selection_policy;
-    
-    bool compute_closest_ds();
 
+    int ds_selection_policy;
+
+    bool compute_closest_ds();
 
     enum ds_state_t
     {
@@ -442,6 +461,17 @@ class docking
         occupied,
         assigned
     };
+
+    void robot_position_callback(const geometry_msgs::PointStamped::ConstPtr &msg);
+    void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void points(const adhoc_communication::MmListOfPoints::ConstPtr &msg);
+    void cb_recharge(const std_msgs::Empty &msg);
+    void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
+
+    std::string csv_file;
+    std::fstream fs_csv;
+    
+
 };
 
 #endif /* DOCKING_H */

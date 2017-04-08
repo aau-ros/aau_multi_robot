@@ -50,12 +50,14 @@ int main(int argc, char** argv)
         // send broadcast message with positions of all (known) docking stations
         
         // 
-        //doc.detect_ds();
+        doc.discover_docking_stations();
         
         //
         doc.compute_optimal_ds();
         
         doc.update_robot_state();
+        
+        doc.map_info();
 
         // sleep for 1/rate seconds
         loop_rate.sleep();

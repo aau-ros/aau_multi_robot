@@ -1305,8 +1305,9 @@ class Explorer
                         // update_robot_state_2(exploring);
                         update_robot_state_2(leaving_ds);
                     }
-                else {
-                    if(ds_path_counter < ds_path_size) {
+                else
+                    if(ds_path_counter < ds_path_size)
+                    {
                         target_ds_x = path[ds_path_counter][0];
                         target_ds_y = path[ds_path_counter][1];
                         ds_path_counter++;
@@ -1349,7 +1350,7 @@ class Explorer
                         // update_robot_state_2(exploring);
                         update_robot_state_2(leaving_ds);
                     }
-                else {
+                else
                     if(ds_path_counter < ds_path_size) {
                         target_ds_x = path[ds_path_counter][0];
                         target_ds_y = path[ds_path_counter][1];
@@ -1490,10 +1491,12 @@ class Explorer
         ros::NodeHandle nh_pub_speed;
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
+        ROS_ERROR("!!!!!!!!!!!! %s", csv_file.c_str());
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#time,exploration_travel_path_global,available_distance,global_"
-                  "map_progress,local_map_progress,battery_state,recharge_cycles,"
-                  "energy_consumption,frontier_selection_strategy" << std::endl;
+        fs_csv << "#time,exploration_travel_path_global,available_distance,"
+                  "global_map_progress,local_map_progress,battery_state,"
+                  "recharge_cycles,energy_consumption,frontier_selection_strategy"
+               << std::endl;
         fs_csv.close();
 
         while (ros::ok() && robot_state != finished)

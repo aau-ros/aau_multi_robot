@@ -4,30 +4,49 @@ using namespace std;
 
 docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 {
-    /* Read parameters */
-    nh.param("energy_mgmt/num_robots", num_robots, 1);
-    nh.param("energy_mgmt/w1", w1, 0.25);
-    nh.param("energy_mgmt/w2", w2, 0.25);
-    nh.param("energy_mgmt/w3", w3, 0.25);
-    nh.param("energy_mgmt/w4", w4, 0.25);
-    nh.param("energy_mgmt/x", origin_absolute_x, 0.0);
-    nh.param("energy_mgmt/y", origin_absolute_y, 0.0);
-    nh.param("energy_mgmt/distance_close", distance_close, 8.0);
-    nh.param<string>("energy_mgmt/move_base_frame", move_base_frame, "map");
-    nh.param<string>("energy_mgmt/robot_prefix", robot_prefix, "");
-    nh.param("energy_mgmt/ds_selection_policy", ds_selection_policy, 1); //TODO add this parameter
-    nh.param<std::string>("log_path", log_path, "");
+    /* Load parameters */
+    ros::NodeHandle nh_tilde("~");
+    nh_tilde.param("num_robots", num_robots, 1);
+    nh_tilde.param("w1", w1, 0.25);
+    nh_tilde.param("w2", w2, 0.25);
+    nh_tilde.param("w3", w3, 0.25);
+    nh_tilde.param("w4", w4, 0.25);
+    nh_tilde.param("x", origin_absolute_x, 0.0);
+    nh_tilde.param("y", origin_absolute_y, 0.0);
+    nh_tilde.param("distance_close", distance_close, 8.0);
+    nh_tilde.param<string>("move_base_frame", move_base_frame, "map");
+    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
+    nh_tilde.param("ds_selection_policy", ds_selection_policy, 1);  // TODO add this parameter
+    nh_tilde.param<std::string>("log_path", log_path, "");
 
     /* Initialize robot name */
     if (robot_prefix.empty())
     {
         /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
+
+        /* Set robot name and hostname */
         char hostname[1024];
         hostname[1023] = '\0';
         gethostname(hostname, 1023);
         robot_name = string(hostname);
-        robot_id = 0;
-        exit(0);
+
+        /* Set robot ID based on the robot name */
+        std::string bob = "bob";
+        std::string marley = "marley";
+        std::string turtlebot = "turtlebot";
+        std::string joy = "joy";
+        std::string hans = "hans";
+        if (robot_name.compare(turtlebot) == 0)
+            robot_id = 0;
+        if (robot_name.compare(joy) == 0)
+            robot_id = 1;
+        if (robot_name.compare(marley) == 0)
+            robot_id = 2;
+        if (robot_name.compare(bob) == 0)
+            robot_id = 3;
+        if (robot_name.compare(hans) == 0)
+            robot_id = 4;
+
         my_prefix = "robot_" + SSTR(robot_id) + "/";  // TODO(minor)
     }
     else
@@ -50,13 +69,12 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
         my_node = "";
     }
 
-    // initialize robot struct
+    /* Initialize robot struct */
     robot_t robot;
     robot.id = robot_id;
     robot.state = active;
     robots.push_back(robot);
 
-    // initialize service clients
     // TODO(minor) names (robot_0 end dockign)
     // TODO(minor) save names in variables
 
@@ -87,8 +105,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
         nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 100, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
         nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 100, &docking::cb_auction_result, this);
-    sub_robot_position =
-        nh.subscribe("goalPoint/goalPoint", 100, &docking::robot_position_callback, this);  // TODO(minor)
+
     sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 100, &docking::adhoc_ds, this);
 
     sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
@@ -98,8 +115,6 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 100, &docking::check_vacancy_callback, this);
 
     sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 100, &docking::check_vacancy_callback, this);
-
-    sub_robot_pose = nh.subscribe("amcl_pose", 100, &docking::robot_pose_callback, this);  // TODO(minor) not used
 
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 100);
@@ -154,16 +169,28 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     };
 
     // compute_MST(graph);
+
+    ROS_ERROR("!!!!!!!!!!!! %s", log_path.c_str());
+    log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    ROS_ERROR("!!!!!!!!!!!!!!!!!!!Logging files to %s", log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+                ROS_ERROR("Cannot create directory %s.", log_path.c_str());
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %s.", log_path.c_str());
+        }
+
+    log_path = log_path.append("/");
+    csv_file = log_path + std::string("periodical.log");
 }
 
-void docking::robot_pose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
-{
-    ROS_DEBUG("Received robot position");
-    robot_x = pose->pose.pose.position.x;
-    robot_y = pose->pose.pose.position.y;
-}
-
-void docking::preload_docking_stations()  // TODO only for simulation
+void docking::preload_docking_stations()
 {
     int index = 0;  // index of the DS: used to loop above all the docking stations inserted in the file
     double x, y;    // DS coordinates
@@ -173,19 +200,20 @@ void docking::preload_docking_stations()  // TODO only for simulation
     while (nh.hasParam("energy_mgmt/d" + SSTR(index) + "/x"))
     {
         /* Load coordinates of the new DS */
-        nh.param("energy_mgmt/d" + SSTR(index) + "/x", x, 0.0);
-        nh.param("energy_mgmt/d" + SSTR(index) + "/y", y, 0.0);
+        ros::NodeHandle nh_tilde("~");
+        nh_tilde.param("d" + SSTR(index) + "/x", x, 0.0);
+        nh_tilde.param("d" + SSTR(index) + "/y", y, 0.0);
 
         /* Store new DS */
         ds_t new_ds;
         new_ds.id = index;
-        new_ds.vacant = true;
         translate_coordinates(x, y, &(new_ds.x), &(new_ds.y));
+        new_ds.vacant = true;
         undiscovered_ds.push_back(new_ds);
 
         /* Delete the loaded parameters (since they are not used anymore) */
-        nh.deleteParam("energy_mgmt/d" + SSTR(index) + "/x");
-        nh.deleteParam("energy_mgmt/d" + SSTR(index) + "/y");
+        nh_tilde.deleteParam("d" + SSTR(index) + "/x");
+        nh_tilde.deleteParam("d" + SSTR(index) + "/y");
 
         /* Prepare to search for next DS (if it exists) in the file */
         index++;
@@ -200,322 +228,290 @@ void docking::preload_docking_stations()  // TODO only for simulation
 
 void docking::compute_optimal_ds()
 {
-
-    /* Get current robot position */
+    /* Get current robot position (once the service required to do that is ready) */
     ros::service::waitForService("explorer/robot_pose");
     explorer::RobotPosition srv_msg;
-    if (ros::service::exists("explorer/robot_pose", true))
-        if (sc_robot_pose.call(srv_msg))
-        {
-            robot_x = srv_msg.response.x;
-            robot_y = srv_msg.response.y;
-            ROS_DEBUG("Robot position: (%f, %f)", robot_x, robot_y);
-        }
-        else
-        {
-            ROS_ERROR("Call to service %s failed", sc_robot_pose.getService().c_str());
-            return;  // TODO do better
-        }
+    if (sc_robot_pose.call(srv_msg))
+    {
+        robot.x = srv_msg.response.x;
+        robot.y = srv_msg.response.y;
+        ROS_DEBUG("Robot position: (%f, %f)", robot.x, robot.y);
+    }
     else
     {
-        ROS_ERROR("Service %s is not ready yet", sc_robot_pose.getService().c_str());
-        return;  // TODO
+        ROS_ERROR("Call to service %s failed; not possible to compute optimal DS for the moment",
+                  sc_robot_pose.getService().c_str());
+        return;
     }
+    
+    /* Check if at least one DS has been discovered */
+    if(ds.size() > 0) {
 
-    /* Check if a new DS can be discovered */
-    std::vector<ds_t>::iterator it;
-    for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
-    {
-        /* Compute distance from robot */
-        double dist = distance((*it).x, (*it).y);
-
-        /* If the DS is inside a fiducial laser range, it can be considered discovered */
-        if (dist > 0 && dist < LASER_RANGE)
-        {
-            /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
-            ROS_DEBUG("Found new DS: ds%d", (*it).id);  // TODO index make sense only in simulation
-            ds.push_back(*it);
-            undiscovered_ds.erase(it);
-
-            /* Inform other robots about the new DS */
-            // TODO call service to call cb_ds
-
-            /* If it is the first DS that is encountered, set it as the currently optimal DS: this is just to initialize
-             * variable 'best_ds', so that we can compute the distance from the robot and the currently selected DS and
-             * compare it with the distance from other DSs also when the node has just started */
-            if (ds.size() == 1)
-            {
-                best_ds = &ds.at(0);
-                target_ds = best_ds;
-                next_target_ds = target_ds;  // TODO are all this best_ds, target_ds, etc. really necessary?
-            }
-
-            /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to
-             * compensate the future increment of the for loop, since, after the deletion of the element, all the
-             * elements are shifted by one position, and so we are already pointing to the next element, even without
-             * the future increment of the for loop */
-            it--;
-        }
-        else
-            ROS_DEBUG("No new DS was encountered");
-    }
-
-    if (participating_to_auction == 0)  // TODO is it a good idea?
-    {
+        /* Some DSs have been discovered: compute optimal DS */
         bool found_new_optimal_ds = false;
+        
+        /* "Closest" policy */
         if (ds_selection_policy == 0)  // TODO(minor) switch-case
             found_new_optimal_ds = compute_closest_ds();
 
-        else if (ds_selection_policy == 1)  // vacant
+        /* "Vacant" policy */
+        else if (ds_selection_policy == 1)
         {
+            /* Check if there are vacant DSs. If there are, check also if there is one that is closest to the robot than the currently optimal DS; if there is, that DS is the new optimal DS, otherwise do not change the optimal DS */
             bool found_vacant_ds = false;
-            std::vector<ds_t>::iterator it;
-            double min_dist = distance(best_ds->x, best_ds->y);
-            for (it = ds.begin(); it != ds.end(); it++) {
+            double min_dist = distance_from_robot(best_ds->x, best_ds->y);
+            for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
+            {
                 if ((*it).vacant)
                 {
+                    /* We have just found a vacant DS */
                     found_vacant_ds = true;
-                    
-                    if(best_ds->vacant)
+
+                    /* Check if the currently optimal DS is no more vacant */
+                    if (best_ds->vacant)
                     {
-    
-                        double dist = distance((*it).x, (*it).y);
-                        if ( dist < min_dist )
+                        /* The currently optimal DS is still vacant, so we have to check if it is also closest to the robot than the vacant DS we have just found: if it is, it is still the optimal DS, otherwise the just found vacant DS is the new optimal DS. Notice that the vacant DS we have just found could be the currently optimal DS itself, but this is not a problem because the check for the closest DS will just tell us that we don't have to update the currently optimal DS. */
+                        double dist = distance_from_robot((*it).x, (*it).y);
+                        if (dist < min_dist)
                         {
                             found_new_optimal_ds = true;
                             best_ds = &(*it);
-                        } else
-                            ; //ROS_ERROR("but it is not closest than best_ds!");
-                    } else {
-                        found_new_optimal_ds = true;
-                        best_ds = &(*it);
-                    }
-
-
-                } else
-                    ROS_ERROR("ds%d is NOT vacant...", (*it).id);
-            }
-            if (!found_vacant_ds) 
-                // closest
-               found_new_optimal_ds = compute_closest_ds();
-        }
-        
-        else if (ds_selection_policy == 2)  // opportune //TODO check and complete
-        {
-            /*
-                int index_best_ds;
-                for(int i=0, count_max=0; i < ds.size(); i++) {
-                    for(int j=0, count=0; j < jobs.size(); j++) {
-                        int dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                        if(dist < MAX_DISTANCE)
-                            count++;
-                     }
-                    if(count > count_max)
-                }
-            */
-            
-            ds_t *best_ds_opp;
-            
-            double min_dist;            
-            bool current_optimal_ds_has_eo = false;
-            for (int j = 0; j < jobs.size(); j++)
-                {
-                    double dist = distance(best_ds->x, best_ds->y, jobs.at(j).x, jobs.at(j).y);
-                    if (dist < MAX_DISTANCE) //TODO not MAX_DIST
-                    {
-                        min_dist = distance(best_ds->x, best_ds->y);
-                        current_optimal_ds_has_eo = true;
-                        break;
-                    
-                    }
-            }
-                    
-            if(!current_optimal_ds_has_eo)
-                min_dist = numeric_limits<int>::max();
-            
-            bool found_reachable_ds_with_eo = false;
-            for (int i = 0; i < ds.size(); i++)
-            {
-                for (int j = 0; j < jobs.size(); j++)
-                {
-                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    double dist2 = distance(ds.at(i).x, ds.at(i).y);
-                    if (dist < MAX_DISTANCE && dist2 < MAX_DISTANCE) //TODO not MAX_DIST
-                    {
-                        found_reachable_ds_with_eo = true;
-                        
-                        if( dist < min_dist) //TODO is what the paper ask?
-                        {
-                            min_dist = distance(ds.at(i).x, ds.at(i).y);
-                            best_ds = &ds.at(i);
-                            found_new_optimal_ds = true;
-                        }
-                    }
-                }
-            }
-            if (!found_reachable_ds_with_eo)
-            {
-                bool ds_found_with_mst = false;
-
-                if (!OPP_ONLY_TWO_DS)
-                {
-                    // construct ds graph //TODO construct graph only when a new DS is found
-                    int ds_graph[V][V];  // TODO remove V
-                    for (int i = 0; i < ds.size(); i++)
-                        for (int j = 0; j < ds.size(); j++)
-                            if (i == j)
-                                ds_graph[i][j] = 0;
-                            else
-                            {
-                                int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                                if (dist < MAX_DISTANCE)
-                                {
-                                    ds_graph[i][j] = dist;
-                                    ds_graph[j][i] = dist;
-                                }
-                            }
-
-                    // construct MST starting from ds graph
-                    compute_MST(ds_graph);
-
-                    int index_best_ds;
-                    bool found_new_best = false;
-                    for (int i = 0; i < ds.size(); i++)
-                        for (int j = 0; j < jobs.size(); j++)
-                            if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
-                            {
-                                if (found_new_best)
-                                {
-                                    if (distance(ds.at(i).x, ds.at(i).y) <
-                                        distance(ds.at(index_best_ds).x, ds.at(index_best_ds).y))
-                                        index_best_ds;
-                                }
-                                else
-                                {
-                                    found_new_best = true;
-                                    index_best_ds = i;
-                                }
-                                break;
-                            }
-
-                    // TODO path to wich frontier??? closest DS with EOs
-                    double min_dist = numeric_limits<int>::max();
-                    ds_t *min_ds;
-                    for (int i = 0; i < ds.size(); i++)
-                    {
-                        for (int j = 0; j < jobs.size(); j++)
-                        {
-                            double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                            
-                            if (dist < MAX_DISTANCE) //TODO not MAX_DIST
-                            {
-                                double dist2 = distance(ds.at(i).x, ds.at(i).y);
-                                
-                                if( dist2 < min_dist) //TODO is what the paper ask?
-                                {
-                                    min_dist = dist2;
-                                    min_ds = &ds.at(i);
-                                    found_new_optimal_ds = true;
-                                }
-                            }
-                        }
-                    }
-                    
-                    std::vector<int> path;
-                    std::vector<std::vector<bool> > tree;
-                    ds_found_with_mst = find_path(tree, 1, 1, path);
-                            
-
-                    if (ds_found_with_mst)
-                    {
-                        if (found_new_best)
-                        {
-                            best_ds = min_ds;
-
-                            int closest_ds_id;
-
-                            moving_along_path = true;
-
-                            adhoc_communication::MmListOfPoints msg_path;
-                            for(int i=0; i < path.size(); i++)
-                                for(int j=0; j<ds.size(); j++)
-                                    if(j == path[i]) {                                    
-                                        msg_path.positions[i].x = ds[j].x;
-                                        msg_path.positions[i].y = ds[j].y;
-                                    }
-                            
-                            pub_moving_along_path.publish(msg_path);
-                            
-                            
-                            
                         }
                     }
                     else
-                        // closest policy
-                        found_new_optimal_ds = compute_closest_ds();
-                }
-
-                else
-                {
-                    if (!moving_along_path)
                     {
-                        double first_step_x, first_step_y, second_step_x, second_step_y;
-                        for (int i = 0; i < ds.size(); i++)
-                        {
-                            bool existing_eo;
-                            for (int j = 0; j < jobs.size(); j++)
-                                if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
-                                {
-                                    existing_eo = true;
-                                    for (int k = 0; k < ds.size(); k++)
-                                        if (k != i &&
-                                            distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
-                                            if (distance(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
-                                            {  // TODO no MAX_DISTANCE, but available_distance
-                                                moving_along_path = true;
-                                                ds_found_with_mst = true;
-                                                first_step_x = ds.at(k).x;
-                                                first_step_y = ds.at(k).y;
-                                                second_step_x = ds.at(i).x;
-                                                second_step_y = ds.at(i).y;
-                                            }
-                                }
-                        }
-
-                        if (ds_found_with_mst)
-                        {
-                            moving_along_path = true;
-
-                            adhoc_communication::MmListOfPoints msg_path;  // publish list of DS
-                            msg_path.positions[0].x = first_step_x;
-                            msg_path.positions[0].y = first_step_y;
-                            msg_path.positions[1].x = second_step_x;
-                            msg_path.positions[1].y = second_step_y;
-
-                            // TODO publish
-                        }
-                        else
-                            ;  // closest policy
+                        /* The current optimal DS is no vacant anymore: this means that the vacant DS we have just found is for the moment the new optimal DS, until we don't find another vacant DS that is closer to the robot */
+                        found_new_optimal_ds = true;
+                        best_ds = &(*it);
                     }
                 }
             }
+            
+            /* If no DS is vacant at the moment, use "closest" policy to update the optimal DS */
+            if (!found_vacant_ds)
+                found_new_optimal_ds = compute_closest_ds();
         }
-        else if (ds_selection_policy == 3)  // current
+
+        /* "Opportune" policy */
+        else if (ds_selection_policy == 2)
         {
+
+
+            /* Check if the currently optimal DS has still exploration opportunities (EO) */
+            bool current_optimal_ds_has_eo = false;
+            for (int j = 0; j < jobs.size(); j++)
+            {
+                double dist = distance(best_ds->x, best_ds->y, jobs.at(j).x, jobs.at(j).y);
+                if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                {
+                    current_optimal_ds_has_eo = true;
+                    break;
+                }
+            }
+
+            /* If the currently optimal DS has no more EOs, as soon as we found a DS that has EOs, this is already better than the curerntly optimal DS */
+            double min_dist;
+            if (!current_optimal_ds_has_eo)
+                min_dist = numeric_limits<int>::max();
+            else
+                min_dist = distance_from_robot(best_ds->x, best_ds->y);
+                
+            /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery power without having to recharge first) with EOs */
+            bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
+            for (int i = 0; i < ds.size(); i++)
+                for (int j = 0; j < jobs.size(); j++)
+                {
+                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                    double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                    if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                    {
+                        /* We have found a DS with EOs */
+                        found_ds_with_eo = true;
+                        
+                        if(dist2 < MAX_DISTANCE) {
+                        
+                            /* We have found a DS that is reachable and that has EOs */
+                            found_reachable_ds_with_eo = true;
+
+                            if (dist < min_dist)  // TODO is what the paper ask?
+                            {
+                                min_dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                                best_ds = &ds.at(i);
+                                found_new_optimal_ds = true;
+                            }
+                        }
+                    }
+                }
+            
+            /* If there are no reachable DSs with EOs, if there are DSs with EOs, compute a path on the graph of the DSs to reach one of these DSs, otherwise jsut use "closest" policy */
+            if (!found_reachable_ds_with_eo)
+            {
+                if(found_ds_with_eo)
+                {
+                    
+                    /* Compute a path. formed by DSs that must be used for recharging, to reach a DS with EOs */
+                    bool ds_found_with_mst = false;
+
+                    if (!OPP_ONLY_TWO_DS) //TODO
+                    {
+                        // construct ds graph //TODO construct graph only when a new DS is found
+                        int ds_graph[V][V];  // TODO remove V
+                        for (int i = 0; i < ds.size(); i++)
+                            for (int j = 0; j < ds.size(); j++)
+                                if (i == j)
+                                    ds_graph[i][j] = 0;
+                                else
+                                {
+                                    int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                                    if (dist < MAX_DISTANCE)
+                                    {
+                                        ds_graph[i][j] = dist;
+                                        ds_graph[j][i] = dist;
+                                    }
+                                }
+
+                        // construct MST starting from ds graph
+                        compute_MST(ds_graph);
+
+                        int index_best_ds;
+                        bool found_new_best = false;
+                        for (int i = 0; i < ds.size(); i++)
+                            for (int j = 0; j < jobs.size(); j++)
+                                if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
+                                {
+                                    if (found_new_best)
+                                    {
+                                        if (distance_from_robot(ds.at(i).x, ds.at(i).y) <
+                                            distance_from_robot(ds.at(index_best_ds).x, ds.at(index_best_ds).y))
+                                            index_best_ds;
+                                    }
+                                    else
+                                    {
+                                        found_new_best = true;
+                                        index_best_ds = i;
+                                    }
+                                    break;
+                                }
+
+                        // TODO path to wich frontier??? closest DS with EOs
+                        double min_dist = numeric_limits<int>::max();
+                        ds_t *min_ds;
+                        for (int i = 0; i < ds.size(); i++)
+                        {
+                            for (int j = 0; j < jobs.size(); j++)
+                            {
+                                double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+
+                                if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                                {
+                                    double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+
+                                    if (dist2 < min_dist)  // TODO is what the paper ask?
+                                    {
+                                        min_dist = dist2;
+                                        min_ds = &ds.at(i);
+                                        found_new_optimal_ds = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        std::vector<int> path;
+                        std::vector<std::vector<bool> > tree;
+                        ds_found_with_mst = find_path(tree, 1, 1, path);
+
+                        if (ds_found_with_mst)
+                        {
+                            if (found_new_best)
+                            {
+                                best_ds = min_ds;
+
+                                int closest_ds_id;
+
+                                moving_along_path = true;
+
+                                adhoc_communication::MmListOfPoints msg_path;
+                                for (int i = 0; i < path.size(); i++)
+                                    for (int j = 0; j < ds.size(); j++)
+                                        if (j == path[i])
+                                        {
+                                            msg_path.positions[i].x = ds[j].x;
+                                            msg_path.positions[i].y = ds[j].y;
+                                        }
+
+                                pub_moving_along_path.publish(msg_path);
+                            }
+                        }
+                        else
+                            // closest policy
+                            found_new_optimal_ds = compute_closest_ds();
+                    }
+
+                    else
+                    {
+                        if (!moving_along_path)
+                        {
+                            double first_step_x, first_step_y, second_step_x, second_step_y;
+                            for (int i = 0; i < ds.size(); i++)
+                            {
+                                bool existing_eo;
+                                for (int j = 0; j < jobs.size(); j++)
+                                    if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
+                                    {
+                                        existing_eo = true;
+                                        for (int k = 0; k < ds.size(); k++)
+                                            if (k != i &&
+                                                distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
+                                                if (distance_from_robot(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
+                                                {  // TODO no MAX_DISTANCE, but available_distance
+                                                    moving_along_path = true;
+                                                    ds_found_with_mst = true;
+                                                    first_step_x = ds.at(k).x;
+                                                    first_step_y = ds.at(k).y;
+                                                    second_step_x = ds.at(i).x;
+                                                    second_step_y = ds.at(i).y;
+                                                }
+                                    }
+                            }
+
+                            if (ds_found_with_mst)
+                            {
+                                moving_along_path = true;
+
+                                adhoc_communication::MmListOfPoints msg_path;  // publish list of DS
+                                msg_path.positions[0].x = first_step_x;
+                                msg_path.positions[0].y = first_step_y;
+                                msg_path.positions[1].x = second_step_x;
+                                msg_path.positions[1].y = second_step_y;
+
+                                // TODO publish
+                            }
+                            
+                        }
+                    }
+                 }
+                 else
+                      found_new_optimal_ds = compute_closest_ds();
+            }
+        }
+        
+        /* "Current" policy */
+        else if (ds_selection_policy == 3)
+        {
+            /* If the currently optimal DS has still EOs, keep using it, otherwise use "closest" policy */
             bool existing_eo = false;
             for (int i = 0; i < jobs.size(); i++)
-                if ( distance(best_ds->x, best_ds->y, jobs.at(i).x, jobs.at(i).y) < distance_close)
+                if (distance(best_ds->x, best_ds->y, jobs.at(i).x, jobs.at(i).y) < distance_close)
                 {
                     existing_eo = true;
                     break;
                 }
             if (!existing_eo)
-            {
-                //closest
                 found_new_optimal_ds = compute_closest_ds();
-            }
         }
-        else if (ds_selection_policy == 4)  // flocking //TODO check and complete
+        
+        /* "Flocking" policy */
+        else if (ds_selection_policy == 4)  //TODO last parameter of the cost function
         {
             for (int d = 0, min_cost = numeric_limits<int>::max(); d < ds.size(); d++)
             {
@@ -597,34 +593,37 @@ void docking::compute_optimal_ds()
             }
         }
 
-        // adhoc_communication::MmListOfPoints msg_points;
-        // pub_moving_along_path.publish(msg_points);
-
-        // ROS_ERROR("!!!!!!!!!!!!!!!%f", atan(-1) * 180.0 / PI );
-
-        /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated */
+        /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated, and the other robots must be informed */ //TODO and inform other robots
         if (found_new_optimal_ds)
         {
-            ROS_ERROR("\e[1;34mNew optimal DS: ds%d (%f, %f)\e[0m", best_ds->id, best_ds->x, best_ds->y);
-            ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x, best_ds->y);
-
-            target_ds = best_ds;
-
+            ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x, best_ds->y); //TODO coordinates in global system...
+            
+            target_ds = best_ds; //TODO necessary?
             update_l4();
+            
+            /* Inform other robots */
+            adhoc_communication::SendEmRobot robot_msg;
+            robot_msg.request.topic = "adhoc_communication/send_em_robot";
+            robot_msg.request.robot.id = robot_id;
+            robot_msg.request.robot.x = robot_x;
+            robot_msg.request.robot.y = robot_y;
+            robot_msg.request.robot.selected_ds = best_ds->id;
+            sc_send_robot.call(robot_msg);
         }
         else
             ROS_DEBUG("Optimal DS unchanged");
+    
+    }
+    else
+        ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not been computed");
+    
+    
+    if (participating_to_auction == 0)  // TODO is it a good idea?
+    {
+        ;
     }
     else
         ROS_DEBUG("There are still some pending auctions: cannot update optimal DS");
-
-    adhoc_communication::SendEmRobot robot_msg;
-    robot_msg.request.topic = "adhoc_communication/send_em_robot";
-    robot_msg.request.robot.id = robot_id;
-    robot_msg.request.robot.x = robot_x;
-    robot_msg.request.robot.y = robot_y;
-    robot_msg.request.robot.selected_ds = best_ds->id;
-    sc_send_robot.call(robot_msg);
 }
 
 void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr &msg)  // TODO(minor)
@@ -639,14 +638,13 @@ void docking::adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &ms
 
 double docking::get_llh()
 {
-    /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) explain
-                                                                                              // better
+    /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO really necessary???
     if (participating_to_auction == 0)
         llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
     return llh;
 }
 
-void docking::update_l1()  // TODO(minor) comments
+void docking::update_l1()
 {
     // count vacant docking stations
     int num_ds_vacant = 0;
@@ -732,7 +730,7 @@ void docking::update_l3()
     for (int i = 0; i < jobs.size(); ++i)
     {
         ++num_jobs;
-        if (distance(jobs[i].x, jobs[i].y, true) <= distance_close)  // use euclidean distance to make it faster //TODO
+        if (distance_from_robot(jobs[i].x, jobs[i].y, true) <= distance_close)  // use euclidean distance to make it faster //TODO
             ++num_jobs_close;
     }
 
@@ -779,7 +777,7 @@ void docking::update_l4()
     {
         if (ds[i].id == target_ds->id)
         {
-            dist_ds = distance(ds[i].x, ds[i].y);
+            dist_ds = distance_from_robot(ds[i].x, ds[i].y);
             break;
         }
     }
@@ -788,7 +786,7 @@ void docking::update_l4()
     int dist_job = numeric_limits<int>::max();
     for (int i = 0; i < jobs.size(); ++i)
     {
-        int dist_job_temp = distance(jobs[i].x, jobs[i].y, true);  // use euclidean distance to make it faster //TODO
+        int dist_job_temp = distance_from_robot(jobs[i].x, jobs[i].y, true);  // use euclidean distance to make it faster //TODO
         if (dist_job_temp < dist_job)
             dist_job = dist_job_temp;
     }
@@ -809,11 +807,6 @@ void docking::update_l4()
 
     // compute l4
     l4 = dist_job / (dist_job + dist_ds);
-}
-
-bool docking::auction(int docking_station, int id, int bid)  // TODO(minor) remove
-{
-    return true;
 }
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction,
@@ -850,7 +843,7 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
     }
 }
 
-double docking::distance(double goal_x, double goal_y, bool euclidean)  // TODO
+double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean)  // TODO
 {
     explorer::DistanceFromRobot srv_msg;
     srv_msg.request.x = goal_x;
@@ -865,7 +858,7 @@ double docking::distance(double goal_x, double goal_y, bool euclidean)  // TODO
         ROS_ERROR("Failed to get RobotPose");
         return -1;
     }
-    return distance(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), goal_x, goal_y, euclidean);
+    return distance_from_robot(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), goal_x, goal_y, euclidean);
     */
     return distance(robot_x, robot_y, goal_x, goal_y, true);
 }
@@ -908,13 +901,6 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     return distance;
 }
 
-void docking::robot_position_callback(const geometry_msgs::PointStamped::ConstPtr &msg)  // TODO(minor)
-{
-    ROS_DEBUG("Received robot position");
-    robot_x = msg.get()->point.x;
-    robot_y = msg.get()->point.y;
-}
-
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
 {
     ROS_DEBUG("Received battery state");
@@ -932,7 +918,6 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
 
 void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TODO(minor) better name
 {
-
     // TODO correctly update the state!!!!
     if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier ||
         msg.get()->state == leaving_ds)
@@ -996,14 +981,12 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");
         return;
     }
-    
-    
+
     adhoc_communication::SendEmRobot srv_msg;
     srv_msg.request.topic = "robots";  // TODO should this service be called also somewhere else?
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = msg.get()->state;
     sc_send_robot.call(srv_msg);
-
 
     robot_state = static_cast<state_t>(msg.get()->state);
 }
@@ -1181,12 +1164,15 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                           ds[i].x, ds[i].y, msg.get()->x, msg.get()->y);
 
             // update vacancy
-            if(ds[i].vacant != msg.get()->vacant) {
+            if (ds[i].vacant != msg.get()->vacant)
+            {
                 ds[i].vacant = msg.get()->vacant;
-                ROS_ERROR("!!!!!!!!!!!New state for ds%d: %s", msg.get()->id, (msg.get()->vacant ? "vacant" : "occupied"));
+                ROS_ERROR("!!!!!!!!!!!New state for ds%d: %s", msg.get()->id,
+                          (msg.get()->vacant ? "vacant" : "occupied"));
             }
             else
-                ROS_ERROR("!!!!!!!!!!!State of ds%d unchanged (%s)", msg.get()->id, (msg.get()->vacant ? "vacant" : "occupied"));
+                ROS_ERROR("!!!!!!!!!!!State of ds%d unchanged (%s)", msg.get()->id,
+                          (msg.get()->vacant ? "vacant" : "occupied"));
 
             new_ds = false;
             break;
@@ -1545,7 +1531,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
     /* If the request for vacancy check is not about the target DS of the robot, for sure the robot is not occupying it
      */
     if (msg.get()->id == target_ds->id)  // TODO at the beginning no robot has already target_ds set, since it is set
-                                        // only after the end of all auctions!!!!!
+                                         // only after the end of all auctions!!!!!
 
         /* If the robot is going to or already charging, or if it is going to check already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
@@ -1726,7 +1712,7 @@ void docking::set_target_ds_vacant(bool vacant)
     */
     target_ds->vacant = vacant;
     ROS_ERROR("!!!!! %d", vacant);
-    
+
     std::vector<ds_t>::iterator it;
     for (it = ds.begin(); it != ds.end(); it++)
         if ((*it).id == target_ds->id)
@@ -1870,16 +1856,140 @@ bool docking::find_path_aux(std::vector<std::vector<bool> > tree, int start, int
     return false;
 }
 
-bool docking::compute_closest_ds() {
-    double min_dist = distance(best_ds->x, best_ds->y), dist;
+bool docking::compute_closest_ds()
+{
+    double min_dist = distance_from_robot(best_ds->x, best_ds->y), dist;
     bool found_new_closest_ds = false;
     std::vector<ds_t>::iterator it;
     for (it = ds.begin(); it != ds.end(); it++)
-        dist = distance( (*it).x, (*it).y );
-        if( dist < min_dist) {
-            min_dist = dist;
-            best_ds = &(*it);
-            found_new_closest_ds;
-        }
+        dist = distance_from_robot((*it).x, (*it).y);
+    if (dist < min_dist)
+    {
+        min_dist = dist;
+        best_ds = &(*it);
+        found_new_closest_ds;
+    }
     return found_new_closest_ds;
 }
+
+void docking::map_info()
+{
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << "#time,exploration_travel_path_global,available_distance,"
+              "global_map_progress,local_map_progress,battery_state,"
+              "recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
+    fs_csv.close();
+
+    /*
+    while (ros::ok() && robot_state != finished)
+    {
+        // double angle_robot = robotPose.getRotation().getAngle();
+        // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
+
+
+        ros::Duration time = ros::Time::now() - time_start;
+
+        map_progress.global_freespace = global_costmap_size();
+        map_progress.local_freespace = local_costmap_size();
+        map_progress.time = time.toSec();
+        map_progress_during_exploration.push_back(map_progress);
+
+        double exploration_travel_path_global =
+            (double)exploration->exploration_travel_path_global * costmap_resolution;
+
+        if (battery_charge_temp >= battery_charge)
+            energy_consumption += battery_charge_temp - battery_charge;
+        battery_charge_temp = battery_charge;
+
+        fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << available_distance << ","
+               << map_progress.global_freespace << "," << map_progress.local_freespace << "," << battery_charge
+               << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
+        fs_csv.close();
+
+        costmap_mutex.unlock();
+
+        // call map_merger to log data
+        map_merger::LogMaps log;
+        log.request.log = 12;  /// request local and global map progress
+        ROS_DEBUG("Calling map_merger service logOutput");
+        if (!mm_log_client.call(log))
+            ROS_WARN("Could not call map_merger service to store log.");
+        ROS_DEBUG("Finished service call.");
+
+        save_progress();
+
+        // publish average speed
+        explorer::Speed speed_msg;
+        speed_msg.avg_speed = exploration_travel_path_global / map_progress.time;
+        publisher_speed.publish(speed_msg);
+
+        ros::Duration(10.0).sleep();
+    }
+    */
+}
+
+void docking::discover_docking_stations() {
+    /* Get current robot position (once the service required to do that is ready) */
+    ros::service::waitForService("explorer/robot_pose");
+    explorer::RobotPosition srv_msg;
+    if (sc_robot_pose.call(srv_msg))
+    {
+        robot.x = srv_msg.response.x;
+        robot.y = srv_msg.response.y;
+        ROS_DEBUG("Robot position: (%f, %f)", robot.x, robot.y);
+    }
+    else
+    {
+        ROS_ERROR("Call to service %s failed; not possible to compute optimal DS for the moment",
+                  sc_robot_pose.getService().c_str());
+        return;
+    }
+
+    /* Check if there are DSs that can be considered discovered */
+    for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
+    {
+        /* Compute distance from robot */
+        double dist = distance_from_robot((*it).x, (*it).y);
+
+        /* If the DS is inside a fiducial laser range, it can be considered discovered */
+        if (dist > 0 && dist < FIDUCIAL_LASER_RANGE)  // TODO
+        {
+            /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
+            ROS_INFO("Found new DS ds%d at (%f, %f)", (*it).id, (*it).x,
+                     (*it).y);  // TODO index make sense only in simulation
+            ds.push_back(*it);
+            undiscovered_ds.erase(it);
+
+            /* Inform other robots about the "new" DS */
+            adhoc_communication::SendEmDockingStation send_ds_srv_msg;
+            send_ds_srv_msg.request.topic = "adhoc_communication/send_em_docking_station";
+            send_ds_srv_msg.request.docking_station.id = (*it).id;
+            send_ds_srv_msg.request.docking_station.x = (*it).x;
+            send_ds_srv_msg.request.docking_station.y = (*it).y;
+            send_ds_srv_msg.request.docking_station.vacant = true;  // TODO sure???
+
+            /* If it is the first DS that is encountered, set it as the currently optimal DS: this is just to initialize
+             * variable 'optimal_ds', so that we can compute the distance from the robot and the currently selected DS
+             * and compare it with the distance from other DSs also when the node has just started.
+             *
+             * Notice that we cannot assign as optimal docking station a DS that was not discovered yet, since it could
+             * cause problems, since this undiscovered Ds that is considered optimal could be more close than all the
+             * other already discovered DSs, and so none of them woulb be selected as optimal DS. */
+            if (ds.size() == 1)
+            {
+                best_ds = &ds.at(0);
+                target_ds = best_ds;
+                next_target_ds = target_ds;  // TODO are all this best_ds, target_ds, etc. really necessary?
+            }
+
+            /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to
+             * compensate the future increment of the for loop, since, after the deletion of the element, all the
+             * elements are shifted by one position, and so we are already pointing to the next element, even without
+             * the future increment of the for loop */
+            it--;
+        }
+        else
+            ROS_DEBUG("No new DS was encountered");
+    }
+    }
