@@ -1392,6 +1392,7 @@ class Explorer
             if (robot_state == in_queue)
             {
                 ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
+                update_robot_state_2(in_queue); //NB to force restarting of periodic auction timer!!!!!!!!
             }
 
             /* If the robot is already preparing to enter in a queue, do nothing */

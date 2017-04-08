@@ -135,7 +135,7 @@ class docking
      * then the actual path is calculated using Dijkstra's algorithm.
      * @return double: The distance between the robots current position and the goal (in meters).
      */
-    double distance_from_boto(double goal_x, double goal_y, bool euclidean = false);
+    double distance_from_robot(double goal_x, double goal_y, bool euclidean = false);
 
     /**
      * Compute the length of the trajectory from a given start to a given goal.
@@ -314,7 +314,8 @@ class docking
 
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
 
-    void translate_coordinates(double a, double b, double *c, double *d);
+    void global_to_local(double global_x, double global_y, double *local_x, double *local_y)
+    void local_to_global(double local_x, double local_y, double *global_x, double *global_y);
 
     double origin_absolute_x, origin_absolute_y;
 

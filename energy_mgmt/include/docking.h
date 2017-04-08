@@ -314,7 +314,8 @@ class docking
 
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
 
-    void translate_coordinates(double a, double b, double *c, double *d);
+    void global_to_local(double global_x, double global_y, double *local_x, double *local_y);
+    void local_to_global(double local_x, double local_y, double *global_x, double *global_y);
 
     double origin_absolute_x, origin_absolute_y;
 
