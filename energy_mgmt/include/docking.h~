@@ -314,8 +314,8 @@ class docking
 
     void timer_callback_schedure_auction_restarting(const ros::TimerEvent &event);
 
-    void global_to_local(double global_x, double global_y, double *local_x, double *local_y)
-    void local_to_global(double local_x, double local_y, double *global_x, double *global_y);
+    void abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y);
+    void rel_to_abs(double relative_x, double relative_y, double *absolute_x, double *absolute_y);
 
     double origin_absolute_x, origin_absolute_y;
 
@@ -403,15 +403,16 @@ class docking
     int printMST(int parent[], int n, int graph[V][V]);
 
     /**
-     * @brief Search for a path connecting the given nodes in an undirected tree
+     * @brief Search for a path connecting the given nodes in an undirected weighted tree
      *
      * The function checks if it is possible to find a path from node 'start' to node 'end' in the (possibly) undirected
      *tree 'tree': if a path is found, the nodes that compose the path are stored in 'path', i.e., 'path' contains the
      *sequence of nodes that form the path going from 'start' to 'end' ('start' and 'end' are the first and last node,
      *respectively); if such path is found, the function returns \c true, otherwise it returns \c false.
      *
-     * 'tree' is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
-     *false otherwise.
+     * \p tree is a weighted adiacency matrix: \p tree[i][j] is different from 0 if (and only if) there is an edge
+     *connecting node 'i' and node 'j'. Notice however that the weights are not considered by the algorithm (it takes a
+     *weighted tree just because in the class it is used to find a path on a minimum spanning tree).
      *
      * @param tree the undirected tree where to search for a path, represented with an adiacency matrix
      * @param start index of the starting node of the path
@@ -419,10 +420,10 @@ class docking
      * @param path the sequence of nodes composing the path (if a path exists) //TODO list of indexes of DSs???
      * @return \c true if a path was found, \c false otherwise
      */
-    bool find_path(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path);
+    bool find_path(std::vector<std::vector<int> > tree, int start, int target, std::vector<int> &path);
 
     /**
-     * @brief Auxiliary function to find a path in an undirected tree
+     * @brief Auxiliary function to find a path in an undirected weigthed tree
      *
      * This function is called by find_path() to search for a path in a tree. It uses a depth-first search approach to
      *find the path, with recursive calls: it checks if there is a node (possibly more than one) connected to 'start' in
@@ -433,8 +434,9 @@ class docking
      *tree that is the current start of the path, to avoid that the recursive call will "backtrack" by selecting this
      *node.
      *
-     * \p tree is an adiacency matrix: \p tree[i][j] is \c true if there is an edge connecting node 'i' and node 'j', \c
-     *false otherwise.
+     * \p tree is a weighted adiacency matrix: \p tree[i][j] is different from 0 if (and only if) there is an edge
+     *connecting node 'i' and node 'j'. Notice however that the weights are not considered by the algorithm (it takes a
+     *weighted tree just because in the class it is used to find a path on a minimum spanning tree).
      *
      * @param tree the undirected tree where to search for a path, represented with ad adiacency matrix
      * @param start index of the starting node of the path
@@ -445,7 +447,7 @@ class docking
      *                  recursive call
      * @return \c true if a path was found, \c false otherwise
      */
-    bool find_path_aux(std::vector<std::vector<bool> > tree, int start, int target, std::vector<int> &path,
+    bool find_path_aux(std::vector<std::vector<int> > tree, int start, int target, std::vector<int> &path,
                        int prev_node);
 
     int mst[V][V];
