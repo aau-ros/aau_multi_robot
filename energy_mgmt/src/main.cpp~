@@ -50,7 +50,7 @@ int main(int argc, char** argv)
         // send broadcast message with positions of all (known) docking stations
         
         // 
-        //doc.detect_ds();
+        doc.discover_docking_stations();
         
         //
         doc.compute_optimal_ds();

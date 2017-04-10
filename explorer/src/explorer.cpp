@@ -397,7 +397,7 @@ class Explorer
             // do nothing while recharging
             if (robot_state == charging)
             {
-                ROS_ERROR("Waiting for battery to charge...");
+                ROS_INFO("Waiting for battery to charge...");
 
                 // NO! i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
                 // if (charge_time > 0)
@@ -923,7 +923,7 @@ class Explorer
                         // moment... it could be solved using a service or using robot_state node
                         if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
                         {
-                            ROS_ERROR("Robot cannot reach any frontier: starting auction to "
+                            ROS_INFO("Robot cannot reach any frontier: starting auction to "
                                       "acquire access to a DS to recharge");  // TODO this message could be misleading
                                                                               // if the robot does not really start a
                                                                               // new auction...
@@ -1069,12 +1069,20 @@ class Explorer
             // TODO(minor) hmm... here??
             if (robot_state == auctioning)
             {
-                ROS_INFO("Starting owm auction...");
+                
+                if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
+                        QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
+                        {
+                            ROS_ERROR("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");  // TODO move robot away in this case...
+                            move_robot_away();
+                            ROS_ERROR("NOW it is ok...");
+                        }
+                else
+                    ROS_INFO("Starting owm auction...");
+                
                 while (robot_state == auctioning)  // TODO(minor) better management of the while loop
                 {
-                    if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                    
                     // TODO(IMPORTANT) check if the robot has not arleady won an auction meanwhile!!!!! I can do it in
                     // docking (in cb_robot) probably, and then use update inside the while loop to immediately change
                     // the state
@@ -1144,11 +1152,11 @@ class Explorer
             if (robot_state == going_in_queue || robot_state == going_checking_vacancy || robot_state == going_charging)
             {
                 if (robot_state == going_checking_vacancy)
-                    ROS_ERROR("Approaching ds%d (%f, %f) to check if it is free", -1, target_ds_x, target_ds_y);
+                    ROS_INFO("Approaching ds%d (%f, %f) to check if it is free", -1, target_ds_x, target_ds_y);
                 else if (robot_state == going_in_queue)
-                    ROS_ERROR("Travelling to DS to go in queue");
+                    ROS_INFO("Travelling to DS to go in queue");
                 else
-                    ROS_ERROR("Robot can finally prepare itself to recharge");
+                    ROS_INFO("Robot can finally prepare itself to recharge");
 
                 counter++;  // TODO(minor) what is this counter?
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
@@ -1169,7 +1177,7 @@ class Explorer
                  * so it can start recharging */
                 if (robot_state == going_charging)
                 {
-                    ROS_ERROR("Reached DS for recharging");
+                    ROS_INFO("Reached DS for recharging");
 
                     std_msgs::Empty msg;
                     pub_occupied_ds.publish(msg);  // TODO(minor) it seems not to be used by any other node... remove it
@@ -2279,6 +2287,111 @@ class Explorer
         }
 
         ROS_INFO("Goal reached");
+
+        // TODO(IMPORTANT) should this code be called also when I brutally abort exploration to put the robot in queue
+        // or in checking_vacancy state????
+        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+
+        return true;
+    }
+    
+    bool move_robot_away()
+    {
+        ROS_INFO("Preparing to move toward goal...");
+        int stuck_countdown = EXIT_COUNTDOWN;
+
+        /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
+         * given about the actual driving state of the robot. */
+        if (!costmap2d_local->getRobotPose(robotPose))
+        {
+            ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
+        }
+
+        actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
+
+        while (!ac.waitForServer(ros::Duration(10.0)))
+            ;
+
+        move_base_msgs::MoveBaseGoal goal_msgs;
+
+        goal_msgs.target_pose.header.seq = seq;                   // increase the sequence number
+        goal_msgs.target_pose.header.frame_id = move_base_frame;  //"map";
+        goal_msgs.target_pose.pose.position.x = home_point_x;
+        goal_msgs.target_pose.pose.position.y = home_point_y;
+        goal_msgs.target_pose.pose.position.z = 0;
+        goal_msgs.target_pose.pose.orientation.x = 0;
+        goal_msgs.target_pose.pose.orientation.y = 0;
+        goal_msgs.target_pose.pose.orientation.z = 0;
+        goal_msgs.target_pose.pose.orientation.w = 1;
+
+        /* Start moving */
+        ROS_DEBUG("Setting goal...");
+        ac.sendGoal(goal_msgs);
+
+        /* Wait until the goal is set */
+        ac.waitForResult(ros::Duration(waitForResult));  // TODO(minor) necessary?
+        while (ac.getState() == actionlib::SimpleClientGoalState::PENDING)
+        {
+            ros::Duration(0.5).sleep();
+        }
+        ROS_DEBUG("Goal correctly set");
+        ROS_DEBUG("Moving toward goal...");
+
+        while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        {
+            // robot seems to be stuck
+            if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
+            {
+                stuck_countdown--;
+                // if(stuck_countdown <= 5){
+
+                // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is
+                // computing the frontier, it is believed to be stucked...
+                if (stuck_countdown <= 10)
+                {
+                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+                }
+
+                if (stuck_countdown <= 0)
+                {
+                    exit(0);
+                }
+
+                // F
+                ros::spinOnce();
+                // ros::Duration(0.5).sleep();
+                ros::Duration(1).sleep();
+            }
+            else
+            {
+                ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y,
+                          pose_angle);
+                stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
+                prev_pose_x = pose_x;
+                prev_pose_y = pose_y;
+                prev_pose_angle = pose_angle;
+            }
+
+            double remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
+
+            /* Print remaining distance to be travelled to reach goal if the goal is a DS */
+            if (remaining_distance > QUEUE_DISTANCE / 2.0) {
+                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+
+            /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
+             * the DS */
+                ac.cancelGoal();
+
+                ROS_ERROR("\n\t\e[1;34mOK!!!\e[0m");
+
+                break;
+            }
+
+            // ros::Duration(0.5).sleep(); //TODO(minor)
+        }
+
+        ROS_ERROR("Goal reached");
 
         // TODO(IMPORTANT) should this code be called also when I brutally abort exploration to put the robot in queue
         // or in checking_vacancy state????

@@ -287,7 +287,6 @@ class docking
     bool test;
     ds_t *best_ds;
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
-    double robot_x, robot_y;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req,
              adhoc_communication::SendEmDockingStation::Response &res);
@@ -473,6 +472,10 @@ class docking
 
     std::string csv_file;
     std::fstream fs_csv;
+    
+    ros::Time time_start;
+    
+    bool started_own_auction;
     
 
 };

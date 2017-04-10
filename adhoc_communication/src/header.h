@@ -806,7 +806,6 @@ bool isReachable(unsigned char mac[6])
         {
             if (other_robot.robot_name_.compare((*it)->robot_name_) == 0)
             {
-                //ROS_ERROR("YESSS");
                 double d = my_sim_position->calcDistance(*it);
 
                 //ROS_ERROR("d: %f",d);
