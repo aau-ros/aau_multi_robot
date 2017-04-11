@@ -90,13 +90,14 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
     sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot");
+    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 100, &docking::cb_battery, this);
     sub_robots = nh.subscribe(my_prefix + "robots", 100, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 10000, &docking::cb_jobs, this);
     sub_robot = nh.subscribe(my_prefix + "explorer/robot", 100, &docking::cb_robot, this);
-    sub_docking_stations = nh.subscribe(my_prefix + "adhoc_communication/send_em_docking_station", 100,
+    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 100,
                                         &docking::cb_docking_stations, this);
 
     sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 100,
@@ -156,11 +157,13 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 
     // TODO(minor)
     // force sending a broadcast message
+    /*
     adhoc_communication::SendEmRobot srv_msg;
     srv_msg.request.topic = "robots";  // TODO should this service be called also somewhere else?
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = fully_charged;
     sc_send_robot.call(srv_msg);
+    */
 
     int arr[5][5] = {
         { 0, 1, 0, 6, 0 }, { 1, 0, 1, 8, 5 }, { 0, 1, 0, 1, 7 }, { 6, 8, 1, 0, 1 }, { 0, 5, 7, 1, 0 },
@@ -174,7 +177,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     }       
      
     //TODO(IMPORTANT) vary bad...
-    ROS_ERROR("calling");
+    //ROS_ERROR("calling");
     for(int i=0; i < 5; i++) {
         std::vector<int> temp;
         for(int j=0; j < 5; j++)
@@ -357,13 +360,12 @@ void docking::compute_optimal_ds()
                 for (int j = 0; j < jobs.size(); j++)
                 {
                     double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    
                     if (dist < battery.remaining_distance / 2)  // TODO ok?
                     {
                         /* We have found a DS with EOs */
                         found_ds_with_eo = true;
                         
-                        /* Check if that DS is also directly reachable (i.e., without recharging) */
+                        /* Check if that DS is also directly reachable (i.e., without recharging at intermediate DSs) */
                         double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
                         if (dist2 < battery.remaining_distance / 2)
                         {
@@ -415,9 +417,24 @@ void docking::compute_optimal_ds()
                                 }
                             }
                         }
+                        
+                        //compute closest DS
+                        min_dist = numeric_limits<int>::max();
+                        ds_t *closest_ds;
+                        for (int i = 0; i < ds.size(); i++)
+                        {
+                                double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+
+                                if (dist < battery.remaining_distance / 2)  // TODO ok?
+                                {
+
+                                        min_dist = dist;
+                                        closest_ds = &ds.at(i);
+                                }
+                        }
 
                         std::vector<int> path;
-                        ds_found_with_mst = find_path(ds_mst, 1, 1, path);
+                        ds_found_with_mst = find_path(ds_mst, closest_ds->id, min_ds->id, path);
 
                         if (ds_found_with_mst)
                         {
@@ -429,7 +446,7 @@ void docking::compute_optimal_ds()
 
                                 moving_along_path = true;
 
-                                adhoc_communication::MmListOfPoints msg_path;
+                                adhoc_communication::MmListOfPoints msg_path; //TODO(minor) maybe I can pass directly msg_path to find_path...
                                 for (int i = 0; i < path.size(); i++)
                                     for (int j = 0; j < ds.size(); j++)
                                         if (ds[j].id == path[i])
@@ -491,6 +508,8 @@ void docking::compute_optimal_ds()
                 else
                     found_new_optimal_ds = compute_closest_ds();
             }
+            else
+                ROS_ERROR("Something went wrong...");
         }
 
         /* "Current" policy */
@@ -607,13 +626,16 @@ void docking::compute_optimal_ds()
 
             /* Inform other robots */  // TODO what if the robot signals a DS that is unkown by one of the other robot
                                        // because it missed the message when the DS was discovered???
+                                       
+            /*
             adhoc_communication::SendEmRobot robot_msg;
-            robot_msg.request.topic = "adhoc_communication/send_em_robot";
+            robot_msg.request.topic = "robots";
             robot_msg.request.robot.id = robot_id;
             robot_msg.request.robot.x = robot.x;
             robot_msg.request.robot.y = robot.y;
             robot_msg.request.robot.selected_ds = best_ds->id;
             sc_send_robot.call(robot_msg);
+            */
         }
         else
             ROS_DEBUG("Optimal DS unchanged");
@@ -844,11 +866,23 @@ bool docking::auction_send_multicast(string multicast_group, adhoc_communication
 
 double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean)  // TODO
 {
+    if(euclidean)
+        return distance(robot.x, robot.y, goal_x, goal_y, true);
+        
     explorer::DistanceFromRobot srv_msg;
     srv_msg.request.x = goal_x;
     srv_msg.request.y = goal_y;
 
-    // sc_distance_from_robot.call(srv_msg);
+    
+    for(int i=0; i<10; i++)
+        if(sc_distance_from_robot.call(srv_msg) && srv_msg.response.distance >= 0)
+            return srv_msg.response.distance;
+        else
+            ros::Duration(1).sleep();
+
+    ROS_ERROR("Unable to compute distance at the moment...");
+    return -1;
+
 
     /*
     tf::Stamped<tf::Pose> robotPose;
@@ -859,28 +893,38 @@ double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean
     }
     return distance_from_robot(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), goal_x, goal_y, euclidean);
     */
-    return distance(robot.x, robot.y, goal_x, goal_y, true);
+    
+    
 }
 
 double docking::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)  // TODO
 {
-    double distance;
-
     // use euclidean distance
     if (euclidean)
     {
         double dx = goal_x - start_x;
         double dy = goal_y - start_y;
-        distance = sqrt(dx * dx + dy * dy);
+        return sqrt(dx * dx + dy * dy);
     }
 
-    // calculate actual path length //TODO
+    // calculate actual path length
     else
     {
-        distance = -1;
+        explorer::Distance srv_msg;
+        srv_msg.request.x1 = start_x;
+        srv_msg.request.y1 = start_y;
+        srv_msg.request.x2 = goal_x;
+        srv_msg.request.y2 = goal_y;
+        
+        for(int i=0; i<10; i++)
+            if(sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
+                return srv_msg.response.distance;
+            else
+                ros::Duration(1).sleep();
     }
 
-    return distance;
+    ROS_ERROR("Unable to compute distance at the moment...");
+    return -1;
 }
 
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
@@ -963,17 +1007,20 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         return;
     }
 
+    /*
     adhoc_communication::SendEmRobot srv_msg;
     srv_msg.request.topic = "robots";  // TODO should this service be called also somewhere else?
     srv_msg.request.robot.id = robot_id;
     srv_msg.request.robot.state = msg.get()->state;
     sc_send_robot.call(srv_msg);
+    */
 
     robot_state = static_cast<state_t>(msg.get()->state);
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
+    ROS_ERROR("Received robot information");
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)
@@ -1667,7 +1714,7 @@ void docking::initLogpath()
 void docking::set_target_ds_vacant(bool vacant)
 {
     adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "adhoc_communication/send_em_docking_station";
+    srv_msg.request.topic = "docking_stations";
     srv_msg.request.docking_station.id = target_ds->id;
     double x, y; 
     rel_to_abs(target_ds->x, target_ds->y, &x, &y);
@@ -1737,6 +1784,7 @@ void docking::compute_MST(std::vector< std::vector<int> > graph)  // TODO(minor)
             ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
      */
 
+    /*
     int k = 0;              // index of the closest recheable DS
     int target = 4;         // the id of the DS that we want to reach
     std::vector<int> path;  // sequence of nodes that from target leads to k; i.e., if the vector is traversed in the
@@ -1747,6 +1795,7 @@ void docking::compute_MST(std::vector< std::vector<int> > graph)  // TODO(minor)
     std::vector<int>::iterator it;
     for (it = path.begin(); it != path.end(); it++)
         ROS_ERROR("%d - ", *it);
+        */
 }
 
 // A utility function to find the vertex with minimum key value, from
@@ -1930,7 +1979,7 @@ void docking::discover_docking_stations()
 
             /* Inform other robots about the "new" DS */
             adhoc_communication::SendEmDockingStation send_ds_srv_msg;
-            send_ds_srv_msg.request.topic = "adhoc_communication/send_em_docking_station";
+            send_ds_srv_msg.request.topic = "docking_stations";
             send_ds_srv_msg.request.docking_station.id = (*it).id;
             double x, y;
             rel_to_abs((*it).x, (*it).y, &x, &y);
@@ -1956,7 +2005,7 @@ void docking::discover_docking_stations()
             else
             {
                 int dist = -1;
-                while(dist == -1) //TODO
+                //while(dist == -1) //TODO
                     dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
                 if (dist < battery.remaining_distance / 2)
                 {
@@ -1977,4 +2026,15 @@ void docking::discover_docking_stations()
    }
    else
             ROS_DEBUG("No new DS was encountered");
+}
+
+void docking::send_robot() {
+    adhoc_communication::SendEmRobot robot_msg;
+    robot_msg.request.topic = "robots";
+    robot_msg.request.robot.id = robot_id;
+    robot_msg.request.robot.x = robot.x; //TODO robot->x ??? and is this robot in robots????
+    robot_msg.request.robot.y = robot.y;
+    robot_msg.request.robot.state = robot.state;
+    robot_msg.request.robot.selected_ds = best_ds->id;
+    sc_send_robot.call(robot_msg);   
 }

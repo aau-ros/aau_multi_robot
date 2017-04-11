@@ -59,6 +59,7 @@ int main(int argc, char** argv)
         
         doc.update_robot_state();
         
+        doc.send_robot();
         
 
         // sleep for 1/rate seconds

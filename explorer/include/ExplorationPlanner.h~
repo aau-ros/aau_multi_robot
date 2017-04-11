@@ -169,7 +169,7 @@ namespace explorationPlanner
             int auction_id_number;
             int auction_pid;
             int frontier_seq_number;
-            double exploration_travel_path_global;
+            double exploration_travel_path_global, exploration_travel_path_global_meters;
             double x_value,y_value,w_value,x_distance,y_distance,robot_pose_x,robot_pose_y;
             int goal_buffer_counter,goal_buffer_length,random_number, random_value;
             int inflated,free,lethal,unknown;
@@ -253,7 +253,6 @@ namespace explorationPlanner
 
 
         private:
-            //Edit Peter
             bool auction_running;
 
             void home_position_(const geometry_msgs::PointStamped::ConstPtr& msg);

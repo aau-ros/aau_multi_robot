@@ -169,7 +169,7 @@ namespace explorationPlanner
             int auction_id_number;
             int auction_pid;
             int frontier_seq_number;
-            double exploration_travel_path_global;
+            double exploration_travel_path_global, exploration_travel_path_global_meters;
             double x_value,y_value,w_value,x_distance,y_distance,robot_pose_x,robot_pose_y;
             int goal_buffer_counter,goal_buffer_length,random_number, random_value;
             int inflated,free,lethal,unknown;
@@ -249,6 +249,7 @@ namespace explorationPlanner
             bool sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic);
 
             double distance_from_robot(double x, double y);
+            double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
 
 

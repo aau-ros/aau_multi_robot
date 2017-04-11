@@ -21,6 +21,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <explorer/RobotPosition.h>
+#include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <sstream>
 #include <math.h>
@@ -65,6 +66,8 @@ class docking
      * For each docking station D, the robot checks if the distance between it and D is less than a certain value: if it so, the docking station D can be considered discovered (i.e., it can be used to recharge from now on).
      */
     void discover_docking_stations();
+    
+    void send_robot();
 
   private:
     /**
@@ -374,7 +377,7 @@ class docking
     void abort_charging_callback(const std_msgs::Empty &msg);
 
     ros::Subscriber sub_robot_pose, sub_robot;
-    ros::ServiceClient sc_robot_pose, sc_distance_from_robot;
+    ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance;
 
     ds_t *next_optimal_ds, *target_ds, *next_target_ds;
 

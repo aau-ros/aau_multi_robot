@@ -33,6 +33,8 @@ int main(int argc, char** argv)
     // Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
+    
+    doc.map_info();
 
     while(ros::ok()){
         // get updates from subscriptions
@@ -57,7 +59,8 @@ int main(int argc, char** argv)
         
         doc.update_robot_state();
         
-        doc.map_info();
+        //doc.send_robot();
+        
 
         // sleep for 1/rate seconds
         loop_rate.sleep();

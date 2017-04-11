@@ -29,6 +29,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
 #include <explorer/RobotPosition.h>
+#include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
@@ -73,7 +74,7 @@ class Explorer
     ros::Publisher pub_robot;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
-    ros::ServiceServer ss_robot_pose, ss_distance_from_robot;
+    ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance;
     ros::ServiceClient sc_get_robot_state;
 
     /*******************
@@ -316,10 +317,13 @@ class Explorer
 
         ready = true;
         // TODO here because it must be after exploration is ready
-        my_counter = 10;  // TODO handle better
+        my_counter = 15;  // TODO handle better
         ss_robot_pose = nh.advertiseService("robot_pose", &Explorer::robot_pose_callback, this);
         ss_distance_from_robot =
             nh.advertiseService("distance_from_robot", &Explorer::distance_from_robot_callback, this);
+            
+        ss_distance =
+            nh.advertiseService("distance", &Explorer::distance, this);
 
         /* Load strings in enum_string vector */
         // TODO(minor) currently, the strings must be inserted in teh same order of the enum, which is not very nice...
@@ -1502,7 +1506,7 @@ class Explorer
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#time,exploration_travel_path_global,available_distance,"
+        fs_csv << "#time,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
                   "global_map_progress,local_map_progress,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
@@ -1649,7 +1653,7 @@ class Explorer
 
         double exploration_time = ros_time.toSec();
         int navigation_goals_required = counter;
-        double exploration_travel_path = (double)exploration->exploration_travel_path_global * 0.02;
+        double exploration_travel_path = (double)exploration->exploration_travel_path_global_meters;
         double size_global_map =
             map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
 
@@ -2262,13 +2266,16 @@ class Explorer
 
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if "
                           "the Ds is free...\e[0m");
-
+                exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 return true;
             }
             else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_in_queue)
             {
                 ac.cancelGoal();
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
+                exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 return true;
             }
 
@@ -2394,8 +2401,6 @@ class Explorer
 
         ROS_ERROR("Goal reached");
 
-        // TODO(IMPORTANT) should this code be called also when I brutally abort exploration to put the robot in queue
-        // or in checking_vacancy state????
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
 
@@ -2586,6 +2591,15 @@ class Explorer
         if (my_counter > 0)
             return false;
         res.distance = exploration->distance_from_robot(req.x, req.y);
+        return true;
+    }
+    
+    bool distance(explorer::Distance::Request &req, explorer::Distance::Response &res)
+    {
+        my_counter--;
+        if (my_counter > 0)
+            return false;
+        res.distance = exploration->distance(req.x1, req.y1, req.x2, req.y2);
         return true;
     }
 
