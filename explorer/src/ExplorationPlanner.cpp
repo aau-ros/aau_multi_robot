@@ -3849,14 +3849,26 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
 }
 
 double ExplorationPlanner::distance_from_robot(double x, double y) {
+    if(costmap_ros_ == NULL) {
+        ROS_ERROR("NULL!!!");
+        return -1;   
+    }
     return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a distance in meters
 }
 
 double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) {
+    if(costmap_ros_ == NULL) {
+        ROS_ERROR("NULL!!!");
+        return -1;   
+    }
     return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a distance in meters
 }
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) {
+    if(costmap_ros_ == NULL) {
+        ROS_ERROR("NULL!!!");
+        return false;   
+    }
     return costmap_global_ros_->getRobotPose(robotPose);
 }
 
@@ -3891,6 +3903,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     int errors = 0;
     if (mode == 1)
     {
+        
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
             //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.

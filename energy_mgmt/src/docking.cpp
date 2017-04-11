@@ -530,7 +530,8 @@ void docking::compute_optimal_ds()
         /* "Flocking" policy */
         else if (ds_selection_policy == 4)  // TODO last parameter of the cost function
         {
-            for (int d = 0, min_cost = numeric_limits<int>::max(); d < ds.size(); d++)
+            double min_cost = numeric_limits<int>::max();
+            for (int d = 0; d < ds.size(); d++)
             {
                 int count = 0;
                 for (int i = 0; i < robots.size(); i++)
@@ -598,14 +599,21 @@ void docking::compute_optimal_ds()
 
                 double theta_s = theta / 180;
 
-                double d_f = 0.0;  // TODO
+                double d_f = numeric_limits<int>::max();
+                for(int i=0; i < jobs.size(); i++) {
+                    double dist = distance(ds[d].x, ds[d].y, jobs[i].x, jobs[i].y);
+                    if(dist < d_f)
+                        d_f = dist;
+                }
 
                 double cost = n_r + d_s + theta_s + d_f;
                 if (cost < min_cost)
                 {
-                    found_new_optimal_ds = true;
                     min_cost = cost;
-                    best_ds = &ds.at(d);
+                    if(ds[d].id != best_ds->id) {
+                        found_new_optimal_ds = true;
+                        best_ds = &ds.at(d);
+                    }
                 }
             }
         }
@@ -811,6 +819,13 @@ void docking::update_l4()
         if (dist_job_temp < dist_job)
             dist_job = dist_job_temp;
     }
+    
+    if(ds.size() == 0 || jobs.size() == 0) {
+        ROS_INFO("No DSs/jobs");
+        l4 = 0;
+        return;
+    }
+        
 
     // sanity checks
     if (dist_job < 0 || dist_job >= numeric_limits<int>::max())
@@ -873,7 +888,7 @@ double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean
     srv_msg.request.x = goal_x;
     srv_msg.request.y = goal_y;
 
-    
+    ros::service::waitForService("explorer/distance_from_robot");
     for(int i=0; i<10; i++)
         if(sc_distance_from_robot.call(srv_msg) && srv_msg.response.distance >= 0)
             return srv_msg.response.distance;
@@ -916,6 +931,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
         srv_msg.request.x2 = goal_x;
         srv_msg.request.y2 = goal_y;
         
+        ros::service::waitForService("explorer/distance");
         for(int i=0; i<10; i++)
             if(sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
                 return srv_msg.response.distance;
@@ -1020,7 +1036,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    ROS_ERROR("Received robot information");
+    ROS_DEBUG("Received robot information");
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)

@@ -1303,6 +1303,7 @@ int main(int argc, char **argv)
                 sub->robot_number_ = i;
                 sub_robot_pos_l.push_front(n_pub->subscribe(topic_to_sub, 1, &PositionSubscriber::Subscribe, &*sub));
                 robot_positions_l.push_front(sub);
+                ROS_ERROR("Changed");
             }
             else
                 sub_robot_pos_l.push_front(n_pub->subscribe(topic, 1, &PositionSubscriber::Subscribe, &*my_sim_position));
