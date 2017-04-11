@@ -1,6 +1,0 @@
-#!/bin/sh
-
-# Script to launch a Stage simulation
-
-rm -r /home/fabrizio/.ros/log
-roslaunch $(rospack find simulation)/launch/master_ext_2_robots.launch
