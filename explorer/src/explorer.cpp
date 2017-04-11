@@ -49,11 +49,12 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000  // F
 
-#define SAFETY_COEFF 0.013
-#define INCR 2
+#define SAFETY_COEFF 0.005
+#define INCR 1.7
 #define QUEUE_DISTANCE 5.0
 #define DS_SELECTION_POLICY 0
 #define OPP_ONLY_TWO_DS false
+#define SAFETY_COEFF_2 0.8
 
 boost::mutex costmap_mutex;
 
@@ -2553,7 +2554,7 @@ class Explorer
         battery_charge = (int)msg->soc;
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        ROS_DEBUG("SOC: %d; available distance: %f", battery_charge, available_distance);
+        ROS_DEBUG("SOC: %d%%; available distance: %f", battery_charge * 100, available_distance);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO hmm...
@@ -2562,7 +2563,7 @@ class Explorer
         if (available_distance <= 0 && robot_state != charging)
         {
             ROS_FATAL("Robot has run out of energy!");
-            finalize_exploration();
+            //finalize_exploration(); //TODO do better
         }
     }
 

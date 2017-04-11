@@ -3846,7 +3846,7 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
     return false;
 }
 
-double ExplorationPlanner::my_distance_from_robot(double x, double y) {
+double ExplorationPlanner::distance_from_robot(double x, double y) {
     return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution();
 }
 

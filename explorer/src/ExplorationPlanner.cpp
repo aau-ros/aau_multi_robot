@@ -3847,7 +3847,7 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
 }
 
 double ExplorationPlanner::distance_from_robot(double x, double y) {
-    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution();
+    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a distance in meters
 }
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) {

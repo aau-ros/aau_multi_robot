@@ -13,11 +13,11 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     nh_tilde.param("w4", w4, 0.25);
     nh_tilde.param("x", origin_absolute_x, 0.0);
     nh_tilde.param("y", origin_absolute_y, 0.0);
-    nh_tilde.param("distance_close", distance_close, 8.0);
-    nh_tilde.param<string>("move_base_frame", move_base_frame, "map");
+    nh_tilde.param("distance_close", distance_close, 8.0); //TODO add this parameter???
+    nh_tilde.param<string>("move_base_frame", move_base_frame, "map"); //TODO remove this
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
     nh_tilde.param("ds_selection_policy", ds_selection_policy, 1);  // TODO add this parameter
-    nh_tilde.param<std::string>("log_path", log_path, "");
+    nh_tilde.param<std::string>("log_path", log_path, "");          //TODO add this parameter (to script)
 
     /* Initialize robot name */
     if (robot_prefix.empty())
@@ -139,13 +139,13 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     auction_winner = false;
     started_own_auction = false;
     update_state_required = false;
-    participating_to_auction = 0;
+    moving_along_path = false;
     managing_auction = false;
-    need_to_charge = false;  // TODO(minor) useless variable
+    need_to_charge = false;  // TODO(minor) useless variable (if we use started_own_auction)
     test = true;
     llh = 0;
     auction_id = 0;
-    moving_along_path = false;
+    participating_to_auction = 0;
     best_ds = NULL;
     target_ds = NULL;
     time_start = ros::Time::now();
@@ -162,17 +162,34 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     srv_msg.request.robot.state = fully_charged;
     sc_send_robot.call(srv_msg);
 
-    int graph[V][V] = {
+    int arr[5][5] = {
         { 0, 1, 0, 6, 0 }, { 1, 0, 1, 8, 5 }, { 0, 1, 0, 1, 7 }, { 6, 8, 1, 0, 1 }, { 0, 5, 7, 1, 0 },
     };
+    std::vector < std::vector <int > > graph;
+    for(int i=0; i < 5; i++) {
+        std::vector<int> temp;
+        for(int j=0; j < 5; j++)
+            temp.push_back(arr[i][j]);
+        graph.push_back(temp);
+    }       
+     
+    //TODO(IMPORTANT) vary bad...
+    ROS_ERROR("calling");
+    for(int i=0; i < 5; i++) {
+        std::vector<int> temp;
+        for(int j=0; j < 5; j++)
+            temp.push_back(10);
+        ds_mst.push_back(temp); 
+        ds_graph.push_back(temp);
+    }    
+    
+    //compute_MST(graph);
 
-    // compute_MST(graph);
-
-    ROS_ERROR("!!!!!!!!!!!! %s", log_path.c_str());
+    //ROS_ERROR("!!!!!!!!!!!! %s", log_path.c_str());
     log_path = log_path.append("/energy_mgmt");
     log_path = log_path.append(robot_name);
     boost::filesystem::path boost_log_path(log_path.c_str());
-    ROS_ERROR("!!!!!!!!!!!!!!!!!!!Logging files to %s", log_path.c_str());
+    //ROS_ERROR("!!!!!!!!!!!!!!!!!!!Logging files to %s", log_path.c_str());
     if (!boost::filesystem::exists(boost_log_path))
         try
         {
@@ -317,7 +334,7 @@ void docking::compute_optimal_ds()
             for (int j = 0; j < jobs.size(); j++)
             {
                 double dist = distance(best_ds->x, best_ds->y, jobs.at(j).x, jobs.at(j).y);
-                if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                if (dist < battery.remaining_distance / 2)  // TODO ok?
                 {
                     current_optimal_ds_has_eo = true;
                     break;
@@ -341,14 +358,14 @@ void docking::compute_optimal_ds()
                 {
                     double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
                     
-                    if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                    if (dist < battery.remaining_distance / 2)  // TODO ok?
                     {
                         /* We have found a DS with EOs */
                         found_ds_with_eo = true;
                         
                         /* Check if that DS is also directly reachable (i.e., without recharging) */
                         double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
-                        if (dist2 < MAX_DISTANCE)
+                        if (dist2 < battery.remaining_distance / 2)
                         {
                             /* We have found a DS that is directly reachable and with EOs */
                             found_reachable_ds_with_eo = true;
@@ -375,24 +392,6 @@ void docking::compute_optimal_ds()
 
                     if (!OPP_ONLY_TWO_DS)  // TODO
                     {
-                        // construct ds graph //TODO construct graph only when a new DS is found
-                        int ds_graph[V][V];  // TODO remove V
-                        for (int i = 0; i < ds.size(); i++)
-                            for (int j = 0; j < ds.size(); j++)
-                                if (i == j)
-                                    ds_graph[i][j] = 0;
-                                else
-                                {
-                                    int dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                                    if (dist < MAX_DISTANCE)
-                                    {
-                                        ds_graph[i][j] = dist;
-                                        ds_graph[j][i] = dist;
-                                    }
-                                }
-
-                        // construct MST starting from ds graph
-                        compute_MST(ds_graph);
 
                         // compute closest DS with EOs // TODO are we sure that this is what the paper asks?
                         double min_dist = numeric_limits<int>::max();
@@ -403,7 +402,7 @@ void docking::compute_optimal_ds()
                             {
                                 double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
 
-                                if (dist < MAX_DISTANCE)  // TODO not MAX_DIST
+                                if (dist < battery.remaining_distance / 2)  // TODO ok?
                                 {
                                     double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
 
@@ -418,8 +417,7 @@ void docking::compute_optimal_ds()
                         }
 
                         std::vector<int> path;
-                        std::vector<std::vector<int> > tree; //TODO
-                        ds_found_with_mst = find_path(tree, 1, 1, path);
+                        ds_found_with_mst = find_path(ds_mst, 1, 1, path);
 
                         if (ds_found_with_mst)
                         {
@@ -434,7 +432,7 @@ void docking::compute_optimal_ds()
                                 adhoc_communication::MmListOfPoints msg_path;
                                 for (int i = 0; i < path.size(); i++)
                                     for (int j = 0; j < ds.size(); j++)
-                                        if (j == path[i])
+                                        if (ds[j].id == path[i])
                                         {
                                             msg_path.positions[i].x = ds[j].x;
                                             msg_path.positions[i].y = ds[j].y;
@@ -457,14 +455,14 @@ void docking::compute_optimal_ds()
                             {
                                 bool existing_eo;
                                 for (int j = 0; j < jobs.size(); j++)
-                                    if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < MAX_DISTANCE)
+                                    if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < battery.remaining_distance / 2)
                                     {
                                         existing_eo = true;
                                         for (int k = 0; k < ds.size(); k++)
                                             if (k != i &&
-                                                distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
-                                                if (distance_from_robot(ds.at(k).x, ds.at(k).y) < MAX_DISTANCE)
-                                                {  // TODO no MAX_DISTANCE, but available_distance
+                                                distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
+                                                if (distance_from_robot(ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
+                                                {
                                                     moving_along_path = true;
                                                     ds_found_with_mst = true;
                                                     first_step_x = ds.at(k).x;
@@ -596,7 +594,7 @@ void docking::compute_optimal_ds()
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated, and the other robots must be informed */  // TODO and inform other robots
         if (found_new_optimal_ds)
         {
-            ROS_ERROR("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x,
+            ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x,
                       best_ds->y);  // TODO coordinates in global system...
 
             ros::Duration time = ros::Time::now() - time_start;
@@ -622,13 +620,6 @@ void docking::compute_optimal_ds()
     }
     else
         ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not been computed");
-
-    if (participating_to_auction == 0)  // TODO is it a good idea?
-    {
-        target_ds = best_ds;
-    }
-    else
-        ROS_DEBUG("There are still some pending auctions: cannot update optimal DS");
         
 }
 
@@ -883,26 +874,9 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
         distance = sqrt(dx * dx + dy * dy);
     }
 
-    // calculate actual path length
+    // calculate actual path length //TODO
     else
     {
-        geometry_msgs::PoseStamped start, goal;
-
-        start.header.frame_id = move_base_frame;
-        start.pose.position.x = start_x;
-        start.pose.position.y = start_y;
-        start.pose.position.z = 0;
-
-        goal.header.frame_id = move_base_frame;
-        goal.pose.position.x = goal_x;
-        goal.pose.position.y = goal_y;
-        goal.pose.position.z = 0;
-
-        vector<geometry_msgs::PoseStamped> plan;
-
-        // if(nav.makePlan(start, goal, plan))
-        //    distance =  plan.size() * costmap->getCostmap()->getResolution();
-        // else
         distance = -1;
     }
 
@@ -1620,7 +1594,9 @@ void docking::update_robot_state()  // TODO(minor) simplify
             if (robot_state != charging || robot_state != going_charging || robot_state != going_checking_vacancy ||
                 robot_state != checking_vacancy)
             {
-                /* Notify explorer node about the new target DS */
+                /* Notify explorer node about the new target DS.
+                 * Notice that it is important that target_ds is updated only here, because otherwise there could be problem when the robot communicates to the other robot that the DS that is currently targettting is now vacant/occupied. */
+                target_ds = best_ds;
                 geometry_msgs::PointStamped msg1;
                 msg1.point.x = target_ds->x;
                 msg1.point.y = target_ds->y;
@@ -1704,8 +1680,9 @@ void docking::set_target_ds_vacant(bool vacant)
 
 }
 
-void docking::compute_MST(int graph[V][V])  // TODO(minor) check all functions related to MST
+void docking::compute_MST(std::vector< std::vector<int> > graph)  // TODO(minor) check all functions related to MST
 {
+    int V = graph.size();          
     int parent[V];   // Array to store constructed MST
     int key[V];      // Key values used to pick minimum weight edge in cut
     bool mstSet[V];  // To represent set of vertices not yet included in MST
@@ -1723,7 +1700,7 @@ void docking::compute_MST(int graph[V][V])  // TODO(minor) check all functions r
     {
         // Pick the minimum key vertex from the set of vertices
         // not yet included in MST
-        int u = minKey(key, mstSet);
+        int u = minKey(key, mstSet, V);
 
         // Add the picked vertex to the MST Set
         mstSet[u] = true;
@@ -1741,32 +1718,31 @@ void docking::compute_MST(int graph[V][V])  // TODO(minor) check all functions r
     }
 
     // print the constructed MST
-    printMST(parent, V, graph);
+    //printMST(parent, V, graph);
 
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            mst[i][j] = 0;
+            ds_mst[i][j] = 0;
 
     // TODO does not work if a DS is not connected to any other DS
     for (int i = 1; i < V; i++)
     {
-        mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
-        mst[parent[i]][i] = 1;
+        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
+        ds_mst[parent[i]][i] = 1;
     }
 
+    /*
     for (int i = 0; i < V; i++)
-    {
         for (int j = 0; j < V; j++)
-            ROS_ERROR("(%d, %d): %d ", i, j, mst[i][j]);
-    }
+            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+     */
 
     int k = 0;              // index of the closest recheable DS
     int target = 4;         // the id of the DS that we want to reach
     std::vector<int> path;  // sequence of nodes that from target leads to k; i.e., if the vector is traversed in the
                             // inverse order (from end to begin), it contains the path to go from k to target
 
-    // find_path(mst, k, target, path);
-    path.push_back(k);
+    find_path(ds_mst, k, target, path);
 
     std::vector<int>::iterator it;
     for (it = path.begin(); it != path.end(); it++)
@@ -1775,7 +1751,7 @@ void docking::compute_MST(int graph[V][V])  // TODO(minor) check all functions r
 
 // A utility function to find the vertex with minimum key value, from
 // the set of vertices not yet included in MST
-int docking::minKey(int key[], bool mstSet[])
+int docking::minKey(int key[], bool mstSet[], int V)
 {
     // Initialize min value
     int min = INT_MAX, min_index;
@@ -1788,10 +1764,10 @@ int docking::minKey(int key[], bool mstSet[])
 }
 
 // A utility function to print the constructed MST stored in parent[]
-int docking::printMST(int parent[], int n, int graph[V][V])
+int docking::printMST(int parent[], int n, std::vector < std::vector<int> > graph)
 {
     printf("Edge   Weight\n");
-    for (int i = 1; i < V; i++)
+    for (int i = 1; i < graph.size(); i++)
         ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
 }
 
@@ -1802,10 +1778,13 @@ bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end,
 
     /* Call auxiliary function find_path_aux to perform the search */
     bool path_found = find_path_aux(tree, start, end, inverse_path, start);
+    
+    //TODO bad doing it here...
+    inverse_path.push_back(start);
 
     /* If a path was found, reverse the constructed path to obtain the real path that goes from 'start' to 'end' */
     if (path_found)
-        for (int i = inverse_path.size(); i >= 0; i--)
+        for (int i = inverse_path.size() - 1; i >= 0; i--)
             path.push_back(inverse_path.at(i));
 
     /* Tell the caller if a path was found or not */
@@ -1843,16 +1822,15 @@ bool docking::compute_closest_ds()
     double min_dist = distance_from_robot(best_ds->x, best_ds->y), dist;
     bool found_new_closest_ds = false;
     std::vector<ds_t>::iterator it;
-    for (it = ds.begin(); it != ds.end(); it++) 
-        if(best_ds->id != (*it).id) { //TODO put this check in all the policies !!!!!!!!!!
-            dist = distance_from_robot((*it).x, (*it).y);
-            if (dist < min_dist)
-            {
-                min_dist = dist;
-                best_ds = &(*it);
-                found_new_closest_ds = true;
-            }
+    for (it = ds.begin(); it != ds.end(); it++) {
+        dist = distance_from_robot((*it).x, (*it).y);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            best_ds = &(*it);
+            found_new_closest_ds = true;
         }
+    }
     return found_new_closest_ds;
 }
 
@@ -1932,6 +1910,7 @@ void docking::discover_docking_stations()
     }
 
     /* Check if there are DSs that can be considered discovered */
+    bool new_ds_discovered = false;
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
         /* Compute distance from robot */
@@ -1940,6 +1919,9 @@ void docking::discover_docking_stations()
         /* If the DS is inside a fiducial laser range, it can be considered discovered */
         if (dist > 0 && dist < FIDUCIAL_LASER_RANGE)  // TODO
         {
+            /* New DS discovered */
+            new_ds_discovered = true;
+            
             /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
             ROS_INFO("Found new DS ds%d at (%f, %f)", (*it).id, (*it).x,
                       (*it).y);  // TODO index make sense only in simulation
@@ -1962,7 +1944,37 @@ void docking::discover_docking_stations()
              * the future increment of the for loop */
             it--;
         }
-        else
-            ROS_DEBUG("No new DS was encountered");
+        
     }
+    
+    if(new_ds_discovered) {
+    // construct ds graph //TODO construct graph only when a new DS is found
+    for (int i = 0; i < ds.size(); i++)
+        for (int j = 0; j < ds.size(); j++)
+            if (i == j)
+                ds_graph[i][j] = 0;
+            else
+            {
+                int dist = -1;
+                while(dist == -1) //TODO
+                    dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                if (dist < battery.remaining_distance / 2)
+                {
+                    ds_graph[i][j] = dist;
+                    ds_graph[j][i] = dist;
+                } else {
+                    ds_graph[i][j] = 0;
+                    ds_graph[j][i] = 0;
+                }
+                    
+            }
+            
+    
+
+    // construct MST starting from ds graph
+    compute_MST(ds_graph);
+    
+   }
+   else
+            ROS_DEBUG("No new DS was encountered");
 }

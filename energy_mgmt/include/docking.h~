@@ -34,10 +34,9 @@
 #define FORCED_AUCTION_END_TIMEOUT (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME (AUCTION_TIMEOUT * 3)
 #define FIDUCIAL_LASER_RANGE 10 //TODO meters???
-#define DS_SELECTION_POLICY 0
 #define MAX_DISTANCE 50
-#define V 5
 #define OPP_ONLY_TWO_DS false
+#define SAFETY_COEFF 0.8
 
 using namespace std;
 
@@ -395,11 +394,11 @@ class docking
 
     void set_target_ds_vacant(bool vacant);
 
-    void compute_MST(int graph[V][V]);
+    void compute_MST(std::vector< std::vector<int> > graph);
 
     int minKey(int key[], bool mstSet[]);
 
-    int printMST(int parent[], int n, int graph[V][V]);
+    int printMST(int parent[], int n, std::vector < std::vector <int> > graph);
 
     /**
      * @brief Search for a path connecting the given nodes in an undirected weighted tree
@@ -449,8 +448,6 @@ class docking
     bool find_path_aux(std::vector<std::vector<int> > tree, int start, int target, std::vector<int> &path,
                        int prev_node);
 
-    int mst[V][V];
-
     bool moving_along_path;
 
     int ds_selection_policy;
@@ -474,6 +471,10 @@ class docking
     std::fstream fs_csv;
     
     ros::Time time_start;
+    
+    bool started_own_auction;
+    
+    std::vector< std::vector<int> > ds_graph, ds_mst;
     
 
 };

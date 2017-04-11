@@ -149,7 +149,7 @@ private:
     // Maximum speed of the robot
     double max_speed_linear;
     
-    double remaining_power, total_power;
+    double remaining_energy, total_energy, maximum_running_time;
     
     ros::Publisher pub_charging_completed;
     ros::Subscriber sub_robot;
