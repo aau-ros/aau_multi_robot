@@ -1,7 +1,0 @@
-#!/bin/bash
-
-#roslaunch multi_robot_simulation slam_gmapping.launch robot_prefix:="/robot_0" xmax:=-35 xmin:=-35 ymax:=35 ymin:=-35 2>/dev/null
-
-roslaunch multi_robot_simulation slam_gmapping.launch robot_prefix:="/robot_0" max:=-35 xmin:=-35 ymax:=35 ymin:=-35 2>/dev/null
-
-

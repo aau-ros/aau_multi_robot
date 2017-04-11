@@ -1,4 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <node name="my_script" pkg ="multi_robot_simulation" type="script" />
-</launch>
