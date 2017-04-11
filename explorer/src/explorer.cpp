@@ -356,7 +356,7 @@ class Explorer
 
         /* Set countdowns */
         int exit_countdown = EXIT_COUNTDOWN;
-        int charge_countdown = EXIT_COUNTDOWN;  // TODO hmm...
+        int charge_countdown = EXIT_COUNTDOWN; // TODO hmm...
 
         /* Start taking the time during exploration */
         time_start = ros::Time::now();

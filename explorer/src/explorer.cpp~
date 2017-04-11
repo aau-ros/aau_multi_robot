@@ -390,7 +390,7 @@ class Explorer
             /* Update robot state */
             update_robot_state();
 
-            ROS_ERROR("EXPLORING");  // TODO(minor) here???
+            ROS_INFO("EXPLORING");  // TODO(minor) here???
 
             // TODO(minor) better while loops
             // do nothing while recharging
