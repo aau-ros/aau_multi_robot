@@ -3,4 +3,4 @@
 # Script to launch a Stage simulation
 
 rm -r /home/fabrizio/.ros/log
-roslaunch $(rospack find multi_robot_simulation)/launch/master_ext_2_robots.launch
+roslaunch $(rospack find simulation)/launch/master_ext_2_robots.launch

@@ -111,7 +111,7 @@ void battery_simulate::compute()
          * the remaing_energy during the charging process */
         if (state.soc >= 1)
         {
-            state.soc = 100; // since SOC cannot be higher than 100% in real life, force it to be 100%
+            state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
             state.remaining_time_charge = 0;
             remaining_energy = total_energy;
