@@ -240,7 +240,7 @@ class docking
         int id;
         simple_state_t state;
         double x, y;
-        int target_ds;
+        int selected_ds;
     };
     robot_t robot;
     vector<robot_t> robots;
@@ -287,7 +287,14 @@ class docking
     // F
     ros::Publisher pub_ds, pub_new_target_ds;
     bool test;
+    
+    /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
     ds_t *best_ds;
+    
+    /* The DS which the robot has currently won the access to. It could be different from optimal_ds because while moving to target_ds, the robot could compute another optimal DS and so it would update optimal_ds, but not target_ds, since it would need have the right to occupy target_ds, not best_ds. This difference is important for when the robot receive a request to double check if a certain DS is not going to be occupied by another robot. */
+    ds_t *target_ds;
+    
+    
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     ros::ServiceServer ss_send_docking_station;
     bool foo(adhoc_communication::SendEmDockingStation::Request &req,
@@ -379,7 +386,7 @@ class docking
     ros::Subscriber sub_robot_pose, sub_robot;
     ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance;
 
-    ds_t *next_optimal_ds, *target_ds, *next_target_ds;
+    ds_t *next_optimal_ds, *next_target_ds;
 
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 

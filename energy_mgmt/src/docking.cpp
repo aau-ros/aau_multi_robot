@@ -119,7 +119,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 100);
-    pub_new_target_ds = nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 100);
+    pub_new_target_ds = nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 100); //to tell explorer...
     pub_adhoc_new_best_ds =
         nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 100);
     pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 100);
@@ -282,7 +282,6 @@ void docking::compute_optimal_ds()
         if (best_ds == NULL)
         {
             best_ds = &ds.at(0);
-            target_ds = best_ds;
             old_optimal_ds = NULL;
         }
         else
@@ -508,7 +507,7 @@ void docking::compute_optimal_ds()
             {
                 int count = 0;
                 for (int i = 0; i < robots.size(); i++)
-                    if (robots.at(i).target_ds == best_ds->id)  // TODO best_ds or target_ds???
+                    if (robots.at(i).selected_ds == best_ds->id)  // TODO best_ds or target_ds???
                         count++;
                 double n_r = (double)count / num_robots;
 
@@ -528,7 +527,7 @@ void docking::compute_optimal_ds()
                     double robot_i_target_ds_x, robot_i_target_ds_y;
 
                     for (int k = 0; k < ds.size(); k++)
-                        if (robots.at(i).target_ds == ds.at(k).id)
+                        if (robots.at(i).selected_ds == ds.at(k).id)
                         {
                             robot_i_target_ds_x = ds.at(k).x;
                             robot_i_target_ds_y = ds.at(k).y;
@@ -602,7 +601,7 @@ void docking::compute_optimal_ds()
                 fs_csv << time.toSec() << "," << best_ds->id << std::endl;
                 fs_csv.close();
 
-                target_ds = best_ds;  // TODO necessary?
+                best_ds;  // TODO necessary?
                 update_l4();
 
                 /* Inform other robots */  // TODO what if the robot signals a DS that is unkown by one of the other robot
@@ -776,7 +775,7 @@ void docking::update_l4()
     double dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
-        if (ds[i].id == target_ds->id)
+        if (ds[i].id == best_ds->id)
         {
             dist_ds = distance_from_robot(ds[i].x, ds[i].y);
             break;
@@ -969,7 +968,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ; //ROS_ERROR("\n\t\e[1;34m checking vacancy!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/check_vacancy";
-        srv_msg.request.docking_station.id = best_ds->id;
+        srv_msg.request.docking_station.id = target_ds->id; //target_ds, not best_ds!!!!!
         sc_send_docking_station.call(srv_msg);
     }
     else if (msg.get()->state == auctioning)
@@ -1026,7 +1025,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
-            robots[i].target_ds = msg.get()->selected_ds;
+            robots[i].selected_ds = msg.get()->selected_ds;
 
             new_robot = false;
             break;
@@ -1048,7 +1047,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
         robot.x = msg.get()->x;
         robot.y = msg.get()->y;
-        robot.target_ds = msg.get()->selected_ds;
+        robot.selected_ds = msg.get()->selected_ds;
 
         robots.push_back(robot);
 
@@ -1548,7 +1547,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
 
     /* If the request for vacancy check is not about the target DS of the robot, for sure the robot is not occupying it
      */
-    if (msg.get()->id == target_ds->id)  // TODO at the beginning no robot has already target_ds set, since it is set
+    if (target_ds != NULL && msg.get()->id == target_ds->id)  // TODO at the beginning no robot has already target_ds set, since it is set
                                          // only after the end of all auctions!!!!!
 
         /* If the robot is going to or already charging, or if it is going to check already checking for vacancy, it is
@@ -1713,6 +1712,8 @@ void docking::set_target_ds_vacant(bool vacant)
     sc_send_docking_station.call(srv_msg);
 
     target_ds->vacant = vacant;
+    
+    ROS_ERROR("ds%d: %d", target_ds->id, target_ds->vacant);
 
 }
 
@@ -1872,9 +1873,7 @@ void docking::compute_closest_ds()
 void docking::map_info()
 {
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << "#time,exploration_travel_path_global,available_distance,"
-              "global_map_progress,local_map_progress,battery_state,"
-              "recharge_cycles,energy_consumption,frontier_selection_strategy" << std::endl;
+    fs_csv << "#time,optimal_ds" << std::endl;
     fs_csv.close();
 
     /*
