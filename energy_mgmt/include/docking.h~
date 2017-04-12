@@ -66,6 +66,8 @@ class docking
      * For each docking station D, the robot checks if the distance between it and D is less than a certain value: if it so, the docking station D can be considered discovered (i.e., it can be used to recharge from now on).
      */
     void discover_docking_stations();
+    
+    void send_robot();
 
   private:
     /**

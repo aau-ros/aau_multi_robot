@@ -455,7 +455,7 @@ class docking
 
     int ds_selection_policy;
 
-    bool compute_closest_ds();
+    void compute_closest_ds();
 
     enum ds_state_t
     {

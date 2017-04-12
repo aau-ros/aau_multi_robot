@@ -265,9 +265,10 @@ void docking::compute_optimal_ds()
     /* Compute optimal DS only if at least one DS has been discovered (just for efficiency and debugging) */
     if (ds.size() > 0) //TODO CHECKS ALL POLICIES
     {
-        bool found_new_optimal_ds = false;
         
         /* NB: notice that the robot position is updated only at the beginning of this function: this means that in all the following policies, when we loop on all the DSs and we compare the distance between the robot and a given DS, let's call it D and the distance between the robot and the currently optimal DS, let's call it 'OD', with a < and not with a <=, when D is exactly OD, there is no way that the function will think to have found a new optimal DS; this instead could happen if we robot position changes during the execution of this function, since the robot could move closer to OD, and if the distance from the robot and OD was computed before the robot movement, when the compute the distance from the robot and D when looping on all the DSs and D is OD, this could happen. */
+        
+        /* NB: even if the robot position does not change during the execution of this function, the distance between the robot and a fixed point computed using distance_from_robot() could change, because it calls a function in explorer node that uses a costmap to compute the distance, and since the costmap could be updated during the execution of compute_optimal_ds(), the distance could change: this means that we need to check at the end of the computation of the new optimal DS if it is really a different DS from the previous one; this can happens for instance because the other robots are moving. Of course the differences between two different calls of distance_from_robot with the same point as argument will be very little, but they are enough to make us think that we have found a DS that is better than the one already selected, even if the new DS is exactly the old one. Another problems is that we could select a DS that is not really the closest at the end of the execution of compute_optimal_ds() because the distances could have changed, but we accept this */
         
         /* If no optimal DS has been selected yet, just set the first DS in the vector of the discovered DSs as the
          * currently optimal DS: this is just to initialize variable 'optimal_ds', so that we can compute the distance
@@ -277,31 +278,27 @@ void docking::compute_optimal_ds()
          * Notice that we cannot assign as optimal docking station a DS that was not discovered yet, since it could
          * cause problems, since this undiscovered Ds that is considered optimal could be more close than all the
          * other already discovered DSs, and so none of them woulb be selected as optimal DS. */
+         ds_t *old_optimal_ds;
         if (best_ds == NULL)
         {
-            found_new_optimal_ds = true;
             best_ds = &ds.at(0);
             target_ds = best_ds;
+            old_optimal_ds = NULL;
         }
+        else
+            /* Store currently optimal DS (for debugging ans safety checks) */
+            old_optimal_ds = best_ds;
 
         /* "Closest" policy */
         if (ds_selection_policy == 0)  // TODO(minor) switch-case
-            found_new_optimal_ds = compute_closest_ds();
+            compute_closest_ds();
 
         /* "Vacant" policy */
         else if (ds_selection_policy == 1)
         {
-            /* Check if the currently optimal DS is still vacant: if it is not, if we found a DS that is vacant, that DS is already better than the currently optimal DS, i.e., we set the currently minimal distance between robot and currently optimal DS to infinite */
-            double min_dist;
-            if (!best_ds->vacant)
-                min_dist = numeric_limits<int>::max();
-            else
-                min_dist = distance_from_robot(best_ds->x, best_ds->y);
-            
-            /* Check if there are vacant DSs. If there are, check also if there is one that is closest to the robot than
-             * the currently optimal DS; if there is, that DS is the new optimal DS, otherwise do not change the optimal
-             * DS */
+            /* Check if there are vacant DSs. If there are, check also which one of them is the closest to the robot */
             bool found_vacant_ds = false;
+            double min_dist = numeric_limits<int>::max();
             for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
             {
                 if ((*it).vacant)
@@ -316,7 +313,6 @@ void docking::compute_optimal_ds()
                     if (dist < min_dist)
                     {
                         min_dist = dist;
-                        found_new_optimal_ds = true;
                         best_ds = &(*it);
                     }
                 }
@@ -325,36 +321,16 @@ void docking::compute_optimal_ds()
             /* If no DS is vacant at the moment, use "closest" policy to update the optimal DS */
             if (!found_vacant_ds) {
                 ROS_INFO("No vacant DS found: fall back to 'closest' policy");
-                found_new_optimal_ds = compute_closest_ds();
+                compute_closest_ds();
             }
         }
 
         /* "Opportune" policy */
         else if (ds_selection_policy == 2)
         {
-            /* Check if the currently optimal DS has still exploration opportunities (EO) */
-            bool current_optimal_ds_has_eo = false;
-            for (int j = 0; j < jobs.size(); j++)
-            {
-                double dist = distance(best_ds->x, best_ds->y, jobs.at(j).x, jobs.at(j).y);
-                if (dist < battery.remaining_distance / 2)  // TODO ok?
-                {
-                    current_optimal_ds_has_eo = true;
-                    break;
-                }
-            }
-
-            /* If the currently optimal DS has no more EOs, as soon as we found a DS that has EOs, this is already
-             * better than the currently optimal DS, , i.e., we set the currently minimal distance between robot and
-             * currently optimal DS to infinite */
-            double min_dist;
-            if (!current_optimal_ds_has_eo)
-                min_dist = numeric_limits<int>::max();
-            else
-                min_dist = distance_from_robot(best_ds->x, best_ds->y);
-
             /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery power
              * without having to recharge first) with EOs */
+            double min_dist = numeric_limits<int>::max();
             bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
             for (int i = 0; i < ds.size(); i++)
                 for (int j = 0; j < jobs.size(); j++)
@@ -378,14 +354,13 @@ void docking::compute_optimal_ds()
                                 /* Update optimal DS */
                                 min_dist = dist2;
                                 best_ds = &ds.at(i);
-                                found_new_optimal_ds = true;
                             }
                         }
                     }
                 }
 
             /* If there are no reachable DSs with EOs, check if there are DSs with EOs: if there are, compute a path on the graph of the DSs to reach one of these DSs, otherwise jsut use "closest" policy */
-            if (!found_reachable_ds_with_eo) //TODO check this part
+            if (!found_reachable_ds_with_eo) //TODO check this part (in particular for the moving_along_path)
             {
                 if (found_ds_with_eo)
                 {
@@ -412,7 +387,6 @@ void docking::compute_optimal_ds()
                                     {
                                         min_dist = dist2;
                                         min_ds = &ds.at(i);
-                                        found_new_optimal_ds = true;
                                     }
                                 }
                             }
@@ -427,7 +401,6 @@ void docking::compute_optimal_ds()
 
                                 if (dist < battery.remaining_distance / 2)  // TODO ok?
                                 {
-
                                         min_dist = dist;
                                         closest_ds = &ds.at(i);
                                 }
@@ -438,7 +411,7 @@ void docking::compute_optimal_ds()
 
                         if (ds_found_with_mst)
                         {
-                            if (found_new_optimal_ds)
+                            if (!moving_along_path)
                             {
                                 best_ds = min_ds;
 
@@ -460,7 +433,7 @@ void docking::compute_optimal_ds()
                         }
                         else
                             // closest policy //TODO hmm...
-                            found_new_optimal_ds = compute_closest_ds();
+                            compute_closest_ds();
                     }
 
                     else
@@ -506,7 +479,7 @@ void docking::compute_optimal_ds()
                     }
                 }
                 else
-                    found_new_optimal_ds = compute_closest_ds();
+                    compute_closest_ds();
             }
             else
                 ROS_ERROR("Something went wrong...");
@@ -524,7 +497,7 @@ void docking::compute_optimal_ds()
                     break;
                 }
             if (!existing_eo)
-                found_new_optimal_ds = compute_closest_ds();
+                compute_closest_ds();
         }
 
         /* "Flocking" policy */
@@ -610,39 +583,39 @@ void docking::compute_optimal_ds()
                 if (cost < min_cost)
                 {
                     min_cost = cost;
-                    if(ds[d].id != best_ds->id) {
-                        found_new_optimal_ds = true;
+                    if(ds[d].id != best_ds->id)
                         best_ds = &ds.at(d);
-                    }
                 }
             }
         }
 
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated, and the other robots must be informed */  // TODO and inform other robots
-        if (found_new_optimal_ds)
+        if (old_optimal_ds == NULL || old_optimal_ds->id != best_ds->id)
         {
-            ROS_INFO("New optimal DS: ds%d (%f, %f)", best_ds->id, best_ds->x,
-                      best_ds->y);  // TODO coordinates in global system...
+            if(old_optimal_ds != NULL)
+                ROS_ERROR("Change optimal DS: ds%d -> ds%d", old_optimal_ds->id, best_ds->id);
+            else
+                ROS_ERROR("Select optimal DS: ds%d", best_ds->id);
+                
+                ros::Duration time = ros::Time::now() - time_start;
+                fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                fs_csv << time.toSec() << "," << best_ds->id << std::endl;
+                fs_csv.close();
 
-            ros::Duration time = ros::Time::now() - time_start;
-            fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << time.toSec() << "," << best_ds->id << std::endl;
-            fs_csv.close();
+                target_ds = best_ds;  // TODO necessary?
+                update_l4();
 
-            target_ds = best_ds;  // TODO necessary?
-            update_l4();
-
-            /* Inform other robots */  // TODO what if the robot signals a DS that is unkown by one of the other robot
-                                       // because it missed the message when the DS was discovered???
-                                       
-            /*
-            adhoc_communication::SendEmRobot robot_msg;
-            robot_msg.request.topic = "robots";
-            robot_msg.request.robot.id = robot_id;
-            robot_msg.request.robot.x = robot.x;
-            robot_msg.request.robot.y = robot.y;
-            robot_msg.request.robot.selected_ds = best_ds->id;
-            sc_send_robot.call(robot_msg);
+                /* Inform other robots */  // TODO what if the robot signals a DS that is unkown by one of the other robot
+                                           // because it missed the message when the DS was discovered???
+                                           
+                /*
+                adhoc_communication::SendEmRobot robot_msg;
+                robot_msg.request.topic = "robots";
+                robot_msg.request.robot.id = robot_id;
+                robot_msg.request.robot.x = robot.x;
+                robot_msg.request.robot.y = robot.y;
+                robot_msg.request.robot.selected_ds = best_ds->id;
+                sc_send_robot.call(robot_msg);
             */
         }
         else
@@ -1882,10 +1855,9 @@ bool docking::find_path_aux(std::vector<std::vector<int> > tree, int start, int 
     return false;
 }
 
-bool docking::compute_closest_ds()
+void docking::compute_closest_ds()
 {
-    double min_dist = distance_from_robot(best_ds->x, best_ds->y), dist;
-    bool found_new_closest_ds = false;
+    double min_dist = numeric_limits<int>::max(), dist;
     std::vector<ds_t>::iterator it;
     for (it = ds.begin(); it != ds.end(); it++) {
         dist = distance_from_robot((*it).x, (*it).y);
@@ -1893,10 +1865,8 @@ bool docking::compute_closest_ds()
         {
             min_dist = dist;
             best_ds = &(*it);
-            found_new_closest_ds = true;
         }
     }
-    return found_new_closest_ds;
 }
 
 void docking::map_info()
