@@ -50,9 +50,9 @@
   <run_depend>roscpp</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>message_runtime</run_depend>
-  <run_depend>adhoc_communication</run_depend>
-  <run_depend>explorer</run_depend>
-  <run_depend>map_merger</run_depend>
+  <build_depend>adhoc_communication</build_depend>
+  <build_depend>explorer</build_depend>
+  <build_depend>map_merger</build_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
