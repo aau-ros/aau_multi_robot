@@ -249,7 +249,9 @@ namespace explorationPlanner
             bool sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic);
 
             double distance_from_robot(double x, double y);
+            double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
+            bool get_robot_position(double &x, double &y);
 
 
         private:

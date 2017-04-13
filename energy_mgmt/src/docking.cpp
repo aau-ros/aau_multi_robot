@@ -1435,6 +1435,11 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 
 void docking::start_new_auction()
 {
+    if(best_ds == NULL) {
+        ROS_FATAL("The robot needs to recharge, but it doesn't know about any existing DS!"); //TODO improve...
+        return;   
+    }
+
     ROS_INFO("Starting new auction");
 
     /* The robot is starting an auction */
@@ -1481,6 +1486,11 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
+    if(best_ds == NULL) {
+        ROS_ERROR("The robot does not know about any existing DS!"); //TODO it means that it missed some messages!!
+        return;
+    }
+        
     // TODO the robot must check for its participation to the auction!!!
 
     // ROS_INFO("Received result of auction ... //TODO(minor) complete!!
@@ -1488,7 +1498,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of the auction whose result has been just
      * received */
     // TODO(minor) use multicast instead!!!
-    if (msg.get()->docking_station == best_ds->id)
+    if (msg.get()->docking_station == best_ds->id) //TODO check if the robot already knows this DS!
     {
         ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor) acutally maybe it
                                                                                     // didn't participate because its
@@ -2014,6 +2024,12 @@ void docking::discover_docking_stations()
 }
 
 void docking::send_robot() {
+    if(robot_id == 0) {
+        //ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
+        ROS_ERROR("(%f, %f)", robot.x, robot.y);
+        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
+        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
+    }
     adhoc_communication::SendEmRobot robot_msg;
     robot_msg.request.topic = "robots";
     robot_msg.request.robot.id = robot_id;

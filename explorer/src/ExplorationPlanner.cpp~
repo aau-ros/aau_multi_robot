@@ -912,10 +912,13 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-
+    
     if(successful == true)
     {
+        //ROS_ERROR("Path from (%f, %f) to (%f, %f)", startPointSimulated.pose.position.x, startPointSimulated.pose.position.y, goalPointSimulated.pose.position.x, goalPointSimulated.pose.position.y);
         distance =  global_plan.size();
+        //for(int i=0; i < global_plan.size(); i++)
+            //ROS_ERROR("(%f, %f)", global_plan[i].pose.position.x, global_plan[i].pose.position.y);
         
         /*
         distance = 0;
@@ -3853,7 +3856,7 @@ double ExplorationPlanner::distance_from_robot(double x, double y) {
         ROS_ERROR("NULL!!!");
         return -1;   
     }
-    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a distance in meters
+    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough, since it is computed as resolution * number_of_grid_cells_between_the_two_points) distance in meters
 }
 
 double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) {
@@ -3861,15 +3864,29 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
         ROS_ERROR("NULL!!!");
         return -1;   
     }
-    return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a distance in meters
+    return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
 }
 
-bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) {
+bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in cells, NOT in meters!!!!
     if(costmap_ros_ == NULL) {
         ROS_ERROR("NULL!!!");
         return false;   
     }
     return costmap_global_ros_->getRobotPose(robotPose);
+}
+
+bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F returns position in meters!!!!
+    if(costmap_ros_ == NULL) {
+        ROS_ERROR("NULL!!!");
+        return false;   
+    }
+    tf::Stamped<tf::Pose> robot_pose;
+    if(costmap_global_ros_->getRobotPose(robot_pose)) {
+        *x = robot_pose.getOrigin().getX() * costmap_ros_->getCostmap()->getResolution();
+        *y = robot_pose.getOrigin().getY() * costmap_ros_->getCostmap()->getResolution();
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -3901,7 +3918,6 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
 
     // look for a FRONTIER as goal
     int errors = 0;
-    ROS_ERROR("frontiers size: %lu", frontiers.size());
     if (mode == 1)
     {
         

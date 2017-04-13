@@ -285,6 +285,8 @@ class Explorer
             ROS_ERROR("Failed to get RobotPose");
         }
         visualize_goal_point(robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+        
+        ROS_ERROR("origin: (%f, %f)", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
 
         // transmit three times, since rviz need at least 1 to buffer before
         // visualizing the point
@@ -2590,6 +2592,15 @@ class Explorer
         res.x = robotPose.getOrigin().getX();
         res.y = robotPose.getOrigin().getY();
         return true;
+        
+        /*
+        double x, y;
+        if(!exploration->get_robot_position(&x, &y))
+            return false;
+        res.x = x;
+        res.y = y;
+        return true;
+        */
     }
 
     bool distance_from_robot_callback(explorer::DistanceFromRobot::Request &req,

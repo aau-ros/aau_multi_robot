@@ -268,7 +268,7 @@ void docking::compute_optimal_ds()
         
         /* NB: notice that the robot position is updated only at the beginning of this function: this means that in all the following policies, when we loop on all the DSs and we compare the distance between the robot and a given DS, let's call it D and the distance between the robot and the currently optimal DS, let's call it 'OD', with a < and not with a <=, when D is exactly OD, there is no way that the function will think to have found a new optimal DS; this instead could happen if we robot position changes during the execution of this function, since the robot could move closer to OD, and if the distance from the robot and OD was computed before the robot movement, when the compute the distance from the robot and D when looping on all the DSs and D is OD, this could happen. */
         
-        /* NB: even if the robot position does not change during the execution of this function, the distance between the robot and a fixed point computed using distance_from_robot() could change, because it calls a function in explorer node that uses a costmap to compute the distance, and since the costmap could be updated during the execution of compute_optimal_ds(), the distance could change: this means that we need to check at the end of the computation of the new optimal DS if it is really a different DS from the previous one; this can happens for instance because the other robots are moving. Of course the differences between two different calls of distance_from_robot with the same point as argument will be very little, but they are enough to make us think that we have found a DS that is better than the one already selected, even if the new DS is exactly the old one. Another problems is that we could select a DS that is not really the closest at the end of the execution of compute_optimal_ds() because the distances could have changed, but we accept this */
+        /* NB: even if the robot position does not change during the execution of this function, the distance between the robot and a fixed point computed using distance_from_robot() could change, because it calls a function in explorer node that uses a costmap to compute the distance, and since the costmap could be updated during the execution of compute_optimal_ds() (or, more simply, the algorithm used to compute the distance is not 100% precise), the distance could change: this means that we need to check at the end of the computation of the new optimal DS if it is really a different DS from the previous one; this can happens for instance because the other robots are moving. Of course the differences between two different calls of distance_from_robot with the same point as argument will be very little, but they are enough to make us think that we have found a DS that is better than the one already selected, even if the new DS is exactly the old one. Another problems is that we could select a DS that is not really the closest at the end of the execution of compute_optimal_ds() because the distances could have changed, but we accept this */
         
         /* If no optimal DS has been selected yet, just set the first DS in the vector of the discovered DSs as the
          * currently optimal DS: this is just to initialize variable 'optimal_ds', so that we can compute the distance
@@ -1435,6 +1435,11 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 
 void docking::start_new_auction()
 {
+    if(best_ds == NULL) {
+        ROS_FATAL("The robot needs to recharge, but it doesn't know about any existing DS!"); //TODO improve...
+        return;   
+    }
+
     ROS_INFO("Starting new auction");
 
     /* The robot is starting an auction */
@@ -1481,6 +1486,11 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
+    if(best_ds == NULL) {
+        ROS_ERROR("The robot does not know about any existing DS!"); //TODO it means that it missed some messages!!
+        return;
+    }
+        
     // TODO the robot must check for its participation to the auction!!!
 
     // ROS_INFO("Received result of auction ... //TODO(minor) complete!!
@@ -1488,7 +1498,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of the auction whose result has been just
      * received */
     // TODO(minor) use multicast instead!!!
-    if (msg.get()->docking_station == best_ds->id)
+    if (msg.get()->docking_station == best_ds->id) //TODO check if the robot already knows this DS!
     {
         ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor) acutally maybe it
                                                                                     // didn't participate because its
@@ -2014,6 +2024,11 @@ void docking::discover_docking_stations()
 }
 
 void docking::send_robot() {
+    if(robot_id == 0) {
+        //ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
+        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
+        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
+    }
     adhoc_communication::SendEmRobot robot_msg;
     robot_msg.request.topic = "robots";
     robot_msg.request.robot.id = robot_id;
