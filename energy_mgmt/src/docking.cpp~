@@ -2026,6 +2026,7 @@ void docking::discover_docking_stations()
 void docking::send_robot() {
     if(robot_id == 0) {
         //ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
+        ROS_ERROR("(%f, %f)", robot.x, robot.y);
         ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
         ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
     }

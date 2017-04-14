@@ -1008,7 +1008,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    ROS_DEBUG("Received robot information");
+    ROS_ERROR("Received robot information");
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)
