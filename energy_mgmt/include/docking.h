@@ -38,6 +38,7 @@
 #define MAX_DISTANCE 50
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF 0.8
+#define DEBUG 1
 
 using namespace std;
 
@@ -68,6 +69,7 @@ class docking
     void discover_docking_stations();
     
     void send_robot();
+    void send_fake_msg();
 
   private:
     /**
@@ -306,6 +308,12 @@ class docking
     void timerCallback(const ros::TimerEvent &);
 
     ros::Timer timer_restart_auction, timer_finish_auction, timer2;
+    
+    std::vector<ros::Timer> debug_timers;
+    
+    void debug_timer_callback_0(const ros::TimerEvent &event);
+    void debug_timer_callback_1(const ros::TimerEvent &event);
+    void debug_timer_callback_2(const ros::TimerEvent &event);
 
     struct auction_bid_t
     {

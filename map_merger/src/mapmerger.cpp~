@@ -849,7 +849,7 @@ void MapMerger::callback_got_position(const nav_msgs::Odometry::ConstPtr &msg)
 
 void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPtr &msg)
 {
-    ROS_ERROR("\e[1;34m Get other map from %s\e[0m", msg.get()->src_robot.c_str());
+    ROS_ERROR("\n\t\e[1;34m Get other map from %s\e[0m\n", msg.get()->src_robot.c_str());
     //ROS_ERROR("Get other map");
     nav_msgs::OccupancyGrid tmp =  msg.get()->map;
     nav_msgs::OccupancyGrid * toInsert = &tmp;

@@ -44,7 +44,7 @@ int main(int argc, char** argv)
         bat.compute();
 
         // output battery state to console
-        bat.output();
+        //bat.output();
 
         // publish battery state
         bat.publish();
@@ -52,14 +52,16 @@ int main(int argc, char** argv)
         // send broadcast message with positions of all (known) docking stations
         
         // 
-        doc.discover_docking_stations();
+        //doc.discover_docking_stations();
         
         //
-        doc.compute_optimal_ds();
+        //doc.compute_optimal_ds();
         
-        doc.update_robot_state();
+        //doc.update_robot_state();
         
-        doc.send_robot();
+        //doc.send_robot();
+        
+        doc.send_fake_msg();
         
 
         // sleep for 1/rate seconds

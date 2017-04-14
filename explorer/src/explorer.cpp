@@ -286,7 +286,7 @@ class Explorer
         }
         visualize_goal_point(robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
         
-        ROS_ERROR("origin: (%f, %f)", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+        //ROS_ERROR("origin: (%f, %f)", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
 
         // transmit three times, since rviz need at least 1 to buffer before
         // visualizing the point
@@ -392,7 +392,7 @@ class Explorer
             /* Update robot state */
             update_robot_state();
 
-            ROS_INFO("EXPLORING");  // TODO(minor) here???
+            ROS_ERROR("EXPLORING");  // TODO(minor) here???
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -431,7 +431,7 @@ class Explorer
             * Use mutex to lock the critical section (access to the costmap)
             * since rosspin tries to update the costmap continuously
             */
-            ROS_INFO("COSTMAP STUFF");
+            //ROS_ERROR("COSTMAP STUFF");
             costmap_mutex.lock();
 
             exploration->transformToOwnCoordinates_frontiers();
@@ -445,15 +445,16 @@ class Explorer
             exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
-            ROS_INFO("PUBLISHING FRONTIERS");
+            //ROS_ERROR("PUBLISHING FRONTIERS");
             
             tf::Stamped<tf::Pose> robotPose;
-            while(!exploration->getRobotPose(robotPose)) {
-                ROS_ERROR("HERE");   
-                ros::Duration(3).sleep();
-            } 
             
             if(!created) {
+                while(!exploration->getRobotPose(robotPose)) {
+                    ROS_ERROR("HERE");   
+                    ros::Duration(3).sleep();
+                } 
+            
                 ss_robot_pose = nh.advertiseService("explorer/robot_pose", &Explorer::robot_pose_callback, this);
                 ss_distance_from_robot =
                     nh.advertiseService("explorer/distance_from_robot", &Explorer::distance_from_robot_callback, this);
@@ -462,11 +463,15 @@ class Explorer
                     nh.advertiseService("explorer/distance", &Explorer::distance, this);
                 created = true;
             }
+            
+            
 
             /*
              * Sleep to ensure that frontiers are exchanged
              */
             ros::Duration(1).sleep();
+            
+            //ROS_ERROR("START FRONTIER SELECTION");
 
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
@@ -875,20 +880,20 @@ class Explorer
                     // TODO(minor) do those sorting works correclty?
                     /* Sort frontiers, firstly from nearest to farthest and then by
                      * efficiency */
-                    ROS_INFO("SORTING FRONTIERS...");
+                    ROS_ERROR("SORTING FRONTIERS...");
                     exploration->sort(2);
                     exploration->sort(3);
                     exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                     /* Look for a frontier as goal */
-                    ROS_INFO("DETERMINE GOAL...");
+                    //ROS_ERROR("DETERMINE GOAL...");
                     // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                     // available_distance, &final_goal, count, &robot_str, -1);
                     goal_determined = exploration->determine_goal_staying_alive(
                         1, 2, available_distance * SAFETY_COEFF +
                                   available_distance * SAFETY_COEFF * INCR * number_of_recharges,
                         &final_goal, count, &robot_str, -1);  // TODO ...
-                    ROS_DEBUG("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                    //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
 
                     /* Check if the robot has found a reachable frontier */
                     if (goal_determined == true)
@@ -1043,6 +1048,8 @@ class Explorer
             /*************************
              * FRONTIER COORDINATION *
              *************************/
+             
+            ROS_ERROR("FRONTIER COORDINATION");
 
             /* Produce frontier/cluster points for rviz */
             exploration->visualize_Cluster_Cells();
@@ -2233,7 +2240,7 @@ class Explorer
             // robot seems to be stuck
             if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
             {
-                stuck_countdown--;
+                //stuck_countdown--; //TODO
                 // if(stuck_countdown <= 5){
 
                 // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is

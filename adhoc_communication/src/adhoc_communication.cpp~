@@ -420,8 +420,8 @@ bool SendEmRobot(adhoc_communication::SendEmRobot::Request &req, adhoc_communica
     ROS_DEBUG("Service called to send state of a robot...");
     string s_msg = getSerializedMessage(req.robot);
     /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/ //F
-    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_ROBOT, req.topic);
-    //res.status = sendBroadcast(req.topic, s_msg, FRAME_DATA_TYPE_EM_ROBOT, 100);
+    //res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_ROBOT, req.topic);
+    res.status = sendBroadcast(req.topic, s_msg, FRAME_TYPE_BROADCAST, 100);
 
 #ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
     Logging::logServiceCalls("SendEmRobot", time_call, getMillisecondsTime(), s_msg.size(), res.status);
@@ -1864,7 +1864,7 @@ void receiveFrames()
         else if (frame_type == FRAME_TYPE_BROADCAST)
         {
             MultiHopBroadcastFrame bcast(buffer_incoming);
-
+            
             if (bcast.correct_crc_ == false)
             {
                 ROS_ERROR("MultiHopBroadcastFrame: CRC INCORECCT!");
@@ -3376,7 +3376,7 @@ void processIncomingFrames()
         }
 
 
-
+        
 
 
         //   ROS_ERROR("%u", frames.size());

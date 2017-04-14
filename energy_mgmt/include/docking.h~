@@ -68,6 +68,7 @@ class docking
     void discover_docking_stations();
     
     void send_robot();
+    void send_fake_msg();
 
   private:
     /**
@@ -240,7 +241,7 @@ class docking
         int id;
         simple_state_t state;
         double x, y;
-        int target_ds;
+        int selected_ds;
     };
     robot_t robot;
     vector<robot_t> robots;
@@ -306,6 +307,12 @@ class docking
     void timerCallback(const ros::TimerEvent &);
 
     ros::Timer timer_restart_auction, timer_finish_auction, timer2;
+    
+    std::vector<ros::Timer> debug_timers;
+    
+    void debug_timer_callback_0(const ros::TimerEvent &event);
+    void debug_timer_callback_1(const ros::TimerEvent &event);
+    void debug_timer_callback_2(const ros::TimerEvent &event);
 
     struct auction_bid_t
     {

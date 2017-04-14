@@ -206,6 +206,16 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 
     log_path = log_path.append("/");
     csv_file = log_path + std::string("periodical.log");
+    
+    ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
+    debug_timers.push_back(timer0);
+    ros::Timer timer1 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_1, this, false, true);
+    debug_timers.push_back(timer1);
+    ros::Timer timer2 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_2, this, false, true);
+    debug_timers.push_back(timer2);
+    
+    debug_timers[robot_id].stop();
+    
 }
 
 void docking::preload_docking_stations()
@@ -1008,7 +1018,15 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    ROS_ERROR("Received robot information");
+    //ROS_ERROR("\e[1;34mReceived information from robot %d\e[0m", msg.get()->id);
+    if(DEBUG) {
+        debug_timers[msg.get()->id].stop();
+        debug_timers[msg.get()->id].setPeriod(ros::Duration(AUCTION_TIMEOUT), true);
+        debug_timers[msg.get()->id].start();
+        return;
+    }
+        
+    
     // check if robot is in list already
     bool new_robot = true;
     for (int i = 0; i < robots.size(); ++i)
@@ -2041,4 +2059,27 @@ void docking::send_robot() {
     else
         robot_msg.request.robot.selected_ds = -1;
     sc_send_robot.call(robot_msg);   
+}
+
+void docking::send_fake_msg() {
+    adhoc_communication::SendEmRobot robot_msg;
+    robot_msg.request.topic = "robots";
+    robot_msg.request.robot.id = robot_id;
+    robot_msg.request.robot.x = robot_id;
+    robot_msg.request.robot.y = robot_id;
+    robot_msg.request.robot.state = robot.state;
+    robot_msg.request.robot.selected_ds = robot_id;
+    sc_send_robot.call(robot_msg);   
+}
+
+void docking::debug_timer_callback_0(const ros::TimerEvent &event) {
+    ROS_ERROR("No information received by robot 0 for a certain amount of time!!!");
+}
+
+void docking::debug_timer_callback_1(const ros::TimerEvent &event) {
+    ROS_ERROR("No information received by robot 1 for a certain amount of time!!!");
+}
+
+void docking::debug_timer_callback_2(const ros::TimerEvent &event) {
+    ROS_ERROR("No information received by robot 2 for a certain amount of time!!!");
 }

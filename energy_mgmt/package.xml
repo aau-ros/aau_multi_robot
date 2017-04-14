@@ -9,6 +9,7 @@
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <maintainer email="fabrizio1.casati@mail.polimi.it">Fabrizio Casati</maintainer>
   <maintainer email="micha.rappaport@aau.at">Micha Rappaport</maintainer>
 
   <!-- One license tag required, multiple allowed, one license per tag -->
