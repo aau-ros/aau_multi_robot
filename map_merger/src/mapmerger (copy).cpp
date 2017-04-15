@@ -574,19 +574,6 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
         for(int collum = 0; collum < local_map->info.width;collum+=2)
         {
             index = row*local_map->info.width + collum;
-            
-            //F
-            if(local_map == NULL || local_map_old == NULL) {
-                ROS_ERROR("NULLL!!!!");
-                return;
-            }
-            if(local_map->data.size() <= index || local_map_old->data.size() <= index)
-            {
-                ; //ROS_ERROR("WRONG SIZE!!! index = %d", index);
-                return;
-            
-            }
-            //end F
             if(local_map->data[index]!= local_map_old->data[index])
             {
                 if(min_x > row)
@@ -598,13 +585,12 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
                 if(max_y < collum)
                     max_y = collum;
             }
-            
         }
     }
     if(min_x == 9999 || min_y == 9999 || max_x == -1 || max_y == -1)
     {
         ROS_DEBUG("map did not changed,skip sending");
-        //return;
+        return;
     }
 #else
     min_x = 0;
@@ -1019,18 +1005,10 @@ void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
         //mergeMaps(toInsert);
     }
     else
-    {   
-    
-        //F
-        if(local_map->info.height < toInsert->info.height || local_map->info.width < toInsert->info.width)
-            ROS_ERROR("STRANGE");
-        
+    {
         local_map->data = toInsert->data;
         local_map->info = toInsert->info;
         local_map->header = toInsert->header;
-        
-        if(local_map->data.size() < local_map->info.height * local_map->info.width)
-            ROS_ERROR("Very strange");
 
         if(seconds_publish_timer < 2)
         {
@@ -1705,6 +1683,7 @@ bool MapMerger::createLogPath()
  */
 bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::LogMaps::Response &res)
 {
+    /*
     ROS_DEBUG("--> Top of service log_output_srv");
     if(!createLogPath())
         return false;
@@ -1837,6 +1816,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
     }
     ROS_DEBUG("<-- end log_output_srv");
     return true;
+    */
 }
 
 
@@ -1997,3 +1977,4 @@ void MapMerger::callback_ask_other_robots(const ros::TimerEvent &e)
     }
     ask_other_timer.stop();
 }
+

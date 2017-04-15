@@ -1,0 +1,250 @@
+info.height:src/mapmerger (copy).cpp:    makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+info.height:src/mapmerger (copy).cpp:        for(int row = 0; row < local_map->info.height;row+=2)
+info.height:src/mapmerger (copy).cpp:            for(int collum = 0; collum < local_map->info.width;collum+=2)
+info.height:src/mapmerger (copy).cpp:                int index = row * local_map->info.width + collum;
+info.height:src/mapmerger (copy).cpp:                if(local_map->data[index]!= -1)
+info.height:src/mapmerger (copy).cpp:        local_map->info.height = msg.get()->height;
+info.height:src/mapmerger (copy).cpp:        local_map->info.width = msg.get()->width;
+info.height:src/mapmerger (copy).cpp:        local_map->info.origin.orientation.w = msg.get()->origin.orientation.w;
+info.height:src/mapmerger (copy).cpp:        local_map->info.resolution = msg.get()->resolution;
+info.height:src/mapmerger (copy).cpp:                        local_map->data.push_back(-1);
+info.height:src/mapmerger (copy).cpp:        if(local_map != NULL && local_map->data.size() > 0)
+info.height:src/mapmerger (copy).cpp:        global_map->data.resize(local_map->data.size());
+info.height:src/mapmerger (copy).cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+info.height:src/mapmerger (copy).cpp:    if(local_map->data.size() == 0 || local_map_old->data.size() == 0)
+info.height:src/mapmerger (copy).cpp:    for(int row = 0; row < local_map->info.height;row+=2)
+info.height:src/mapmerger (copy).cpp:        for(int collum = 0; collum < local_map->info.width;collum+=2)
+info.height:src/mapmerger (copy).cpp:            index = row*local_map->info.width + collum;
+info.height:src/mapmerger (copy).cpp:            if(local_map->data[index]!= local_map_old->data[index])
+info.height:src/mapmerger (copy).cpp:    ROS_DEBUG("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
+info.height:src/mapmerger (copy).cpp:    if(local_map->data.size() != local_map_old->data.size())
+info.height:src/mapmerger (copy).cpp:        global_map->data.resize(local_map->data.size());
+info.height:src/mapmerger (copy).cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+info.height:src/mapmerger (copy).cpp:    ROS_DEBUG("copy local_map->data to local_map_old->data");
+info.height:src/mapmerger (copy).cpp:    std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+info.height:src/mapmerger (copy).cpp:            if(local_map->data.size() == 0)
+info.height:src/mapmerger (copy).cpp:                local_map->header.frame_id = "/robot_0/map";
+info.height:src/mapmerger (copy).cpp:                local_map->info.width = map_width;
+info.height:src/mapmerger (copy).cpp:                local_map->info.height = map_height;
+info.height:src/mapmerger (copy).cpp:                local_map->data.resize(local_map->info.height * local_map->info.width);
+info.height:src/mapmerger (copy).cpp:                for(int i = 0; i < local_map->data.size(); i++)
+info.height:src/mapmerger (copy).cpp:                    local_map->data[i] = -1;
+info.height:src/mapmerger (copy).cpp:                global_map->data = local_map->data;
+info.height:src/mapmerger (copy).cpp:                global_map->header = local_map->header;
+info.height:src/mapmerger (copy).cpp:                global_map->info = local_map->info;
+info.height:src/mapmerger (copy).cpp:        local_map->data = toInsert->data;
+info.height:src/mapmerger (copy).cpp:        local_map->info = toInsert->info;
+info.height:src/mapmerger (copy).cpp:        local_map->header = toInsert->header;
+info.height:src/mapmerger (copy).cpp:        local_map->header.frame_id = local_map_frame_id;
+info.height:src/mapmerger (copy).cpp:        /*for(int i = 0; i < local_map->data.size(); i++)
+info.height:src/mapmerger (copy).cpp:            local_map_old->data.push_back(local_map->data[i]);*/
+info.height:src/mapmerger (copy).cpp:        //local_map_old->data.insert(local_map_old->data.begin(),local_map->data.begin(),local_map->data.end());
+info.height:src/mapmerger (copy).cpp:        local_map_old->header = local_map->header;
+info.height:src/mapmerger (copy).cpp:        local_map_old->info = local_map->info;
+info.height:src/mapmerger (copy).cpp:        ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
+info.height:src/mapmerger (copy).cpp:        global_map->data = local_map->data;
+info.height:src/mapmerger (copy).cpp:        global_map->header = local_map->header;
+info.height:src/mapmerger (copy).cpp:        global_map->info = local_map->info;
+info.height:src/mapmerger (copy).cpp:        //if(local_map->data == global_map->data)
+info.height:src/mapmerger (copy).cpp:        local_map->data = toInsert->data;
+info.height:src/mapmerger (copy).cpp:        local_map->info = toInsert->info;
+info.height:src/mapmerger (copy).cpp:        local_map->header = toInsert->header;
+info.height:src/mapmerger (copy).cpp:    while(local_map->data.size() == 0 && has_local_map)
+info.height:src/mapmerger (copy).cpp:                if(local_map->data[index_global_map] == -1)
+info.height:src/mapmerger (copy).cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+info.height:src/mapmerger (copy).cpp:    if(local_map->data.size()== 0
+info.height:src/mapmerger (copy).cpp:            || sum_elements == (-1) * local_map->data.size())
+info.height:src/mapmerger (copy).cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+info.height:src/mapmerger (copy).cpp:    if(local_map->data.size()== 0
+info.height:src/mapmerger (copy).cpp:            || sum_elements == (-1) * local_map->data.size())
+info.height:src/mapmerger (copy).cpp:            for(int i=0; i<local_map->data.size(); i++)
+info.height:src/mapmerger (copy).cpp:                if(local_map->data[i] == 0)
+info.height:src/mapmerger (copy).cpp:                makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+info.height:src/mapmerger.cpp:    makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+info.height:src/mapmerger.cpp:        for(int row = 0; row < local_map->info.height;row+=2)
+info.height:src/mapmerger.cpp:            for(int collum = 0; collum < local_map->info.width;collum+=2)
+info.height:src/mapmerger.cpp:                int index = row * local_map->info.width + collum;
+info.height:src/mapmerger.cpp:                if(local_map->data[index]!= -1)
+info.height:src/mapmerger.cpp:        local_map->info.height = msg.get()->height;
+info.height:src/mapmerger.cpp:        local_map->info.width = msg.get()->width;
+info.height:src/mapmerger.cpp:        local_map->info.origin.orientation.w = msg.get()->origin.orientation.w;
+info.height:src/mapmerger.cpp:        local_map->info.resolution = msg.get()->resolution;
+info.height:src/mapmerger.cpp:                        local_map->data.push_back(-1);
+info.height:src/mapmerger.cpp:        if(local_map != NULL && local_map->data.size() > 0)
+info.height:src/mapmerger.cpp:        global_map->data.resize(local_map->data.size());
+info.height:src/mapmerger.cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+info.height:src/mapmerger.cpp:    if(local_map->data.size() == 0 || local_map_old->data.size() == 0)
+info.height:src/mapmerger.cpp:    for(int row = 0; row < local_map->info.height;row+=2)
+info.height:src/mapmerger.cpp:        for(int collum = 0; collum < local_map->info.width;collum+=2)
+info.height:src/mapmerger.cpp:            index = row*local_map->info.width + collum;
+info.height:src/mapmerger.cpp:            if(local_map->data.size() <= index || local_map_old->data.size() <= index)
+info.height:src/mapmerger.cpp:            if(local_map->data[index]!= local_map_old->data[index])
+info.height:src/mapmerger.cpp:    ROS_DEBUG("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
+info.height:src/mapmerger.cpp:    if(local_map->data.size() != local_map_old->data.size())
+info.height:src/mapmerger.cpp:        global_map->data.resize(local_map->data.size());
+info.height:src/mapmerger.cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+info.height:src/mapmerger.cpp:    ROS_DEBUG("copy local_map->data to local_map_old->data");
+info.height:src/mapmerger.cpp:    std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+info.height:src/mapmerger.cpp:            if(local_map->data.size() == 0)
+info.height:src/mapmerger.cpp:                local_map->header.frame_id = "/robot_0/map";
+info.height:src/mapmerger.cpp:                local_map->info.width = map_width;
+info.height:src/mapmerger.cpp:                local_map->info.height = map_height;
+info.height:src/mapmerger.cpp:                local_map->data.resize(local_map->info.height * local_map->info.width);
+info.height:src/mapmerger.cpp:                for(int i = 0; i < local_map->data.size(); i++)
+info.height:src/mapmerger.cpp:                    local_map->data[i] = -1;
+info.height:src/mapmerger.cpp:                global_map->data = local_map->data;
+info.height:src/mapmerger.cpp:                global_map->header = local_map->header;
+info.height:src/mapmerger.cpp:                global_map->info = local_map->info;
+info.height:src/mapmerger.cpp:        local_map->data = toInsert->data;
+info.height:src/mapmerger.cpp:        local_map->info = toInsert->info;
+info.height:src/mapmerger.cpp:        local_map->header = toInsert->header;
+info.height:src/mapmerger.cpp:        local_map->header.frame_id = local_map_frame_id;
+info.height:src/mapmerger.cpp:        /*for(int i = 0; i < local_map->data.size(); i++)
+info.height:src/mapmerger.cpp:            local_map_old->data.push_back(local_map->data[i]);*/
+info.height:src/mapmerger.cpp:        //local_map_old->data.insert(local_map_old->data.begin(),local_map->data.begin(),local_map->data.end());
+info.height:src/mapmerger.cpp:        local_map_old->header = local_map->header;
+info.height:src/mapmerger.cpp:        local_map_old->info = local_map->info;
+info.height:src/mapmerger.cpp:        ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
+info.height:src/mapmerger.cpp:        global_map->data = local_map->data;
+info.height:src/mapmerger.cpp:        global_map->header = local_map->header;
+info.height:src/mapmerger.cpp:        global_map->info = local_map->info;
+info.height:src/mapmerger.cpp:        //if(local_map->data == global_map->data)
+info.height:src/mapmerger.cpp:        local_map->data = toInsert->data;
+info.height:src/mapmerger.cpp:        local_map->info = toInsert->info;
+info.height:src/mapmerger.cpp:        local_map->header = toInsert->header;
+info.height:src/mapmerger.cpp:    while(local_map->data.size() == 0 && has_local_map)
+info.height:src/mapmerger.cpp:                if(local_map->data[index_global_map] == -1)
+info.height:src/mapmerger.cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+info.height:src/mapmerger.cpp:    if(local_map->data.size()== 0
+info.height:src/mapmerger.cpp:            || sum_elements == (-1) * local_map->data.size())
+info.height:src/mapmerger.cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+info.height:src/mapmerger.cpp:    if(local_map->data.size()== 0
+info.height:src/mapmerger.cpp:            || sum_elements == (-1) * local_map->data.size())
+info.height:src/mapmerger.cpp:            for(int i=0; i<local_map->data.size(); i++)
+info.height:src/mapmerger.cpp:                if(local_map->data[i] == 0)
+info.height:src/mapmerger.cpp:                makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+src/mapmerger (copy).cpp:    makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+src/mapmerger (copy).cpp:        for(int row = 0; row < local_map->info.height;row+=2)
+src/mapmerger (copy).cpp:            for(int collum = 0; collum < local_map->info.width;collum+=2)
+src/mapmerger (copy).cpp:                int index = row * local_map->info.width + collum;
+src/mapmerger (copy).cpp:                if(local_map->data[index]!= -1)
+src/mapmerger (copy).cpp:        local_map->info.height = msg.get()->height;
+src/mapmerger (copy).cpp:        local_map->info.width = msg.get()->width;
+src/mapmerger (copy).cpp:        local_map->info.origin.orientation.w = msg.get()->origin.orientation.w;
+src/mapmerger (copy).cpp:        local_map->info.resolution = msg.get()->resolution;
+src/mapmerger (copy).cpp:                        local_map->data.push_back(-1);
+src/mapmerger (copy).cpp:        if(local_map != NULL && local_map->data.size() > 0)
+src/mapmerger (copy).cpp:        global_map->data.resize(local_map->data.size());
+src/mapmerger (copy).cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+src/mapmerger (copy).cpp:    if(local_map->data.size() == 0 || local_map_old->data.size() == 0)
+src/mapmerger (copy).cpp:    for(int row = 0; row < local_map->info.height;row+=2)
+src/mapmerger (copy).cpp:        for(int collum = 0; collum < local_map->info.width;collum+=2)
+src/mapmerger (copy).cpp:            index = row*local_map->info.width + collum;
+src/mapmerger (copy).cpp:            if(local_map->data[index]!= local_map_old->data[index])
+src/mapmerger (copy).cpp:    ROS_DEBUG("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
+src/mapmerger (copy).cpp:    if(local_map->data.size() != local_map_old->data.size())
+src/mapmerger (copy).cpp:        global_map->data.resize(local_map->data.size());
+src/mapmerger (copy).cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+src/mapmerger (copy).cpp:    ROS_DEBUG("copy local_map->data to local_map_old->data");
+src/mapmerger (copy).cpp:    std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+src/mapmerger (copy).cpp:            if(local_map->data.size() == 0)
+src/mapmerger (copy).cpp:                local_map->header.frame_id = "/robot_0/map";
+src/mapmerger (copy).cpp:                local_map->info.width = map_width;
+src/mapmerger (copy).cpp:                local_map->info.height = map_height;
+src/mapmerger (copy).cpp:                local_map->data.resize(local_map->info.height * local_map->info.width);
+src/mapmerger (copy).cpp:                for(int i = 0; i < local_map->data.size(); i++)
+src/mapmerger (copy).cpp:                    local_map->data[i] = -1;
+src/mapmerger (copy).cpp:                global_map->data = local_map->data;
+src/mapmerger (copy).cpp:                global_map->header = local_map->header;
+src/mapmerger (copy).cpp:                global_map->info = local_map->info;
+src/mapmerger (copy).cpp:        local_map->data = toInsert->data;
+src/mapmerger (copy).cpp:        local_map->info = toInsert->info;
+src/mapmerger (copy).cpp:        local_map->header = toInsert->header;
+src/mapmerger (copy).cpp:        local_map->header.frame_id = local_map_frame_id;
+src/mapmerger (copy).cpp:        /*for(int i = 0; i < local_map->data.size(); i++)
+src/mapmerger (copy).cpp:            local_map_old->data.push_back(local_map->data[i]);*/
+src/mapmerger (copy).cpp:        //local_map_old->data.insert(local_map_old->data.begin(),local_map->data.begin(),local_map->data.end());
+src/mapmerger (copy).cpp:        local_map_old->header = local_map->header;
+src/mapmerger (copy).cpp:        local_map_old->info = local_map->info;
+src/mapmerger (copy).cpp:        ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
+src/mapmerger (copy).cpp:        global_map->data = local_map->data;
+src/mapmerger (copy).cpp:        global_map->header = local_map->header;
+src/mapmerger (copy).cpp:        global_map->info = local_map->info;
+src/mapmerger (copy).cpp:        //if(local_map->data == global_map->data)
+src/mapmerger (copy).cpp:        local_map->data = toInsert->data;
+src/mapmerger (copy).cpp:        local_map->info = toInsert->info;
+src/mapmerger (copy).cpp:        local_map->header = toInsert->header;
+src/mapmerger (copy).cpp:    while(local_map->data.size() == 0 && has_local_map)
+src/mapmerger (copy).cpp:                if(local_map->data[index_global_map] == -1)
+src/mapmerger (copy).cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+src/mapmerger (copy).cpp:    if(local_map->data.size()== 0
+src/mapmerger (copy).cpp:            || sum_elements == (-1) * local_map->data.size())
+src/mapmerger (copy).cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+src/mapmerger (copy).cpp:    if(local_map->data.size()== 0
+src/mapmerger (copy).cpp:            || sum_elements == (-1) * local_map->data.size())
+src/mapmerger (copy).cpp:            for(int i=0; i<local_map->data.size(); i++)
+src/mapmerger (copy).cpp:                if(local_map->data[i] == 0)
+src/mapmerger (copy).cpp:                makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+src/mapmerger.cpp:    makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);
+src/mapmerger.cpp:        for(int row = 0; row < local_map->info.height;row+=2)
+src/mapmerger.cpp:            for(int collum = 0; collum < local_map->info.width;collum+=2)
+src/mapmerger.cpp:                int index = row * local_map->info.width + collum;
+src/mapmerger.cpp:                if(local_map->data[index]!= -1)
+src/mapmerger.cpp:        local_map->info.height = msg.get()->height;
+src/mapmerger.cpp:        local_map->info.width = msg.get()->width;
+src/mapmerger.cpp:        local_map->info.origin.orientation.w = msg.get()->origin.orientation.w;
+src/mapmerger.cpp:        local_map->info.resolution = msg.get()->resolution;
+src/mapmerger.cpp:                        local_map->data.push_back(-1);
+src/mapmerger.cpp:        if(local_map != NULL && local_map->data.size() > 0)
+src/mapmerger.cpp:        global_map->data.resize(local_map->data.size());
+src/mapmerger.cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+src/mapmerger.cpp:    if(local_map->data.size() == 0 || local_map_old->data.size() == 0)
+src/mapmerger.cpp:    for(int row = 0; row < local_map->info.height;row+=2)
+src/mapmerger.cpp:        for(int collum = 0; collum < local_map->info.width;collum+=2)
+src/mapmerger.cpp:            index = row*local_map->info.width + collum;
+src/mapmerger.cpp:            if(local_map->data.size() <= index || local_map_old->data.size() <= index)
+src/mapmerger.cpp:            if(local_map->data[index]!= local_map_old->data[index])
+src/mapmerger.cpp:    ROS_DEBUG("Sended local map over network,adding updateentry for update number:%i\n\t\t\tminx:%i\tmaxx:%i\tminy:%i\tmaxy:%i",local_map->header.seq,min_x,max_x,min_y,max_y);
+src/mapmerger.cpp:    if(local_map->data.size() != local_map_old->data.size())
+src/mapmerger.cpp:        global_map->data.resize(local_map->data.size());
+src/mapmerger.cpp:        std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+src/mapmerger.cpp:    ROS_DEBUG("copy local_map->data to local_map_old->data");
+src/mapmerger.cpp:    std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+src/mapmerger.cpp:            if(local_map->data.size() == 0)
+src/mapmerger.cpp:                local_map->header.frame_id = "/robot_0/map";
+src/mapmerger.cpp:                local_map->info.width = map_width;
+src/mapmerger.cpp:                local_map->info.height = map_height;
+src/mapmerger.cpp:                local_map->data.resize(local_map->info.height * local_map->info.width);
+src/mapmerger.cpp:                for(int i = 0; i < local_map->data.size(); i++)
+src/mapmerger.cpp:                    local_map->data[i] = -1;
+src/mapmerger.cpp:                global_map->data = local_map->data;
+src/mapmerger.cpp:                global_map->header = local_map->header;
+src/mapmerger.cpp:                global_map->info = local_map->info;
+src/mapmerger.cpp:        local_map->data = toInsert->data;
+src/mapmerger.cpp:        local_map->info = toInsert->info;
+src/mapmerger.cpp:        local_map->header = toInsert->header;
+src/mapmerger.cpp:        local_map->header.frame_id = local_map_frame_id;
+src/mapmerger.cpp:        /*for(int i = 0; i < local_map->data.size(); i++)
+src/mapmerger.cpp:            local_map_old->data.push_back(local_map->data[i]);*/
+src/mapmerger.cpp:        //local_map_old->data.insert(local_map_old->data.begin(),local_map->data.begin(),local_map->data.end());
+src/mapmerger.cpp:        local_map_old->header = local_map->header;
+src/mapmerger.cpp:        local_map_old->info = local_map->info;
+src/mapmerger.cpp:        ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
+src/mapmerger.cpp:        global_map->data = local_map->data;
+src/mapmerger.cpp:        global_map->header = local_map->header;
+src/mapmerger.cpp:        global_map->info = local_map->info;
+src/mapmerger.cpp:        //if(local_map->data == global_map->data)
+src/mapmerger.cpp:        local_map->data = toInsert->data;
+src/mapmerger.cpp:        local_map->info = toInsert->info;
+src/mapmerger.cpp:        local_map->header = toInsert->header;
+src/mapmerger.cpp:    while(local_map->data.size() == 0 && has_local_map)
+src/mapmerger.cpp:                if(local_map->data[index_global_map] == -1)
+src/mapmerger.cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+src/mapmerger.cpp:    if(local_map->data.size()== 0
+src/mapmerger.cpp:            || sum_elements == (-1) * local_map->data.size())
+src/mapmerger.cpp:    int sum_elements = std::accumulate(local_map->data.begin(),local_map->data.end(),0);
+src/mapmerger.cpp:    if(local_map->data.size()== 0
+src/mapmerger.cpp:            || sum_elements == (-1) * local_map->data.size())
+src/mapmerger.cpp:            for(int i=0; i<local_map->data.size(); i++)
+src/mapmerger.cpp:                if(local_map->data[i] == 0)
+src/mapmerger.cpp:                makeEmptyMapData(newRobotName,map_height,map_width,local_map->info.resolution);

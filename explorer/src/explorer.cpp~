@@ -393,7 +393,7 @@ class Explorer
             /* Update robot state */
             update_robot_state();
 
-            ROS_ERROR("EXPLORING");  // TODO(minor) here???
+            //ROS_ERROR("EXPLORING");  // TODO(minor) here???
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -881,7 +881,7 @@ class Explorer
                     // TODO(minor) do those sorting works correclty?
                     /* Sort frontiers, firstly from nearest to farthest and then by
                      * efficiency */
-                    ROS_ERROR("SORTING FRONTIERS...");
+                    //ROS_ERROR("SORTING FRONTIERS...");
                     exploration->sort(2);
                     exploration->sort(3);
                     exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
@@ -1564,9 +1564,9 @@ class Explorer
             // call map_merger to log data
             map_merger::LogMaps log;
             log.request.log = 12;  /// request local and global map progress
-            ROS_DEBUG("Calling map_merger service logOutput");
+            //ROS_ERROR("Calling map_merger service logOutput");
             if (!mm_log_client.call(log))
-                ROS_WARN("Could not call map_merger service to store log.");
+                ROS_ERROR("Could not call map_merger service to store log.");
             ROS_DEBUG("Finished service call.");
 
             save_progress();
@@ -1776,8 +1776,9 @@ class Explorer
         {
             map_merger::LogMaps log;
             log.request.log = 3;  /// request local and global map
+            ROS_ERROR("Logging");
             if (!mm_log_client.call(log))
-                ROS_WARN("Could not call map_merger service to store log.");
+                ROS_ERROR("Could not call map_merger service to store log.");
         }
     }
 
@@ -1857,8 +1858,9 @@ class Explorer
 
         map_merger::LogMaps log;
         log.request.log = 3;  /// request local and global map
+        ROS_ERROR("Logging");
         if (!mm_log_client.call(log))
-            ROS_WARN("Could not call map_merger service to store log.");
+            ROS_ERROR("Could not call map_merger service to store log.");
 
         //#ifdef PROFILE
         // HeapProfilerStop();

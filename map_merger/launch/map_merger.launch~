@@ -8,6 +8,8 @@
     <arg name="output" default="log" />
 	<arg name="position_local_robot_topic" default="odom" />
 
+  
+	<!--<node launch-prefix="xterm -e gdb --args" pkg="map_merger" type="map_merger" name="map_merger" output="log"   > -->
 	<node pkg="map_merger" type="map_merger" name="map_merger" output="log"   >
    		<param name="log_path" value="$(arg log_path)" />
 		<param name="robot_name" value="$(arg robot_name)" />

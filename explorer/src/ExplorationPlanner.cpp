@@ -705,6 +705,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
                 ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
                 ROS_DEBUG("Old x: %f   y: %f", frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
 
+                ROS_ERROR("calling client");
                 if(client.call(service_message))
                 {
                     frontiers.at(i).x_coordinate = service_message.response.point.x;
@@ -720,6 +721,8 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
                     transformedPointsFromOtherRobot_frontiers.push_back(transform_point);
                     ROS_DEBUG("New x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
                 }
+                else
+                    ROS_ERROR("FAILED!");
             }
         }
     }
@@ -807,6 +810,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
 
                 ROS_DEBUG("Old visited x: %f   y: %f", visited_frontiers.at(i).x_coordinate, visited_frontiers.at(i).y_coordinate);
 
+                ROS_ERROR("calling");
                 if(client.call(service_message))
                 {
                     visited_frontiers.at(i).x_coordinate = service_message.response.point.x;

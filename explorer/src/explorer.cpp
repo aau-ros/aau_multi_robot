@@ -1050,7 +1050,7 @@ class Explorer
              * FRONTIER COORDINATION *
              *************************/
              
-            ROS_ERROR("FRONTIER COORDINATION");
+            //ROS_ERROR("FRONTIER COORDINATION");
 
             /* Produce frontier/cluster points for rviz */
             exploration->visualize_Cluster_Cells();
@@ -1564,9 +1564,9 @@ class Explorer
             // call map_merger to log data
             map_merger::LogMaps log;
             log.request.log = 12;  /// request local and global map progress
-            ROS_DEBUG("Calling map_merger service logOutput");
+            //ROS_ERROR("Calling map_merger service logOutput");
             if (!mm_log_client.call(log))
-                ROS_WARN("Could not call map_merger service to store log.");
+                ROS_ERROR("Could not call map_merger service to store log.");
             ROS_DEBUG("Finished service call.");
 
             save_progress();
@@ -1776,8 +1776,9 @@ class Explorer
         {
             map_merger::LogMaps log;
             log.request.log = 3;  /// request local and global map
+            ROS_ERROR("Logging");
             if (!mm_log_client.call(log))
-                ROS_WARN("Could not call map_merger service to store log.");
+                ROS_ERROR("Could not call map_merger service to store log.");
         }
     }
 
@@ -1857,8 +1858,9 @@ class Explorer
 
         map_merger::LogMaps log;
         log.request.log = 3;  /// request local and global map
+        ROS_ERROR("Logging");
         if (!mm_log_client.call(log))
-            ROS_WARN("Could not call map_merger service to store log.");
+            ROS_ERROR("Could not call map_merger service to store log.");
 
         //#ifdef PROFILE
         // HeapProfilerStop();
