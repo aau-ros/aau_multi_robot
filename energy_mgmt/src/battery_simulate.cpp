@@ -52,7 +52,7 @@ battery_simulate::battery_simulate()
         power_standing = 0.0;  // watt
         power_moving   = 0.0;  // watt/(m/s)
         power_charging = 100.0; // watt
-        maximum_running_time = 100000;
+        maximum_running_time = 100000000000000000;
     }
     
 

@@ -50,7 +50,8 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000  // F
 
-#define SAFETY_COEFF 0.005
+//#define SAFETY_COEFF 0.005
+#define SAFETY_COEFF 10.005
 #define INCR 1.7
 #define QUEUE_DISTANCE 5.0
 #define DS_SELECTION_POLICY 0
@@ -392,7 +393,7 @@ class Explorer
             /* Update robot state */
             update_robot_state();
 
-            ROS_ERROR("EXPLORING");  // TODO(minor) here???
+            //ROS_ERROR("EXPLORING");  // TODO(minor) here???
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -880,7 +881,7 @@ class Explorer
                     // TODO(minor) do those sorting works correclty?
                     /* Sort frontiers, firstly from nearest to farthest and then by
                      * efficiency */
-                    ROS_ERROR("SORTING FRONTIERS...");
+                    //ROS_ERROR("SORTING FRONTIERS...");
                     exploration->sort(2);
                     exploration->sort(3);
                     exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);

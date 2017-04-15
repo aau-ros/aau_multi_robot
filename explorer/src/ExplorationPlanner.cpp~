@@ -3867,7 +3867,7 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
     return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
 }
 
-bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in cells, NOT in meters!!!!
+bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in meters!!!!
     if(costmap_ros_ == NULL) {
         ROS_ERROR("NULL!!!");
         return false;   
@@ -3875,7 +3875,7 @@ bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F
     return costmap_global_ros_->getRobotPose(robotPose);
 }
 
-bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F returns position in meters!!!!
+bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!!!!!!!
     if(costmap_ros_ == NULL) {
         ROS_ERROR("NULL!!!");
         return false;   

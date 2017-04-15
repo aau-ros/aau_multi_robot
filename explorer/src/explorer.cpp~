@@ -50,7 +50,8 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000  // F
 
-#define SAFETY_COEFF 0.005
+//#define SAFETY_COEFF 0.005
+#define SAFETY_COEFF 10.005
 #define INCR 1.7
 #define QUEUE_DISTANCE 5.0
 #define DS_SELECTION_POLICY 0
@@ -431,7 +432,7 @@ class Explorer
             * Use mutex to lock the critical section (access to the costmap)
             * since rosspin tries to update the costmap continuously
             */
-            ROS_ERROR("COSTMAP STUFF");
+            //ROS_ERROR("COSTMAP STUFF");
             costmap_mutex.lock();
 
             exploration->transformToOwnCoordinates_frontiers();
@@ -445,7 +446,7 @@ class Explorer
             exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
-            ROS_ERROR("PUBLISHING FRONTIERS");
+            //ROS_ERROR("PUBLISHING FRONTIERS");
             
             tf::Stamped<tf::Pose> robotPose;
             
@@ -471,7 +472,7 @@ class Explorer
              */
             ros::Duration(1).sleep();
             
-            ROS_ERROR("START FRONTIER SELECTION");
+            //ROS_ERROR("START FRONTIER SELECTION");
 
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
@@ -886,14 +887,14 @@ class Explorer
                     exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                     /* Look for a frontier as goal */
-                    ROS_ERROR("DETERMINE GOAL...");
+                    //ROS_ERROR("DETERMINE GOAL...");
                     // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                     // available_distance, &final_goal, count, &robot_str, -1);
                     goal_determined = exploration->determine_goal_staying_alive(
                         1, 2, available_distance * SAFETY_COEFF +
                                   available_distance * SAFETY_COEFF * INCR * number_of_recharges,
                         &final_goal, count, &robot_str, -1);  // TODO ...
-                    ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                    //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
 
                     /* Check if the robot has found a reachable frontier */
                     if (goal_determined == true)

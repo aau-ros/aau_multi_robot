@@ -822,6 +822,8 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
                     transformedPointsFromOtherRobot_visited_frontiers.push_back(transform_point);
                     ROS_DEBUG("New visited x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
                 }
+                else
+                    ROS_ERROR("FAILED!!!!");
             }
         }
     }
