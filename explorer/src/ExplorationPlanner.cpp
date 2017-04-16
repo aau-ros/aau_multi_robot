@@ -3901,7 +3901,7 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
         //for(int i =0; i < global_plan.size(); i++)
         //    ROS_ERROR("point of plan: (%f, %f)", global_plan.at(i).pose.position.x, global_plan.at(i).pose.position.y);
         
-        ROS_ERROR("finals: (%f, %f) - target: (%f, %f)", final_x, final_y, x, y);
+        //ROS_ERROR("finals: (%f, %f) - target: (%f, %f)", final_x, final_y, x, y);
         
         if(final_x > x)
             if(final_x - x > acc)

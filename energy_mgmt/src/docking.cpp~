@@ -4,7 +4,7 @@ using namespace std;
 
 docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
 {
-    /* Load parameters */
+    /* Load parameters */ //TODO(minor) checks if these params exist...
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param("num_robots", num_robots, 1);
     nh_tilde.param("w1", w1, 0.25);
@@ -16,8 +16,17 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     nh_tilde.param("distance_close", distance_close, 8.0); //TODO add this parameter???
     nh_tilde.param<string>("move_base_frame", move_base_frame, "map"); //TODO remove this
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
-    nh_tilde.param("ds_selection_policy", ds_selection_policy, 1);  // TODO add this parameter
     nh_tilde.param<std::string>("log_path", log_path, "");          //TODO add this parameter (to script)
+    nh_tilde.param<int>("ds_selection_policy", ds_selection_policy, -1);
+    nh_tilde.param<int>("auction_duration", auction_timeout, 5);
+    nh_tilde.param<int>("reauctioning_timeout", reauctioning_timeout, 20);
+    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 10.0);
+    nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true); //not used at the moment...
+    nh_tilde.param<float>("safety_coeff", safety_coeff, 1); //not used at the moment
+    
+    
+    
+    ROS_ERROR("%d, %d, %d", ds_selection_policy, auction_timeout, reauctioning_timeout);
 
     /* Initialize robot name */
     if (robot_prefix.empty())
@@ -133,7 +142,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     sub_next_ds = nh.subscribe("next_ds", 100, &docking::next_ds_callback, this);
 
     /* Timers */
-    timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
+    timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
     timer_restart_auction =
         nh.createTimer(ros::Duration(10), &docking::timer_callback_schedure_auction_restarting, this, true, false);
 
@@ -230,10 +239,10 @@ void docking::preload_docking_stations()
 
     /* If the x-coordinate of DS with index <index> is found, it means that that DS is present in the file and must be
      * loaded */
-    while (nh.hasParam("energy_mgmt/d" + SSTR(index) + "/x"))
+    ros::NodeHandle nh_tilde("~");
+    while (nh_tilde.hasParam("d" + SSTR(index) + "/x"))
     {
         /* Load coordinates of the new DS */
-        ros::NodeHandle nh_tilde("~");
         nh_tilde.param("d" + SSTR(index) + "/x", x, 0.0);
         nh_tilde.param("d" + SSTR(index) + "/y", y, 0.0);
 
@@ -973,7 +982,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
 
         /* Schedule next auction (a robot goes in queue only if it has lost an auction started by itself) NB: NOOOO!!! it could win is auction, then immediately lose a following one that was sovrapposing with the one started by it, so when both the auction are completed, the robot will seem to be lost only an auction started by another robot!!!*/
-        timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+        timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
 
     }
@@ -1282,7 +1291,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 
     /* Check if the robot has some interested in participating to this auction, i.e., if the auctioned DS is the one
      * currently targetted by the robot */
-    if (msg.get()->docking_station != best_ds->id)
+    if (best_ds == NULL || msg.get()->docking_station != best_ds->id)
     {
         /* Robot received a bid of an auction whose auctioned docking station is not the one the robot is interested in
          * at the moment, so it won't participate to the auction */
@@ -1299,7 +1308,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
          * which is cleared when no auction is pending (and so no timer is active). A better management should be
          * possible, for instance using insert(), at(), etc., but in previous tries the node always crashed when using
          * these functions... */
-        ros::Timer timer = nh.createTimer(ros::Duration(FORCED_AUCTION_END_TIMEOUT),
+        ros::Timer timer = nh.createTimer(ros::Duration(auction_timeout + 2), //TODO do better...
                                           &docking::end_auction_participation_timer_callback, this, true, false);
         timer.start();
         timers.push_back(timer);
@@ -1465,10 +1474,10 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
     ROS_ERROR("Periodic re-auctioning");
-    if(participating_to_auction == 0)
+    if(participating_to_auction == 0) //Notice that it is still possible that two robots start an auction at the same time...
         start_new_auction();
     else {
-        timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+        timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
     }
 }
@@ -1488,7 +1497,7 @@ void docking::start_new_auction()
     participating_to_auction++;
 
     /* Start auction timer to be notified of auction conclusion */
-    timer_finish_auction.setPeriod(ros::Duration(AUCTION_TIMEOUT), true);
+    timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
     timer_finish_auction.start();
 
     /* Send broadcast message to inform all robots of the new auction */
@@ -2021,7 +2030,7 @@ void docking::discover_docking_stations()
             /* Compute distance from robot */
             double dist = distance_from_robot((*it).x, (*it).y);
                 
-            if (dist > 0 && dist < FIDUCIAL_LASER_RANGE)  // TODO
+            if (dist > 0 && dist < fiducial_signal_range)  // TODO
             {
                 /* New DS discovered */
                 new_ds_discovered = true;
@@ -2085,7 +2094,7 @@ void docking::discover_docking_stations()
 }
 
 void docking::send_robot() {
-    if(robot_id == 0) {
+    if(robot_id == 0 && DEBUG) {
         //ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
         ROS_ERROR("(%f, %f)", robot.x, robot.y);
         ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));

@@ -1,0 +1,6 @@
+auction_duration: 1 # Duration (in seconds) of an auction, i.e., after 'auction_duration' seconds that an auction 
+                    # has been started, it is considered concluded and the winner is computed
+power_charging: 150 # watt, power that the power supply provides, e.g. 36 for P3DX
+power_moving: 22.3775 # watt
+power_standing: 13.2075 # watt
+charge_max: 5 # Wh, charge of battery if fully charged

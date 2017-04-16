@@ -3894,7 +3894,7 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
     
     if(successful == true) {
         double final_x, final_y;
-        double acc = 0.1;
+        double acc = 1;
         final_x = global_plan.at(global_plan.size()-1).pose.position.x;
         final_y = global_plan.at(global_plan.size()-1).pose.position.y;
         

@@ -1,0 +1,3 @@
+queue_distance: 5.0 # Distance that a robot has to keep between itself and the docking station when it is in a queue.
+                    # At the momemt this value is only indicative: it can happen than the robot is closer than 
+                    # 'queue_distance' to the docking station...

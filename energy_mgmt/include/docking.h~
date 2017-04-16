@@ -31,14 +31,9 @@
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
-#define AUCTION_TIMEOUT 5
-#define FORCED_AUCTION_END_TIMEOUT (AUCTION_TIMEOUT + 2)
-#define AUCTION_RESCHEDULING_TIME (AUCTION_TIMEOUT * 3)
-#define FIDUCIAL_LASER_RANGE 100000000 //TODO meters???
-#define MAX_DISTANCE 50
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF 0.8
-#define DEBUG 0
+#define DEBUG false
 
 using namespace std;
 
@@ -497,6 +492,14 @@ class docking
     int index_of_ds_in_path;
     
     void next_ds_callback(const std_msgs::Empty &msg);
+    
+    ros::Subscriber sub_next_ds;
+    
+    string ds_path;
+    
+    int auction_timeout, reauctioning_timeout;
+    float fiducial_signal_range, safety_coeff;
+    bool fiducial_sensor_on;
 
 };
 

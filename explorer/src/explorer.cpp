@@ -53,11 +53,10 @@
 #define SAFETY_COEFF 0.003
 //#define SAFETY_COEFF 10.005
 #define INCR 1.7
-#define QUEUE_DISTANCE 5.0
-#define DS_SELECTION_POLICY 0
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
+#define DEBUG true
 
 boost::mutex costmap_mutex;
 
@@ -79,6 +78,7 @@ class Explorer
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
     ros::ServiceClient sc_get_robot_state;
     bool created;
+    float queue_distance;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -158,6 +158,8 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
+        nh.param<float>("queue_distance", queue_distance, 7.0);
+        //ROS_ERROR("%f", queue_distance);
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
 
@@ -886,7 +888,7 @@ class Explorer
                 {
 
                     
-                    if(moving_along_path) {
+                    if(moving_along_path) { //if not used, this var is always false...
                         if(OPP_ONLY_TWO_DS)
                             if (ds_path_counter < 2)
                             {
@@ -951,12 +953,16 @@ class Explorer
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
-                        goal_determined = exploration->determine_goal_staying_alive(
-                            1, 2, available_distance * SAFETY_COEFF +
-                                      available_distance * SAFETY_COEFF * INCR * number_of_recharges,
-                            &final_goal, count, &robot_str, -1);  // TODO ...
+                        if(DEBUG)
+                            goal_determined = exploration->determine_goal_staying_alive(
+                                1, 2, available_distance * SAFETY_COEFF +
+                                          available_distance * SAFETY_COEFF * INCR * number_of_recharges,
+                                &final_goal, count, &robot_str, -1);  // TODO ...
+                        else
+                            goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                         //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
-                        if(IMM_CHARGE && number_of_recharges == 0 ) {
+                        
+                        if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
                             goal_determined  = false;
                             update_robot_state_2(exploring);
                             ros::Duration(5).sleep();
@@ -1165,7 +1171,7 @@ class Explorer
             {
                 
                 if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
+                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
                         {
                             ROS_ERROR("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");  // TODO move robot away in this case...
                             move_robot_away();
@@ -1200,7 +1206,7 @@ class Explorer
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        QUEUE_DISTANCE / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
+                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
                         ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
 
                     update_robot_state();
@@ -1947,7 +1953,7 @@ class Explorer
     {
         /// FIXME: remove this stuff once ported to multicast
 
-        /*
+        
         std::stringstream robot_number;
         robot_number << robot_id;
 
@@ -1956,8 +1962,7 @@ class Explorer
         std::string robo_name = prefix.append(robot_number.str());
         std::string file_suffix(".finished");
 
-        std::string ros_package_path =
-        ros::package::getPath("multi_robot_analyzer");
+        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
         std::string status_path = ros_package_path + status_directory;
         std::string status_file = status_path + robo_name + file_suffix;
 
@@ -1970,7 +1975,7 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
-        */
+        
     }
 
     // TODO(minor) interesting function
@@ -2283,12 +2288,12 @@ class Explorer
         double remaining_distance = exploration->distance_from_robot(position_x, position_y);
 
         /* If the robot is moving toward a DS, check if it is already close to the DS: if it is, do not move it */
-        if (remaining_distance < QUEUE_DISTANCE && robot_state == going_in_queue)
+        if (remaining_distance < queue_distance && robot_state == going_in_queue)
         {
             ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
             return true;
         }
-        else if (remaining_distance < QUEUE_DISTANCE &&
+        else if (remaining_distance < queue_distance &&
                  robot_state == going_checking_vacancy)  // TODO(minor) unify these two if, and then put different code
                                                          // in explore() to handle the different cases
         {
@@ -2330,7 +2335,9 @@ class Explorer
 
                 if (stuck_countdown <= 0)
                 {
-                    exit(0);
+                    //F
+                    //exit(0);
+                    exit(-1);
                 }
 
                 // F
@@ -2356,7 +2363,7 @@ class Explorer
 
             /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
              * the DS */
-            if (remaining_distance < QUEUE_DISTANCE && robot_state == going_checking_vacancy)
+            if (remaining_distance < queue_distance && robot_state == going_checking_vacancy)
             {
                 ac.cancelGoal();
                 update_robot_state_2(checking_vacancy);  // TODO(minor) move to epxlore()
@@ -2367,7 +2374,7 @@ class Explorer
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 return true;
             }
-            else if (remaining_distance < QUEUE_DISTANCE && robot_state == going_in_queue)
+            else if (remaining_distance < queue_distance && robot_state == going_in_queue)
             {
                 ac.cancelGoal();
                 ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
@@ -2448,7 +2455,7 @@ class Explorer
             // robot seems to be stuck
             if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
             {
-                stuck_countdown--;
+                //stuck_countdown--;
                 // if(stuck_countdown <= 5){
 
                 // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is
@@ -2460,7 +2467,9 @@ class Explorer
 
                 if (stuck_countdown <= 0)
                 {
-                    exit(0);
+                    //F
+                    //exit(0);
+                    exit(-1);
                 }
 
                 // F
@@ -2481,7 +2490,7 @@ class Explorer
             double remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
 
             /* Print remaining distance to be travelled to reach goal if the goal is a DS */
-            if (remaining_distance > QUEUE_DISTANCE / 2.0) {
+            if (remaining_distance > queue_distance / 2.0) {
                 ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
             /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
@@ -2759,10 +2768,13 @@ class Explorer
             robot_y = robotPose.getOrigin().getY();
             if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
                 ROS_ERROR("Stucked? Countdown at %d seconds till shutdown...", countdown*5);
+                if(countdown != starting_value && countdown*5 % 100 == 0)
+                    ROS_ERROR("Countdown to shutdown at %dmin...", countdown*5/60);
                 countdown--;
                 if(countdown < 0) {
-                    ROS_FATAL("Robot is not moving anymore: shutdown");
-                    finalize_exploration();
+                    ROS_FATAL("Robot is not moving anymore: making the node crash on purpose...");
+                    ros::Duration(5).sleep();
+                    exit(-1);
                 }
             } else {
                 //ROS_DEBUG("OK!");

@@ -1,0 +1,13 @@
+fiducial_sensor_on: true  # If this parameter is true, it means that the robot has a fiducial sensor to detect the
+                          # presence of docking stations (and that the docking stations emit a fiducial signal):
+                          # in other words, each docking station constantly emits a particual signal that can be
+                          # detected by the robots using this fiducial sensor to precisely locate a docking station.
+                          # The fiducial signal has of course a limited range, so the robot can detect a docking station
+                          # only when it is enough close to it.
+                          # If the parameter is instead set to false, the robot can locate a docking station only by
+                          # image processing: not implemented yet...
+fiducial_signal_range: 10.0 # The range (in meters) of the fiducial signal emitted by the docking stations; this parameter
+                            # is used only if 'fiducial_senson_on' parameter is set to true.
+safety_coeff: 0.8 # Coefficient, belonging to the real interval (0, 1], that is used to reduce the value available
+                  # distance when check if a target point is reachable: more precisely, let be 'dist' the amout
+                  # of meters that the robot is at the moment able to travel
