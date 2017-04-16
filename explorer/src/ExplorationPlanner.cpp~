@@ -810,6 +810,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
 
                 ROS_DEBUG("Old visited x: %f   y: %f", visited_frontiers.at(i).x_coordinate, visited_frontiers.at(i).y_coordinate);
 
+                ROS_ERROR("calling");
                 if(client.call(service_message))
                 {
                     visited_frontiers.at(i).x_coordinate = service_message.response.point.x;
@@ -870,6 +871,7 @@ int ExplorationPlanner::trajectory_plan(double target_x, double target_y)
         ROS_ERROR("Failed to get RobotPose");
         return -1;
     }
+    //ROS_ERROR("%f", costmap_global_ros_->getCostmap()->getResolution());
     return trajectory_plan(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), target_x, target_y);
 }
 
@@ -3854,6 +3856,67 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
         return true;
     }
     return false;
+}
+
+bool ExplorationPlanner::reachable_target(double x, double y) {
+    if(costmap_ros_ == NULL) {
+        ROS_ERROR("NULL!!!");
+        return false;
+    }
+    
+    geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
+
+    startPointSimulated.header.seq = 1; //TODO correct??
+    startPointSimulated.header.stamp = ros::Time::now();
+    startPointSimulated.header.frame_id = move_base_frame;
+    startPointSimulated.pose.position.x = robotPose.getOrigin().getX();
+    startPointSimulated.pose.position.y = robotPose.getOrigin().getY();
+    startPointSimulated.pose.position.z = 0;
+    startPointSimulated.pose.orientation.x = 0;
+    startPointSimulated.pose.orientation.y = 0;
+    startPointSimulated.pose.orientation.z = 0;
+    startPointSimulated.pose.orientation.w = 1;
+
+    goalPointSimulated.header.seq = 1; //TODO correct??
+    goalPointSimulated.header.stamp = ros::Time::now();
+    goalPointSimulated.header.frame_id = move_base_frame;  
+    goalPointSimulated.pose.position.x = x;
+    goalPointSimulated.pose.position.y = y;
+    goalPointSimulated.pose.position.z = 0;
+    goalPointSimulated.pose.orientation.x = 0;
+    goalPointSimulated.pose.orientation.y = 0;
+    goalPointSimulated.pose.orientation.z = 0;
+    goalPointSimulated.pose.orientation.w = 1;
+
+    std::vector<geometry_msgs::PoseStamped> global_plan;
+
+    bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    
+    if(successful == true) {
+        double final_x, final_y;
+        double acc = 0.1;
+        final_x = global_plan.at(global_plan.size()-1).pose.position.x;
+        final_y = global_plan.at(global_plan.size()-1).pose.position.y;
+        
+        //for(int i =0; i < global_plan.size(); i++)
+        //    ROS_ERROR("point of plan: (%f, %f)", global_plan.at(i).pose.position.x, global_plan.at(i).pose.position.y);
+        
+        ROS_ERROR("finals: (%f, %f) - target: (%f, %f)", final_x, final_y, x, y);
+        
+        if(final_x > x)
+            if(final_x - x > acc)
+                return false;
+            else if(x - final_x > acc)
+                return false;
+        if(final_y > y)
+            if(final_y - y > acc)
+                return false;
+            else if(y - final_y > acc)
+                return false;
+        return true;
+    }
+    else
+        return false;
 }
 
 double ExplorationPlanner::distance_from_robot(double x, double y) {

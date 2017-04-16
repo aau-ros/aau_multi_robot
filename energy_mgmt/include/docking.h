@@ -34,11 +34,11 @@
 #define AUCTION_TIMEOUT 5
 #define FORCED_AUCTION_END_TIMEOUT (AUCTION_TIMEOUT + 2)
 #define AUCTION_RESCHEDULING_TIME (AUCTION_TIMEOUT * 3)
-#define FIDUCIAL_LASER_RANGE 10 //TODO meters???
+#define FIDUCIAL_LASER_RANGE 100000000 //TODO meters???
 #define MAX_DISTANCE 50
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF 0.8
-#define DEBUG 1
+#define DEBUG 0
 
 using namespace std;
 
@@ -392,7 +392,7 @@ class docking
     void abort_charging_callback(const std_msgs::Empty &msg);
 
     ros::Subscriber sub_robot_pose, sub_robot;
-    ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance;
+    ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance, sc_reachable_target;
 
     ds_t *next_optimal_ds, *next_target_ds;
 

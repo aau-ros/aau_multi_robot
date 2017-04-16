@@ -2,5 +2,4 @@ float32 x
 float32 y
 ---
 uint8 status
-uint8 reachable
 float32 distance

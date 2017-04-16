@@ -50,13 +50,14 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000  // F
 
-//#define SAFETY_COEFF 0.005
-#define SAFETY_COEFF 10.005
+#define SAFETY_COEFF 0.003
+//#define SAFETY_COEFF 10.005
 #define INCR 1.7
 #define QUEUE_DISTANCE 5.0
 #define DS_SELECTION_POLICY 0
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF_2 0.8
+#define IMM_CHARGE 0
 
 boost::mutex costmap_mutex;
 
@@ -75,7 +76,7 @@ class Explorer
     ros::Publisher pub_robot;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
-    ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance;
+    ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
     ros::ServiceClient sc_get_robot_state;
     bool created;
 
@@ -459,6 +460,8 @@ class Explorer
                 ss_robot_pose = nh.advertiseService("explorer/robot_pose", &Explorer::robot_pose_callback, this);
                 ss_distance_from_robot =
                     nh.advertiseService("explorer/distance_from_robot", &Explorer::distance_from_robot_callback, this);
+                ss_reachable_target =
+                    nh.advertiseService("explorer/reachable_target", &Explorer::reachable_target_callback, this);
                     
                 ss_distance =
                     nh.advertiseService("explorer/distance", &Explorer::distance, this);
@@ -888,6 +891,7 @@ class Explorer
 
                     /* Look for a frontier as goal */
                     //ROS_ERROR("DETERMINE GOAL...");
+                    
                     // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                     // available_distance, &final_goal, count, &robot_str, -1);
                     goal_determined = exploration->determine_goal_staying_alive(
@@ -895,6 +899,13 @@ class Explorer
                                   available_distance * SAFETY_COEFF * INCR * number_of_recharges,
                         &final_goal, count, &robot_str, -1);  // TODO ...
                     //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                    if(IMM_CHARGE && number_of_recharges == 0 ) {
+                        goal_determined  = false;
+                        update_robot_state_2(exploring);
+                        ros::Duration(5).sleep();
+                    }
+                        
+                    
 
                     /* Check if the robot has found a reachable frontier */
                     if (goal_determined == true)
@@ -2612,6 +2623,15 @@ class Explorer
         return true;
         */
     }
+       
+    bool reachable_target_callback(explorer::DistanceFromRobot::Request &req,
+                                      explorer::DistanceFromRobot::Response &res)
+    {
+        res.reachable = exploration->reachable_target(req.x, req.y);
+        return true;
+    }
+    
+    
 
     bool distance_from_robot_callback(explorer::DistanceFromRobot::Request &req,
                                       explorer::DistanceFromRobot::Response &res)

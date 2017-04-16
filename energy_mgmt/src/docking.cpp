@@ -90,6 +90,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
     sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot");
+    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
     /* Subscribers */
@@ -207,14 +208,17 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     log_path = log_path.append("/");
     csv_file = log_path + std::string("periodical.log");
     
-    ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
-    debug_timers.push_back(timer0);
-    ros::Timer timer1 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_1, this, false, true);
-    debug_timers.push_back(timer1);
-    ros::Timer timer2 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_2, this, false, true);
-    debug_timers.push_back(timer2);
+    if(DEBUG)  {
+        ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
+        debug_timers.push_back(timer0);
+        ros::Timer timer1 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_1, this, false, true);
+        debug_timers.push_back(timer1);
+        ros::Timer timer2 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_2, this, false, true);
+        debug_timers.push_back(timer2);
+        
+        debug_timers[robot_id].stop();
     
-    debug_timers[robot_id].stop();
+    }
     
 }
 
@@ -1021,7 +1025,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     //ROS_ERROR("\e[1;34mReceived information from robot %d\e[0m", msg.get()->id);
     if(DEBUG) {
         debug_timers[msg.get()->id].stop();
-        debug_timers[msg.get()->id].setPeriod(ros::Duration(AUCTION_TIMEOUT), true);
+        debug_timers[msg.get()->id].setPeriod(ros::Duration(20), true);
         debug_timers[msg.get()->id].start();
         return;
     }
@@ -1401,7 +1405,7 @@ void docking::timerCallback(const ros::TimerEvent &event)  // TODO check
     // TODO
 
     if (auction_bids.size() < 3 && ds.size() == 1)
-        ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
+        ; //ROS_ERROR("\n\t\e[1;34m OH NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \e[0m");
 
     ROS_DEBUG("The winner is robot %d", winner);
 
@@ -1975,36 +1979,57 @@ void docking::discover_docking_stations()
     bool new_ds_discovered = false;
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
-        /* Compute distance from robot */
-        double dist = distance_from_robot((*it).x, (*it).y);
+        bool reachable;
+        
+        
 
         /* If the DS is inside a fiducial laser range, it can be considered discovered */
-        if (dist > 0 && dist < FIDUCIAL_LASER_RANGE)  // TODO
-        {
-            /* New DS discovered */
-            new_ds_discovered = true;
-            
-            /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
-            ROS_INFO("Found new DS ds%d at (%f, %f)", (*it).id, (*it).x,
-                      (*it).y);  // TODO index make sense only in simulation
-            ds.push_back(*it);
-            undiscovered_ds.erase(it);
+        explorer::DistanceFromRobot srv_msg;
+        srv_msg.request.x = (*it).x;
+        srv_msg.request.y = (*it).y;
 
-            /* Inform other robots about the "new" DS */
-            adhoc_communication::SendEmDockingStation send_ds_srv_msg;
-            send_ds_srv_msg.request.topic = "docking_stations";
-            send_ds_srv_msg.request.docking_station.id = (*it).id;
-            double x, y;
-            rel_to_abs((*it).x, (*it).y, &x, &y);
-            send_ds_srv_msg.request.docking_station.x = x;
-            send_ds_srv_msg.request.docking_station.y = y;
-            send_ds_srv_msg.request.docking_station.vacant = true;  // TODO sure???
+        ros::service::waitForService("explorer/reachable_target");
+        if(sc_reachable_target.call(srv_msg))
+            reachable = srv_msg.response.reachable;
+        else {
+            ROS_ERROR("Unable at the moment...");
+            return;
+        }
 
-            /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to
-             * compensate the future increment of the for loop, since, after the deletion of the element, all the
-             * elements are shifted by one position, and so we are already pointing to the next element, even without
-             * the future increment of the for loop */
-            it--;
+        
+        if(!reachable)
+            ROS_ERROR("UNREACHABLE!!!");
+        else {   
+            /* Compute distance from robot */
+            double dist = distance_from_robot((*it).x, (*it).y);
+                
+            if (dist > 0 && dist < FIDUCIAL_LASER_RANGE)  // TODO
+            {
+                /* New DS discovered */
+                new_ds_discovered = true;
+                
+                /* Store new DS in the vector of known DSs, and remove it from the vector of undiscovered DSs */
+                ROS_INFO("Found new DS ds%d at (%f, %f)", (*it).id, (*it).x,
+                          (*it).y);  // TODO index make sense only in simulation
+                ds.push_back(*it);
+                undiscovered_ds.erase(it);
+
+                /* Inform other robots about the "new" DS */
+                adhoc_communication::SendEmDockingStation send_ds_srv_msg;
+                send_ds_srv_msg.request.topic = "docking_stations";
+                send_ds_srv_msg.request.docking_station.id = (*it).id;
+                double x, y;
+                rel_to_abs((*it).x, (*it).y, &x, &y);
+                send_ds_srv_msg.request.docking_station.x = x;
+                send_ds_srv_msg.request.docking_station.y = y;
+                send_ds_srv_msg.request.docking_station.vacant = true;  // TODO sure???
+
+                /* Since an element from 'undiscovered_ds' was removed, we have to decrease the iterator by one to
+                 * compensate the future increment of the for loop, since, after the deletion of the element, all the
+                 * elements are shifted by one position, and so we are already pointing to the next element, even without
+                 * the future increment of the for loop */
+                it--;
+            }
         }
         
     }

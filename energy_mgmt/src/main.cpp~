@@ -59,7 +59,9 @@ int main(int argc, char** argv)
         
         //doc.update_robot_state();
         
-        doc.send_robot();
+        //doc.send_robot();
+        
+        doc.send_fake_msg();
         
 
         // sleep for 1/rate seconds
