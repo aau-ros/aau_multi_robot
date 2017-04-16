@@ -377,6 +377,8 @@ class Explorer
 
         ros::Subscriber sub_moving_along_path =
             nh.subscribe("moving_along_path", 1, &Explorer::moving_along_path_callback, this);
+            
+        ros::Publisher pub_next_ds = nh.advertise<std_msgs::Empty>("next_ds", 1);
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
 
@@ -881,87 +883,142 @@ class Explorer
                    function with staying-alive path planning */
                 else if (frontier_selection == 7)
                 {
-                    // TODO(minor) do those sorting works correclty?
-                    /* Sort frontiers, firstly from nearest to farthest and then by
-                     * efficiency */
-                    //ROS_ERROR("SORTING FRONTIERS...");
-                    exploration->sort(2);
-                    exploration->sort(3);
-                    exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
-                    /* Look for a frontier as goal */
-                    //ROS_ERROR("DETERMINE GOAL...");
                     
-                    // goal_determined = exploration->determine_goal_staying_alive(1, 2,
-                    // available_distance, &final_goal, count, &robot_str, -1);
-                    goal_determined = exploration->determine_goal_staying_alive(
-                        1, 2, available_distance * SAFETY_COEFF +
-                                  available_distance * SAFETY_COEFF * INCR * number_of_recharges,
-                        &final_goal, count, &robot_str, -1);  // TODO ...
-                    //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
-                    if(IMM_CHARGE && number_of_recharges == 0 ) {
-                        goal_determined  = false;
-                        update_robot_state_2(exploring);
-                        ros::Duration(5).sleep();
-                    }
-                        
+                    if(moving_along_path) {
+                        if(OPP_ONLY_TWO_DS)
+                            if (ds_path_counter < 2)
+                            {
+                                target_ds_x = path[ds_path_counter][0];
+                                target_ds_y = path[ds_path_counter][1];
+                                ds_path_counter++;
+                                update_robot_state_2(going_checking_vacancy);
+                            }
+                            else
+                            {
+                                moving_along_path = false;
+                                // update_robot_state_2(exploring);
+                                update_robot_state_2(leaving_ds);
+                            }
+                        else
+                            if(ds_path_counter < ds_path_size - 1)
+                            {
+                                double next_ds_x = path[ds_path_counter+1][0];
+                                double next_ds_y = path[ds_path_counter+1][0];
+                                
+                                if(exploration->distance_from_robot(next_ds_x, next_ds_y) > available_distance * 0.8) //TODO 0.8 -> parameter
+                                    if(robot_state == fully_charged) {
+                                        ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
+                                        update_robot_state_2(finished);
+                                    }
+                                    else {
+                                        ROS_ERROR("Cannot reach next DS on the path: reauction for current one");
+                                        update_robot_state_2(auctioning);
+                                    }
+                                else {
+                                    ROS_ERROR("Going to next DS in path");
+                                    ds_path_counter++;
+                                    target_ds_x = path[ds_path_counter][0];
+                                    target_ds_y = path[ds_path_counter][1];
+                                    std_msgs::Empty msg;
+                                    pub_next_ds.publish(msg);
+                                    update_robot_state_2(going_checking_vacancy); //TODO maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
+                                }
+                            }
+                            else {
+                                moving_along_path = false;
+                                std_msgs::Empty msg;
+                                pub_next_ds.publish(msg);
+                                // update_robot_state_2(exploring);
+                            } 
                     
-
-                    /* Check if the robot has found a reachable frontier */
-                    if (goal_determined == true)
-                    {
-                        /* The robot has found a reachable frontier: it can move toward it */
-                        update_robot_state_2(moving_to_frontier);
-
-                        // TODO ...
-                        if (exit_countdown != EXIT_COUNTDOWN)
-                        {
-                            exit_countdown = EXIT_COUNTDOWN;
-                            ROS_ERROR("To be sae, resetting exit countdown at starting "
-                                      "value; something must have gone wrong however, "
-                                      "because this shoulw never happen...");
-                        }
-
-                        // TODO useless
-                        // charge_countdown = EXIT_COUNTDOWN;
+                        continue;
+                    
                     }
-
-                    else if (robot_state == fully_charged)
-                    {
-                        /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
-                         * that it will never be able to reach a frontier: exploration is over */
-                        // TODO(improv) we shoudl better check if there are still unvisited
-                        // frontier and the robot is not able to reach any of them even if
-                        // fully charged, because clearly this is a problem... which could be solved by navigating the
-                        // ds graph to reach one of this frontiers
-                        ROS_INFO("Robot cannot reach any frontier even if fully charged: "
-                                 "exploration is completed");
-
-                        /* Start countdown to finalize exploration */
-                        // TODO
-                        // exit_countdown--;
-                        // ROS_ERROR("Shutdown in: %d", exit_countdown);
-                        // if (exit_countdown <= 0)
-                        finalize_exploration();
-                        // continue;
-                    }
-
                     else
                     {
-                        /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
-                        // TODO check if the robot has not just won an auction meanwhile...
-                        // TODO call udpate_robot_state() instead!!!
-                        // TODO but also calling update_robot_state does not solve the problem, because maybe the
-                        // docking node knows that all the auctions have been concluded, but it has not notified the
-                        // explorer node about it yet, which means that update_robot_state hase nothing to update at the
-                        // moment... it could be solved using a service or using robot_state node
-                        if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+                        // TODO(minor) do those sorting works correclty?
+                        /* Sort frontiers, firstly from nearest to farthest and then by
+                         * efficiency */
+                        ROS_ERROR("SORTING FRONTIERS...");
+                        exploration->sort(2);
+                        exploration->sort(3);
+                        exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
+
+                        /* Look for a frontier as goal */
+                        ROS_ERROR("DETERMINE GOAL...");
+                        
+                        // goal_determined = exploration->determine_goal_staying_alive(1, 2,
+                        // available_distance, &final_goal, count, &robot_str, -1);
+                        goal_determined = exploration->determine_goal_staying_alive(
+                            1, 2, available_distance * SAFETY_COEFF +
+                                      available_distance * SAFETY_COEFF * INCR * number_of_recharges,
+                            &final_goal, count, &robot_str, -1);  // TODO ...
+                        //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                        if(IMM_CHARGE && number_of_recharges == 0 ) {
+                            goal_determined  = false;
+                            update_robot_state_2(exploring);
+                            ros::Duration(5).sleep();
+                        }
+                            
+                        
+
+                        /* Check if the robot has found a reachable frontier */
+                        if (goal_determined == true)
                         {
-                            ROS_INFO("Robot cannot reach any frontier: starting auction to "
-                                      "acquire access to a DS to recharge");  // TODO this message could be misleading
-                                                                              // if the robot does not really start a
-                                                                              // new auction...
-                            update_robot_state_2(auctioning);
+                            /* The robot has found a reachable frontier: it can move toward it */
+                            update_robot_state_2(moving_to_frontier);
+
+                            // TODO ...
+                            if (exit_countdown != EXIT_COUNTDOWN)
+                            {
+                                exit_countdown = EXIT_COUNTDOWN;
+                                ROS_ERROR("To be sae, resetting exit countdown at starting "
+                                          "value; something must have gone wrong however, "
+                                          "because this shoulw never happen...");
+                            }
+
+                            // TODO useless
+                            // charge_countdown = EXIT_COUNTDOWN;
+                        }
+
+                        else if (robot_state == fully_charged)
+                        {
+                            /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
+                             * that it will never be able to reach a frontier: exploration is over */
+                            // TODO(improv) we shoudl better check if there are still unvisited
+                            // frontier and the robot is not able to reach any of them even if
+                            // fully charged, because clearly this is a problem... which could be solved by navigating the
+                            // ds graph to reach one of this frontiers
+                            ROS_INFO("Robot cannot reach any frontier even if fully charged: "
+                                     "exploration is completed");
+
+                            /* Start countdown to finalize exploration */
+                            // TODO
+                            // exit_countdown--;
+                            // ROS_ERROR("Shutdown in: %d", exit_countdown);
+                            // if (exit_countdown <= 0)
+                            finalize_exploration();
+                            // continue;
+                        }
+
+                        else
+                        {
+                            /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
+                            // TODO check if the robot has not just won an auction meanwhile...
+                            // TODO call udpate_robot_state() instead!!!
+                            // TODO but also calling update_robot_state does not solve the problem, because maybe the
+                            // docking node knows that all the auctions have been concluded, but it has not notified the
+                            // explorer node about it yet, which means that update_robot_state hase nothing to update at the
+                            // moment... it could be solved using a service or using robot_state node
+                            if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+                            {
+                                ROS_INFO("Robot cannot reach any frontier: starting auction to "
+                                          "acquire access to a DS to recharge");  // TODO this message could be misleading
+                                                                                  // if the robot does not really start a
+                                                                                  // new auction...
+                                update_robot_state_2(auctioning);
+                            }
                         }
                     }
                 }
@@ -1333,6 +1390,7 @@ class Explorer
         {
             ROS_ERROR("STRANGE CASE!!!!!!!!!!");
             // TODO opportune
+            /*
             if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
                                                                 // reach the next DS with the current state of charge???
                 if(OPP_ONLY_TWO_DS)
@@ -1365,6 +1423,7 @@ class Explorer
                     
                     
             else
+            */
             {
                 // update_robot_state_2(exploring);
                 update_robot_state_2(leaving_ds);
@@ -1378,6 +1437,7 @@ class Explorer
         {
             ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
             // TODO opportune
+            /*
              if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
                                                                 // reach the next DS with the current state of charge???
                 if(OPP_ONLY_TWO_DS)
@@ -1407,6 +1467,7 @@ class Explorer
                     }               
 
             else
+            */
             {
                 update_robot_state_2(fully_charged);
             }
@@ -1469,6 +1530,7 @@ class Explorer
             {
                 // TODO opportune
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
+                /*
                 if (DS_SELECTION_POLICY == 2 && moving_along_path)
                     if (ds_path_counter < 2)
                     {
@@ -1492,6 +1554,7 @@ class Explorer
                         update_robot_state_2(leaving_ds);
                     }
                 else
+                */
                 {
                     // update_robot_state_2(exploring);
                     update_robot_state_2(leaving_ds);

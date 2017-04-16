@@ -493,7 +493,12 @@ class docking
     bool started_own_auction;
     
     std::vector< std::vector<int> > ds_graph, ds_mst;
+    std::vector<int> path;
+    int index_of_ds_in_path;
     
+    void next_ds_callback(const std_msgs::Empty &msg);
+    
+    ros::Subscriber sub_next_ds;
 
 };
 

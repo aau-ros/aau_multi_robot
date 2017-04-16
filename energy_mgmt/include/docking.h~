@@ -392,7 +392,7 @@ class docking
     void abort_charging_callback(const std_msgs::Empty &msg);
 
     ros::Subscriber sub_robot_pose, sub_robot;
-    ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance;
+    ros::ServiceClient sc_robot_pose, sc_distance_from_robot, sc_distance, sc_reachable_target;
 
     ds_t *next_optimal_ds, *next_target_ds;
 
@@ -493,7 +493,10 @@ class docking
     bool started_own_auction;
     
     std::vector< std::vector<int> > ds_graph, ds_mst;
+    std::vector<int> path;
+    int index_of_ds_in_path;
     
+    void next_ds_callback(const std_msgs::Empty &msg);
 
 };
 

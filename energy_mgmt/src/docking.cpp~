@@ -16,7 +16,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     nh_tilde.param("distance_close", distance_close, 8.0); //TODO add this parameter???
     nh_tilde.param<string>("move_base_frame", move_base_frame, "map"); //TODO remove this
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
-    nh_tilde.param("ds_selection_policy", ds_selection_policy, 1);  // TODO add this parameter
+    nh_tilde.param("ds_selection_policy", ds_selection_policy, 2);  // TODO add this parameter
     nh_tilde.param<std::string>("log_path", log_path, "");          //TODO add this parameter (to script)
 
     /* Initialize robot name */
@@ -130,6 +130,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 100);
 
     pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 100);
+    sub_next_ds = nh.subscribe("next_ds", 100, &docking::next_ds_callback, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(AUCTION_TIMEOUT), &docking::timerCallback, this, true, false);
@@ -341,161 +342,175 @@ void docking::compute_optimal_ds()
         /* "Opportune" policy */
         else if (ds_selection_policy == 2)
         {
-            /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery power
-             * without having to recharge first) with EOs */
-            double min_dist = numeric_limits<int>::max();
-            bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
-            for (int i = 0; i < ds.size(); i++)
-                for (int j = 0; j < jobs.size(); j++)
-                {
-                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-                    if (dist < battery.remaining_distance / 2)  // TODO ok?
+            if (!moving_along_path) {
+                /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery power
+                 * without having to recharge first) with EOs */
+                double min_dist = numeric_limits<int>::max();
+                bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
+                for (int i = 0; i < ds.size(); i++)
+                    for (int j = 0; j < jobs.size(); j++)
                     {
-                        /* We have found a DS with EOs */
-                        found_ds_with_eo = true;
-                        
-                        /* Check if that DS is also directly reachable (i.e., without recharging at intermediate DSs) */
-                        double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
-                        if (dist2 < battery.remaining_distance / 2)
+                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                        if (dist < battery.remaining_distance / 2)  // TODO ok?
                         {
-                            /* We have found a DS that is directly reachable and with EOs */
-                            found_reachable_ds_with_eo = true;
-
-                            /* Check if it also the closest reachable DS with EOs */
-                            if (dist2 < min_dist)  // TODO is what the paper ask?
+                            /* We have found a DS with EOs */
+                            found_ds_with_eo = true;
+                            
+                            /* Check if that DS is also directly reachable (i.e., without recharging at intermediate DSs) */
+                            double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                            if (dist2 < battery.remaining_distance / 2)
                             {
-                                /* Update optimal DS */
-                                min_dist = dist2;
-                                best_ds = &ds.at(i);
-                            }
-                        }
-                    }
-                }
+                                /* We have found a DS that is directly reachable and with EOs */
+                                found_reachable_ds_with_eo = true;
 
-            /* If there are no reachable DSs with EOs, check if there are DSs with EOs: if there are, compute a path on the graph of the DSs to reach one of these DSs, otherwise jsut use "closest" policy */
-            if (!found_reachable_ds_with_eo) //TODO check this part (in particular for the moving_along_path)
-            {
-                if (found_ds_with_eo)
-                {
-                    /* Compute a path formed by DSs that must be used for recharging, to reach a DS with EOs */
-                    bool ds_found_with_mst = false;
-
-                    if (!OPP_ONLY_TWO_DS)  // TODO
-                    {
-
-                        // compute closest DS with EOs // TODO are we sure that this is what the paper asks?
-                        double min_dist = numeric_limits<int>::max();
-                        ds_t *min_ds;
-                        for (int i = 0; i < ds.size(); i++)
-                        {
-                            for (int j = 0; j < jobs.size(); j++)
-                            {
-                                double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
-
-                                if (dist < battery.remaining_distance / 2)  // TODO ok?
+                                /* Check if it also the closest reachable DS with EOs */
+                                if (dist2 < min_dist)  // TODO is what the paper ask?
                                 {
-                                    double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
-
-                                    if (dist2 < min_dist)  // TODO is what the paper ask?
-                                    {
-                                        min_dist = dist2;
-                                        min_ds = &ds.at(i);
-                                    }
+                                    /* Update optimal DS */
+                                    min_dist = dist2;
+                                    best_ds = &ds.at(i);
                                 }
                             }
                         }
-                        
-                        //compute closest DS
-                        min_dist = numeric_limits<int>::max();
-                        ds_t *closest_ds;
-                        for (int i = 0; i < ds.size(); i++)
-                        {
-                                double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
-
-                                if (dist < battery.remaining_distance / 2)  // TODO ok?
-                                {
-                                        min_dist = dist;
-                                        closest_ds = &ds.at(i);
-                                }
-                        }
-
-                        std::vector<int> path;
-                        ds_found_with_mst = find_path(ds_mst, closest_ds->id, min_ds->id, path);
-
-                        if (ds_found_with_mst)
-                        {
-                            if (!moving_along_path)
-                            {
-                                best_ds = min_ds;
-
-                                int closest_ds_id;
-
-                                moving_along_path = true;
-
-                                adhoc_communication::MmListOfPoints msg_path; //TODO(minor) maybe I can pass directly msg_path to find_path...
-                                for (int i = 0; i < path.size(); i++)
-                                    for (int j = 0; j < ds.size(); j++)
-                                        if (ds[j].id == path[i])
-                                        {
-                                            msg_path.positions[i].x = ds[j].x;
-                                            msg_path.positions[i].y = ds[j].y;
-                                        }
-
-                                pub_moving_along_path.publish(msg_path);
-                            }
-                        }
-                        else
-                            // closest policy //TODO hmm...
-                            compute_closest_ds();
                     }
 
-                    else
+                /* If there are no reachable DSs with EOs, check if there are DSs with EOs: if there are, compute a path on the graph of the DSs to reach one of these DSs, otherwise jsut use "closest" policy */
+                if (!found_reachable_ds_with_eo) //TODO check this part (in particular for the moving_along_path)
+                {
+                    if (found_ds_with_eo)
                     {
-                        if (!moving_along_path)
+                        /* Compute a path formed by DSs that must be used for recharging, to reach a DS with EOs */
+                        bool ds_found_with_mst = false;
+
+                        if (!OPP_ONLY_TWO_DS)  // TODO
                         {
-                            double first_step_x, first_step_y, second_step_x, second_step_y;
+
+                            // compute closest DS with EOs // TODO are we sure that this is what the paper asks?
+                            double min_dist = numeric_limits<int>::max();
+                            ds_t *min_ds;
                             for (int i = 0; i < ds.size(); i++)
                             {
-                                bool existing_eo;
                                 for (int j = 0; j < jobs.size(); j++)
-                                    if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < battery.remaining_distance / 2)
+                                {
+                                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+
+                                    if (dist < battery.remaining_distance / 2)  // TODO ok?
                                     {
-                                        existing_eo = true;
-                                        for (int k = 0; k < ds.size(); k++)
-                                            if (k != i &&
-                                                distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
-                                                if (distance_from_robot(ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
-                                                {
-                                                    moving_along_path = true;
-                                                    ds_found_with_mst = true;
-                                                    first_step_x = ds.at(k).x;
-                                                    first_step_y = ds.at(k).y;
-                                                    second_step_x = ds.at(i).x;
-                                                    second_step_y = ds.at(i).y;
-                                                }
+                                        double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+
+                                        if (dist2 < min_dist)  // TODO is what the paper ask?
+                                        {
+                                            min_dist = dist2;
+                                            min_ds = &ds.at(i);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            //compute closest DS
+                            min_dist = numeric_limits<int>::max();
+                            ds_t *closest_ds;
+                            for (int i = 0; i < ds.size(); i++)
+                            {
+                                    double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+
+                                    if (dist < battery.remaining_distance / 2)  // TODO(IMPORTANT) ok? NO!!!! /2 is only for frontiers...
+                                    {
+                                            min_dist = dist;
+                                            closest_ds = &ds.at(i);
                                     }
                             }
+
+                            path.clear();
+                            index_of_ds_in_path = 0;
+                            ds_found_with_mst = find_path(ds_mst, closest_ds->id, min_ds->id, path);
 
                             if (ds_found_with_mst)
                             {
-                                moving_along_path = true;
+                                if (!moving_along_path)
+                                {   
 
-                                adhoc_communication::MmListOfPoints msg_path;
-                                msg_path.positions[0].x = first_step_x;
-                                msg_path.positions[0].y = first_step_y;
-                                msg_path.positions[1].x = second_step_x;
-                                msg_path.positions[1].y = second_step_y;
+                                    int closest_ds_id;
 
-                                pub_moving_along_path.publish(msg_path);
+                                    moving_along_path = true;
+
+                                    adhoc_communication::MmListOfPoints msg_path; //TODO(minor) maybe I can pass directly msg_path to find_path...
+                                    for (int i = 0; i < path.size(); i++)
+                                        for (int j = 0; j < ds.size(); j++)
+                                            if (ds[j].id == path[i])
+                                            {
+                                                msg_path.positions[i].x = ds[j].x;
+                                                msg_path.positions[i].y = ds[j].y;
+                                            }
+
+                                    pub_moving_along_path.publish(msg_path);
+                                    
+                                    //best_ds = min_ds;
+                                    for (int j = 0; j < ds.size(); j++)
+                                        if(path[0] == ds[j].id) {
+                                            best_ds = &ds[j]; //TODO VERY BAD!!!
+                                            target_ds = &ds[j]; //TODO probably ok...;
+                                        }
+                                    
+                                }
+                                else
+                                    ROS_ERROR("ERROR");
+                            }
+                            else
+                                // closest policy //TODO hmm...
+                                compute_closest_ds();
+                        }
+
+                        else //only two ds... not really implemented...
+                        {
+                            if (!moving_along_path)
+                            {
+                                double first_step_x, first_step_y, second_step_x, second_step_y;
+                                for (int i = 0; i < ds.size(); i++)
+                                {
+                                    bool existing_eo;
+                                    for (int j = 0; j < jobs.size(); j++)
+                                        if (distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y) < battery.remaining_distance / 2)
+                                        {
+                                            existing_eo = true;
+                                            for (int k = 0; k < ds.size(); k++)
+                                                if (k != i &&
+                                                    distance(ds.at(i).x, ds.at(i).y, ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
+                                                    if (distance_from_robot(ds.at(k).x, ds.at(k).y) < battery.remaining_distance / 2)
+                                                    {
+                                                        moving_along_path = true;
+                                                        ds_found_with_mst = true;
+                                                        first_step_x = ds.at(k).x;
+                                                        first_step_y = ds.at(k).y;
+                                                        second_step_x = ds.at(i).x;
+                                                        second_step_y = ds.at(i).y;
+                                                    }
+                                        }
+                                }
+
+                                if (ds_found_with_mst)
+                                {
+                                    moving_along_path = true;
+
+                                    adhoc_communication::MmListOfPoints msg_path;
+                                    msg_path.positions[0].x = first_step_x;
+                                    msg_path.positions[0].y = first_step_y;
+                                    msg_path.positions[1].x = second_step_x;
+                                    msg_path.positions[1].y = second_step_y;
+
+                                    pub_moving_along_path.publish(msg_path);
+                                }
                             }
                         }
                     }
+                    else
+                        compute_closest_ds();
                 }
                 else
-                    compute_closest_ds();
+                    ROS_ERROR("Something went wrong...");
             }
             else
-                ROS_ERROR("Something went wrong...");
+                ROS_ERROR("Already moving along path...");
         }
 
         /* "Current" policy */
@@ -995,8 +1010,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
         set_target_ds_vacant(true);
-        if (moving_along_path)
-            moving_along_path = false;
     }
     else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue ||
              msg.get()->state == finished || msg.get()->state == exploring)
@@ -1995,9 +2008,7 @@ void docking::discover_docking_stations()
             ROS_ERROR("Unable at the moment...");
             return;
         }
-        
-        
-        
+
         
         if(!reachable)
             ROS_ERROR("UNREACHABLE!!!");
@@ -2109,4 +2120,19 @@ void docking::debug_timer_callback_1(const ros::TimerEvent &event) {
 
 void docking::debug_timer_callback_2(const ros::TimerEvent &event) {
     ROS_ERROR("No information received by robot 2 for a certain amount of time!!!");
+}
+
+void docking::next_ds_callback( const std_msgs::Empty &msg ) {
+    ROS_ERROR("next_ds_callback");
+    if(index_of_ds_in_path < path.size() - 1) {
+        index_of_ds_in_path++;
+        for(int i=0; i < ds.size(); i++)
+            if(path[index_of_ds_in_path] == ds[i].id) {
+                target_ds = &ds[i]; //TODO probably ok...
+                best_ds = &ds[i]; //TODO VERY BAD!!!!
+                break;
+            }
+    } 
+    else
+        moving_along_path = false;
 }
