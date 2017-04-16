@@ -120,6 +120,7 @@ class Explorer
         ready = false;
         moving_along_path = false;
         created = false;
+        exploration = NULL;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(improv) what if instead it is not fully charged?
@@ -2741,6 +2742,38 @@ class Explorer
 
         return true;
     }
+    
+    void safety_checks() {
+        int starting_value = 12 * 10;
+        int countdown = starting_value;
+        float prev_robot_x, prev_robot_y, robot_x, robot_y;
+        tf::Stamped<tf::Pose> robotPose;
+        while(exploration == NULL)
+            ros::Duration(5).sleep();
+        while(ros::ok()) {
+            ros::Duration(5).sleep();
+            //ROS_DEBUG("Checking...");
+            if(!exploration->getRobotPose(robotPose))
+                continue;
+            robot_x = robotPose.getOrigin().getX();
+            robot_y = robotPose.getOrigin().getY();
+            if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
+                ROS_ERROR("Stucked? Countdown at %d seconds till shutdown...", countdown*5);
+                countdown--;
+                if(countdown < 0) {
+                    ROS_FATAL("Robot is not moving anymore: shutdown");
+                    finalize_exploration();
+                }
+            } else {
+                //ROS_DEBUG("OK!");
+                countdown = starting_value;
+                prev_robot_x = robot_x;
+                prev_robot_y = robot_y;
+            }
+
+        }
+    
+    }
 
     /********************
      * CLASS ATTRIBUTES *
@@ -2931,6 +2964,8 @@ int main(int argc, char **argv)
 
     /* Create thread to periodically publish unexplored frontiers */
     boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &simple));
+    
+    boost::thread thr_safety_checks(boost::bind(&Explorer::safety_checks, &simple));
 
     /*
      * FIXME

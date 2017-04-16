@@ -1465,7 +1465,12 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
     ROS_ERROR("Periodic re-auctioning");
-    start_new_auction();
+    if(participating_to_auction == 0) //Notice that it is still possible that two robots start an auction at the same time...
+        start_new_auction();
+    else {
+        timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+        timer_restart_auction.start();
+    }
 }
 
 void docking::start_new_auction()

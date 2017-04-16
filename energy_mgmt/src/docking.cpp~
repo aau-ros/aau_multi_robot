@@ -16,7 +16,7 @@ docking::docking()  // TODO(minor) comments //TODO(minor) comments in .h file
     nh_tilde.param("distance_close", distance_close, 8.0); //TODO add this parameter???
     nh_tilde.param<string>("move_base_frame", move_base_frame, "map"); //TODO remove this
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
-    nh_tilde.param("ds_selection_policy", ds_selection_policy, 2);  // TODO add this parameter
+    nh_tilde.param("ds_selection_policy", ds_selection_policy, 1);  // TODO add this parameter
     nh_tilde.param<std::string>("log_path", log_path, "");          //TODO add this parameter (to script)
 
     /* Initialize robot name */
@@ -1465,7 +1465,12 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
     ROS_ERROR("Periodic re-auctioning");
-    start_new_auction();
+    if(participating_to_auction == 0)
+        start_new_auction();
+    else {
+        timer_restart_auction.setPeriod(ros::Duration(AUCTION_RESCHEDULING_TIME), true);
+        timer_restart_auction.start();
+    }
 }
 
 void docking::start_new_auction()
