@@ -400,6 +400,8 @@ class Explorer
             update_robot_state();
 
             //ROS_ERROR("EXPLORING");  // TODO(minor) here???
+            
+            exit(-1);
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -2772,7 +2774,7 @@ class Explorer
                     ROS_ERROR("Countdown to shutdown at %dmin...", countdown*5/60);
                 countdown--;
                 if(countdown < 0) {
-                    ROS_FATAL("Robot is not moving anymore: making the node crash on purpose... ");
+                    ROS_FATAL("Robot is not moving anymore: making the node crash on purpose...");
                     ros::Duration(5).sleep();
                     exit(-1);
                 }
