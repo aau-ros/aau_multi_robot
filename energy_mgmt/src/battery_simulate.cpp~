@@ -1,7 +1,6 @@
 #include <battery_simulate.h>
 
-#define VALUE_FOR_FULL_BATTERY 1000
-#define INFINITE_ENERGY 1
+#define INFINITE_ENERGY 0
 
 using namespace std;
 
@@ -9,19 +8,16 @@ battery_simulate::battery_simulate()
 {
     // read parameters
     nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
-    nh.getParam("energy_mgmt/power_charging", power_charging);
-    nh.getParam("energy_mgmt/power_moving", power_moving);
-    nh.getParam("energy_mgmt/power_standing", power_standing);
-    nh.getParam("energy_mgmt/charge_max", charge_max);
+    nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
+    nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
+    nh.getParam("energy_mgmt/power_standing", power_standing); // W
+    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour)
+    nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear);         // m/s
+    nh.getParam("energy_mgmt/mass", mass);         // kg
     
-    power_standing = 13.7;  // watt
-    power_moving   = 18.0;  // watt/(m/s)
-    power_charging = 100.0; // watt
-
-    charge_max = VALUE_FOR_FULL_BATTERY;
+    ROS_ERROR("%f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max);
 
     // initialize private variables
-    charge = charge_max;
     speed_linear = 0;
     speed_angular = 0;
     time_moving = 0;
@@ -30,32 +26,24 @@ battery_simulate::battery_simulate()
     perc_standing = 0.5;
     output_shown = false;
     time_last = ros::Time::now();
-
-    max_speed_linear = 0.8;
     
-    //TODO
-    total_energy = VALUE_FOR_FULL_BATTERY;  // NB: do not put it under 50-60, because otherwise robots do not have enough
-                                           // time to make computations...
-    maximum_running_time = VALUE_FOR_FULL_BATTERY;
-                                           
+    charge = charge_max;
+    total_energy = charge_max * 3600; // J (i.e, joule)       
     speed_linear = max_speed_linear;
-    //maximum_running_time = total_energy * max_speed_linear;
+    //maximum_running_time = max_speed_linear * mass / total_energy; // s
     maximum_running_time = 3 * 60; //s //TODO
     
-    total_energy = maximum_running_time * (max_speed_linear * power_moving + power_standing); //J
-    remaining_energy = total_energy; //J
-    
+    charge = charge_max;
+    remaining_energy = total_energy;
     
     if(INFINITE_ENERGY) {
         total_energy = 10000;
         remaining_energy = 10000;
-        power_standing = 0.0;  // watt
-        power_moving   = 0.0;  // watt/(m/s)
-        power_charging = 100.0; // watt
-        maximum_running_time = 10000000000000000000;
+        power_standing = 0.0;  
+        power_moving   = 0.0;  
+        power_charging = 100.0;
+        maximum_running_time = 100000000000000000;
     }
-    
-
 
     // initialize battery state
     state.charging = false;

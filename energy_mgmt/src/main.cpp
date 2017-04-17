@@ -54,6 +54,8 @@ int main(int argc, char** argv)
         // 
         doc.discover_docking_stations();
         
+        doc.check_reachable_ds();
+        
         //
         doc.compute_optimal_ds();
         

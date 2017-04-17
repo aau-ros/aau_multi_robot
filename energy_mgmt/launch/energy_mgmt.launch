@@ -25,14 +25,9 @@
         <rosparam file="$(find energy_mgmt)/param/$(arg ds_yaml)" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/durations.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/extra_params.yaml" command="load"/>
-        
-    <!--   <param name="robot_prefix" value="$(arg robot_prefix)"/> -->
-    <!--     <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
-        <rosparam file="$(find energy_mgmt)/param/docking_common.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
 
-       <param name="robot_prefix" value="$(arg robot_prefix)"/>		-->
    <!--     <param name="move_base_frame" value="$(arg robot_prefix)/map"/>	-->
-   <!--     <param name="num_robots" value="$(arg num_robots)"/>		-->
     </node>
 
 </launch>

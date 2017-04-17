@@ -1,12 +1,5 @@
-#ifndef BATTERY_SIMULATE_H
-#define BATTERY_SIMULATE_H
-
-/*
-class battery_simulate : public battery {
-public:
-    battery_simulate() : battery();
-};
-*/
+#ifndef BATTERY_H
+#define BATTERY_H
 
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
@@ -15,20 +8,19 @@ public:
 #include <energy_mgmt/battery_state.h>
 #include <explorer/Speed.h>
 #include "std_msgs/Float32.h"
-#include <adhoc_communication/EmRobot.h>
 
-class battery_simulate
+class battery
 {
 public:
     /**
      * Constructor.
      */
-    battery_simulate();
+    battery();
 
     /**
      * Compute the battery state.
      */
-    void compute();
+    virtual void compute() = 0;
 
     /**
      * Outputs the battery soc to the console.
@@ -145,52 +137,6 @@ private:
      * Callback to get maximum time.
      */
     void totalTime(const std_msgs::Float32::ConstPtr& msg);
-    
-    // Maximum speed of the robot
-    double max_speed_linear;
-    
-    double remaining_energy, total_energy, maximum_running_time;
-    
-    ros::Publisher pub_charging_completed;
-    ros::Subscriber sub_robot;
-    
-    
-    enum state_t
-    {
-        exploring,       // the robot is computing which is the next frontier to be
-                         // explored
-        going_charging,  // the robot has the right to occupy a DS to recharge
-        charging,        // the robot is charging at a DS
-        finished,        // the robot has finished the exploration
-        fully_charged,   // the robot has recently finished a charging process; notice
-                         // that the robot is in this state even if it is not really
-                         // fully charged (since just after a couple of seconds after
-                         // the end of the recharging process the robot has already
-                         // lost some battery energy, since it consumes power even
-                         // when it stays still
-        stuck,
-        in_queue,                                  // the robot is in a queue, waiting for a DS to be vacant
-        auctioning,                                // auctioning: the robot has started an auction; notice that if
-                                                   // the robot is aprticipating to an auction that it was not
-                                                   // started by it, its state is not equal to auctioning!!!
-        going_in_queue,                            // the robot is moving near a DS to later put itself in
-                                                   // in_queue state
-        going_checking_vacancy,                    // the robot is moving near a DS to check if it
-                                                   // vacant, so that it can occupy it and start
-                                                   // recharging
-        checking_vacancy,                          // the robot is currently checking if the DS is vacant,
-                                                   // i.e., it is waiting information from the other robots
-                                                   // about the state of the DS
-        moving_to_frontier_before_going_charging,  // TODO hmm...
-        moving_to_frontier,                         // the robot has selected the next frontier to be
-                                                   // reached, and it is moving toward it
-        leaving_ds                                 //the robot was recharging, but another robot stopped                                           
-    };
-    
-    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
-    
-    float mass;
 };
 
-
-#endif //BATTERY_SIMULATE_H
+#endif  /* BATTERY_H */

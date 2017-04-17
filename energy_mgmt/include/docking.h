@@ -64,6 +64,7 @@ class docking
     
     void send_robot();
     void send_fake_msg();
+    void check_reachable_ds();
 
   private:
     /**
@@ -172,7 +173,7 @@ class docking
     /**
      * ID of the last auction.
      */
-    int auction_id;
+    int auction_id, local_auction_id;
 
     /**
      * A vector of all robots with their current state.
@@ -253,6 +254,7 @@ class docking
     };
     vector<ds_t> ds;
     vector<ds_t> undiscovered_ds;
+    vector<ds_t> discovered_ds;
 
     /**
      * The battery state containing time needed to fully charge the battery and time left until battery depletion.
@@ -479,8 +481,8 @@ class docking
     void cb_recharge(const std_msgs::Empty &msg);
     void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
 
-    std::string csv_file;
-    std::fstream fs_csv;
+    std::string csv_file, csv_file_2, csv_file_3, info_file;
+    std::fstream fs_csv, fs2_csv, fs3_csv, fs_info;
     
     ros::Time time_start;
     
@@ -498,7 +500,13 @@ class docking
     
     int auction_timeout, reauctioning_timeout;
     float fiducial_signal_range, safety_coeff;
-    bool fiducial_sensor_on;
+    bool fiducial_sensor_on, recompute_graph, recompute_llh;
+    
+    void finalize();
+    
+    int next_auction_id();
+    
+    
 
 };
 

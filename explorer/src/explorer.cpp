@@ -233,7 +233,13 @@ class Explorer
          */
         initLogPath();
         csv_file = log_path + std::string("periodical.log");
+        csv_state_file = log_path + std::string("robot_state.log");
         log_file = log_path + std::string("exploration.log");
+        
+        fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        fs_csv_state << "#time,robot_state" << std::endl;
+        fs_csv_state.close();
+
 
         ROS_INFO("*********************************************");
         ROS_INFO("******* Initializing Simple Navigation ******");
@@ -943,13 +949,13 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_ERROR("SORTING FRONTIERS...");
+                        ROS_INFO("SORTING FRONTIERS...");
                         exploration->sort(2);
                         exploration->sort(3);
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
-                        ROS_ERROR("DETERMINE GOAL...");
+                        ROS_INFO("DETERMINE GOAL...");
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
@@ -1372,6 +1378,14 @@ class Explorer
 
         //robot_state::GetRobotState srv;
         // sc_get_robot_state.call(srv);
+        
+        ros::Duration time = ros::Time::now() - time_start;
+
+        fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
+        fs_csv_state.close();
+        
+        
     }
 
     void update_robot_state()
@@ -1895,7 +1909,7 @@ class Explorer
         this->indicateSimulationEnd();
 
         ROS_INFO("Shutting down...");
-        ros::shutdown();
+        //ros::shutdown();
     }
 
     void exploration_has_finished()
@@ -2767,7 +2781,7 @@ class Explorer
             robot_x = robotPose.getOrigin().getX();
             robot_y = robotPose.getOrigin().getY();
             if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
-                ROS_ERROR("Stucked? Countdown at %d seconds till shutdown...", countdown*5);
+                //ROS_ERROR("Stucked? Countdown at %d seconds till shutdown...", countdown*5);
                 if(countdown != starting_value && countdown*5 % 100 == 0)
                     ROS_ERROR("Countdown to shutdown at %dmin...", countdown*5/60);
                 countdown--;
@@ -2832,9 +2846,9 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, log_file;
+    std::string csv_file, csv_state_file, log_file;
     std::string log_path;
-    std::fstream fs_csv, fs;
+    std::fstream fs_csv, fs_csv_state, fs;
 
     int number_of_recharges = 0;
 

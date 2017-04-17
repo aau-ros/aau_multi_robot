@@ -137,6 +137,8 @@ private:
      * Callback to get maximum time.
      */
     void totalTime(const std_msgs::Float32::ConstPtr& msg);
+    
+    float mass;
 };
 
 #endif  /* BATTERY_H */
