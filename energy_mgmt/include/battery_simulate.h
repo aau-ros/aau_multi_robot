@@ -50,6 +50,8 @@ public:
      *  - float32 remaining_distance
      */
     energy_mgmt::battery_state state;
+    
+    void run();
 
 
 private:
@@ -190,6 +192,8 @@ private:
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
     
     float mass;
+    
+    
 };
 
 

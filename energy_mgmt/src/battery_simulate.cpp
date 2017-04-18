@@ -205,3 +205,18 @@ void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
 {
     total_time = ("%F", msg->data);
 }
+
+void battery_simulate::run() {
+    while(ros::ok()) {
+        ros::Duration(0.1).sleep();
+        ros::spinOnce();
+                // compute new battery state
+        compute();
+
+        // output battery state to console
+        //bat.output();
+
+        // publish battery state
+        publish();
+    }
+}
