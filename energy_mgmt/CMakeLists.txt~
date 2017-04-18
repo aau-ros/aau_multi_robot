@@ -107,7 +107,7 @@ generate_messages(
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES battery docking
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer
+ CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger
 #  DEPENDS system_lib
 )
 
@@ -144,7 +144,7 @@ add_executable(energy_mgmt src/main.cpp)
 ## same as for the library above
 add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(energy_mgmt adhoc_communication adhoc_communication_gencpp)
-#add_dependencies(energy_mgmt map_merger map_merger_gencpp)
+add_dependencies(energy_mgmt map_merger map_merger_gencpp)
 #add_dependencies(energy_mgmt explorer explorer_gencpp)
 #add_dependencies(energy_mgmt energy_mgmt energy_mgmt_gencpp)
 

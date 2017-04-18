@@ -134,6 +134,7 @@ add_library(docking src/docking.cpp)
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(battery energy_mgmt_gencpp)
 add_dependencies(battery_simulate energy_mgmt_gencpp)
+add_dependencies(docking energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
 
 
@@ -144,7 +145,7 @@ add_executable(energy_mgmt src/main.cpp)
 ## same as for the library above
 add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #add_dependencies(energy_mgmt adhoc_communication adhoc_communication_gencpp)
-#add_dependencies(energy_mgmt map_merger map_merger_gencpp)
+add_dependencies(energy_mgmt map_merger map_merger_gencpp)
 #add_dependencies(energy_mgmt explorer explorer_gencpp)
 #add_dependencies(energy_mgmt energy_mgmt energy_mgmt_gencpp)
 
