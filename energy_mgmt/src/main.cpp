@@ -37,19 +37,14 @@ int main(int argc, char** argv)
     
     boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
+    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat));
+    
 
     while(ros::ok()){
         // get updates from subscriptions
         ros::spinOnce();
 
-        // compute new battery state
-        bat.compute();
 
-        // output battery state to console
-        //bat.output();
-
-        // publish battery state
-        bat.publish();
 
         // send broadcast message with positions of all (known) docking stations
         
