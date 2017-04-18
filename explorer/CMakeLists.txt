@@ -139,7 +139,7 @@ add_executable(explorer src/explorer.cpp)
 target_link_libraries( explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp )
+add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp energy_mgmt_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES} )
