@@ -491,6 +491,7 @@ class Explorer
             
             while(available_distance < 1) {
                 ROS_ERROR("Waiting battery state...");
+                ros::spinOnce();
                 ros::Duration(5).sleep();
             }
             
