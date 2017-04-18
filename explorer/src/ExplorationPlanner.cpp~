@@ -3981,14 +3981,9 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     else if(strategy == 2){
         dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
     }
-    if(dist_home > 0 && available_distance > 0 && dist_home >= available_distance) {
-        ROS_ERROR("%f, %f, %f, %f", robot_home_x, robot_home_y, robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
-        ROS_ERROR("%f, %f", dist_home, available_distance);
+    if(dist_home >= available_distance)
         return false;
-        
-     }
-    
-    ROS_ERROR("Here");
+
     // look for a FRONTIER as goal
     int errors = 0;
     if (mode == 1)
@@ -4063,7 +4058,7 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     return true;
                 }else{
-                    ROS_ERROR("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
+                    ROS_INFO("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     return false;
                 }
             }

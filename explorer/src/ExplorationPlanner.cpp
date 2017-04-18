@@ -3981,18 +3981,13 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     else if(strategy == 2){
         dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
     }
-    if(dist_home > 0 && dist_home >= available_distance) {
-        ROS_ERROR("%f, %f, %f, %f", robot_home_x, robot_home_y, robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
-        ROS_ERROR("%f, %f", dist_home, available_distance);
+    if(dist_home > 0 && dist_home >= available_distance)
         return false;
-        
-     }
-    
+
     // look for a FRONTIER as goal
     int errors = 0;
     if (mode == 1)
     {
-        ROS_ERROR("%lu", frontiers.size());
         for (int i = 0 + count; i < frontiers.size(); i++)
         {
             //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
