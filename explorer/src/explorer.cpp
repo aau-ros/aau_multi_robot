@@ -963,13 +963,13 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_INFO("SORTING FRONTIERS...");
+                        ROS_ERROR("SORTING FRONTIERS...");
                         exploration->sort(2);
                         exploration->sort(3);
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
-                        ROS_INFO("DETERMINE GOAL...");
+                        ROS_ERROR("DETERMINE GOAL...");
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);

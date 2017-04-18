@@ -236,7 +236,7 @@ void McHandler::createGroup(std::string* group_name, bool root, bool member, boo
     }
 
 
-    this->groups_->push_front(my_mc_group);
+    this->groups_->push_front(my_mc_group);z
 
 }
 

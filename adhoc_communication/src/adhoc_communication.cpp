@@ -136,7 +136,7 @@ bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_co
      */
     if (req.action)
     {
-        ROS_INFO("Try to join group: %s", req.group_name.c_str());
+        ROS_DEBUG("Try to join group: %s", req.group_name.c_str());
         /* Check if i am already a node in the tree */
         res.status = false;
 
@@ -858,7 +858,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
                 if (mc_t->root && mc_t->downlinks_l_.size() == 0)
                 {
-                    ROS_DEBUG("There are no other members in the mc group [%s]. Returning true.", mc_t->group_name_.c_str());
+                    ROS_ERROR("There are no other members in the mc group [%s]. Returning true.", mc_t->group_name_.c_str());
                     return true;
                 }
             }
@@ -873,7 +873,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
     else
     {
         /*BROADCAST*/
-        //ROS_ERROR("Broadcast"); //F
+        ROS_ERROR("Broadcast"); //F
         memcpy(route.next_hop, bcast_mac, 6);
         route.hostname_destination = "";
         route.hostname_source = hostname;

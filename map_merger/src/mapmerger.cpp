@@ -582,8 +582,8 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             }
             if(local_map->data.size() <= index || local_map_old->data.size() <= index)
             {
-                ROS_ERROR("WRONG SIZE!!! index = %d", index);
-                //return;
+                //ROS_ERROR("WRONG SIZE!!! index = %d", index);
+                return;
             
             }
             //end F
@@ -1603,6 +1603,10 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                 exchange.request.map_update.update_numbers = *containedUpdates;
                 std::string hostname = destination;
                 exchange.request.dst_robot = destination;
+                
+                //F
+                exchange.request.dst_robot = "";
+                
                 ROS_DEBUG("Send Map to %s(if nothing -> boradcast) ,frame id:%s| topic:[%s]|data<_size:%lu",
                           destination.c_str(),t->header.frame_id.c_str(),
                           topic_over_network.c_str(), exchange.request.map_update.map.data.size());

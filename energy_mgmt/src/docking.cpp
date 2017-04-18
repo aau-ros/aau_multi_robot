@@ -1,4 +1,5 @@
 #include <docking.h>
+#define DEBUG true
 
 using namespace std;
 
@@ -231,6 +232,13 @@ docking::docking()  // TODO(minor) create functions //TODO(minor) comments in .h
     }
     
     ROS_INFO("Instance of Docking class correctly creeated");
+    
+
+    //msg.request.group_name="mc_robot_3";
+    //sc_join.call(msg);  
+        
+        
+    
 }
 
 void docking::preload_docking_stations()
@@ -275,6 +283,8 @@ void docking::preload_docking_stations()
 
 void docking::compute_optimal_ds()
 {
+    
+
     ROS_DEBUG("Compute currently optimal DS");
 
     /* Compute optimal DS only if at least one DS has been discovered (just for
@@ -1150,8 +1160,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    // ROS_ERROR("\e[1;34mReceived information from robot %d\e[0m",
-    // msg.get()->id);
+    ROS_ERROR("\e[1;34mReceived information from robot %d\e[0m", msg.get()->id);
     if (DEBUG)
     {
         debug_timers[msg.get()->id].stop();
@@ -2196,14 +2205,40 @@ void docking::discover_docking_stations()
 
 void docking::send_robot()
 {
+    ros::ServiceClient sc_join = nh.serviceClient<adhoc_communication::ChangeMCMembership>("adhoc_communication/join_mc_group");
+    adhoc_communication::ChangeMCMembership msg;
+    msg.request.action=true;
+    ros::service::waitForService("adhoc_communication/join_mc_group");
+
+        msg.request.group_name="mc_robot_0";
+        if(sc_join.call(msg))
+            ; //ROS_ERROR("OK!");
+        else
+            ROS_ERROR("NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+
+        msg.request.group_name="mc_robot_1";
+        if(sc_join.call(msg))
+            ; //ROS_ERROR("OK!");
+        else
+            ROS_ERROR("NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+
+
+        msg.request.group_name="mc_robot_2";
+        if(sc_join.call(msg))
+            ; //ROS_ERROR("OK!");
+        else
+            ROS_ERROR("NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+
+    
     if (robot_id == 0 && DEBUG)
     {
         // ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
-        ROS_ERROR("(%f, %f)", robot.x, robot.y);
-        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
-        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
+        //ROS_ERROR("(%f, %f)", robot.x, robot.y);
+        //ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
+        ; //ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
     }
     adhoc_communication::SendEmRobot robot_msg;
+    robot_msg.request.dst_robot = "mc_robot_0";
     robot_msg.request.topic = "robots";
     robot_msg.request.robot.id = robot_id;
     robot_msg.request.robot.x = robot.x;  // TODO robot->x ??? and is this robot in robots????

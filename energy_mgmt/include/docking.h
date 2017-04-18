@@ -14,6 +14,7 @@
 #include <adhoc_communication/SendEmDockingStation.h>
 #include <adhoc_communication/SendEmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
+#include <adhoc_communication/ChangeMCMembership.h>
 //#include <adhoc_communication/SendMmPoint.h>
 #include <map_merger/TransformPoint.h>
 #include <energy_mgmt/battery_state.h>
@@ -32,7 +33,6 @@
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
 #define OPP_ONLY_TWO_DS false
-#define DEBUG false
 
 using namespace std;
 

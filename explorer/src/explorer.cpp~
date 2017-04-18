@@ -489,8 +489,9 @@ class Explorer
             //F
             ros::Duration(10).sleep();
             
-            while(available_distance < 1) {
+            while(available_distance <= 0) {
                 ROS_ERROR("Waiting battery state...");
+                ros::spinOnce();
                 ros::Duration(5).sleep();
             }
             
@@ -962,7 +963,7 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_INFO("SORTING FRONTIERS...");
+                        ROS_ERROR("SORTING FRONTIERS...");
                         exploration->sort(2);
                         exploration->sort(3);
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
