@@ -56,7 +56,7 @@
 #define OPP_ONLY_TWO_DS false
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
-#define DEBUG true
+#define DEBUG false
 
 boost::mutex costmap_mutex;
 
@@ -485,6 +485,14 @@ class Explorer
              * Sleep to ensure that frontiers are exchanged
              */
             ros::Duration(1).sleep();
+            
+            //F
+            ros::Duration(10).sleep();
+            
+            while(available_distance < 1) {
+                ROS_ERROR("Waiting battery state...");
+                ros::Duration(5).sleep();
+            }
             
             //ROS_ERROR("START FRONTIER SELECTION");
 
@@ -920,7 +928,7 @@ class Explorer
                                     ros::Duration(1).sleep();   
                                 }
                                 
-                                if(dist > 0 && dist > available_distance * 0.8) //TODO 0.8 -> parameter
+                                if(dist > available_distance * 0.8) //TODO 0.8 -> parameter
                                     if(robot_state == fully_charged) {
                                         ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
