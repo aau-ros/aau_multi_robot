@@ -914,8 +914,13 @@ class Explorer
                             {
                                 double next_ds_x = path[ds_path_counter+1][0];
                                 double next_ds_y = path[ds_path_counter+1][0];
+                                double dist = -1;
+                                for(int i=0; i<10 || dist >= 0; i++) {
+                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO very bad way to check...
+                                    ros::Duration(1).sleep();   
+                                }
                                 
-                                if(exploration->distance_from_robot(next_ds_x, next_ds_y) > available_distance * 0.8) //TODO 0.8 -> parameter
+                                if(dist > 0 && dist > available_distance * 0.8) //TODO 0.8 -> parameter
                                     if(robot_state == fully_charged) {
                                         ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
@@ -1909,7 +1914,7 @@ class Explorer
         this->indicateSimulationEnd();
 
         ROS_INFO("Shutting down...");
-        ros::shutdown();
+        //ros::shutdown();
     }
 
     void exploration_has_finished()

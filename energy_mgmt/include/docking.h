@@ -43,6 +43,8 @@ class docking
      * Constructor.
      */
     docking();
+    
+    void spin();
 
     /**
      * @brief Compute the optimal docking station for the robot

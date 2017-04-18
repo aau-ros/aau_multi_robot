@@ -3,6 +3,7 @@
 #include <battery.h>
 #include <battery_simulate.h>
 #include <docking.h>
+#include <boost/thread.hpp>
 
 int main(int argc, char** argv)
 {
@@ -35,6 +36,9 @@ int main(int argc, char** argv)
     ros::Rate loop_rate(rate);
     
     doc.map_info();
+    
+    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    
 
     while(ros::ok()){
         // get updates from subscriptions
@@ -69,6 +73,9 @@ int main(int argc, char** argv)
         // sleep for 1/rate seconds
         loop_rate.sleep();
     }
+    
+    thr_spin.interrupt();
+    thr_spin.join();
 
     return 0;
 }

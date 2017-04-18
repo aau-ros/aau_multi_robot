@@ -173,7 +173,7 @@ class docking
     /**
      * ID of the last auction.
      */
-    int auction_id;
+    int auction_id, local_auction_id;
 
     /**
      * A vector of all robots with their current state.
@@ -506,7 +506,7 @@ class docking
     
     int next_auction_id();
     
-    
+    void spin();
 
 };
 
