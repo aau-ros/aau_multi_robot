@@ -12,7 +12,7 @@
  <!--   <arg name="num_robots"/> 		-->
  
  
-    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
+    <node launch-prefix="xterm -e gdb --args" pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
         <param name="num_robots" value="$(arg num_robots)" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
 
@@ -26,8 +26,6 @@
         <rosparam file="$(find energy_mgmt)/param/durations.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/extra_params.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
-        
-    <!--   <param name="robot_prefix" value="$(arg robot_prefix)"/> -->
 
    <!--     <param name="move_base_frame" value="$(arg robot_prefix)/map"/>	-->
     </node>

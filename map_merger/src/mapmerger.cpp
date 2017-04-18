@@ -587,6 +587,7 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             
             }
             //end F
+            
             if(local_map->data[index]!= local_map_old->data[index])
             {
                 if(min_x > row)

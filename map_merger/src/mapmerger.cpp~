@@ -586,20 +586,17 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
                 return;
             
             }
-            else
             //end F
+            if(local_map->data[index]!= local_map_old->data[index])
             {
-                if(local_map->data[index]!= local_map_old->data[index])
-                {
-                    if(min_x > row)
-                        min_x = row;
-                    if(min_y > collum)
-                        min_y = collum;
-                    if(max_x < row)
-                        max_x = row;
-                    if(max_y < collum)
-                        max_y = collum;
-                }
+                if(min_x > row)
+                    min_x = row;
+                if(min_y > collum)
+                    min_y = collum;
+                if(max_x < row)
+                    max_x = row;
+                if(max_y < collum)
+                    max_y = collum;
             }
             
         }

@@ -54,8 +54,7 @@ class docking
     void compute_optimal_ds();
 
     void update_robot_state();
-
-    void map_info();
+    void update_robot_position();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -400,7 +399,7 @@ class docking
 
     string my_prefix, my_node;
 
-    void initLogpath();
+    void create_log_files();
 
     std::string log_path;
 

@@ -35,8 +35,6 @@ int main(int argc, char** argv)
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
     
-    doc.map_info();
-    
     boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
 
@@ -55,15 +53,15 @@ int main(int argc, char** argv)
 
         // send broadcast message with positions of all (known) docking stations
         
-        // 
+        doc.update_robot_position();
+        
+        doc.update_robot_state();
+        
         doc.discover_docking_stations();
         
         doc.check_reachable_ds();
         
-        //
         doc.compute_optimal_ds();
-        
-        doc.update_robot_state();
         
         doc.send_robot();
         

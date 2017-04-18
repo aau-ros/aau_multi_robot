@@ -43,6 +43,8 @@ class docking
      * Constructor.
      */
     docking();
+    
+    void spin();
 
     /**
      * @brief Compute the optimal docking station for the robot
@@ -52,8 +54,6 @@ class docking
     void compute_optimal_ds();
 
     void update_robot_state();
-
-    void map_info();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -398,7 +398,7 @@ class docking
 
     string my_prefix, my_node;
 
-    void initLogpath();
+    void create_log_files();
 
     std::string log_path;
 
@@ -506,7 +506,7 @@ class docking
     
     int next_auction_id();
     
-    void spin();
+    
 
 };
 
