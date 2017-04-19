@@ -44,7 +44,7 @@ int main(int argc, char** argv)
         // get updates from subscriptions
         ros::spinOnce();
 
-        // send broadcast message with positions of all (known) docking stations
+        doc.join_all_multicast_groups();
         
         doc.update_robot_position();
         

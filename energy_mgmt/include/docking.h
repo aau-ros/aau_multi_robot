@@ -2,6 +2,7 @@
 #define DOCKING_H
 
 #include <ros/ros.h>
+#include <ros/topic.h>
 #include <navfn/navfn_ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
@@ -55,6 +56,7 @@ class docking
 
     void update_robot_state();
     void update_robot_position();
+    void join_all_multicast_groups();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -81,7 +83,7 @@ class docking
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction_starting, sub_auction_reply;
+    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction_starting, sub_auction_reply, sub_resend_ds_list;
 
     /**
      * Callbacks for the subscribed topics.
@@ -240,8 +242,8 @@ class docking
         double x, y;
         int selected_ds;
     };
-    robot_t robot;
     vector<robot_t> robots;
+    robot_t *robot;
 
     /**
      * A vector of all docking stations with coordinates and vacancy.
@@ -377,7 +379,7 @@ class docking
 
     void check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
-    bool going_to_ds, going_to_check_if_ds_is_free, need_to_charge, charging_completed, going_charging_bool;
+    bool need_to_charge;
 
     std::vector<ros::Timer> timers;
 
@@ -495,7 +497,7 @@ class docking
     
     void next_ds_callback(const std_msgs::Empty &msg);
     
-    ros::Subscriber sub_next_ds;
+    ros::Subscriber sub_next_ds, sub_full_battery_info;
     
     string ds_path;
     
@@ -506,6 +508,24 @@ class docking
     void finalize();
     
     int next_auction_id();
+    
+    void resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    
+    int my_counter;
+    
+    bool going_to_ds;
+    
+    int extra_time;
+    
+    
+    float conservative_remaining_distance_with_return();
+    float conservative_maximum_distance_with_return();
+    float conservative_remaining_distance_one_way();
+    float conservative_maximum_distance_one_way();
+    
+    float maximum_travelling_distance;
+    
+    void full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg);
     
     
 

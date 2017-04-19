@@ -50,6 +50,8 @@ public:
      *  - float32 remaining_distance
      */
     energy_mgmt::battery_state state;
+    
+    void run();
 
 
 private:
@@ -191,7 +193,7 @@ private:
     
     float mass;
     
-    void run();
+    
 };
 
 

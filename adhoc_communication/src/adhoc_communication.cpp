@@ -858,7 +858,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
                 if (mc_t->root && mc_t->downlinks_l_.size() == 0)
                 {
-                    ROS_ERROR("There are no other members in the mc group [%s]. Returning true.", mc_t->group_name_.c_str());
+                    ROS_INFO("There are no other members in the mc group [%s]. Returning true.", mc_t->group_name_.c_str());
                     return true;
                 }
             }
@@ -872,12 +872,18 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
     }
     else
     {
+        //F
         /*BROADCAST*/
-        ROS_ERROR("Broadcast"); //F
+        ROS_ERROR("Broadcastfor topic %s", topic.c_str());
+        std::string dest = "mc_robot_0";
+        sendPacket(dest, payload, data_type_, topic);
+        
+        
         memcpy(route.next_hop, bcast_mac, 6);
         route.hostname_destination = "";
         route.hostname_source = hostname;
         send_successfully = true;
+        
     }
 
     if (!send_successfully)
@@ -1304,7 +1310,6 @@ int main(int argc, char **argv)
                 sub->robot_number_ = i;
                 sub_robot_pos_l.push_front(n_pub->subscribe(topic_to_sub, 1, &PositionSubscriber::Subscribe, &*sub));
                 robot_positions_l.push_front(sub);
-                ROS_ERROR("Changed");
             }
             else
                 sub_robot_pos_l.push_front(n_pub->subscribe(topic, 1, &PositionSubscriber::Subscribe, &*my_sim_position));

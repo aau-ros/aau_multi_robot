@@ -123,7 +123,7 @@ class Explorer
         exploration = NULL;
 
         /* Initial robot state */
-        robot_state = fully_charged;  // TODO(improv) what if instead it is not fully charged?
+        robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
         robot_state_next = current_state;
 
         /* Robot state publishers */
@@ -351,7 +351,7 @@ class Explorer
     void explore()  // TODO(minor) comments
     {
         ROS_INFO("STARTING EXPLORATION");
-        // TODO put to sleep also the other nodes
+        // TODO(minor) put to sleep also the other nodes
         /*
          * Sleep is required to get the actual a
          * costmap updated with obstacle and inflated
@@ -369,7 +369,7 @@ class Explorer
 
         /* Set countdowns */
         int exit_countdown = EXIT_COUNTDOWN;
-        int charge_countdown = EXIT_COUNTDOWN; // TODO hmm...
+        int charge_countdown = EXIT_COUNTDOWN; // TODO(minor) hmm...
 
         /* Start taking the time during exploration */
         time_start = ros::Time::now();
@@ -925,11 +925,11 @@ class Explorer
                                 double next_ds_y = path[ds_path_counter+1][0];
                                 double dist = -1;
                                 for(int i=0; i<10 || dist >= 0; i++) {
-                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO very bad way to check...
+                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(IMPORTANT) very bad way to check... -> parameter...
                                     ros::Duration(1).sleep();   
                                 }
                                 
-                                if(dist > available_distance * 0.8) //TODO 0.8 -> parameter
+                                if(dist > available_distance * 0.8) //TODO(IMPORTANT) 0.8 -> parameter, and in determine_goal, etc....
                                     if(robot_state == fully_charged) {
                                         ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
@@ -945,7 +945,7 @@ class Explorer
                                     target_ds_y = path[ds_path_counter][1];
                                     std_msgs::Empty msg;
                                     pub_next_ds.publish(msg);
-                                    update_robot_state_2(going_checking_vacancy); //TODO maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
+                                    update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
                                 }
                             }
                             else {
@@ -963,13 +963,13 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_ERROR("SORTING FRONTIERS...");
+                        ROS_DEBUG("SORTING FRONTIERS...");
                         exploration->sort(2);
                         exploration->sort(3);
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
-                        ROS_INFO("DETERMINE GOAL...");
+                        ROS_DEBUG("DETERMINE GOAL...");
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
@@ -977,7 +977,7 @@ class Explorer
                             goal_determined = exploration->determine_goal_staying_alive(
                                 1, 2, available_distance * SAFETY_COEFF +
                                           available_distance * SAFETY_COEFF * INCR * number_of_recharges,
-                                &final_goal, count, &robot_str, -1);  // TODO ...
+                                &final_goal, count, &robot_str, -1);
                         else
                             goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                         //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
@@ -996,7 +996,7 @@ class Explorer
                             /* The robot has found a reachable frontier: it can move toward it */
                             update_robot_state_2(moving_to_frontier);
 
-                            // TODO ...
+                            // TODO(minor) ...
                             if (exit_countdown != EXIT_COUNTDOWN)
                             {
                                 exit_countdown = EXIT_COUNTDOWN;
@@ -1005,7 +1005,7 @@ class Explorer
                                           "because this shoulw never happen...");
                             }
 
-                            // TODO useless
+                            // TODO(minor) useless
                             // charge_countdown = EXIT_COUNTDOWN;
                         }
 
@@ -1013,7 +1013,7 @@ class Explorer
                         {
                             /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
                              * that it will never be able to reach a frontier: exploration is over */
-                            // TODO(improv) we shoudl better check if there are still unvisited
+                            // TODO(minor) we shoudl better check if there are still unvisited
                             // frontier and the robot is not able to reach any of them even if
                             // fully charged, because clearly this is a problem... which could be solved by navigating the
                             // ds graph to reach one of this frontiers
@@ -1021,7 +1021,7 @@ class Explorer
                                      "exploration is completed");
 
                             /* Start countdown to finalize exploration */
-                            // TODO
+                            // TODO(minor)
                             // exit_countdown--;
                             // ROS_ERROR("Shutdown in: %d", exit_countdown);
                             // if (exit_countdown <= 0)
@@ -1032,16 +1032,16 @@ class Explorer
                         else
                         {
                             /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
-                            // TODO check if the robot has not just won an auction meanwhile...
-                            // TODO call udpate_robot_state() instead!!!
-                            // TODO but also calling update_robot_state does not solve the problem, because maybe the
+                            // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
+                            // TODO(minor) call udpate_robot_state() instead!!!
+                            // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
                             // docking node knows that all the auctions have been concluded, but it has not notified the
                             // explorer node about it yet, which means that update_robot_state hase nothing to update at the
                             // moment... it could be solved using a service or using robot_state node
                             if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
                             {
                                 ROS_INFO("Robot cannot reach any frontier: starting auction to "
-                                          "acquire access to a DS to recharge");  // TODO this message could be misleading
+                                          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
                                                                                   // if the robot does not really start a
                                                                                   // new auction...
                                 update_robot_state_2(auctioning);
@@ -1154,12 +1154,12 @@ class Explorer
             /* Navigate robot to next frontier */
             ROS_INFO("Navigating to Goal");  // TODO(minor) actually only the following if is for navigating to goal
             if (robot_state == moving_to_frontier ||
-                robot_state == moving_to_frontier_before_going_charging)  // TODO is
+                robot_state == moving_to_frontier_before_going_charging)  // TODO(minor) is
                                                                           // moving_to_frontier_before_going_charging
                                                                           // still necessary? no if the state update is
                                                                           // done in the correct point... yes otherwise
             {
-                // TODO what is this part???
+                // TODO(IMPORTANT) what is this part???
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
@@ -1191,10 +1191,10 @@ class Explorer
             {
                 
                 if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
+                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(IMPORTANT) do better
                         {
-                            ROS_ERROR("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");  // TODO move robot away in this case...
-                            move_robot_away();
+                            ROS_ERROR("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther..."); 
+                            move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
                             ROS_ERROR("NOW it is ok...");
                         }
                 else
@@ -1203,12 +1203,9 @@ class Explorer
                 while (robot_state == auctioning)  // TODO(minor) better management of the while loop
                 {
                     
-                    // TODO(IMPORTANT) check if the robot has not arleady won an auction meanwhile!!!!! I can do it in
-                    // docking (in cb_robot) probably, and then use update inside the while loop to immediately change
-                    // the state
                     // ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
                     ros::Duration(0.1).sleep();
-                    ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
+                    ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
 
                     update_robot_state();
                 }
@@ -1226,8 +1223,8 @@ class Explorer
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(minor) do better
-                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO move robot away in this case...
+                        queue_distance / 2.0) //TODO(IMPORTANT) do better
+                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO(minor) move robot away in this case...
 
                     update_robot_state();
                 }
@@ -1241,7 +1238,7 @@ class Explorer
 
                 occupied_ds = false;
 
-                // TODO use a bterr way!!!
+                // TODO(IMPORTANT) use a bterr way!!!
                 int i = 10;
                 while (i > 0)
                 {
@@ -1251,7 +1248,7 @@ class Explorer
                 }
                 if (occupied_ds)
                 {
-                    // TODO opportune? no because if I ahve this DS in the path, it's because I need to recharge here
+                    // TODO(IMPORTANT) opportune? no because if I ahve this DS in the path, it's because I need to recharge here
 
                     /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
                     ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
@@ -1317,7 +1314,6 @@ class Explorer
                     if (robot_state == moving_to_frontier)
                         update_robot_state_2(exploring);
 
-                    // TODO hmm... going_checking_vacancy
                     ROS_INFO("STORING PATH");
                     /* Compute path length */  // TODO(IMPORTANT) is it possible that this method should be called also
                                                // somewhere else? probably is just a debug method... OR MAYBE IS THE ONE
@@ -1375,9 +1371,9 @@ class Explorer
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
 
-        ROS_DEBUG("State transiction: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
-        ROS_ERROR("\e[1;34m State transiction: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(),
+        ROS_ERROR("\e[1;34m State transition: %s -> %s \e[0m", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
@@ -1404,7 +1400,7 @@ class Explorer
 
     void update_robot_state()
     {
-        // TODO ???
+        // TODO(minor) ???
         ros::spinOnce();
 
         /* If the next state is equal to the current one, do nothing */
@@ -1418,16 +1414,15 @@ class Explorer
          * was concluded, he discovered itself winner of the other auction and went
          * to occupy the DS; of course this could happen only if the auction timeout
          * is quite high: with a low timeout this scenario is not possible */
-        // TODO the robot after having discovered that the DS is free should check
+        // TODO(minor) the robot after having discovered that the DS is free should check
         // its state to see if instead it shouldn't put itself in in_queue state
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
             ROS_ERROR("STRANGE CASE!!!!!!!!!!");
-            // TODO opportune
+          
             /*
-            if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
-                                                                // reach the next DS with the current state of charge???
+            if (DS_SELECTION_POLICY == 2 && moving_along_path)  
                 if(OPP_ONLY_TWO_DS)
                     if (ds_path_counter < 2)
                     {
@@ -1471,10 +1466,9 @@ class Explorer
         else if (robot_state_next == fully_charged_next)
         {
             ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
-            // TODO opportune
+           
             /*
-             if (DS_SELECTION_POLICY == 2 && moving_along_path)  // TODO(IMPORTANT) what if the robot is not able to
-                                                                // reach the next DS with the current state of charge???
+             if (DS_SELECTION_POLICY == 2 && moving_along_path) 
                 if(OPP_ONLY_TWO_DS)
                     if (ds_path_counter < 2)
                     {
@@ -1527,7 +1521,7 @@ class Explorer
         {
             /* If it is already in a queue, just signal that it is in a queue, to make
              * the rescheduling timer in docking restart */
-            // TODO hmm... if the timer instead is not blocked in docking, it is not
+            // TODO(minor) hmm... if the timer instead is not blocked in docking, it is not
             // necessary...
             if (robot_state == in_queue)
             {
@@ -1543,7 +1537,7 @@ class Explorer
 
             /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new
              * auction */
-            // TODO something probably went wrong in this case
+            // TODO(minor) something probably went wrong in this case...
             else if (robot_state == going_charging)
             {
                 ROS_ERROR("\n\t\e[1;34m i want to charge a little, first... \e[0m");
@@ -1563,7 +1557,7 @@ class Explorer
             /* If the robot is recharing, it must stop */
             if (robot_state == charging)
             {
-                // TODO opportune
+               
                 ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 /*
                 if (DS_SELECTION_POLICY == 2 && moving_along_path)
@@ -1571,7 +1565,7 @@ class Explorer
                     {
                         if (exploration->distance_from_robot(path[ds_path_counter + 1][0],
                                                              path[ds_path_counter + 1][1]) <
-                            available_distance)  // TODO(IMPORTANT) safety coefficient
+                            available_distance) 
                         {
                             ds_path_counter++;
                             target_ds_x = path[ds_path_counter][0];
@@ -1579,7 +1573,7 @@ class Explorer
                             update_robot_state_2(going_checking_vacancy);
                         }
                         else
-                            update_robot_state_2(going_in_queue);  // TODO going_in_queue or in_queue
+                            update_robot_state_2(going_in_queue);  
                     }
                     else
                     {
@@ -1899,7 +1893,7 @@ class Explorer
         // finish log files
         exploration_has_finished();
 
-        // TODO hmm...
+        // TODO(minor) hmm...
 
         visualize_goal_point(home_point_x, home_point_y);
 
@@ -1994,7 +1988,7 @@ class Explorer
         std::string status_path = ros_package_path + status_directory;
         std::string status_file = status_path + robo_name + file_suffix;
 
-        /// TODO: check whether directory exists
+        // TODO(minor): check whether directory exists
         boost::filesystem::path boost_status_path(status_path.c_str());
         if(!boost::filesystem::exists(boost_status_path))
             if(!boost::filesystem::create_directories(boost_status_path))
@@ -2303,7 +2297,7 @@ class Explorer
         goal_msgs.target_pose.pose.orientation.z = 0;
         goal_msgs.target_pose.pose.orientation.w = 1;
 
-        // TODO needed???
+        // TODO(minor) needed???
         // ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m");
         // if(robot_state == leaving_ds)
         // if(leaving_ds) {
@@ -2351,10 +2345,10 @@ class Explorer
             // robot seems to be stuck
             if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
             {
-                //stuck_countdown--; //TODO
+                //stuck_countdown--; //TODO(minor)
                 // if(stuck_countdown <= 5){
 
-                // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is
+                // TODO(minor) if STUCK_COUNTDOWN is too low, even when the robot is
                 // computing the frontier, it is believed to be stucked...
                 if (stuck_countdown <= 10)
                 {
@@ -2486,7 +2480,7 @@ class Explorer
                 //stuck_countdown--;
                 // if(stuck_countdown <= 5){
 
-                // TODO //F if STUCK_COUNTDOWN is too low, even when the robot is
+                // TODO(minor) if STUCK_COUNTDOWN is too low, even when the robot is
                 // computing the frontier, it is believed to be stucked...
                 if (stuck_countdown <= 10)
                 {
@@ -2696,14 +2690,19 @@ class Explorer
         ROS_DEBUG("SOC: %d%%; available distance: %f", battery_charge * 100, available_distance);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
-            recharge_cycles++;  // TODO hmm...
+            recharge_cycles++;  // TODO(IMPORTANT) hmm... soc, charge, ...
 
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
         if (available_distance <= 0 && robot_state != charging)
         {
-            ROS_FATAL("Robot has run out of energy!");
-            //finalize_exploration(); //TODO do better
+            ROS_FATAL("Robot has run out of energy! Aborting...");
+            abort();
         }
+    }
+    
+    void abort() {
+        ros::Duration(3).sleep();
+        exit(-1);
     }
 
     bool robot_pose_callback(explorer::RobotPosition::Request &req, explorer::RobotPosition::Response &res)
@@ -2984,28 +2983,28 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "simple_navigation");
 
     /*
-     * Create instance of Simple Navigation
+     * Create instance of Explorer
      */
     tf::TransformListener tf(ros::Duration(10));
-    Explorer simple(tf);
+    Explorer explorer(tf);
 
     /*
      * The ros::spin command is needed to wait for any call-back. This could for
      * example be a subscription on another topic. Do this to be able to receive a
      * message.
      */
-    boost::thread thr_explore(boost::bind(&Explorer::explore, &simple));
+    boost::thread thr_explore(boost::bind(&Explorer::explore, &explorer));
 
     /*
      * The following thread is only necessary to log simulation results.
      * Otherwise it produces unused output.
      */
-    boost::thread thr_map(boost::bind(&Explorer::map_info, &simple));
+    boost::thread thr_map(boost::bind(&Explorer::map_info, &explorer));
 
     /* Create thread to periodically publish unexplored frontiers */
-    boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &simple));
+    boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &explorer));
     
-    boost::thread thr_safety_checks(boost::bind(&Explorer::safety_checks, &simple));
+    boost::thread thr_safety_checks(boost::bind(&Explorer::safety_checks, &explorer));
 
     /*
      * FIXME

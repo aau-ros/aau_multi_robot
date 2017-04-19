@@ -68,7 +68,7 @@ private:
     /**
      * Publishers.
      */
-    ros::Publisher pub_battery;
+    ros::Publisher pub_battery, pub_full_battery_info;
 
     /**
      * Battery charge in Wh.
