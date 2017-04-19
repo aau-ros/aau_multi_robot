@@ -2693,12 +2693,13 @@ class Explorer
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
         if (available_distance <= 0 && robot_state != charging)
         {
-            ROS_FATAL("Robot has run out of energy! Aborting...");
+            ROS_FATAL("Robot has run out of energy!");
             abort();
         }
     }
     
     void abort() {
+        ROS_FATAL("Exploration is going to be brutally aborted...");
         ros::Duration(3).sleep();
         exit(-1);
     }
@@ -2778,31 +2779,31 @@ class Explorer
     }
     
     void safety_checks() {
-        int starting_value = 12 * 10;
+        int starting_value = 12 * 5;
         int countdown = starting_value;
-        float prev_robot_x, prev_robot_y, robot_x, robot_y;
+        float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
         tf::Stamped<tf::Pose> robotPose;
         while(exploration == NULL)
             ros::Duration(5).sleep();
         while(ros::ok()) {
             ros::Duration(5).sleep();
             //ROS_DEBUG("Checking...");
-            if(!exploration->getRobotPose(robotPose))
-                continue;
-            robot_x = robotPose.getOrigin().getX();
-            robot_y = robotPose.getOrigin().getY();
+            if(exploration->getRobotPose(robotPose)) {
+                robot_x = robotPose.getOrigin().getX();
+                robot_y = robotPose.getOrigin().getY();
+            }
             if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
-                //ROS_ERROR("Stucked? Countdown at %d seconds till shutdown...", countdown*5);
                 if(countdown != starting_value && countdown*5 % 100 == 0)
                     ROS_ERROR("Countdown to shutdown at %dmin...", countdown*5/60);
+                else
+                    ROS_DEBUG("Countdown to shutdown at %dmin...", countdown*5/60);
                 countdown--;
                 if(countdown < 0) {
-                    ROS_FATAL("Robot is not moving anymore: making the node crash on purpose...");
-                    ros::Duration(5).sleep();
-                    exit(-1);
+                    ROS_FATAL("Robot is not moving anymore");
+                    abort();
                 }
             } else {
-                //ROS_DEBUG("OK!");
+                ROS_DEBUG("Robot is moving");
                 countdown = starting_value;
                 prev_robot_x = robot_x;
                 prev_robot_y = robot_y;

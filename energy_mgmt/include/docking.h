@@ -182,6 +182,7 @@ class docking
      * A vector of all robots with their current state.
      */
     int num_robots;  // number of robots is known in simulations
+    int num_ds;
 
     enum state_t
     {
@@ -406,8 +407,6 @@ class docking
     std::string log_path;
 
     void start_new_auction();
-
-    bool num_ds;
 
     void set_target_ds_vacant(bool vacant);
 

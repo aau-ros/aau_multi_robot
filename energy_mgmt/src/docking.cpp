@@ -215,7 +215,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     // TODO(minor) vary bad if we don't know the number of DS a-priori
     /* Initialize docking station graph */
-    for (int i = 0; i < undiscovered_ds.size(); i++)
+    for (int i = 0; i < num_ds; i++)
     {
         std::vector<int> temp;
         for (int j = 0; j < undiscovered_ds.size(); j++)
@@ -272,6 +272,9 @@ void docking::preload_docking_stations()
         /* Prepare to search for next DS (if it exists) in the file */
         index++;
     }
+    
+    /* Store the number of DSs in the environment */
+    num_ds = undiscovered_ds.size(); //TODO(minor) a problem in general!!
 
     /* Print loaded DSs with their coordinates relative to the local reference system of the robot; only for debugging
      */  // TODO(minor) or better in global system?
@@ -745,7 +748,7 @@ double docking::get_llh()
     return llh;
 }
 
-void docking::update_l1()
+void docking::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
 {
     ROS_DEBUG("Update l1");
     
@@ -756,6 +759,7 @@ void docking::update_l1()
         if (ds[i].vacant == true)
             ++num_ds_vacant;
     }
+    ROS_DEBUG("Number of vacant DS: %d", num_ds_vacant);
 
     /* Count active robots */
     int num_robots_active = 0;
@@ -764,6 +768,7 @@ void docking::update_l1()
         if (robots[i].state == active)
             ++num_robots_active;
     }
+    ROS_DEBUG("Number of active robots DS: %d", num_robots_active);
 
     /* Sanity checks */
     if (num_ds_vacant < 0)
@@ -799,7 +804,10 @@ void docking::update_l2()
     ROS_DEBUG("Update l2");
     
     double time_run = battery.remaining_time_run;
+    ROS_DEBUG("Remaining running time: %.3fs", time_run);
+    
     double time_charge = battery.remaining_time_charge;
+    ROS_DEBUG("Remaining time until recharge completion: %.3fs", time_charge);
 
     /* Sanity checks */
     if (time_charge < 0)
@@ -848,6 +856,8 @@ void docking::update_l3()
         if (dist <= conservative_maximum_distance_with_return()) //NB I'm considering the frontiers that are reachable, possibly, with a recharging, whereare previopusly I've count just the unvisited frontiers, not matter if they are reachable or not...
             ++num_jobs_close;
     }
+    ROS_DEBUG("Number of frontiers: %d", num_jobs);
+    ROS_DEBUG("Number of reachable frontiers: %d", num_jobs_close);
     
     /* If the execution flow reaches this point, the (re)computation of l3 succeeded */
     recompute_llh = false;
@@ -877,6 +887,8 @@ void docking::update_l3()
         l3 = 1;
     else
         l3 = (num_jobs - num_jobs_close) / num_jobs;
+        
+        
 
     
 }
@@ -885,12 +897,17 @@ void docking::update_l4() //TODO(minor) comments
 {
     ROS_DEBUG("Update l4");
     
+    if (best_ds == NULL || ds.size() == 0 || jobs.size() == 0)
+    {
+        ROS_DEBUG("No optimal DS and/or frontiers");
+        l4 = 0;
+        return;
+    }
+    
     // get distance to docking station
     double dist_ds = -1;
     for (int i = 0; i < ds.size(); ++i)
     {
-        if(best_ds == NULL)
-            ROS_FATAL("This should not happen...");
             
         if (ds[i].id == best_ds->id)
         {
@@ -904,12 +921,13 @@ void docking::update_l4() //TODO(minor) comments
             break;
         }
     }
+    ROS_DEBUG("Distance to optimal DS: %.3f", dist_ds);
 
     // get distance to closest job
-    int dist_job = numeric_limits<int>::max();
+    double dist_job = numeric_limits<int>::max();
     for (int i = 0; i < jobs.size(); ++i)
     {
-        int dist_job_temp = distance_from_robot(jobs[i].x, jobs[i].y,
+        double dist_job_temp = distance_from_robot(jobs[i].x, jobs[i].y,
                                                 true);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
         if (dist_job_temp < 0)
         {
@@ -919,20 +937,14 @@ void docking::update_l4() //TODO(minor) comments
         if (dist_job_temp < dist_job)
             dist_job = dist_job_temp;
     }
+    ROS_DEBUG("Distance to closest frontier: %.3f", dist_job);
     
     recompute_llh = false;
-
-    if (ds.size() == 0 || jobs.size() == 0)
-    {
-        ROS_INFO("No DSs/jobs");
-        l4 = 0;
-        return;
-    }
 
     // sanity checks
     if (dist_job < 0 || dist_job >= numeric_limits<int>::max())
     {
-        ROS_ERROR("Invalid distance to closest job: %d", dist_job);
+        ROS_ERROR("Invalid distance to closest job: %.3f", dist_job);
         l4 = 0;
         return;
     }
@@ -941,7 +953,7 @@ void docking::update_l4() //TODO(minor) comments
         ROS_ERROR("Invalid distances to closest job and docking station. Both are zero!");
         l4 = 0;
         return;
-    }
+    }      
 
     // compute l4
     l4 = dist_job / (dist_job + dist_ds);
@@ -1200,8 +1212,9 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
         
     }
 
-    /* Update parameter l3 of charging likelihood function */
+    /* Update parameters l3 and l4 of charging likelihood function */
     update_l3();
+    update_l4();
 }
 
 
@@ -1332,8 +1345,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             timer.start();
             timers.push_back(timer);
 
-            ROS_INFO("The robot can bet an higher bid than the one received, so it "
-                     "will participate to the auction");
+            ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = "mc_robot_0";
             srv.request.topic = "adhoc_communication/send_em_auction/reply";
@@ -1354,7 +1366,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    ROS_ERROR("Received bid to auction %d", auction_id);
+    ROS_ERROR("Received bid for auction %d", auction_id);
 
     if (auction_id != msg.get()->auction)
     {
@@ -1370,7 +1382,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
         return;
     }
 
-    // probably this is unnecessary, but jsut to be safe...
+    // TODO(minor) probably this is unnecessary, but jsut to be safe...
     for (std::vector<auction_bid_t>::iterator it = auction_bids.begin(); it != auction_bids.end(); it++)
         if ((*it).robot_id == msg.get()->robot)
         {
@@ -1378,7 +1390,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
             return;
         }
 
-    ROS_DEBUG("Store bid");
+    ROS_DEBUG("Store bid (%f) of robot %d for this auction", msg.get()->bid, msg.get()->robot);
     auction_bid_t bid;
     bid.robot_id = msg.get()->robot;
     bid.bid = msg.get()->bid;
@@ -1400,7 +1412,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     /* The auction is concluded; the robot that started it has to compute who is
      * the winner and must inform all the
      * other robots */
-    ROS_INFO("Auction timeout: compute auction winner...");
+    ROS_INFO("Auction timeout: compute auction winner");
 
     // ??? //TODO(minor)
     managing_auction = false;
@@ -1412,7 +1424,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for (; it != auction_bids.end(); it++)
     {
-        ROS_DEBUG("Robot %d placed %f", (*it).robot_id, (*it).bid);
+        ROS_INFO("robot_%d placed %f", (*it).robot_id, (*it).bid);
         if ((*it).bid > winner_bid)
         {
             winner = (*it).robot_id;
@@ -1420,7 +1432,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
         }
     }
 
-    ROS_DEBUG("The winner is robot %d", winner);
+    ROS_DEBUG("The winner is robot_%d", winner);
 
     /* Delete stored bids to be able to start another auction in the future */
     auction_bids.clear();  // TODO(minor) inefficient!!!!
@@ -1439,7 +1451,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     else
     {
         /* The robot lost its own auction */
-        ROS_ERROR("Robot lost its own auction");
+        ROS_INFO("Robot lost its own auction");
         auction_winner = false;
     }
 
@@ -1495,11 +1507,17 @@ void docking::start_new_auction()
     }
 
     ROS_INFO("Starting new auction");
-    started_own_auction = true;
+    
+    /* Keep track of robot bid */
+    auction_bid_t bid;
+    bid.robot_id = robot_id;
+    bid.bid = get_llh();
+    auction_bids.push_back(bid);
 
     /* The robot is starting an auction */
-    managing_auction = true;  // TODO(minor)
-    participating_to_auction++;
+    managing_auction = true;  // TODO(minor) reduntant w.r.t started_own_auction???
+    started_own_auction = true;
+    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
 
     /* Start auction timer to be notified of auction conclusion */
     timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
@@ -1516,11 +1534,6 @@ void docking::start_new_auction()
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
 
-    /* Keep track of robot bid */
-    auction_bid_t bid;
-    bid.robot_id = robot_id;
-    bid.bid = get_llh();
-    auction_bids.push_back(bid);
 }
 
 void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg)  // TODO(minor)
@@ -1861,7 +1874,7 @@ void docking::set_target_ds_vacant(bool vacant)
 
 void docking::compute_MST(std::vector<std::vector<int> > graph)  // TODO(minor) check all functions related to MST
 {
-    int V = graph.size();
+    int V = num_ds;
     int parent[V];   // Array to store constructed MST
     int key[V];      // Key values used to pick minimum weight edge in cut
     bool mstSet[V];  // To represent set of vertices not yet included in MST
@@ -2053,7 +2066,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
         {
             /* Store new DS in the vector of known DSs, and remove it from the vector
              * of undiscovered DSs */
-            ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no actual path for this DS is known...", (*it).id, (*it).x,
+            ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
                      (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
             discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
             undiscovered_ds.erase(it);

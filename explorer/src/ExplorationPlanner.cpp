@@ -3860,7 +3860,7 @@ bool ExplorationPlanner::negotiate_Frontier(double x, double y, int detected_by,
 
 bool ExplorationPlanner::reachable_target(double x, double y) {
     if(costmap_ros_ == NULL) {
-        ROS_ERROR("NULL!!!");
+        ROS_DEBUG("Costmap is not ready yet: cannot check reachability of the target");
         return false;
     }
     
@@ -3921,7 +3921,7 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
 
 double ExplorationPlanner::distance_from_robot(double x, double y) {
     if(costmap_ros_ == NULL) {
-        ROS_ERROR("NULL!!!");
+        ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between target and robot");
         return -1;   
     }
     return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough, since it is computed as resolution * number_of_grid_cells_between_the_two_points) distance in meters
@@ -3929,7 +3929,7 @@ double ExplorationPlanner::distance_from_robot(double x, double y) {
 
 double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) {
     if(costmap_ros_ == NULL) {
-        ROS_ERROR("NULL!!!");
+        ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between given points");
         return -1;   
     }
     return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
@@ -3937,7 +3937,7 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in meters!!!!
     if(costmap_ros_ == NULL) {
-        ROS_ERROR("NULL!!!");
+        ROS_DEBUG("Costmap is not ready yet: cannot get robot pose");
         return false;   
     }
     return costmap_global_ros_->getRobotPose(robotPose);
