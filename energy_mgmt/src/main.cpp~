@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
         // send broadcast message with positions of all (known) docking stations
         
-        doc.update_robot_position();
+        //doc.update_robot_position();
         
         //doc.update_robot_state();
         
