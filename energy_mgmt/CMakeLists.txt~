@@ -106,7 +106,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES battery docking
+ LIBRARIES battery
  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger
 #  DEPENDS system_lib
 )
@@ -126,7 +126,6 @@ include_directories(
 ## Declare a C++ library
 add_library(battery src/battery.cpp)
 add_library(battery_simulate src/battery_simulate.cpp)
-add_library(docking src/docking.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -134,11 +133,10 @@ add_library(docking src/docking.cpp)
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(battery energy_mgmt_gencpp)
 add_dependencies(battery_simulate energy_mgmt_gencpp)
-add_dependencies(docking map_merger_cpp)
 
 
 ## Declare a C++ executable
-add_executable(energy_mgmt src/main.cpp)
+add_executable(energy_mgmt src/docking.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above

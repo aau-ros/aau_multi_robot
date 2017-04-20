@@ -137,6 +137,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* General services */
     sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
+    //sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
     sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot");
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
@@ -243,7 +244,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
     sub_wait = nh.subscribe("explorer/im_ready", 10, &docking::wait_for_explorer_callback, this);
-
+    
 }
 
 void docking::wait_for_explorer() {
@@ -629,8 +630,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         {
             /* Get current robot position (once the service required to do that is ready)
              */  // TODO(minor) possibly reduntant...
-            //ros::service::waitForService("explorer/robot_pose");                           // TODO(minor)
+            ros::service::waitForService("explorer/robot_pose");                           // TODO(minor)
             explorer::RobotPosition srv_msg;
+            for(int i = 0; i < 10 && !sc_robot_pose; i++)
+                ROS_FATAL("NO MORE CONNECTION!");
             if (sc_robot_pose.call(srv_msg))
             {
                 robot->x = srv_msg.response.x;
@@ -2434,4 +2437,81 @@ float docking::conservative_maximum_distance_one_way() {
 void docking::full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg) {
     ROS_ERROR("Received!"); //TODO(minor) it seems that this message is not even sent... i think that it's because the instance of battery is created before the isntance of docking, and so when the message is published, there is still no subscriber to receive it... the best way should be to create a una tantum function for abttery, that is called after that both bat and doc objects are created...
     maximum_travelling_distance = msg.get()->remaining_distance;
+}
+
+#include <ros/ros.h>
+#include <ros/console.h>
+#include <battery.h>
+#include <battery_simulate.h>
+#include <docking.h>
+#include <boost/thread.hpp>
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "energy_mgmt");
+
+    // handle battery management for different robot platforms
+    string platform;
+    
+    /*
+    ros::get_environment_variable(platform, "ROBOT_PLATFORM");
+    if(platform.compare("turtlebot") == 0){
+        battery_turtle bat;
+    }
+    else if(platform.compare("pioneer3dx") == 0 || platform.compare("pioneer3at") == 0){
+        battery_pioneer bat;
+    }
+    else{
+        battery_simulate bat;
+    }
+    */
+    
+    battery_simulate bat;
+    //boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
+    
+    // coordinate docking of robots for recharging
+    docking doc;
+    doc.wait_for_explorer();
+    //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    
+    
+
+// Frequency of loop
+    double rate = 0.5; // Hz
+    ros::Rate loop_rate(rate);
+    while(ros::ok()){
+        // get updates from subscriptions
+        ros::spinOnce();
+        
+        //bat.spin();
+        bat.compute();
+        bat.publish();
+        
+        ros::spinOnce();
+        
+        doc.join_all_multicast_groups();
+        
+        doc.update_robot_position();
+        
+        doc.update_robot_state();
+        
+        doc.discover_docking_stations();
+        
+        doc.check_reachable_ds();
+        
+        doc.compute_optimal_ds();
+        
+        doc.send_robot();
+        
+        //doc.send_fake_msg();
+        
+
+        // sleep for 1/rate seconds
+        loop_rate.sleep();
+    }
+    
+    //thr_spin.interrupt();
+    //thr_spin.join();
+
+    return 0;
 }
