@@ -26,34 +26,31 @@ int main(int argc, char** argv)
     */
     
     battery_simulate bat;
-    
+    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
     docking doc;
+    doc.wait_for_explorer();
+    //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    
+    doc.join_all_multicast_groups();
 
-    // Frequency of loop
+// Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
-    
-    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
-    
-    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat));
-    
-
     while(ros::ok()){
         // get updates from subscriptions
         ros::spinOnce();
-
         
         doc.update_robot_position();
         
-        doc.update_robot_state();
+        //doc.update_robot_state();
         
-        doc.discover_docking_stations();
+        //doc.discover_docking_stations();
         
-        doc.check_reachable_ds();
+        //doc.check_reachable_ds();
         
-        doc.compute_optimal_ds();
+        //doc.compute_optimal_ds();
         
         doc.send_robot();
         
@@ -64,8 +61,8 @@ int main(int argc, char** argv)
         loop_rate.sleep();
     }
     
-    thr_spin.interrupt();
-    thr_spin.join();
+    //thr_spin.interrupt();
+    //thr_spin.join();
 
     return 0;
 }

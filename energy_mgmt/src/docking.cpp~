@@ -142,47 +142,46 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
     /* Subscribers */
-    sub_battery = nh.subscribe(my_prefix + "battery_state", 100, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(my_prefix + "robots", 100, &docking::cb_robots, this);
-    sub_jobs = nh.subscribe(my_prefix + "frontiers", 10000, &docking::cb_jobs, this);
-    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 100, &docking::cb_robot, this);
-    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 100, &docking::cb_docking_stations, this);
+    sub_battery = nh.subscribe(my_prefix + "battery_state", 10, &docking::cb_battery, this);
+    sub_robots = nh.subscribe(my_prefix + "robots", 10, &docking::cb_robots, this);
+    sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
+    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 10, &docking::cb_robot, this);
+    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 10, &docking::cb_docking_stations, this);
 
-    sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 100,
+    sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 10,
                                         &docking::cb_new_auction, this);
     sub_auction_reply =
-        nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 100, &docking::cb_auction_reply, this);
+        nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 10, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
-        nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 100, &docking::cb_auction_result, this);
+        nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 10, &docking::cb_auction_result, this);
 
-    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 100, &docking::adhoc_ds, this);
+    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 10, &docking::adhoc_ds, this);
 
-    sub_charging_completed = nh.subscribe("charging_completed", 100, &docking::cb_charging_completed, this);
+    sub_charging_completed = nh.subscribe("charging_completed", 10, &docking::cb_charging_completed, this);
 
-    sub_translate = nh.subscribe("translate", 100, &docking::cb_translate, this);
-    sub_all_points = nh.subscribe("all_positions", 100, &docking::points, this);
-    sub_check_vacancy = nh.subscribe("explorer/check_vacancy", 100, &docking::check_vacancy_callback, this);
+    sub_translate = nh.subscribe("translate", 10, &docking::cb_translate, this);
+    sub_all_points = nh.subscribe("all_positions", 10, &docking::points, this);
 
-    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 100, &docking::check_vacancy_callback, this);
+    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 10, &docking::check_vacancy_callback, this);
     
-    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 100, &docking::resend_ds_list_callback, this);
-    sub_full_battery_info = nh.subscribe("full_battery_info", 100, &docking::full_battery_info_callback, this);
+    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 10, &docking::resend_ds_list_callback, this);
+    sub_full_battery_info = nh.subscribe("full_battery_info", 10, &docking::full_battery_info_callback, this);
     
 
     /* Publishers */
-    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 100);
+    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 10);
     pub_new_target_ds =
-        nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 100);  // to tell explorer...
+        nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 10);  // to tell explorer...
     pub_adhoc_new_best_ds =
-        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 100);
-    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 100);
-    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 100);
-    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 100);
+        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
+    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 10);
+    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 10);
+    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 10);
 
-    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 100);
+    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 10);
 
-    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 100);
-    sub_next_ds = nh.subscribe("next_ds", 100, &docking::next_ds_callback, this);
+    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
+    sub_next_ds = nh.subscribe("next_ds", 10, &docking::next_ds_callback, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -200,6 +199,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     recompute_graph = false;
     recompute_llh = false;
     going_to_ds = false;
+    explorer_ready = false;
     my_counter = 0;
     llh = 0;
     local_auction_id = 0;
@@ -237,7 +237,27 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     }
     
     ROS_INFO("Instance of Docking class correctly created");
+    
+    pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
+    sub_wait = nh.subscribe("explorer/im_ready", 10, &docking::wait_for_explorer_callback, this);
 
+}
+
+void docking::wait_for_explorer() {
+    ROS_INFO("Waiting that explorer services are ready...");
+    std_msgs::Empty msg;
+    ros::Duration(10).sleep();
+    while(!explorer_ready) {
+        pub_wait.publish(msg);
+        ros::Duration(1).sleep();
+        ros::spinOnce();
+    }
+    ros::Duration(5).sleep();
+}
+
+void docking::wait_for_explorer_callback(const std_msgs::Empty &msg) {
+    ROS_ERROR("Explorer is ready");
+    explorer_ready = true;
 }
 
 //DONE+
@@ -606,7 +626,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         {
             /* Get current robot position (once the service required to do that is ready)
              */  // TODO(minor) possibly reduntant...
-            ros::service::waitForService("explorer/robot_pose");                           // TODO(minor)
+            //ros::service::waitForService("explorer/robot_pose");                           // TODO(minor)
             explorer::RobotPosition srv_msg;
             if (sc_robot_pose.call(srv_msg))
             {
@@ -697,7 +717,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             if (old_optimal_ds != NULL)
                 ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds->id, best_ds->id);
             else
-                ROS_INFO("Select optimal DS: ds%d", best_ds->id);
+                ROS_INFO("Change optimal DS: (none) -> ds%d", best_ds->id);
 
             /* Keep track of the new optimal DS in log file */
             ros::Duration time = ros::Time::now() - time_start;
@@ -1016,14 +1036,19 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     srv_msg.request.y1 = start_y;
     srv_msg.request.x2 = goal_x;
     srv_msg.request.y2 = goal_y;
-    ros::service::waitForService("explorer/distance");
+    
+    
+    //ros::service::waitForService("explorer/distance");
     for (int i = 0; i < 10; i++)
+    //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
+        //if (ros::service::exists("explorer/distance", true) && sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
         if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
             return srv_msg.response.distance;
         else
             ros::Duration(1).sleep();
     
-    /* If the service is not working at the moment, return invalid value */
+    
+    /* If the service is not working at the moment, return invalid value */ //TODO(minor) raise exception?
     ROS_ERROR("Unable to compute distance at the moment...");
     return -1;
 }
@@ -2042,8 +2067,11 @@ void docking::discover_docking_stations() //TODO(minor) comments
 {
     /* Get current robot position (once the service required to do that is ready)
      */  // TODO(minor) reduntant...
-    ros::service::waitForService("explorer/robot_pose");
+     
+    //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
+    //ros::service::waitForService("explorer/robot_pose");
     explorer::RobotPosition srv_msg;
+    //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
     if (sc_robot_pose.call(srv_msg))
     {
         robot->x = srv_msg.response.x;
@@ -2066,7 +2094,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
         {
             /* Store new DS in the vector of known DSs, and remove it from the vector
              * of undiscovered DSs */
-            ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no actual path for this DS is known...", (*it).id, (*it).x,
+            ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
                      (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
             discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
             undiscovered_ds.erase(it);
@@ -2202,7 +2230,7 @@ void docking::check_reachable_ds()
         explorer::DistanceFromRobot srv_msg;
         srv_msg.request.x = (*it).x;
         srv_msg.request.y = (*it).y;
-        ros::service::waitForService("explorer/reachable_target");
+        //ros::service::waitForService("explorer/reachable_target");
         if (sc_reachable_target.call(srv_msg))
             reachable = srv_msg.response.reachable;
         else
@@ -2323,7 +2351,7 @@ void docking::update_robot_position()
     ROS_DEBUG("Update robot position");
     
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
-    ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
+    //ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
     explorer::RobotPosition srv_msg;
     if (sc_robot_pose.call(srv_msg))
     {

@@ -70,9 +70,10 @@ class Explorer
 {
   public:
     // TODO(minor) move in better place
-    bool ready, moving_along_path;
+    bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
-    ros::Publisher pub_robot;
+    ros::Publisher pub_robot, pub_wait;
+    ros::Subscriber sub_wait;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
@@ -121,6 +122,7 @@ class Explorer
         moving_along_path = false;
         created = false;
         exploration = NULL;
+        explorer_ready = false;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -144,6 +146,9 @@ class Explorer
                                                     this);  // to know when a robot lost another robot auction
 
         pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);  // to publish robot state updates
+        
+        sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
+        pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
 
         ros::NodeHandle n;
         //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -476,6 +481,7 @@ class Explorer
                     
                 ss_distance =
                     nh.advertiseService("explorer/distance", &Explorer::distance, this);
+                    
                 created = true;
             }
             
@@ -484,16 +490,15 @@ class Explorer
             /*
              * Sleep to ensure that frontiers are exchanged
              */
-            ros::Duration(1).sleep();
-            
-            //F
-            ros::Duration(10).sleep();
+            ros::Duration(5).sleep();
             
             while(available_distance <= 0) {
                 ROS_ERROR("Waiting battery state...");
                 ros::spinOnce();
-                ros::Duration(5).sleep();
+                ros::Duration(3).sleep();
             }
+            
+            explorer_ready = true;
             
             //ROS_ERROR("START FRONTIER SELECTION");
 
@@ -2233,6 +2238,13 @@ class Explorer
 
         // return outcome of navigation
         return (completed_navigation);
+    }
+    
+    void wait_for_explorer_callback(const std_msgs::Empty &msg) {
+        if(explorer_ready) {
+            std_msgs::Empty msg;
+            pub_wait.publish(msg);
+        }
     }
 
     void visualize_goal_point(double x, double y)

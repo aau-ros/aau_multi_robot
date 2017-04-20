@@ -57,6 +57,7 @@ class docking
     void update_robot_state();
     void update_robot_position();
     void join_all_multicast_groups();
+    void wait_for_explorer();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -526,6 +527,12 @@ class docking
     
     void full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg);
     
+    bool explorer_ready;
+    
+    void wait_for_explorer_callback(const std_msgs::Empty &msg);
+    
+    ros::Publisher pub_wait;
+    ros::Subscriber sub_wait;
     
 
 };
