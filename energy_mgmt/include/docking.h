@@ -275,7 +275,8 @@ class docking
         double x;
         double y;
     };
-    vector<job_t> jobs;
+    //vector<job_t> jobs;
+    vector<adhoc_communication::ExpFrontierElement> jobs;
 
     /**
      * Likelihood values for going recharging. A linear combination of the values is used in the auctions.
@@ -533,6 +534,8 @@ class docking
     
     ros::Publisher pub_wait;
     ros::Subscriber sub_wait;
+    
+    std::string group_name;
     
 
 };

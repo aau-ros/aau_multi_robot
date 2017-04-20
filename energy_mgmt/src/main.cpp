@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     doc.wait_for_explorer();
     //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
-    doc.join_all_multicast_groups();
+    
 
 // Frequency of loop
     double rate = 0.5; // Hz
@@ -41,6 +41,8 @@ int main(int argc, char** argv)
     while(ros::ok()){
         // get updates from subscriptions
         ros::spinOnce();
+        
+        doc.join_all_multicast_groups();
         
         doc.update_robot_position();
         
