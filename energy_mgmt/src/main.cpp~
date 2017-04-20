@@ -44,7 +44,7 @@ int main(int argc, char** argv)
         
         doc.update_robot_position();
         
-        //doc.update_robot_state();
+        doc.update_robot_state();
         
         //doc.discover_docking_stations();
         

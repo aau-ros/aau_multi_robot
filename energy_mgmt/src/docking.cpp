@@ -2072,12 +2072,13 @@ void docking::discover_docking_stations() //TODO(minor) comments
     //ros::service::waitForService("explorer/robot_pose");
     explorer::RobotPosition srv_msg;
     //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
-    if (sc_robot_pose.call(srv_msg))
-    {
+    //if (sc_robot_pose.call(srv_msg))
+    //{
         robot->x = srv_msg.response.x;
         robot->y = srv_msg.response.y;
         ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
-    }
+    //}
+    /*
     else
     {
         ROS_ERROR("Call to service %s failed; not possible to compute optimal DS "
@@ -2085,6 +2086,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                   sc_robot_pose.getService().c_str());
         return;
     }
+    */
 
     /* Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS */
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
@@ -2254,8 +2256,12 @@ void docking::check_reachable_ds()
     if (new_ds_discovered || recompute_graph)
     {
         // construct ds graph //TODO(minor) construct graph only when a new DS is found
-        for (int i = 0; i < ds.size(); i++)
+        for (int i = 0; i < ds.size(); i++) {
+            //safety checks   
+            if( ds[i].id >= ds_graph.size() || ds[i].id >= ds_graph[ds[i].id].size() || ds[i].id < 0)
+                ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");
             for (int j = 0; j < ds.size(); j++)
+                       
                 if (i == j)
                     ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
                 else
@@ -2279,7 +2285,7 @@ void docking::check_reachable_ds()
                         ds_graph[ds[j].id][ds[i].id] = 0;
                     }
                 }
-
+        }
         recompute_graph = false;
 
         // construct MST starting from ds graph

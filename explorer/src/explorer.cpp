@@ -490,13 +490,15 @@ class Explorer
             /*
              * Sleep to ensure that frontiers are exchanged
              */
-            ros::Duration(5).sleep();
+            ros::Duration(2).sleep();
             
+            /*
             while(available_distance <= 0) {
                 ROS_ERROR("Waiting battery state...");
                 ros::spinOnce();
                 ros::Duration(3).sleep();
             }
+            */
             
             explorer_ready = true;
             
@@ -505,6 +507,9 @@ class Explorer
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
+                if(available_distance <= 0)
+                    continue;
+                    
                 /**********************
                  * FRONTIER SELECTION *
                  **********************/

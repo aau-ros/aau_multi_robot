@@ -3944,8 +3944,9 @@ bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F
 }
 
 bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!!!!!!!
+    /*
     if(costmap_ros_ == NULL) {
-        ROS_DEBUG("Costmap is not ready yet: cannot get robot pose");
+        ROS_ERROR("NULL!!!");
         return false;   
     }
     tf::Stamped<tf::Pose> robot_pose;
@@ -3954,6 +3955,7 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
         *y = robot_pose.getOrigin().getY() * costmap_ros_->getCostmap()->getResolution();
         return true;
     }
+    */
     return false;
 }
 

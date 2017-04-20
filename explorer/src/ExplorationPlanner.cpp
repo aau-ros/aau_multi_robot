@@ -3943,7 +3943,9 @@ bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F
     return costmap_global_ros_->getRobotPose(robotPose);
 }
 
+/*
 bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!!!!!!!
+    
     if(costmap_ros_ == NULL) {
         ROS_ERROR("NULL!!!");
         return false;   
@@ -3954,8 +3956,10 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
         *y = robot_pose.getOrigin().getY() * costmap_ros_->getCostmap()->getResolution();
         return true;
     }
+    
     return false;
 }
+*/
 
 /**
  * Check a frontier (or a cluster) if it is within reach of the robot considering its available energy

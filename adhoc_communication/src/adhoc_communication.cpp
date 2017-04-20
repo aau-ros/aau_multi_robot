@@ -875,8 +875,8 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
         //F
         /*BROADCAST*/
         ROS_ERROR("Broadcastfor topic %s", topic.c_str());
-        std::string dest = "mc_robot_0";
-        sendPacket(dest, payload, data_type_, topic);
+        //std::string dest = "mc_robot_0";
+        //sendPacket(dest, payload, data_type_, topic);
         
         
         memcpy(route.next_hop, bcast_mac, 6);
