@@ -245,6 +245,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
     sub_wait = nh.subscribe("explorer/im_ready", 10, &docking::wait_for_explorer_callback, this);
     
+    DsGraph mygraph;
+    mygraph.addEdge(1,2,10);
+    //mygraph.print();
+    
 }
 
 void docking::wait_for_explorer() {
