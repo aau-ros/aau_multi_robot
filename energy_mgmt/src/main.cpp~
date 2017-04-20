@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     */
     
     battery_simulate bat;
-    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
+    //boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
     docking doc;
@@ -42,6 +42,12 @@ int main(int argc, char** argv)
         // get updates from subscriptions
         ros::spinOnce();
         
+        //bat.spin();
+        bat.compute();
+        bet.publish();
+        
+        ros::spinOnce();
+        
         doc.join_all_multicast_groups();
         
         doc.update_robot_position();
@@ -52,7 +58,7 @@ int main(int argc, char** argv)
         
         doc.check_reachable_ds();
         
-        //doc.compute_optimal_ds();
+        doc.compute_optimal_ds();
         
         doc.send_robot();
         
