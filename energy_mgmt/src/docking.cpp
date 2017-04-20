@@ -2084,9 +2084,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
     //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
     //if (sc_robot_pose.call(srv_msg))
     //{
-        robot->x = srv_msg.response.x;
-        robot->y = srv_msg.response.y;
-        ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
+    //    robot->x = srv_msg.response.x;
+     //   robot->y = srv_msg.response.y;
+     //   ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
     //}
     /*
     else

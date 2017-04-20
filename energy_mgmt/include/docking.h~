@@ -245,7 +245,7 @@ class docking
         int selected_ds;
     };
     vector<robot_t> robots;
-    robot_t *robot;
+    robot_t robot;
 
     /**
      * A vector of all docking stations with coordinates and vacancy.
@@ -534,6 +534,8 @@ class docking
     
     ros::Publisher pub_wait;
     ros::Subscriber sub_wait;
+    
+    std::string group_name;
     
 
 };

@@ -733,7 +733,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         }
         else
-            ROS_DEBUG("Optimal DS unchanged");
+            ROS_INFO("Optimal DS unchanged");
     }
     else
         ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not "
@@ -1902,7 +1902,7 @@ void docking::set_target_ds_vacant(bool vacant)
 
     target_ds->vacant = vacant;
 
-    ROS_INFO("Updated own information about ds%d state", target_ds->id, target_ds->vacant);
+    ROS_INFO("Updated own information about ds%d state", target_ds->id);
 
     update_l1();
 }
@@ -2084,9 +2084,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
     //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
     //if (sc_robot_pose.call(srv_msg))
     //{
-        robot->x = srv_msg.response.x;
-        robot->y = srv_msg.response.y;
-        ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
+    //    robot->x = srv_msg.response.x;
+     //   robot->y = srv_msg.response.y;
+     //   ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
     //}
     /*
     else
