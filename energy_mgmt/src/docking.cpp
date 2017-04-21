@@ -96,14 +96,36 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     }
 
     /* Initialize robot struct */
-    robot_t temp_robot;
-    temp_robot.id = robot_id;
-    temp_robot.state = active;
-    abs_to_rel(origin_absolute_x, origin_absolute_y, &(temp_robot.x), &(temp_robot.y));
-    robots.push_back(temp_robot);
-    robot = &robots[0];
-    //ROS_ERROR("%f, %f", robot->x, robot->y);
+    robot = NULL;
+    robot = new robot_t;
+    if(robot == NULL)
+        ROS_FATAL("Allocation failure!");
+    /*
+    if(robot == NULL)
+        ROS_ERROR("NULL!!!!!");
+    else {
+        robot->id = 10;
+        ROS_ERROR("%d", robot->id);
+    }
+    */
+    ros::Duration(10).sleep();
+    robot->id = robot_id;
+    robot->state = active;
+    abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
+    robots.push_back(*robot);
     
+    best_ds = NULL;
+    target_ds == NULL;
+    best_ds = new ds_t;
+        if(best_ds == NULL)
+        ROS_FATAL("Allocation failure!");
+    best_ds->id = -1;
+    target_ds = new ds_t;
+        if(target_ds == NULL)
+        ROS_FATAL("Allocation failure!");
+    target_ds->id = -1;
+    
+    //ROS_ERROR("%f, %f", robot->x, robot->y);
     
     /*
     temp_robot.x = 10;
@@ -127,7 +149,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     // TODO(minor) save names in variables
     // TODO(minor) queues length?
 
-    /* SERVICE CLIENTS */
+
     /* Adhoc communication services */
     sc_send_auction =
         nh.serviceClient<adhoc_communication::SendEmAuction>(my_prefix + "adhoc_communication/send_em_auction");
@@ -135,13 +157,15 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
         my_prefix + "adhoc_communication/send_em_docking_station");
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(my_prefix + "adhoc_communication/send_em_robot");
 
+
     /* General services */
-    sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
-    //sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
-    sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot");
-    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
-    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
+    //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
+    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);
+    //sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
+    //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
+    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 10, &docking::cb_battery, this);
@@ -169,7 +193,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 10, &docking::resend_ds_list_callback, this);
     sub_full_battery_info = nh.subscribe("full_battery_info", 10, &docking::full_battery_info_callback, this);
     
-
+    
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 10);
     pub_new_target_ds =
@@ -211,8 +235,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     local_auction_id = 0;
     participating_to_auction = 0;
     maximum_travelling_distance = 0;
-    best_ds = NULL;
-    target_ds = NULL;
     time_start = ros::Time::now();
 
     /* Function calls */
@@ -254,16 +276,62 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 }
 
 void docking::wait_for_explorer() {
-    ROS_INFO("Waiting that explorer services are ready...");
     std_msgs::Empty msg;
-    ros::Duration(10).sleep();
+    ros::Duration(5).sleep();
     while(!explorer_ready) {
+        ROS_ERROR("Waiting for the explorer services to be ready...");
         pub_wait.publish(msg);
-        ros::Duration(1).sleep();
+        ros::Duration(5).sleep();
         ros::spinOnce();
     }
     ros::Duration(5).sleep();
+    
+    ros::service::waitForService("explorer/distance");
+    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    while(!sc_distance) {
+        ROS_FATAL("NO CONNECTION!");
+        ros::Duration(3).sleep();
+        sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    }
+    ROS_ERROR("Established persistent connection to service 'explorer/distance'");
+    //ros::Duration(0.1).sleep();
+    
+    ros::service::waitForService("explorer/reachable_target");
+    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    for(int i = 0; i < 10 && !sc_reachable_target; i++) {
+        ROS_FATAL("NO CONNECTION!");
+        ros::Duration(3).sleep();
+        sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    }
+    ROS_ERROR("Established persistent connection to service 'explorer/reachable_target'");
+    //ros::Duration(0.1).sleep();
+    
+    ros::service::waitForService("explorer/robot_pose");
+    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+    for(int i = 0; i < 10 && !sc_robot_pose; i++) {
+        ROS_FATAL("NO CONNECTION!");
+        ros::Duration(3).sleep();
+        sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+    }
+    ROS_ERROR("Established persistent connection to service 'explorer/robot_pose'");    
+    //ros::Duration(0.1).sleep();
+    
+    ros::Duration(5).sleep();
 }
+
+
+template <class T>
+void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name) {
+/*
+    ros::service::waitForService(service_name);
+    for(int i = 0; i < 10 && !(*sc); i++) {
+        ROS_FATAL("NO MORE CONNECTION!");
+        ros::Duration(1).sleep();
+        *sc = nh.serviceClient<T>(service_name, true);
+    } 
+    */
+}
+
 
 void docking::wait_for_explorer_callback(const std_msgs::Empty &msg) {
     ROS_INFO("Explorer is ready");
@@ -600,7 +668,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         else if (ds_selection_policy == 3)
         {
             /* If no optimal DS has been selected yet, use "closest" policy, otherwise use "current" policy */ //TODO(minor) assumption
-            if (best_ds == NULL) {
+            if (!optimal_ds_is_set()) {
                 ROS_DEBUG("No optimal docking station selected yet: fall back to 'closest' policy");
                 compute_closest_ds();
             }
@@ -631,27 +699,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         /* "Flocking" policy */
         else if (ds_selection_policy == 4) //TODO(minor) comments and possibly use functions...
-        {
-            /* Get current robot position (once the service required to do that is ready)
-             */  // TODO(minor) possibly reduntant...
-            ros::service::waitForService("explorer/robot_pose");                           // TODO(minor)
-            explorer::RobotPosition srv_msg;
-            for(int i = 0; i < 10 && !sc_robot_pose; i++)
-                ROS_FATAL("NO MORE CONNECTION!");
-            if (sc_robot_pose.call(srv_msg))
-            {
-                robot->x = srv_msg.response.x;
-                robot->y = srv_msg.response.y;
-                ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
-            }
-            else
-            {
-                ROS_ERROR("Call to service %s failed; not possible to compute optimal DS "
-                          "for the moment",
-                          sc_robot_pose.getService().c_str());
-                return;
-            }
-            
+        {   
             /* Compute DS with minimal cost */
             double min_cost = numeric_limits<int>::max();
             for (int d = 0; d < ds.size(); d++)
@@ -659,8 +707,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 /* n_r */
                 int count = 0;
                 for (int i = 0; i < robots.size(); i++)
-                    if (best_ds != NULL &&
-                        robots.at(i).selected_ds == best_ds->id)  // TODO(minor) best_ds or target_ds??? best_ds != NULL?
+                    if (optimal_ds_is_set() &&
+                        robots.at(i).selected_ds == best_ds->id)  // TODO(minor) best_ds or target_ds??? optimal_ds_is_set()?
                         count++;
                 double n_r = (double)count / (double)num_robots;
 
@@ -720,7 +768,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         }
 
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
-        if (best_ds == NULL)
+        if (!optimal_ds_is_set())
             ROS_DEBUG("No optimal DS has been selected yet");
         else if (old_optimal_ds == NULL || old_optimal_ds->id != best_ds->id)
         {
@@ -736,7 +784,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             fs_csv.close();
 
             /* Update parameter l4 */
-            update_l4();
+            //update_l4();
 
         }
         else
@@ -776,6 +824,14 @@ double docking::get_llh()
         llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
     
     return llh;
+}
+
+void docking::update_llh() {
+
+        update_l1();
+        update_l2();
+        update_l3();
+        update_l4();
 }
 
 void docking::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
@@ -927,7 +983,7 @@ void docking::update_l4() //TODO(minor) comments
 {
     ROS_DEBUG("Update l4");
     
-    if (best_ds == NULL || ds.size() == 0 || jobs.size() == 0)
+    if (!optimal_ds_is_set() || ds.size() == 0 || jobs.size() == 0)
     {
         ROS_DEBUG("No optimal DS and/or frontiers");
         l4 = 0;
@@ -936,12 +992,12 @@ void docking::update_l4() //TODO(minor) comments
     
     // get distance to docking station
     double dist_ds = -1;
-    for (int i = 0; i < ds.size(); ++i)
-    {
-            
+    for (int i = 0; i < ds.size(); i++)
+    {       
         if (ds[i].id == best_ds->id)
         {
             dist_ds = distance_from_robot(ds[i].x, ds[i].y);
+            ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
             if (dist_ds < 0)
             {
                 ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
@@ -955,7 +1011,7 @@ void docking::update_l4() //TODO(minor) comments
 
     // get distance to closest job
     double dist_job = numeric_limits<int>::max();
-    for (int i = 0; i < jobs.size(); ++i)
+    for (int i = 0; i < jobs.size(); i++)
     {
         double dist_job_temp = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate,
                                                 true);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
@@ -990,6 +1046,8 @@ void docking::update_l4() //TODO(minor) comments
 
     recompute_llh = false;
 }
+
+
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction,
                                      string topic)  // TODO(minor) useless?
@@ -1047,11 +1105,13 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     srv_msg.request.x2 = goal_x;
     srv_msg.request.y2 = goal_y;
     
-    
-    ros::service::waitForService("explorer/distance");
+    //ros::service::waitForService("explorer/distance");   
+    for(int i = 0; i < 10 && !sc_distance; i++) {
+        ROS_FATAL("NO MORE CONNECTION!");
+        ros::Duration(1).sleep();
+        sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    }
     for (int i = 0; i < 10; i++)
-    //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
-        //if (ros::service::exists("explorer/distance", true) && sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
         if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
             return srv_msg.response.distance;
         else
@@ -1075,7 +1135,7 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_distance = msg.get()->remaining_distance;
 
     /* Update parameter l2 of charging likelihood function */
-    update_l2();
+    //update_l2();
     
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
@@ -1241,7 +1301,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
 
     /* Update parameter l1 of charging likelihood function */
-    update_l1();
+    //update_l1();
 }
 
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
@@ -1267,8 +1327,8 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     jobs = msg.get()->frontier_element;
     
     /* Update parameters l3 and l4 of charging likelihood function */
-    update_l3();
-    update_l4();
+    //update_l3();
+    //update_l4();
 }
 
 
@@ -1327,7 +1387,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     }
 
     /* Update parameter l1 of charging likelihood function */
-    update_l1();
+    //update_l1();
 }
 
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -1370,7 +1430,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     /* Check if the robot has some interested in participating to this auction,
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
-    if (best_ds == NULL || msg.get()->docking_station != best_ds->id)
+    if (!optimal_ds_is_set() || msg.get()->docking_station != best_ds->id)
     {
         /* Robot received a bid of an auction whose auctioned docking station is not
          * the one the robot is interested in
@@ -1553,7 +1613,7 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
 
 void docking::start_new_auction()
 {
-    if (best_ds == NULL)
+    if (!optimal_ds_is_set())
     {
         ROS_FATAL("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
@@ -1610,7 +1670,7 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    if (best_ds == NULL)
+    if (!optimal_ds_is_set())
     {
         ROS_ERROR("The robot does not know about any existing DS!");  // TODO(minor) it
                                                                       // means that
@@ -1697,7 +1757,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
     /* If the request for vacancy check is not about the target DS of the robot,
      * for sure the robot is not occupying it
      */
-    if (target_ds != NULL && msg.get()->id == target_ds->id)
+    if (target_ds_is_set() && msg.get()->id == target_ds->id)
 
         /* If the robot is going to or already charging, or if it is going to check
          * already checking for vacancy, it is
@@ -1806,7 +1866,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 robot_state != checking_vacancy)
             {
                 //safety check
-                if(best_ds == NULL)
+                if(!optimal_ds_is_set())
                     ROS_FATAL("THIS SHOULD NOT HAPPEN!");
                     
                 /* Notify explorer node about the new target DS.
@@ -1927,7 +1987,7 @@ void docking::set_target_ds_vacant(bool vacant)
 
     ROS_INFO("Updated own information about ds%d state", target_ds->id);
 
-    update_l1();
+    //update_l1();
 }
 
 void docking::compute_MST(std::vector<std::vector<int> > graph)  // TODO(minor) check all functions related to MST
@@ -2098,29 +2158,6 @@ void docking::compute_closest_ds()
 //DONE+
 void docking::discover_docking_stations() //TODO(minor) comments
 {
-    /* Get current robot position (once the service required to do that is ready)
-     */  // TODO(minor) reduntant...
-     
-    //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
-    ros::service::waitForService("explorer/robot_pose");
-    explorer::RobotPosition srv_msg;
-    //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
-    //if (sc_robot_pose.call(srv_msg))
-    //{
-    //    robot->x = srv_msg.response.x;
-     //   robot->y = srv_msg.response.y;
-     //   ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
-    //}
-    /*
-    else
-    {
-        ROS_ERROR("Call to service %s failed; not possible to compute optimal DS "
-                  "for the moment",
-                  sc_robot_pose.getService().c_str());
-        return;
-    }
-    */
-
     /* Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS */
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
@@ -2168,16 +2205,7 @@ void docking::join_all_multicast_groups() { //TODO(minor) maybe it's enough to j
 }
 
 void docking::send_robot()
-{
-        adhoc_communication::SendEmDockingStation srv_msg;
-        srv_msg.request.topic = "adhoc_communication/resend_ds_list";
-        srv_msg.request.dst_robot = group_name;
-        srv_msg.request.docking_station.id = my_counter++;
-        //sc_send_docking_station.call(srv_msg);
-
-    //ROS_ERROR("%d", robots[1].id);
-    //robots[1].id = 200;
-    
+{    
     if (robot_id == 0 && DEBUG)
     {
         // ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
@@ -2192,7 +2220,8 @@ void docking::send_robot()
     robot_msg.request.robot.x = robot->x;
     robot_msg.request.robot.y = robot->y;
     robot_msg.request.robot.state = robot->state;
-    if (best_ds != NULL)
+    robot_msg.request.robot.state = active;
+    if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = best_ds->id;
     else
         robot_msg.request.robot.selected_ds = -1;
@@ -2265,12 +2294,18 @@ void docking::check_reachable_ds()
         explorer::DistanceFromRobot srv_msg;
         srv_msg.request.x = (*it).x;
         srv_msg.request.y = (*it).y;
-        ros::service::waitForService("explorer/reachable_target");
+        
+        //ros::service::waitForService("explorer/reachable_target");
+        for(int i = 0; i < 10 && !sc_reachable_target; i++) {
+            ROS_FATAL("NO MORE CONNECTION!");
+            ros::Duration(1).sleep();
+            sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+        }
         if (sc_reachable_target.call(srv_msg))
             reachable = srv_msg.response.reachable;
         else
         {
-            ROS_ERROR("Unable at the moment...");
+            ROS_ERROR("Unable to check if ds%d is reachable, retrying later...", (*it).id);
             return;
         }
 
@@ -2392,6 +2427,27 @@ void docking::spin()
 void docking::update_robot_position()
 {   
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
+    //ros::service::waitForService("explorer/robot_pose");
+    explorer::RobotPosition srv_msg;
+    for(int i = 0; i < 10 && !sc_robot_pose; i++) {
+        ROS_FATAL("NO MORE CONNECTION!");
+        ros::Duration(1).sleep();
+        sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+    }
+    if (sc_robot_pose.call(srv_msg))
+    {
+        robot->x = srv_msg.response.x;
+        robot->y = srv_msg.response.y;
+        ROS_DEBUG("Robot position: (%f, %f)", robot->x, robot->y);
+    }
+    else
+    {
+        ROS_ERROR("Call to service %s failed; not possible to compute optimal DS "
+                  "for the moment",
+                  sc_robot_pose.getService().c_str());
+        return;
+    }
+    /*
     ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
     explorer::RobotPosition srv_msg;
     if (sc_robot_pose.call(srv_msg))
@@ -2403,6 +2459,7 @@ void docking::update_robot_position()
     else
         ROS_ERROR("Call to service %s failed; not possible to update robot position for the moment",
                   sc_robot_pose.getService().c_str());
+    */
 }
 
 void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) { //TODO(minor) do better...
@@ -2457,6 +2514,18 @@ float docking::conservative_maximum_distance_one_way() {
 void docking::full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg) {
     ROS_ERROR("Received!"); //TODO(minor) it seems that this message is not even sent... i think that it's because the instance of battery is created before the isntance of docking, and so when the message is published, there is still no subscriber to receive it... the best way should be to create a una tantum function for abttery, that is called after that both bat and doc objects are created...
     maximum_travelling_distance = msg.get()->remaining_distance;
+}
+
+bool docking::optimal_ds_is_set() {
+    if(best_ds->id == -1) //TODO(minor) this check is very bad....
+        return false;
+    return true;
+}
+
+bool docking::target_ds_is_set() {
+    if(target_ds->id == -1) //TODO(minor) this check is very bad....
+        return false;
+    return true;
 }
 
 #include <ros/ros.h>

@@ -540,7 +540,12 @@ class docking
     
     std::string group_name;
     
+    void update_llh();
+    bool optimal_ds_is_set(); 
+    bool target_ds_is_set();
 
 };
+
+    void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
 
 #endif /* DOCKING_H */

@@ -292,7 +292,7 @@ class docking
     double w1, w2, w3, w4;
 
     // F
-    ros::Publisher pub_ds, pub_new_target_ds;
+    ros::Publisher pub_ds, pub_new_target_ds, pub_finish;
     bool test;
     
     /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
@@ -540,7 +540,12 @@ class docking
     
     std::string group_name;
     
+    void update_llh();
+    bool optimal_ds_is_set() 
+    bool target_ds_is_set() 
 
 };
+
+    void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
 
 #endif /* DOCKING_H */

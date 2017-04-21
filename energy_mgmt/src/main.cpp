@@ -62,6 +62,8 @@ int main(int argc, char** argv)
         
         doc.send_robot();
         
+        doc.update_llh();
+        
         //doc.send_fake_msg();
         
 
