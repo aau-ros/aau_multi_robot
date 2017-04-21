@@ -888,7 +888,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
     if (!send_successfully)
     {
-        ROS_ERROR("No route found to [%s] though I've tried hard! Dropping packet", hostname_destination.c_str());
+        ROS_DEBUG("No route found to [%s] though I've tried hard! Dropping packet", hostname_destination.c_str());
         return false;
     }
 

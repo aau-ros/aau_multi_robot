@@ -826,7 +826,7 @@ bool isReachable(unsigned char mac[6])
                     return false;
             }
         }
-        ROS_FATAL("Cannot determine position of node '%s' for incoming message. Do not have a position subscriber for that robot.", other_robot.robot_name_.c_str());
+        ROS_INFO("Cannot determine position of node '%s' for incoming message. Do not have a position subscriber for that robot.", other_robot.robot_name_.c_str());
     }
     else if (sim_robot_macs.compare("") != 0)
     {

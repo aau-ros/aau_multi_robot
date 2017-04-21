@@ -1478,7 +1478,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    ROS_ERROR("Received bid for auction %d", auction_id);
+    ROS_INFO("Received bid for auction %d", auction_id);
 
     if (auction_id != msg.get()->auction)
     {
@@ -1595,7 +1595,7 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
                                  // because the following if is true, then win
                                  // another robot auction and stop the time, then
                                  // lost another and not be reset in queue... //TODO(minor) not very clean...
-    ROS_ERROR("Periodic re-auctioning");
+    ROS_INFO("Periodic re-auctioning");
     if (participating_to_auction == 0)  // Notice that it is still possible that
                                         // two robots start an auction at the same
                                         // time...
@@ -1990,14 +1990,34 @@ void docking::set_target_ds_vacant(bool vacant)
 
 void docking::compute_MST(std::vector<std::vector<int> > graph)  // TODO(minor) check all functions related to MST
 {
-    int V = num_ds;
+    int V = num_ds+1;
+    int graph_2[V][V];
     int parent[V];   // Array to store constructed MST
     int key[V];      // Key values used to pick minimum weight edge in cut
     bool mstSet[V];  // To represent set of vertices not yet included in MST
-
+    
     // Initialize all keys as INFINITE
+    for (int i = 0; i < V; i++) {
+        key[i] = INT_MAX;
+        mstSet[i] = false;
+    }
+    for(int i=0; i<V; i++)
+        for(int j=0; j<V; j++)
+            graph_2[i][j] = 0;
+    for(int i=0; i<V-1; i++)
+        for(int j=0; j<V-1; j++)
+            graph_2[i][j] = graph[i][j];
+            
+    graph_2[1][2] = 100;
+    graph_2[2][1] = 100;
+    graph_2[2][4] = 20;
+    graph_2[4][2] = 20;
+    
+    
+    
     for (int i = 0; i < V; i++)
-        key[i] = INT_MAX, mstSet[i] = false;
+        for (int j = 0; j < V; j++)
+            ROS_ERROR("(%d, %d): %d", i, j, graph_2[i][j]);
 
     // Always include first 1st vertex in MST.
     key[0] = 0;      // Make key 0 so that this vertex is picked as first vertex
@@ -2006,9 +2026,11 @@ void docking::compute_MST(std::vector<std::vector<int> > graph)  // TODO(minor) 
     // The MST will have V vertices
     for (int count = 0; count < V - 1; count++)
     {
+
         // Pick the minimum key vertex from the set of vertices
         // not yet included in MST
         int u = minKey(key, mstSet, V);
+        ROS_ERROR("%d", u);
 
         // Add the picked vertex to the MST Set
         mstSet[u] = true;
@@ -2021,29 +2043,33 @@ void docking::compute_MST(std::vector<std::vector<int> > graph)  // TODO(minor) 
             // graph[u][v] is non zero only for adjacent vertices of m
             // mstSet[v] is false for vertices not yet included in MST
             // Update the key only if graph[u][v] is smaller than key[v]
-            if (graph[u][v] && mstSet[v] == false && graph[u][v] < key[v])
-                parent[v] = u, key[v] = graph[u][v];
+            if (graph_2[u][v] > 0 && mstSet[v] == false && graph_2[u][v] < key[v]) {
+                parent[v] = u;
+                key[v] = graph_2[u][v];
+            }
     }
 
     // print the constructed MST
     // printMST(parent, V, graph);
-
+    int ds_mst_2[V][V];
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            ds_mst[i][j] = 0;
+            ds_mst_2[i][j] = 0;
 
     // TODO(minor) does not work if a DS is not connected to any other DS
     for (int i = 1; i < V; i++)
     {
-        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
-        ds_mst[parent[i]][i] = 1;
+        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size() || parent[i] < 0)
+            ROS_FATAL("SIZE!!!");
+        ds_mst_2[i][parent[i]] = 1;  // parent[i] is the node closest to node i
+        ds_mst_2[parent[i]][i] = 1;
     }
 
-    /*
+    
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
-     */
+            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst_2[i][j]);
+     
 
     /*
     int k = 0;              // index of the closest recheable DS
@@ -2068,10 +2094,21 @@ int docking::minKey(int key[], bool mstSet[], int V)
 // the set of vertices not yet included in MST
     // Initialize min value
     int min = INT_MAX, min_index;
-
-    for (int v = 0; v < V; v++)
-        if (mstSet[v] == false && key[v] < min)
-            min = key[v], min_index = v;
+/*
+    for(int u=0; u < V; u++)
+        if(mstSet[u] == false) {
+            min_index = u;
+            break;
+        }
+        */
+    for (int v = 0; v < V; v++) {
+        ROS_ERROR("%d", mstSet[v]);        
+        ROS_ERROR("%d", key[v]);
+        if (mstSet[v] == false && key[v] < min) {
+            min = key[v];
+            min_index = v;
+        }
+    }
 
     return min_index;
 }
@@ -2323,13 +2360,10 @@ void docking::check_reachable_ds()
     {
         // construct ds graph //TODO(minor) construct graph only when a new DS is found
         for (int i = 0; i < ds.size(); i++) {
-            //safety checks   
-            
-            for (int j = 0; j < ds.size(); j++)
-             ;
-             //if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
-             //   ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");        
-             /*        
+            for (int j = 0; j < ds.size(); j++) {
+                //safety checks   
+                if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
+                    ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
                 if (i == j)
                     ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
                 else
@@ -2341,8 +2375,10 @@ void docking::check_reachable_ds()
                         recompute_graph = true;
                         return;
                     }
-                    if (dist < conservative_maximum_distance_one_way())
-                                                           //TODO(IMPORTANT) NO!!!! maximum travelling distance!!!!
+                    ROS_ERROR("%f", dist);
+                    ROS_ERROR("%f", conservative_maximum_distance_one_way());
+                    //if (dist < conservative_maximum_distance_one_way())
+                    if (dist < 50)
                     {
                         ds_graph[ds[i].id][ds[j].id] = dist;
                         ds_graph[ds[j].id][ds[i].id] = dist;
@@ -2353,12 +2389,12 @@ void docking::check_reachable_ds()
                         ds_graph[ds[j].id][ds[i].id] = 0;
                     }
                 }
-             */
+            }
         }
         recompute_graph = false;
 
         // construct MST starting from ds graph
-        //compute_MST(ds_graph);
+        compute_MST(ds_graph);
     }
     
 }
@@ -2496,6 +2532,7 @@ float docking::conservative_remaining_distance_with_return() {
 
 //DONE++
 float docking::conservative_maximum_distance_with_return() {
+    ROS_ERROR("%f", maximum_travelling_distance);
     return (maximum_travelling_distance / (double)2 ) * safety_coeff;
 }
 
@@ -2506,6 +2543,7 @@ float docking::conservative_remaining_distance_one_way() {
 
 //DONE++
 float docking::conservative_maximum_distance_one_way() {
+    ROS_ERROR("%f", maximum_travelling_distance);
     return maximum_travelling_distance * safety_coeff;
 }
 

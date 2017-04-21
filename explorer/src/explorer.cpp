@@ -1275,7 +1275,7 @@ class Explorer
             if (robot_state == checking_vacancy)
             {
                 /* Robot reached frontier */
-                ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
+                //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
 
                 occupied_ds = false;
 
@@ -1297,7 +1297,7 @@ class Explorer
                 }
                 else
                 {
-                    ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
+                    //ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
                     update_robot_state_2(going_charging);
                 }
             }
@@ -1915,7 +1915,7 @@ class Explorer
         {
             map_merger::LogMaps log;
             log.request.log = 3;  /// request local and global map
-            ROS_ERROR("Logging");
+            ROS_INFO("Logging");
             if (!mm_log_client.call(log))
                 ROS_ERROR("Could not call map_merger service to store log.");
         }
@@ -1997,7 +1997,7 @@ class Explorer
 
         map_merger::LogMaps log;
         log.request.log = 3;  /// request local and global map
-        ROS_ERROR("Logging");
+        ROS_INFO("Logging");
         if (!mm_log_client.call(log))
             ROS_ERROR("Could not call map_merger service to store log.");
 
@@ -2355,7 +2355,7 @@ class Explorer
         /* If the robot is moving toward a DS, check if it is already close to the DS: if it is, do not move it */
         if (remaining_distance < queue_distance && robot_state == going_in_queue)
         {
-            ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
             return true;
         }
         else if (remaining_distance < queue_distance &&
@@ -2364,8 +2364,8 @@ class Explorer
         {
             update_robot_state_2(checking_vacancy);  // TODO(minor) move this in explore()
 
-            ROS_ERROR("\n\t\e[1;34mSTOP!! let's check if "
-                      "the Ds is free...\e[0m");
+            //ROS_ERROR("\n\t\e[1;34mSTOP!! let's check if "
+            //          "the Ds is free...\e[0m");
 
             return true;
         }
@@ -2433,8 +2433,8 @@ class Explorer
                 ac.cancelGoal();
                 update_robot_state_2(checking_vacancy);  // TODO(minor) move to epxlore()
 
-                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if "
-                          "the Ds is free...\e[0m");
+                //ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's check if "
+                //          "the Ds is free...\e[0m");
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 return true;
@@ -2442,7 +2442,7 @@ class Explorer
             else if (remaining_distance < queue_distance && robot_state == going_in_queue)
             {
                 ac.cancelGoal();
-                ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
+                //ROS_ERROR("\n\t\e[1;34m!!!!!!!!!!!!!!!!!!!!!!!\nSTOP!! let's wait...\e[0m");
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 return true;
@@ -2640,13 +2640,13 @@ class Explorer
 
     void won_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m won_callback \e[0m");
+        //ROS_ERROR("\n\t\e[1;34m won_callback \e[0m");
         robot_state_next = going_charging_next;
     }
 
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m lost_other_robot_callback \e[0m");
+        //ROS_ERROR("\n\t\e[1;34m lost_other_robot_callback \e[0m");
         if (robot_state_next != fully_charged_next)
             robot_state_next = exploring_next;
     }
