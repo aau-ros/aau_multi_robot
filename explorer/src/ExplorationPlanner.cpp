@@ -3923,6 +3923,37 @@ bool ExplorationPlanner::existFrontiers() {
     return frontiers.size() > 0 ? true : false;
 }
 
+bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
+    // distance to next frontier
+    for (int i = 0; i < frontiers.size(); i++)
+    {
+        if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
+        {
+            double distance;
+            double total_distance;    
+            total_distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+            if(total_distance < 0){
+                ROS_ERROR("Failed to compute distance!");
+                continue;
+            }
+            // distance from frontier to home base
+            distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, robot_home_x, robot_home_y);
+            if(distance < 0){
+                ROS_ERROR("Failed to compute distance!");
+                continue;
+            }
+            total_distance += distance;
+
+            // convert from cells to meters
+            total_distance *= costmap_ros_->getCostmap()->getResolution();
+            if(max_available_distance > total_distance)                  
+                return true;
+       }
+   }
+   return false;
+                
+}
+
 double ExplorationPlanner::distance_from_robot(double x, double y) {
     if(costmap_ros_ == NULL) {
         ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between target and robot");

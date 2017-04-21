@@ -3919,6 +3919,53 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
         return false;
 }
 
+bool ExplorationPlanner::existFrontiers() {
+    return frontiers.size() > 0 ? true : false;
+}
+
+bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
+    // distance to next frontier
+    for (int i = 0; i < frontiers.size(); i++)
+    {
+        /*
+        //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
+        if(i>8){
+            // if the distances could not be computed, try again using euclidean distances instead
+            if(errors == i && strategy == 2){
+                ROS_ERROR("Fallback to euclidean distance.");
+                return this->determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1);
+            }
+            return false;
+        }
+        */
+
+        if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
+        {
+            double distance;
+            double total_distance;    
+            total_distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+            if(total_distance < 0){
+                ROS_ERROR("Failed to compute distance!");
+                continue;
+            }
+            // distance from frontier to home base
+            distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, robot_home_x, robot_home_y);
+            if(distance < 0){
+                ROS_ERROR("Failed to compute distance!");
+                continue;
+            }
+            total_distance += distance;
+
+            // convert from cells to meters
+            total_distance *= costmap_ros_->getCostmap()->getResolution();
+            if(max_available_distance > total_distance)                  
+                return true;
+       }
+   }
+   return false;
+                
+}
+
 double ExplorationPlanner::distance_from_robot(double x, double y) {
     if(costmap_ros_ == NULL) {
         ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between target and robot");

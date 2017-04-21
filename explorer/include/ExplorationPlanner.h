@@ -249,6 +249,7 @@ namespace explorationPlanner
             bool sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic);
 
             bool existFrontiers();
+            bool existFrontiersReachableWithFullBattery(float max_available_distance);
             double distance_from_robot(double x, double y);
             double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);

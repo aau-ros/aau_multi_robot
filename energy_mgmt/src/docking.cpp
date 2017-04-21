@@ -316,10 +316,6 @@ void docking::preload_docking_stations()
 void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in distance computation??
 //TODO(minor) maybe there are more efficient for some steps; for instance, i coudl keep track somewhere of the DS with EOs and avoid recomputing them two times in the same call of this funcion...
 {
-    std_msgs::Empty msg;
-    pub_finish.publish(msg);
-    
-
     ROS_DEBUG("Compute optimal DS");
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
@@ -1052,7 +1048,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     srv_msg.request.y2 = goal_y;
     
     
-    //ros::service::waitForService("explorer/distance");
+    ros::service::waitForService("explorer/distance");
     for (int i = 0; i < 10; i++)
     //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
         //if (ros::service::exists("explorer/distance", true) && sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
@@ -1149,7 +1145,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
             need_to_charge = true;
             if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                       // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+            {
+                ros::Duration(10).sleep();
                 start_new_auction();
+            }
         } else {
             ROS_ERROR("DS graph cannot be navigated with this strategy...");
             std_msgs::Empty msg;
@@ -2103,7 +2102,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
      */  // TODO(minor) reduntant...
      
     //TODO(minor) silly fix to avoid malloc problem with waitForService (according to backtrace of gdb...)
-    //ros::service::waitForService("explorer/robot_pose");
+    ros::service::waitForService("explorer/robot_pose");
     explorer::RobotPosition srv_msg;
     //if (ros::service::exists("explorer/robot_pose", true) && sc_robot_pose.call(srv_msg))
     //if (sc_robot_pose.call(srv_msg))
@@ -2266,7 +2265,7 @@ void docking::check_reachable_ds()
         explorer::DistanceFromRobot srv_msg;
         srv_msg.request.x = (*it).x;
         srv_msg.request.y = (*it).y;
-        //ros::service::waitForService("explorer/reachable_target");
+        ros::service::waitForService("explorer/reachable_target");
         if (sc_reachable_target.call(srv_msg))
             reachable = srv_msg.response.reachable;
         else
@@ -2393,7 +2392,7 @@ void docking::spin()
 void docking::update_robot_position()
 {   
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
-    //ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
+    ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
     explorer::RobotPosition srv_msg;
     if (sc_robot_pose.call(srv_msg))
     {

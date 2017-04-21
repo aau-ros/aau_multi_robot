@@ -79,7 +79,7 @@ class Explorer
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
     ros::ServiceClient sc_get_robot_state;
     bool created;
-    float queue_distance;
+    float queue_distance, max_av_distance;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -123,6 +123,7 @@ class Explorer
         created = false;
         exploration = NULL;
         explorer_ready = false;
+        max_av_distance = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -1032,11 +1033,13 @@ class Explorer
                                 // frontier and the robot is not able to reach any of them even if
                                 // fully charged, because clearly this is a problem... which could be solved by navigating the
                                 // ds graph to reach one of this frontiers
-                                if(exploration->existFrontiers()) {
-                                    ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                if(exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
+                                {
+                                 ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
                                     update_robot_state_2(auctioning_2);
-                                    }
-                                else {
+                                }
+                                else
+                                {
                                     ROS_INFO("No more frontiers to be visited: exploration is completed");
                                     /* Start countdown to finalize exploration */
                                     // TODO(minor)
@@ -1045,20 +1048,24 @@ class Explorer
                                     // if (exit_countdown <= 0)
                                     finalize_exploration();
                                     // continue;                                    
-                                }
-
-
+                                }                                
                             }
 
                             else if(robot_state == leaving_ds) {
                                 if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
                                     // check the existence of reachable frontiers with full battery life
                                     if(exploration->existFrontiers()) {
-                                        ROS_ERROR("Charging was interrupted, but there are still frontiers to be visited, so start auction");
-                                        update_robot_state_2(auctioning);
+                                        if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
+                                            ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                            update_robot_state_2(auctioning_2);
+                                         }
+                                         else {
+                                            ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
+                                            finalize_exploration();
+                                         }
                                     } else {
-                                        ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
-                                        update_robot_state_2(auctioning_2);
+                                        ROS_ERROR("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
+                                        finalize_exploration();
                                     }
                                 }
                             }
@@ -2741,6 +2748,9 @@ class Explorer
             ROS_FATAL("Robot has run out of energy!");
             abort();
         }
+        
+        if(max_av_distance < available_distance)
+            max_av_distance = available_distance;
     }
     
     void finish_callback(const std_msgs::Empty &msg) {
