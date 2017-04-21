@@ -3919,6 +3919,10 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
         return false;
 }
 
+bool ExplorationPlanner::existFrontiers() {
+    return frontiers.size() > 0 ? true : false;
+}
+
 double ExplorationPlanner::distance_from_robot(double x, double y) {
     if(costmap_ros_ == NULL) {
         ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between target and robot");

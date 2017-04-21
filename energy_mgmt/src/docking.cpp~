@@ -184,6 +184,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
     sub_next_ds = nh.subscribe("next_ds", 10, &docking::next_ds_callback, this);
+    
+    pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -247,7 +249,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
-    mygraph.print();
+    //mygraph.print();
     
 }
 
@@ -1138,6 +1140,19 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
             start_new_auction();  
                                   // TODO(minor) only if the robot has not been just interrupted from recharging
+    }
+    else if (msg.get()->state == auctioning_2) {
+        if(ds_selection_policy == 2) {
+            ROS_INFO("Robot need to recharge");
+            need_to_charge = true;
+            if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
+                                      // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                start_new_auction();
+        } else {
+            ROS_ERROR("DS graph cannot be navigated with this strategy...");
+            std_msgs::Empty msg;
+            pub_finish.publish(msg);
+        }   
     }
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {

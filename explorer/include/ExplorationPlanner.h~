@@ -251,7 +251,7 @@ namespace explorationPlanner
             double distance_from_robot(double x, double y);
             double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
-            bool get_robot_position(double *x, double *y);
+            //bool get_robot_position(double *x, double *y);
             bool reachable_target(double x, double y);
 
 

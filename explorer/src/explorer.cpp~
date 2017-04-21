@@ -345,6 +345,7 @@ class Explorer
         enum_string.push_back("stuck");
         enum_string.push_back("in_queue");
         enum_string.push_back("auctioning");
+        enum_string.push_back("auctioning_2");
         enum_string.push_back("going_in_queue");
         enum_string.push_back("going_checking_vacancy");
         enum_string.push_back("checking_vacancy");
@@ -381,7 +382,7 @@ class Explorer
 
         ros::NodeHandle nh;
 
-        ros::Subscriber sub, sub2, sub3, pose_sub;
+        ros::Subscriber sub, sub2, sub3, pose_sub, sub_finish;
 
         ros::Subscriber my_sub =
             nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);
@@ -401,6 +402,8 @@ class Explorer
 
         /* Subscribe to robot pose to check if robot is stuck */
         pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);
+        
+        sub_finish = nh.subscribe("explorer/finish", 1, &Explorer::finish_callback, this);
 
         ROS_INFO("STARTING EXPLORATION");
 
@@ -490,7 +493,7 @@ class Explorer
             /*
              * Sleep to ensure that frontiers are exchanged
              */
-            ros::Duration(5).sleep();
+            ros::Duration(2).sleep();
             
             /*
             while(available_distance <= 0) {
@@ -1010,7 +1013,7 @@ class Explorer
                             if (exit_countdown != EXIT_COUNTDOWN)
                             {
                                 exit_countdown = EXIT_COUNTDOWN;
-                                ROS_ERROR("To be sae, resetting exit countdown at starting "
+                                ROS_ERROR("To be safe, resetting exit countdown at starting "
                                           "value; something must have gone wrong however, "
                                           "because this shoulw never happen...");
                             }
@@ -1019,42 +1022,63 @@ class Explorer
                             // charge_countdown = EXIT_COUNTDOWN;
                         }
 
-                        else if (robot_state == fully_charged)
-                        {
-                            /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
-                             * that it will never be able to reach a frontier: exploration is over */
-                            // TODO(minor) we shoudl better check if there are still unvisited
-                            // frontier and the robot is not able to reach any of them even if
-                            // fully charged, because clearly this is a problem... which could be solved by navigating the
-                            // ds graph to reach one of this frontiers
-                            ROS_INFO("Robot cannot reach any frontier even if fully charged: "
-                                     "exploration is completed");
-
-                            /* Start countdown to finalize exploration */
-                            // TODO(minor)
-                            // exit_countdown--;
-                            // ROS_ERROR("Shutdown in: %d", exit_countdown);
-                            // if (exit_countdown <= 0)
-                            finalize_exploration();
-                            // continue;
-                        }
-
                         else
                         {
-                            /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
-                            // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
-                            // TODO(minor) call udpate_robot_state() instead!!!
-                            // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
-                            // docking node knows that all the auctions have been concluded, but it has not notified the
-                            // explorer node about it yet, which means that update_robot_state hase nothing to update at the
-                            // moment... it could be solved using a service or using robot_state node
-                            if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+                            if (robot_state == fully_charged)
                             {
-                                ROS_INFO("Robot cannot reach any frontier: starting auction to "
-                                          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
-                                                                                  // if the robot does not really start a
-                                                                                  // new auction...
-                                update_robot_state_2(auctioning);
+                                /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
+                                 * that it will never be able to reach a frontier: exploration is over */
+                                // TODO(minor) we shoudl better check if there are still unvisited
+                                // frontier and the robot is not able to reach any of them even if
+                                // fully charged, because clearly this is a problem... which could be solved by navigating the
+                                // ds graph to reach one of this frontiers
+                                if(exploration->existFrontiers()) {
+                                    ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                    update_robot_state_2(auctioning_2);
+                                    }
+                                else {
+                                    ROS_INFO("No more frontiers to be visited: exploration is completed");
+                                    /* Start countdown to finalize exploration */
+                                    // TODO(minor)
+                                    // exit_countdown--;
+                                    // ROS_ERROR("Shutdown in: %d", exit_countdown);
+                                    // if (exit_countdown <= 0)
+                                    finalize_exploration();
+                                    // continue;                                    
+                                }
+
+
+                            }
+
+                            else if(robot_state == leaving_ds) {
+                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
+                                    // check the existence of reachable frontiers with full battery life
+                                    if(exploration->existFrontiers()) {
+                                        ROS_ERROR("Charging was interrupted, but there are still frontiers to be visited, so start auction");
+                                        update_robot_state_2(auctioning);
+                                    } else {
+                                        ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                        update_robot_state_2(auctioning_2);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
+                                // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
+                                // TODO(minor) call udpate_robot_state() instead!!!
+                                // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
+                                // docking node knows that all the auctions have been concluded, but it has not notified the
+                                // explorer node about it yet, which means that update_robot_state hase nothing to update at the
+                                // moment... it could be solved using a service or using robot_state node
+                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+                                {
+                                    ROS_INFO("Robot cannot reach any frontier: starting auction to "
+                                              "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
+                                                                                      // if the robot does not really start a
+                                                                                      // new auction...
+                                    update_robot_state_2(auctioning);
+                                }
                             }
                         }
                     }
@@ -1197,7 +1221,7 @@ class Explorer
             }
 
             // TODO(minor) hmm... here??
-            if (robot_state == auctioning)
+            if (robot_state == auctioning || robot_state == auctioning_2 )
             {
                 
                 if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
@@ -1210,7 +1234,7 @@ class Explorer
                 else
                     ROS_INFO("Starting owm auction...");
                 
-                while (robot_state == auctioning)  // TODO(minor) better management of the while loop
+                while (robot_state == auctioning || robot_state == auctioning_2 )  // TODO(minor) better management of the while loop
                 {
                     
                     // ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
@@ -1403,6 +1427,8 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
+        if(robot_state == finished)
+            finalize_exploration();
         
     }
 
@@ -1410,9 +1436,14 @@ class Explorer
     {
         // TODO(minor) ???
         ros::spinOnce();
+        if(robot_state_next == finish_next) {
+            ROS_ERROR("Have to finish...");
+            update_robot_state_2(finished);
+        }
+        
 
         /* If the next state is equal to the current one, do nothing */
-        if (robot_state_next == current_state)
+        else if (robot_state_next == current_state)
             ROS_DEBUG("Next state is equal to the current state: do nothing");
 
         // TODO(IMPORTANT) does this works???
@@ -2715,6 +2746,10 @@ class Explorer
         }
     }
     
+    void finish_callback(const std_msgs::Empty &msg) {
+        robot_state_next = finish_next;
+    }
+    
     void abort() {
         ROS_FATAL("Exploration is going to be brutally aborted...");
         ros::Duration(3).sleep();
@@ -2906,6 +2941,7 @@ class Explorer
         auctioning,                                // auctioning: the robot has started an auction; notice that if
                                                    // the robot is aprticipating to an auction that it was not
                                                    // started by it, its state is not equal to auctioning!!!
+        auctioning_2,
         going_in_queue,                            // the robot is moving near a DS to later put itself in
                                                    // in_queue state
         going_checking_vacancy,                    // the robot is moving near a DS to check if it
@@ -2939,7 +2975,8 @@ class Explorer
         going_charging_next,
         going_queue_next,
         fully_charged_next,
-        current_state
+        current_state,
+        finish_next
     };
     state_next_t robot_state_next;
 

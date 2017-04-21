@@ -175,6 +175,7 @@ private:
         auctioning,                                // auctioning: the robot has started an auction; notice that if
                                                    // the robot is aprticipating to an auction that it was not
                                                    // started by it, its state is not equal to auctioning!!!
+        auctioning_2,
         going_in_queue,                            // the robot is moving near a DS to later put itself in
                                                    // in_queue state
         going_checking_vacancy,                    // the robot is moving near a DS to check if it
