@@ -116,17 +116,14 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     best_ds = NULL;
     target_ds == NULL;
-    if(best_ds == NULL)
-        ROS_FATAL("Allocation failure!");
-    if(target_ds == NULL)
-        ROS_FATAL("Allocation failure!");
-        
     best_ds = new ds_t;
+        if(best_ds == NULL)
+        ROS_FATAL("Allocation failure!");
     best_ds->id = -1;
     target_ds = new ds_t;
+        if(target_ds == NULL)
+        ROS_FATAL("Allocation failure!");
     target_ds->id = -1;
-    
-    //ROS_ERROR("%f, %f", robot->x, robot->y);
     
     /*
     temp_robot.x = 10;
@@ -280,7 +277,7 @@ void docking::wait_for_explorer() {
     std_msgs::Empty msg;
     ros::Duration(5).sleep();
     while(!explorer_ready) {
-        ROS_ERROR("Waiting for the explorer services to be ready...");
+        ROS_INFO("Waiting for the explorer services to be ready...");
         pub_wait.publish(msg);
         ros::Duration(5).sleep();
         ros::spinOnce();
@@ -290,31 +287,31 @@ void docking::wait_for_explorer() {
     ros::service::waitForService("explorer/distance");
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     while(!sc_distance) {
-        ROS_FATAL("NO CONNECTION!");
+        ROS_ERROR("No connection to service 'explorer/distance': retrying...");
         ros::Duration(3).sleep();
         sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     }
-    ROS_ERROR("Established persistent connection to service 'explorer/distance'");
+    ROS_INFO("Established persistent connection to service 'explorer/distance'");
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/reachable_target");
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     for(int i = 0; i < 10 && !sc_reachable_target; i++) {
-        ROS_FATAL("NO CONNECTION!");
+        ROS_ERROR("No connection to service 'explorer/distance': retrying...");
         ros::Duration(3).sleep();
         sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     }
-    ROS_ERROR("Established persistent connection to service 'explorer/reachable_target'");
+    ROS_INFO("Established persistent connection to service 'explorer/reachable_target'");
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/robot_pose");
     sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
-        ROS_FATAL("NO CONNECTION!");
+        ROS_ERROR("No connection to service 'explorer/distance': retrying...");
         ros::Duration(3).sleep();
         sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     }
-    ROS_ERROR("Established persistent connection to service 'explorer/robot_pose'");    
+    ROS_INFO("Established persistent connection to service 'explorer/robot_pose'");    
     //ros::Duration(0.1).sleep();
     
     ros::Duration(5).sleep();

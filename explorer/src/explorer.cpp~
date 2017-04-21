@@ -1035,7 +1035,7 @@ class Explorer
                                 // ds graph to reach one of this frontiers
                                 if(exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
                                 {
-                                 ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                 ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
                                     update_robot_state_2(auctioning_2);
                                 }
                                 else
@@ -1501,15 +1501,12 @@ class Explorer
                 // update_robot_state_2(exploring);
                 update_robot_state_2(leaving_ds);
             }
-            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
         }
 
         /* If the robot has completed the recharging process, set it to
            fully_charged */
         else if (robot_state_next == fully_charged_next)
         {
-            ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
-           
             /*
              if (DS_SELECTION_POLICY == 2 && moving_along_path) 
                 if(OPP_ONLY_TWO_DS)
@@ -1551,7 +1548,6 @@ class Explorer
             if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
                 robot_state != checking_vacancy)
             {
-                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
                 // robot_state = going_charging;
                 update_robot_state_2(going_checking_vacancy);
             }
@@ -1589,7 +1585,6 @@ class Explorer
             /* Otherwise, really prepare the robot to go in queue */
             else
             {
-                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
                 update_robot_state_2(going_in_queue);
             }
         }
@@ -1600,8 +1595,6 @@ class Explorer
             /* If the robot is recharing, it must stop */
             if (robot_state == charging)
             {
-               
-                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 /*
                 if (DS_SELECTION_POLICY == 2 && moving_along_path)
                     if (ds_path_counter < 2)

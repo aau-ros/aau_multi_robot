@@ -1448,7 +1448,7 @@ class Explorer
 
         /* If the next state is equal to the current one, do nothing */
         else if (robot_state_next == current_state)
-            ROS_DEBUG("Next state is equal to the current state: do nothing");
+            ROS_INFO("Next state is equal to the current state: do nothing");
 
         // TODO(IMPORTANT) does this works???
         /* If a robot has already begun charging, and then discover that it has lost
@@ -1501,15 +1501,12 @@ class Explorer
                 // update_robot_state_2(exploring);
                 update_robot_state_2(leaving_ds);
             }
-            ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
         }
 
         /* If the robot has completed the recharging process, set it to
            fully_charged */
         else if (robot_state_next == fully_charged_next)
         {
-            ROS_ERROR("\n\t\e[1;34m finishing charging \e[0m");
-           
             /*
              if (DS_SELECTION_POLICY == 2 && moving_along_path) 
                 if(OPP_ONLY_TWO_DS)
@@ -1551,7 +1548,6 @@ class Explorer
             if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
                 robot_state != checking_vacancy)
             {
-                ROS_ERROR("\n\t\e[1;34m going_checking_vacancy \e[0m");
                 // robot_state = going_charging;
                 update_robot_state_2(going_checking_vacancy);
             }
@@ -1589,7 +1585,6 @@ class Explorer
             /* Otherwise, really prepare the robot to go in queue */
             else
             {
-                ROS_ERROR("\n\t\e[1;34m going_in_queue \e[0m");
                 update_robot_state_2(going_in_queue);
             }
         }
@@ -1600,8 +1595,6 @@ class Explorer
             /* If the robot is recharing, it must stop */
             if (robot_state == charging)
             {
-               
-                ROS_ERROR("\n\t\e[1;34m aborting charging \e[0m");
                 /*
                 if (DS_SELECTION_POLICY == 2 && moving_along_path)
                     if (ds_path_counter < 2)
