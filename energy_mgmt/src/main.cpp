@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     doc.wait_for_explorer();
     //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
-    //doc.wait_battery_info();
+    //doc.wait_battery_info(); //only ok if threat thr_battery is active
     
     
 
@@ -66,9 +66,9 @@ int main(int argc, char** argv)
         
         doc.send_robot();
         
-        doc.update_llh();
+        //doc.update_llh();
         
-        doc.recompute_MST();
+        //doc.recompute_MST();
         
         //doc.send_fake_msg();
         

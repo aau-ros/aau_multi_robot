@@ -861,6 +861,18 @@ void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
         ROS_ERROR("Failed to compute distance!");
 }
 
+void ExplorationPlanner::my_trajectory_plan_store(double target_x, double target_y)
+{
+    int distance = trajectory_plan(target_x, target_y);
+
+    if(distance >= 0) {
+        exploration_travel_path_global += distance;
+        exploration_travel_path_global_meters += distance * costmap_ros_->getCostmap()->getResolution();
+    }
+    else
+        ROS_ERROR("Failed to compute distance!");
+}
+
 /**
  * Compute the length of the trajectory from the robots current position to a given target
  */
@@ -3927,18 +3939,6 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++)
     {
-        /*
-        //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
-        if(i>8){
-            // if the distances could not be computed, try again using euclidean distances instead
-            if(errors == i && strategy == 2){
-                ROS_ERROR("Fallback to euclidean distance.");
-                return this->determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1);
-            }
-            return false;
-        }
-        */
-
         if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
         {
             double distance;

@@ -124,7 +124,8 @@ void battery_simulate::compute()
         {
             state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
             state.remaining_time_run = state.soc * total_energy;
-            state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; //TODO(IMPORTANT) correct? if yes, do the same also below...
+            state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0 * max_speed_linear; //TODO(IMPORTANT) correct? if yes, do the same also below...
+            //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; 
         }
     }
     else
@@ -148,7 +149,7 @@ void battery_simulate::compute()
 
     }
     
-    //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
+    ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
     time_last = ros::Time::now();
@@ -177,7 +178,7 @@ void battery_simulate::publish()
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
-    ROS_INFO("Received speed");
+    ROS_DEBUG("Received speed");
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
 }

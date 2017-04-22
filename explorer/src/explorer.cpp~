@@ -80,6 +80,8 @@ class Explorer
     ros::ServiceClient sc_get_robot_state;
     bool created;
     float queue_distance, max_av_distance;
+    float safety_coeff, min_distance_queue_ds;
+    float stored_robot_x, stored_robot_y;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -124,6 +126,7 @@ class Explorer
         exploration = NULL;
         explorer_ready = false;
         max_av_distance = 0;
+        available_distance = -1;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -164,7 +167,9 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
+        nh.param<float>("safety_coeff", safety_coeff, 0.9);
         nh.param<float>("queue_distance", queue_distance, 7.0);
+        nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
         //ROS_ERROR("%f", queue_distance);
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
@@ -413,6 +418,8 @@ class Explorer
         {
             /* Update robot state */
             update_robot_state();
+            
+            store_current_position();
 
             //ROS_ERROR("EXPLORING");  // TODO(minor) here???
 
@@ -938,12 +945,12 @@ class Explorer
                                 double next_ds_x = path[ds_path_counter+1][0];
                                 double next_ds_y = path[ds_path_counter+1][0];
                                 double dist = -1;
-                                for(int i=0; i<10 || dist >= 0; i++) {
-                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(IMPORTANT) very bad way to check... -> parameter...
+                                for(int i=0; i<5 || dist >= 0; i++) {
+                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
                                     ros::Duration(1).sleep();   
                                 }
                                 
-                                if(dist > available_distance * 0.8) //TODO(IMPORTANT) 0.8 -> parameter, and in determine_goal, etc....
+                                if(dist > available_distance * safety_coeff)
                                     if(robot_state == fully_charged) {
                                         ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
@@ -1035,7 +1042,7 @@ class Explorer
                                 // ds graph to reach one of this frontiers
                                 if(exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
                                 {
-                                 ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
+                                 ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
                                     update_robot_state_2(auctioning_2);
                                 }
                                 else
@@ -1056,7 +1063,7 @@ class Explorer
                                     // check the existence of reachable frontiers with full battery life
                                     if(exploration->existFrontiers()) {
                                         if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
-                                            ROS_ERROR("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+                                            ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
                                             update_robot_state_2(auctioning_2);
                                          }
                                          else {
@@ -1064,7 +1071,7 @@ class Explorer
                                             finalize_exploration();
                                          }
                                     } else {
-                                        ROS_ERROR("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
+                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
                                         finalize_exploration();
                                     }
                                 }
@@ -1200,7 +1207,7 @@ class Explorer
                                                                           // still necessary? no if the state update is
                                                                           // done in the correct point... yes otherwise
             {
-                // TODO(IMPORTANT) what is this part???
+                // TODO(minor) what is this part???
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
@@ -1232,11 +1239,11 @@ class Explorer
             {
                 
                 if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        queue_distance / 2.0)  // TODO could the DS change meanwhile??? //TODO(IMPORTANT) do better
+                        min_distance_queue_ds)  // TODO could the DS change meanwhile???
                         {
-                            ROS_ERROR("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther..."); 
+                            ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther..."); 
                             move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
-                            ROS_ERROR("NOW it is ok...");
+                            ROS_INFO("NOW it is ok...");
                         }
                 else
                     ROS_INFO("Starting owm auction...");
@@ -1264,7 +1271,7 @@ class Explorer
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
                     if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        queue_distance / 2.0) //TODO(IMPORTANT) do better
+                        min_distance_queue_ds)
                         ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO(minor) move robot away in this case...
 
                     update_robot_state();
@@ -1279,8 +1286,8 @@ class Explorer
 
                 occupied_ds = false;
 
-                // TODO(IMPORTANT) use a bterr way!!!
-                int i = 10;
+                // TODO(minor) use a bterr way!!!
+                int i = 5;
                 while (i > 0)
                 {
                     ros::Duration(1).sleep();
@@ -1289,10 +1296,10 @@ class Explorer
                 }
                 if (occupied_ds)
                 {
-                    // TODO(IMPORTANT) opportune? no because if I ahve this DS in the path, it's because I need to recharge here
+                    // TODO(minor) use opportune? no because if I ahve this DS in the path, it's because I need to recharge here
 
                     /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
-                    ROS_ERROR("\n\t\e[1;34moccupied ds...\e[0m");
+                    ROS_INFO("\n\t\e[1;34moccupied ds...\e[0m");
                     update_robot_state_2(in_queue);
                 }
                 else
@@ -1320,6 +1327,7 @@ class Explorer
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
             }
 
+            /* NAVIGATION COMPLETED */ //F
             /* Check if the robot was able to reach the selected goal */
             if (navigate_to_goal == true)  // IMPORTANT do not put an else-if //TODO(minor) sure??
             {
@@ -1343,10 +1351,8 @@ class Explorer
                     number_of_recharges++;  // TODO(minor) remove
                     update_robot_state_2(charging);
 
-                    /* Compute path length */  // TODO(IMPORTANT) is it possible that this method should be called also
-                                               // somewhere else? probably is just a debug method... OR MAYBE IS THE ONE
-                                               // USED TO CALLED SIMULATION DATA
-                    exploration->trajectory_plan_store(target_ds_x, target_ds_y);
+                    /* Compute path length */  //TODO(minor) maybe we shoiuld also call this method when a robot reaches a queue, when it is moving from a queue to the DS, when it leaves the DS to queue again, ...
+                    //exploration->trajectory_plan_store(target_ds_x, target_ds_y);
                 }
 
                 if (robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
@@ -1359,15 +1365,16 @@ class Explorer
                     /* Compute path length */  // TODO(IMPORTANT) is it possible that this method should be called also
                                                // somewhere else? probably is just a debug method... OR MAYBE IS THE ONE
                                                // USED TO CALLED SIMULATION DATA
-                    exploration->trajectory_plan_store(
-                        exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).x_coordinate,
-                        exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);
+                    //exploration->trajectory_plan_store(
+                    //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).x_coordinate,
+                    //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);
 
                     ROS_DEBUG("Storing visited...");
                     exploration->storeVisitedFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
                                                       robot_str.at(0), final_goal.at(3));
                     ROS_DEBUG("Stored Visited frontier");
                 }
+
             }
 
             else
@@ -1401,12 +1408,24 @@ class Explorer
                     ROS_DEBUG("Stored unreachable frontier");
                 }
             }
+            
+            exploration->trajectory_plan_store(stored_robot_x, stored_robot_y); //TODO(minor) here? yes it should be ok because even if the robot failes reaching the goal, in the worst case the travelled distance is 0, so it's ok if I add it to the global_travelled distance, and if instead it moved a little, I have to take note of this travelled distance...
 
             ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
 
             ROS_INFO("DONE EXPLORING");
         }
+    }
+    
+    void store_current_position() {
+        tf::Stamped<tf::Pose> robotPose;
+        while(!exploration->getRobotPose(robotPose)) {
+            ROS_ERROR("Failed getting current position... retrying in a moment");
+            ros::Duration(2).sleep();
+        }
+        stored_robot_x = robotPose.getOrigin().getX();
+        stored_robot_y = robotPose.getOrigin().getY();
     }
     
     void update_robot_state_2(int new_state)
@@ -1441,7 +1460,7 @@ class Explorer
         // TODO(minor) ???
         ros::spinOnce();
         if(robot_state_next == finish_next) {
-            ROS_ERROR("Have to finish...");
+            ROS_INFO("Have to finish...");
             finalize_exploration();
         }
         
@@ -1450,7 +1469,7 @@ class Explorer
         else if (robot_state_next == current_state)
             ROS_INFO("Next state is equal to the current state: do nothing");
 
-        // TODO(IMPORTANT) does this works???
+        // TODO(minor) does this works???
         /* If a robot has already begun charging, and then discover that it has lost
          * its own auction (which means that meanwhile the auction of another player
          * was going on, it started its own auction, but before taht its own auction
@@ -1462,7 +1481,7 @@ class Explorer
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
-            ROS_ERROR("STRANGE CASE!!!!!!!!!!");
+            ROS_ERROR("Strange case: ideally, it should not happen...");
           
             /*
             if (DS_SELECTION_POLICY == 2 && moving_along_path)  
@@ -1564,14 +1583,14 @@ class Explorer
             // necessary...
             if (robot_state == in_queue)
             {
-                ROS_ERROR("\n\t\e[1;34m already in_queue... \e[0m");
+                ROS_INFO("\n\t\e[1;34m already in_queue... \e[0m");
                 update_robot_state_2(in_queue); //NB to force restarting of periodic auction timer!!!!!!!!
             }
 
             /* If the robot is already preparing to enter in a queue, do nothing */
             else if (robot_state == going_in_queue)
             {
-                ROS_ERROR("\n\t\e[1;34m aready going_in_queue... \e[0m");
+                ROS_INFO("\n\t\e[1;34m aready going_in_queue... \e[0m");
             }
 
             /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new
@@ -1579,7 +1598,7 @@ class Explorer
             // TODO(minor) something probably went wrong in this case...
             else if (robot_state == going_charging)
             {
-                ROS_ERROR("\n\t\e[1;34m i want to charge a little, first... \e[0m");
+                ROS_INFO("\n\t\e[1;34m i want to charge a little, first... \e[0m");
             }
 
             /* Otherwise, really prepare the robot to go in queue */
@@ -1806,7 +1825,7 @@ class Explorer
         log_path = log_path.append("/");
     }
 
-    void save_progress(bool final = false)  // TODO(IMPORTANT) is this required to called simulaton data???
+    void save_progress(bool final = false)
     {
         ros::Duration ros_time = ros::Time::now() - time_start;
 
@@ -1997,7 +2016,7 @@ class Explorer
 
         map_merger::LogMaps log;
         log.request.log = 3;  /// request local and global map
-        ROS_ERROR("Logging");
+        ROS_INFO("Logging");
         if (!mm_log_client.call(log))
             ROS_ERROR("Could not call map_merger service to store log.");
 
@@ -2465,8 +2484,6 @@ class Explorer
 
         ROS_INFO("Goal reached");
 
-        // TODO(IMPORTANT) should this code be called also when I brutally abort exploration to put the robot in queue
-        // or in checking_vacancy state????
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
 
@@ -2562,7 +2579,7 @@ class Explorer
              * the DS */
                 ac.cancelGoal();
 
-                ROS_ERROR("\n\t\e[1;34mOK!!!\e[0m");
+                //ROS_ERROR("\n\t\e[1;34mOK!!!\e[0m");
 
                 break;
             }
@@ -2570,7 +2587,7 @@ class Explorer
             // ros::Duration(0.5).sleep(); //TODO(minor)
         }
 
-        ROS_ERROR("Goal reached");
+        ROS_INFO("Goal reached");
 
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
@@ -2634,7 +2651,7 @@ class Explorer
 
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m lost_own_auction_callback \e[0m");
+        ROS_INFO("\n\t\e[1;34m lost_own_auction_callback \e[0m");
         robot_state_next = going_queue_next;
     }
 
@@ -2706,7 +2723,7 @@ class Explorer
 
     void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
     {
-        ROS_ERROR("MOVING!!!!!!!!!!!!");
+        ROS_INFO("MOVING!!!!!!!!!!!!");
         moving_along_path = true;
         ds_path_counter = 0;
         
@@ -2730,10 +2747,10 @@ class Explorer
         battery_charge = (int)msg->soc;
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        ROS_DEBUG("SOC: %d%%; available distance: %f", battery_charge * 100, available_distance);
+        //ROS_ERROR("SOC: %d%%; available distance: %f", battery_charge * 100, available_distance);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
-            recharge_cycles++;  // TODO(IMPORTANT) hmm... soc, charge, ...
+            recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
 
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
         if (available_distance <= 0 && robot_state != charging)
@@ -2831,24 +2848,27 @@ class Explorer
     }
     
     void safety_checks() {
-        int starting_value = 12 * 5;
+        int duration = 3; //minutes;
+        
+        int sleeping_time = 5.0;
+        int starting_value = 60/sleeping_time * duration;
         int countdown = starting_value;
         float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
         tf::Stamped<tf::Pose> robotPose;
         while(exploration == NULL)
-            ros::Duration(5).sleep();
+            ros::Duration(sleeping_time).sleep();
         while(ros::ok()) {
-            ros::Duration(5).sleep();
+            ros::Duration(sleeping_time).sleep();
             //ROS_DEBUG("Checking...");
             if(exploration->getRobotPose(robotPose)) {
                 robot_x = robotPose.getOrigin().getX();
                 robot_y = robotPose.getOrigin().getY();
             }
             if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
-                if(countdown != starting_value && countdown*5 % 100 == 0)
-                    ROS_ERROR("Countdown to shutdown at %dmin...", countdown*5/60);
+                if(countdown != starting_value && countdown*sleeping_time % 100 == 0)
+                    ROS_ERROR("Countdown to shutdown at %dmin...", countdown*sleeping_time/60);
                 else
-                    ROS_DEBUG("Countdown to shutdown at %dmin...", countdown*5/60);
+                    ROS_DEBUG("Countdown to shutdown at %dmin...", countdown*sleeping_time/60);
                 countdown--;
                 if(countdown < 0) {
                     ROS_FATAL("Robot is not moving anymore");
