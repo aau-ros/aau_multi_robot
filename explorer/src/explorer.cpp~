@@ -418,8 +418,6 @@ class Explorer
         {
             /* Update robot state */
             update_robot_state();
-            
-            store_current_position();
 
             //ROS_ERROR("EXPLORING");  // TODO(minor) here???
 
@@ -514,7 +512,9 @@ class Explorer
             explorer_ready = true;
             
             //ROS_ERROR("START FRONTIER SELECTION");
-
+            
+            store_current_position();
+            
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {

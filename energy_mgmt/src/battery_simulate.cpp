@@ -13,7 +13,7 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
-    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(IMPORTANT) which value is good in the YAML file?
+    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear);         // m/s
     nh.getParam("energy_mgmt/mass", mass);         // kg
     
@@ -104,7 +104,7 @@ void battery_simulate::compute()
         ROS_DEBUG("Recharging...");
         remaining_energy += power_charging * time_diff_sec;
         state.soc = remaining_energy / total_energy;
-        //state.remaining_time_charge = //TODO(IMPORTANT)
+        state.remaining_time_charge = -1;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
@@ -124,7 +124,7 @@ void battery_simulate::compute()
         {
             state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
             state.remaining_time_run = state.soc * total_energy;
-            state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0 * max_speed_linear; //TODO(IMPORTANT) correct? if yes, do the same also below...
+            state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0 * max_speed_linear; //TODO(minor) correct? if yes, do the same also below...
             //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; 
         }
     }
@@ -144,7 +144,7 @@ void battery_simulate::compute()
         /* Update battery state */
         state.soc = remaining_energy / total_energy;
         state.remaining_time_run = state.soc * total_energy;
-        //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; //TODO(IMPORTANT)
+        //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear;
         state.remaining_distance = state.remaining_time_run * max_speed_linear;
 
     }
@@ -212,7 +212,7 @@ void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
 
 void battery_simulate::run() {
     while(ros::ok()) {
-        ros::Duration(5).sleep(); //TODO(IMPORTANT) rates???
+        ros::Duration(5).sleep(); //TODO(minor) rates???
         ros::spinOnce();
                 // compute new battery state
         compute();

@@ -1362,9 +1362,6 @@ class Explorer
                         update_robot_state_2(exploring);
 
                     ROS_INFO("STORING PATH");
-                    /* Compute path length */  // TODO(IMPORTANT) is it possible that this method should be called also
-                                               // somewhere else? probably is just a debug method... OR MAYBE IS THE ONE
-                                               // USED TO CALLED SIMULATION DATA
                     //exploration->trajectory_plan_store(
                     //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).x_coordinate,
                     //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);

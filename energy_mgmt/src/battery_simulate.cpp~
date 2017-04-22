@@ -13,7 +13,7 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
-    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(IMPORTANT) which value is good in the YAML file?
+    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear);         // m/s
     nh.getParam("energy_mgmt/mass", mass);         // kg
     
@@ -104,7 +104,7 @@ void battery_simulate::compute()
         ROS_DEBUG("Recharging...");
         remaining_energy += power_charging * time_diff_sec;
         state.soc = remaining_energy / total_energy;
-        //state.remaining_time_charge = //TODO(IMPORTANT)
+        state.remaining_time_charge = -1;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
@@ -149,7 +149,7 @@ void battery_simulate::compute()
 
     }
     
-    ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
+    //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
     time_last = ros::Time::now();
@@ -212,7 +212,7 @@ void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
 
 void battery_simulate::run() {
     while(ros::ok()) {
-        ros::Duration(5).sleep(); //TODO(IMPORTANT) rates???
+        ros::Duration(5).sleep(); //TODO(minor) rates???
         ros::spinOnce();
                 // compute new battery state
         compute();
