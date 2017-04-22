@@ -415,7 +415,7 @@ class docking
 
     void set_target_ds_vacant(bool vacant);
 
-    void compute_MST(std::vector< std::vector<int> > graph);
+    void compute_MST();
 
     int minKey(int key[], bool mstSet[], int V);
 
@@ -543,6 +543,8 @@ class docking
     void update_llh();
     bool optimal_ds_is_set(); 
     bool target_ds_is_set();
+    void wait_battery_info();
+    void recompute_MST();
 
 };
 

@@ -541,8 +541,10 @@ class docking
     std::string group_name;
     
     void update_llh();
-    bool optimal_ds_is_set() 
-    bool target_ds_is_set() 
+    bool optimal_ds_is_set(); 
+    bool target_ds_is_set();
+    void wait_battery_info();
+    void recompute_MST();
 
 };
 

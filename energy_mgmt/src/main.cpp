@@ -26,12 +26,16 @@ int main(int argc, char** argv)
     */
     
     battery_simulate bat;
+    bat.compute(); //force computation and publishing...
+    bat.publish();
     //boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
     docking doc;
     doc.wait_for_explorer();
     //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    
+    //doc.wait_battery_info();
     
     
 
@@ -63,6 +67,8 @@ int main(int argc, char** argv)
         doc.send_robot();
         
         doc.update_llh();
+        
+        doc.recompute_MST();
         
         //doc.send_fake_msg();
         
