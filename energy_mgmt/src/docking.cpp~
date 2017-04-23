@@ -2308,7 +2308,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
         }
         //ROS_INFO("u: %d", u);
         if(u < 0) {
-            //ROS_ERROR("DS graph has unconnected components! Not implemented for the moment...");
+            //ROS_INFO("DS graph has unconnected components!");
             can_continue = false;
             continue;
             

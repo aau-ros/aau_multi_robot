@@ -2621,7 +2621,7 @@ void docking::check_reachable_ds()
         recompute_graph = false;
 
         // construct MST starting from ds graph
-        compute_MST_2(1);
+        //compute_MST_2(1);
         
         //timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, true, false); //TODO(minor) timeout
     }
