@@ -1605,7 +1605,7 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                 exchange.request.dst_robot = destination;
                 
                 //F
-                exchange.request.dst_robot = "";
+                exchange.request.dst_robot = "mc_robot_0";
                 
                 ROS_DEBUG("Send Map to %s(if nothing -> boradcast) ,frame id:%s| topic:[%s]|data<_size:%lu",
                           destination.c_str(),t->header.frame_id.c_str(),

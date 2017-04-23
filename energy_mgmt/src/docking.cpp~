@@ -244,10 +244,13 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     for (int i = 0; i < num_ds; i++)
     {
         std::vector<int> temp;
-        for (int j = 0; j < undiscovered_ds.size(); j++)
+        std::vector<float> temp_f;
+        for (int j = 0; j < undiscovered_ds.size(); j++) {
             temp.push_back(-1);
+            temp_f.push_back(-1);
+        }
         ds_mst.push_back(temp);
-        ds_graph.push_back(temp);
+        ds_graph.push_back(temp_f);
     }
 
     if (DEBUG)
@@ -557,7 +560,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                             path.clear();
                             index_of_ds_in_path = 0;
-                            ds_found_with_mst = find_path(ds_mst, closest_ds->id, min_ds->id, path);
+                            ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
 
                             if (ds_found_with_mst)
                             {
@@ -724,7 +727,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                     double dist = distance(ds[d].x, ds[d].y, ds[h].x, ds[h].y);
                     if(dist < 0)
                         continue; //TODO(minor) hmm...
-                    if(dist < conservatime_maximum_distance_one_way())
+                    if(dist < conservative_maximum_distance_one_way())
                         if(dist > max_distance)
                             max_distance = dist;
                     
@@ -2004,7 +2007,7 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
     //int N = ds.size();
     //int graph_2[V][V];
     int parent[V];   // Array to store constructed MST
-    int key[V];      // Key values used to pick minimum weight edge in cut
+    float key[V];      // Key values used to pick minimum weight edge in cut
     bool mstSet[V];  // To represent set of vertices not yet included in MST
     
     // Initialize all keys as INFINITE
@@ -2026,12 +2029,12 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
     graph_2[2][4] = 20;
     graph_2[4][2] = 20;
     
-    
+*/    
     
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            ROS_ERROR("(%d, %d): %d", i, j, graph_2[i][j]);
-*/
+            ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
+
 
     // Always include first 1st vertex in MST.
     key[0] = 0;      // Make key 0 so that this vertex is picked as first vertex
@@ -2107,17 +2110,28 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
     // TODO(minor) does not work if a DS is not connected to any other DS
     for (int i = 1; i < V; i++)
     {
-        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size() || parent[i] < 0)
+        if(parent[i] < 0) {
+            ROS_ERROR("This node is not connected with other nodes");
+            for(int j=0; j < V; j++) {
+                ds_mst[i][j] = -10;
+                ds_mst[j][i] = -10;
+            }
+            continue;
+        }
+        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size() || parent[i] < 0) {
             ROS_FATAL("SIZE!!!");
+            ROS_ERROR("%d", i);   
+            ROS_ERROR("%d", parent[i]);
+        }
         ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
         ds_mst[parent[i]][i] = 1;
     }
 
-    /*
+    
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst_2[i][j]);
-     */
+            ; //ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+    
 
     /*
     int k = 0;              // index of the closest recheable DS
@@ -2217,6 +2231,169 @@ bool docking::find_path_aux(std::vector<std::vector<int> > tree, int start, int 
     path.clear();
     return false;
 }
+
+bool docking::find_path_2(int start, int end, std::vector<int> &path) {
+    compute_MST_2(start);
+    return find_path(ds_mst, start, end, path);
+}
+
+void docking::compute_MST_2(int root)  // TODO(minor) check all functions related to MST
+{
+    int V = ds_graph.size();
+    //int N = ds.size();
+    //int graph_2[V][V];
+    int parent[V];   // Array to store constructed MST
+    float key[V];      // Key values used to pick minimum weight edge in cut
+    bool mstSet[V];  // To represent set of vertices not yet included in MST
+    
+    // Initialize all keys as INFINITE
+    for (int i = 0; i < V; i++) {
+        key[i] = INT_MAX;
+        mstSet[i] = false;
+        parent[i] = -1;
+    }
+    
+    /*
+    for(int i=0; i<V; i++)
+        for(int j=0; j<V; j++)
+            graph_2[i][j] = 0;
+    for(int i=0; i<V-1; i++)
+        for(int j=0; j<V-1; j++)
+            graph_2[i][j] = graph[i][j];
+            
+    graph_2[1][2] = 100;
+    graph_2[2][1] = 100;
+    graph_2[2][4] = 20;
+    graph_2[4][2] = 20;
+    
+*/    
+    
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ; //ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
+
+
+    // 'root' is our root of the MST
+    key[root] = 0;      // Make key 0 so that this vertex is picked as first vertex
+    parent[root] = -1;  // First node is always root of MST
+    
+    //for(int i=0; i<V; i++)
+    //    parent[i] = -1;
+    //ROS_INFO("Computing...");
+    // The MST will have V vertices
+    bool can_continue = true;
+    for (int count = 0; count < V - 1 && can_continue; count++)
+    {
+
+        // Pick the minimum key vertex from the set of vertices
+        // not yet included in MST
+        //int u = minKey(key, mstSet, V);
+        
+        
+        int min = INT_MAX, u = -1;
+        /*
+        for(int u=0; u < V; u++)
+            if(mstSet[u] == false) {
+                min_index = u;
+                break;
+            }
+        */
+        for (int v = 0; v < V; v++) {
+            //ROS_ERROR("%d", mstSet[v]);        
+            //ROS_ERROR("%d", key[v]);
+            if (mstSet[v] == false && key[v] < min) {
+                min = key[v];
+                u = v;
+            }
+        }
+        //ROS_INFO("u: %d", u);
+        if(u < 0) {
+            //ROS_ERROR("DS graph has unconnected components! Not implemented for the moment...");
+            can_continue = false;
+            continue;
+            
+            /*
+            for(u=0; u < V; u++)
+            if(mstSet[u] == false)
+                break;
+            if(u >= V) {
+                ROS_FATAL("Strange DS graph... abort computation of MST");
+                return;
+            }
+            parent[u] = -1;
+            */
+        }
+
+        // Add the picked vertex to the MST Set
+        mstSet[u] = true;
+        
+        // Update key value and parent index of the adjacent vertices of
+        // the picked vertex. Consider only those vertices which are not yet
+        // included in MST
+        for (int v = 0; v < V; v++)
+
+            // graph[u][v] is non zero only for adjacent vertices of m
+            // mstSet[v] is false for vertices not yet included in MST
+            // Update the key only if graph[u][v] is smaller than key[v]
+            if (ds_graph[u][v] > 0 && mstSet[v] == false && (key[u] + ds_graph[u][v]) < key[v]) {
+                parent[v] = u;
+                key[v] = key[u] + ds_graph[u][v];
+                //ROS_ERROR("%d has %d as parent; cost of %d is %f", v, parent[v], v, key[v]); 
+            }
+    }
+
+    // print the constructed MST
+    // printMST(parent, V, graph);
+    //int ds_mst_2[V][V];
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ds_mst[i][j] = 0;
+
+    // TODO(minor) does not work if a DS is not connected to any other DS
+    for (int i = 0; i < V; i++)
+    {
+        if(parent[i] < 0) {
+            //ROS_INFO("node %d is not connected with other nodes", i);
+            /*
+            for(int j=0; j < V; j++) {
+                ds_mst[i][j] = -10;
+                ds_mst[j][i] = -10;
+            }
+            */
+            continue;
+        }
+        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size()) {
+            ROS_FATAL("SIZE!!!");
+            ROS_ERROR("%d", i);   
+            ROS_ERROR("%d", parent[i]);
+        }
+        //ROS_INFO("%d has %d as parent", i, parent[i]); 
+        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
+        ds_mst[parent[i]][i] = 1;
+    }
+
+    
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ; //ROS_INFO("(%d, %d): %d ", i, j, ds_mst[i][j]);
+    
+
+    /*
+    int k = 0;              // index of the closest recheable DS
+    int target = 4;         // the id of the DS that we want to reach
+    std::vector<int> path;  // sequence of nodes that from target leads to k;
+    i.e., if the vector is traversed in the
+                            // inverse order (from end to begin), it contains the
+    path to go from k to target
+
+    find_path(ds_mst, k, target, path);
+
+    std::vector<int>::iterator it;
+    for (it = path.begin(); it != path.end(); it++)
+        ROS_ERROR("%d - ", *it);
+        */
+}
+
 
 //DONE+
 void docking::compute_closest_ds()
@@ -2425,6 +2602,7 @@ void docking::check_reachable_ds()
                     //ROS_ERROR("%f", conservative_maximum_distance_one_way());
                     if(conservative_maximum_distance_one_way() <= 0){
                         ROS_ERROR("Cannot compute DS graph at the moment...");
+                        recompute_graph = true;
                         return;
                     }
                     if (dist < conservative_maximum_distance_one_way())
@@ -2443,7 +2621,7 @@ void docking::check_reachable_ds()
         recompute_graph = false;
 
         // construct MST starting from ds graph
-        compute_MST();
+        compute_MST_2(1);
         
         //timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, true, false); //TODO(minor) timeout
     }
@@ -2737,5 +2915,5 @@ void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
             }
         }
     }
-    compute_MST();
+    //compute_MST();
 }

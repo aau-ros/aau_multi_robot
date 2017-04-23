@@ -582,8 +582,8 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             }
             if(local_map->data.size() <= index || local_map_old->data.size() <= index)
             {
-                //ROS_ERROR("WRONG SIZE!!! index = %d", index);
-                return;
+                ROS_ERROR("WRONG SIZE!!! index = %d", index);
+                //return;
             
             }
             //end F

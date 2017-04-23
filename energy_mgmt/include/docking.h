@@ -419,6 +419,7 @@ class docking
     void set_target_ds_vacant(bool vacant);
 
     void compute_MST();
+    void compute_MST_2(int root);
 
     int minKey(int key[], bool mstSet[], int V);
 
@@ -443,6 +444,8 @@ class docking
      * @return \c true if a path was found, \c false otherwise
      */
     bool find_path(std::vector<std::vector<int> > tree, int start, int target, std::vector<int> &path);
+    
+    bool find_path_2(int start, int target, std::vector<int> &path);
 
     /**
      * @brief Auxiliary function to find a path in an undirected weigthed tree
@@ -498,7 +501,8 @@ class docking
     
     bool started_own_auction;
     
-    std::vector< std::vector<int> > ds_graph, ds_mst;
+    std::vector< std::vector<float> > ds_graph;
+    std::vector< std::vector<int> > ds_mst; //TODO woubl be better a 2d vector of bool
     std::vector<int> path;
     int index_of_ds_in_path;
     
