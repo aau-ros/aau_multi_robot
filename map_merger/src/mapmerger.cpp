@@ -569,6 +569,9 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     ROS_DEBUG("Check if map changed");
     //+=2 because nearly no differnce to +=1 but lowers number
     //of iterations per 75%
+    
+    bool print = true;
+    
     for(int row = 0; row < local_map->info.height;row+=2)
     {
         for(int collum = 0; collum < local_map->info.width;collum+=2)
@@ -576,24 +579,31 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             index = row*local_map->info.width + collum;
             
             //F
+            /*
             if(local_map == NULL || local_map_old == NULL) {
                 ROS_ERROR("NULLL!!!!");
                 return;
             }
+            */
+            /*
             if(local_map->data.size() <= index)
             {
                 ROS_ERROR("WRONG SIZE of local_map!!!");
-                return;
+                //return;
             
             }
-            if(local_map_old->data.size() <= index)
+            if(local_map_old->data.size() <= index){
+            if(print)
             {
+                 print = false;
                 ROS_ERROR("WRONG SIZE of old_local_map!!!");
-                return;
+                //return;
             
             }
             //end F
-            
+            }
+            else
+            */
             if(local_map->data[index]!= local_map_old->data[index])
             {
                 if(min_x > row)
@@ -644,13 +654,21 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
         ROS_FATAL("Local map changed size, not implemented yet");
         
         //F
-        return;
+        //return;
         
         //need to delete all and to remerge the maps
-        ROS_INFO("Deleting global_map");
+        ROS_ERROR("Deleting global_map");
         delete global_map;
         global_map = new nav_msgs::OccupancyGrid();
         global_map->data.resize(local_map->data.size());
+        
+        //F
+        //delete local_map_old;
+        //local_map_old = new nav_msgs::OccupancyGrid();
+        //local_map_old->data.resize(local_map->data.size());
+        //local_map_old->info = local_map->info;;
+        //end F
+        
         ROS_INFO("Copying local map data into global map");
         std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
         ROS_INFO("Clearing transforms");
@@ -673,10 +691,11 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             ROS_INFO("Merged %i in map_data",i);
         }
         //exit(-2);
-        ROS_INFO("Managed map size change");
+        ROS_ERROR("Managed map size change");
     }
-    ROS_DEBUG("copy local_map->data to local_map_old->data");
+    //ROS_ERROR("copy local_map->data to local_map_old->data");
     std::copy(local_map->data.begin(),local_map->data.end(),local_map_old->data.begin());
+    //ROS_ERROR("copy completed");
 }
 
 void MapMerger::callback_got_position_network(const adhoc_communication::MmRobotPosition::ConstPtr &msg)
@@ -1033,8 +1052,8 @@ void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
     {   
     
         //F
-        if(local_map->info.height < toInsert->info.height || local_map->info.width < toInsert->info.width)
-            ROS_ERROR("STRANGE");
+        //if(local_map->info.height < toInsert->info.height || local_map->info.width < toInsert->info.width)
+        //    ROS_ERROR("STRANGE");
         
         local_map->data = toInsert->data;
         local_map->info = toInsert->info;
@@ -1613,11 +1632,7 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                 exchange.request.map_update.map.data = t->data;
                 exchange.request.map_update.update_numbers = *containedUpdates;
                 std::string hostname = destination;
-                exchange.request.dst_robot = destination;
-                
-                //F
-                exchange.request.dst_robot = "mc_robot_0";
-                
+                exchange.request.dst_robot = destination;                
                 ROS_DEBUG("Send Map to %s(if nothing -> boradcast) ,frame id:%s| topic:[%s]|data<_size:%lu",
                           destination.c_str(),t->header.frame_id.c_str(),
                           topic_over_network.c_str(), exchange.request.map_update.map.data.size());

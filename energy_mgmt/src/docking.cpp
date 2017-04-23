@@ -782,9 +782,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
         if (!optimal_ds_is_set())
             ROS_DEBUG("No optimal DS has been selected yet");
-        else if (old_optimal_ds == NULL || old_optimal_ds->id != best_ds->id)
+        else if (old_optimal_ds->id == -1 || old_optimal_ds->id != best_ds->id)
         {
-            if (old_optimal_ds != NULL)
+            /* Debug output */
+            if (old_optimal_ds->id != -1)
                 ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds->id, best_ds->id);
             else
                 ROS_INFO("Change optimal DS: (none) -> ds%d", best_ds->id);
