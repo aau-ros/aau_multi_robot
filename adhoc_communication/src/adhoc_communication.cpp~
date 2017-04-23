@@ -1531,7 +1531,7 @@ void processCrSelectionFrame(CrSelectionFrame* f)
     }
 
     (*find_relay).activate(f->eh_h_.eh_source, f->header_.relay_index);
-    ROS_ERROR("GOT CR SELECTION FROM %s FOR %s RELAY INDEX[%u]", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(f->header_.relay_connection).c_str(), f->header_.relay_index);
+    ROS_INFO("GOT CR SELECTION FROM %s FOR %s RELAY INDEX[%u]", getMacAsStr(f->eh_h_.eh_source).c_str(), getMacAsStr(f->header_.relay_connection).c_str(), f->header_.relay_index);
 
 #ifdef PERFORMANCE_LOGGING_UC_LINK_SUMMARY
     Logging::increaseProperty("num_relay_selection_received");
@@ -3132,9 +3132,7 @@ void processRouteResponse(RouteResponse rr)
         else if (request.response_sent)
             ROS_INFO("I SENT ALREADY A RESPONSE: ID[%u] SOURCE HOST[%s]", rr.request_id_, rr.hostname_source_.c_str());
         else if (compareMac(rr.mac_current_hop_, src_mac) == false)
-            ROS_ERROR("I AM NOT THE CURRENT HOP[%s] TO FORWARD THE RESPONSE!", getMacAsStr(rr.mac_current_hop_).c_str());
-        else
-            ROS_ERROR("OK!!!");
+            ROS_INFO("I AM NOT THE CURRENT HOP[%s] TO FORWARD THE RESPONSE!", getMacAsStr(rr.mac_current_hop_).c_str());
 
         if (enable_cooperative_relaying)// && rr.mc_flag_ == false)todo
         {
@@ -3251,10 +3249,10 @@ void addGroupToRelay(unsigned char* mac1, unsigned char* mac2, std::string group
     if (find_relay != cr_entries_l.end())
     {
         if ((*find_relay).addMcRelayConnection(mac1, mac2, group_name))
-            ROS_ERROR("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac1).c_str(), getMacAsStr(mac2).c_str(), group_name.c_str());
+            ROS_INFO("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac1).c_str(), getMacAsStr(mac2).c_str(), group_name.c_str());
 
         if ((*find_relay).addMcRelayConnection(mac2, mac1, group_name))
-            ROS_ERROR("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac2).c_str(), getMacAsStr(mac1).c_str(), group_name.c_str());
+            ROS_INFO("ADD MC ENTRY FOR RELAY CONNECTION FROM %s TO %s GROUP[%s]", getMacAsStr(mac2).c_str(), getMacAsStr(mac1).c_str(), group_name.c_str());
 
     }
     else

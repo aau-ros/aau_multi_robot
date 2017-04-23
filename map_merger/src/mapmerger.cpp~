@@ -580,9 +580,15 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
                 ROS_ERROR("NULLL!!!!");
                 return;
             }
-            if(local_map->data.size() <= index || local_map_old->data.size() <= index)
+            if(local_map->data.size() <= index)
             {
-                //ROS_ERROR("WRONG SIZE!!! index = %d", index);
+                ROS_ERROR("WRONG SIZE of local_map!!!");
+                return;
+            
+            }
+            if(local_map_old->data.size() <= index)
+            {
+                ROS_ERROR("WRONG SIZE of old_local_map!!!");
                 return;
             
             }
@@ -636,6 +642,10 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     if(local_map->data.size() != local_map_old->data.size())
     {
         ROS_FATAL("Local map changed size, not implemented yet");
+        
+        //F
+        return;
+        
         //need to delete all and to remerge the maps
         ROS_INFO("Deleting global_map");
         delete global_map;
@@ -1209,6 +1219,10 @@ cv::Mat MapMerger::mapToMat(const nav_msgs::OccupancyGrid *map)
     if (map->info.height*map->info.width != map->data.size())
     {
         ROS_ERROR("Data size doesn't match width*height: width = %d, height = %d, data size = %zu", map->info.width, map->info.height, map->data.size());
+        
+        //F
+        return;
+        
     }
 
     // transform the map in the same way the map_saver component does
