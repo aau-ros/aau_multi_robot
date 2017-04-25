@@ -168,4 +168,4 @@ private:
     bool turning;
 };
 
-#endif // MAPMERGER_Hd
+#endif // MAPMERGER_H
