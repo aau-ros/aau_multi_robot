@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cerrno>
 #include "adhoc_communication/MmPoint.h"
+#include <ros/console.h>
 
 
 
@@ -12,7 +13,12 @@
 //#define DEA_OPT_PARTIAL_MERGE
 //#define DEBUG
 MapMerger::MapMerger()
-{    
+{
+	// set output level to debug
+	if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+	   ros::console::notifyLoggerLevelsChanged();
+	}
+		
     pos_seq_my = 0;
     pos_pub_other = new std::vector<ros::Publisher>();
     pos_array_other = new std::vector<visualization_msgs::MarkerArray>();
@@ -131,7 +137,6 @@ MapMerger::MapMerger()
     ROS_INFO("Prefix:%s",robot_prefix.c_str());
     ROS_INFO("Local Map Frame:%s",local_map_frame_id.c_str());
     robot_hostname = robot_name;
-
 }
 void MapMerger::waitForLocalMetaData()
 {
@@ -272,19 +277,19 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
         //of iterations per 75%
         for(int row = 0; row < local_map->info.height;row+=2)
         {
-            for(int collum = 0; collum < local_map->info.width;collum+=2)
+            for(int column = 0; column < local_map->info.width;column+=2)
             {
-                int index = row * local_map->info.width + collum;
+                int index = row * local_map->info.width + column;
                 if(local_map->data[index]!= -1)
                 {
                     if(min_x > row)
                         min_x = row;
-                    if(min_y > collum)
-                        min_y = collum;
+                    if(min_y > column)
+                        min_y = column;
                     if(max_x < row)
                         max_x = row;
-                    if(max_y < collum)
-                        max_y = collum;
+                    if(max_y < column)
+                        max_y = column;
                 }
             }
         }
@@ -556,8 +561,12 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     local_map_new_data = false;
     if(debug)
     {
-        cv::imwrite("local.pgm",mapToMat(local_map));
-        cv::imwrite("old.pgm",mapToMat(local_map_old));
+    	std::stringstream fn;
+    	fn << robot_name << "_" << ros::Time::now() << "_local.pgm";
+        cv::imwrite(fn.str(),mapToMat(local_map));
+        fn.str("");
+    	fn << robot_name << "_" << ros::Time::now() << "_old.pgm";
+        cv::imwrite(fn.str(),mapToMat(local_map_old));
     }
 #ifndef DEA_OPT_MAP_CHANGED
     int min_x = 9999;
@@ -574,18 +583,18 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     
     for(int row = 0; row < local_map->info.height;row+=2)
     {
-        for(int collum = 0; collum < local_map->info.width;collum+=2)
+        for(int column = 0; column < local_map->info.width;column+=2)
         {
-            index = row*local_map->info.width + collum;
+            index = row*local_map->info.width + column;
             
             //F
             /*
             if(local_map == NULL || local_map_old == NULL) {
                 ROS_ERROR("NULLL!!!!");
-                return;
+                //return;
             }
-            */
-            /*
+            
+            
             if(local_map->data.size() <= index)
             {
                 ROS_ERROR("WRONG SIZE of local_map!!!");
@@ -602,18 +611,18 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             }
             //end F
             }
-            else
+            //else
             */
-            if(local_map->data[index]!= local_map_old->data[index])
+            if(index >= local_map_old->data.size() || local_map->data[index] != local_map_old->data[index])
             {
                 if(min_x > row)
                     min_x = row;
-                if(min_y > collum)
-                    min_y = collum;
+                if(min_y > column)
+                    min_y = column;
                 if(max_x < row)
                     max_x = row;
-                if(max_y < collum)
-                    max_y = collum;
+                if(max_y < column)
+                    max_y = column;
             }
             
         }
@@ -651,7 +660,7 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     update_seq++;
     if(local_map->data.size() != local_map_old->data.size())
     {
-        ROS_FATAL("Local map changed size, not implemented yet");
+        ROS_FATAL("Local map changed size, not implemented yet"); // should be fixed now
         
         //F
         //return;
@@ -668,6 +677,9 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
         //local_map_old->data.resize(local_map->data.size());
         //local_map_old->info = local_map->info;;
         //end F
+        local_map_old->data.resize(local_map->data.size());
+        local_map_old->header = local_map->header;
+        local_map_old->info = local_map->info;
         
         ROS_INFO("Copying local map data into global map");
         std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
@@ -1192,16 +1204,16 @@ void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int mi
         ROS_INFO("Stop merging maps, globl map is null");
         return;
     }
-    int collums,rows;
+    int columns,rows;
     if(max_x == -1 || max_y == -1)
     {
         rows    =  mapToMerge->info.height;
-        collums =  mapToMerge->info.width;
+        columns =  mapToMerge->info.width;
     }
     else
     {
         rows    =  max_x;
-        collums =  max_y;
+        columns =  max_y;
     }
     int start_x = min_x;
     int start_y = min_y;
@@ -1218,10 +1230,10 @@ void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int mi
         }
      for(int row = start_x; +row < rows ; row++)
      {
-         for(int collum = start_y; collum < collums;collum++)
+         for(int column = start_y; column < columns;column++)
          {
-            index_map_to_merge = (row - start_x) * (collums - start_y) + (collum - start_y);
-            index_global_map = row * map_width + collum;
+            index_map_to_merge = (row - start_x) * (columns - start_y) + (column - start_y);
+            index_global_map = row * map_width + column;
 
             if(mapToMerge->data[index_map_to_merge] != -1)
                 if(local_map->data[index_global_map] == -1)
@@ -1355,9 +1367,9 @@ nav_msgs::OccupancyGrid* MapMerger::getMapPart(int map_index, int start_x, int s
      nav_msgs::OccupancyGrid* part = new nav_msgs::OccupancyGrid();
      for(int row = 0; row < height;row ++)
      {
-         for(int collum = 0; collum < width;collum++)
+         for(int column = 0; column < width;column++)
          {
-             part->data.push_back(tmp->data[(row+start_x)*tmp->info.width+(collum + start_y)]);
+             part->data.push_back(tmp->data[(row+start_x)*tmp->info.width+(column + start_y)]);
          }
      }
      part->header = tmp->header;
@@ -1397,13 +1409,13 @@ void MapMerger::updateMapArea(int map_index, nav_msgs::OccupancyGrid *newData, b
     }
     for(int row = 0; row < height; row++)
     {
-        for(int collum = 0; collum < width; collum++)
+        for(int column = 0; column < width; column++)
         {
-            int i_data =row * width + collum ;
+            int i_data =row * width + column ;
             if(newData->data[i_data] == -1 && clear == false)
                 continue;
             //may segfault, because every map has a other size
-            int i_global = (row+start_x)*tmp->info.width+(collum + start_y);
+            int i_global = (row+start_x)*tmp->info.width+(column + start_y);
             tmp->data[i_global] = newData->data[i_data];
         }
     }
@@ -1575,7 +1587,7 @@ void MapMerger::callback_robot_status(const nav_msgs::MapMetaData::ConstPtr &msg
     }
 }
 
-void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* containedUpdates, int start_row, int start_collum, int end_row, int end_collum)
+void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* containedUpdates, int start_row, int start_column, int end_row, int end_column)
 {
      //ros::nodeHandle nodeHandle ("~");
      ros::ServiceClient client;
@@ -1583,16 +1595,16 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
      client = nodeHandle->serviceClient<adhoc_communication::SendMmMapUpdate>
              (robot_prefix + "/adhoc_communication/send_map_update");
       std::string service = robot_prefix + "/adhoc_communication/send_map_update";
-     if(end_row == -1 || end_collum == -1)
+     if(end_row == -1 || end_column == -1)
     {
         ROS_DEBUG("Send whole map");
         end_row = map_height;
-        end_collum = map_width;
+        end_column = map_width;
         start_row = 0;
-        start_collum = 0;
+        start_column = 0;
         isWholeMap = true;
     }
-        ROS_DEBUG("Send map using:%s \n\t\t\t\t the normal way min_x:%i|max_x:%i|min_y:%i|max_y:%i",service.c_str(),start_row,end_row,start_collum,end_collum);
+        ROS_DEBUG("Send map using:%s \n\t\t\t\t the normal way min_x:%i|max_x:%i|min_y:%i|max_y:%i",service.c_str(),start_row,end_row,start_column,end_column);
         /**
           todo:
           values for the mapPart are used wrong, always creates one great map part if i just send 688 x 688 packets,
@@ -1603,14 +1615,14 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
         width = size;
         for(int row = start_row; row < end_row;row+=size)
         {
-            for(int collum = start_collum; collum < end_collum;collum+=size)
+            for(int column = start_column; column < end_column;column+=size)
             {
                 if(row + height > end_row)
                     height = end_row - row;
-                if(collum + width > end_collum)
-                    width = end_collum - collum;
+                if(column + width > end_column)
+                    width = end_column - column;
                 ROS_DEBUG("Creating map part t");
-                nav_msgs::OccupancyGrid * t = this->getMapPart(-1,row,collum,width,height);
+                nav_msgs::OccupancyGrid * t = this->getMapPart(-1,row,column,width,height);
                 ROS_DEBUG("Checking data of  map part t,size:%lu",t->data.size());
 
                 /*int sum_elements = std::accumulate(t->data.begin(),t->data.end(),0);
@@ -1640,9 +1652,9 @@ void MapMerger::sendMapOverNetwork(string destination, std::vector<int>* contain
                 {
                     if(exchange.response.status)
                         if(destination == "")
-                            ROS_DEBUG("Sended Map to:all,topic:%s|r:%i;c:%i",exchange.request.topic.c_str(),row,collum);
+                            ROS_DEBUG("Sended Map to:all,topic:%s|r:%i;c:%i",exchange.request.topic.c_str(),row,column);
                     else
-                        ROS_DEBUG("Sended Map to:%s,topic:%s|r:%i;c:%i",exchange.request.dst_robot.c_str(),exchange.request.topic.c_str(),row,collum);
+                        ROS_DEBUG("Sended Map to:%s,topic:%s|r:%i;c:%i",exchange.request.dst_robot.c_str(),exchange.request.topic.c_str(),row,column);
                     else
                         ROS_WARN("Destination host unreachable [%s](if nothing -> boradcast)",hostname.c_str());
                 }
