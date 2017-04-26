@@ -2580,6 +2580,7 @@ void docking::check_reachable_ds()
             ROS_INFO("UNREACHABLE!!!");
     }
 
+    return;
     if (new_ds_discovered || recompute_graph)
     {
         // construct ds graph //TODO(minor) construct graph only when a new DS is found
@@ -2881,6 +2882,7 @@ void docking::wait_battery_info() {
 
 void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
     ROS_INFO("Periodic recomputation of DS graph");
+    return;
     for (int i = 0; i < ds.size(); i++) {
         for (int j = 0; j < ds.size(); j++) {
             //safety checks   
