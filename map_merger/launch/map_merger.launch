@@ -26,5 +26,6 @@
     	<param name="local_map_topic" value="$(arg robot_prefix)/map" />
     	<param name="meta_topic_over_network" value="$(arg robot_prefix)/map_meta" />
     	<param name="local_map_metadata_topic" value="$(arg robot_prefix)/map_metadata" />
+    	<param name="debug" value="false" /> <!-- DEBUG -->
 	</node>  
 </launch>
