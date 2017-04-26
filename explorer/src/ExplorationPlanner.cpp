@@ -1642,11 +1642,11 @@ void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoi
     position_mutex.lock();
 
     other_robots_positions.positions.clear();
-    ROS_INFO("positions size: %lu", msg.get()->positions.size());
     for(int i = 0; i < msg.get()->positions.size(); i++)
     {
         other_robots_positions.positions.push_back(msg.get()->positions.at(i));
     }
+    ROS_INFO("positions size: %lu", msg.get()->positions.size());
     position_mutex.unlock();
 }
 
@@ -2592,15 +2592,16 @@ bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costma
     if(!global_costmap->getCostmap()->worldToMap(x,y,mx,my))
     {
         ROS_ERROR("Cannot convert coordinates successfully.");
+        return false;
     }
-    ROS_DEBUG("Map coordinates mx: %d  my: %d",mx,my);
+    //ROS_DEBUG("Map coordinates mx: %d  my: %d",mx,my);
 
 
     neighbours = getMapNeighbours(mx, my, 40);
-    ROS_DEBUG("Got neighbours");
+    //ROS_DEBUG("Got neighbours");
     for (int j = 0; j< neighbours.size()/2; j++)
     {
-        ROS_DEBUG("Get neighbours %d and %d",j*2,j*2+1);
+        // ROS_DEBUG("Get neighbours %d and %d",j*2,j*2+1); // bad place for debug output
         new_mx = neighbours.at(j*2);
         new_my = neighbours.at(j*2+1);
 
@@ -2613,7 +2614,7 @@ bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costma
             inner_neighbours = getMapNeighbours(new_mx, new_my, INNER_DISTANCE);
             for (int i = 0; i< inner_neighbours.size()/2; i++)
             {
-                ROS_DEBUG("Get inner neighbours %d and %d",i*2,i*2+1);
+                // ROS_DEBUG("Get inner neighbours %d and %d",i*2,i*2+1); // bad place for debug output!
                 inner_mx = inner_neighbours.at(i*2);
                 inner_my = inner_neighbours.at(i*2+1);
 
