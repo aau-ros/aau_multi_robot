@@ -362,7 +362,7 @@ class Explorer
 
     void explore()  // TODO(minor) comments
     {
-        ROS_INFO("STARTING EXPLORATION");
+        //ROS_ERROR("STARTING explore()");
         // TODO(minor) put to sleep also the other nodes
         /*
          * Sleep is required to get the actual a
@@ -411,7 +411,7 @@ class Explorer
         
         sub_finish = nh.subscribe("explorer/finish", 1, &Explorer::finish_callback, this);
 
-        ROS_INFO("STARTING EXPLORATION");
+        ROS_ERROR("STARTING EXPLORATION");
 
         /* Start main loop (it loops till the end of the exploration) */
         while (robot_state != finished)
@@ -468,7 +468,7 @@ class Explorer
             exploration->findFrontiers();
 
             exploration->clearVisitedFrontiers();
-            exploration->clearUnreachableFrontiers();
+            exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
             exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
@@ -511,15 +511,21 @@ class Explorer
             
             explorer_ready = true;
             
-            //ROS_ERROR("START FRONTIER SELECTION");
+            
             
             store_current_position();
             
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
-                if(available_distance <= 0)
+                if(available_distance <= 0) {
+                    ROS_ERROR("waiting battery info");
                     continue;
+                   }  
+                    
+                  
+                    
+                ROS_ERROR("START FRONTIER SELECTION");
                     
                 /**********************
                  * FRONTIER SELECTION *
@@ -984,24 +990,24 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_DEBUG("SORTING FRONTIERS...");
+                        ROS_ERROR("SORTING FRONTIERS...");
                         exploration->sort(2);
                         exploration->sort(3);
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
-                        ROS_DEBUG("DETERMINE GOAL...");
+                        ROS_ERROR("DETERMINE GOAL...");
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
                         if(DEBUG)
-                            goal_determined = exploration->determine_goal_staying_alive(
+                            goal_determined = exploration->determine_goal_staying_alive_2(
                                 1, 2, available_distance * SAFETY_COEFF +
                                           available_distance * SAFETY_COEFF * INCR * number_of_recharges,
                                 &final_goal, count, &robot_str, -1);
                         else
-                            goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                        //ROS_ERROR("Goal determined: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                            goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                        ROS_ERROR("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
                             goal_determined  = false;
@@ -2845,7 +2851,7 @@ class Explorer
     }
     
     void safety_checks() {
-        int duration = 3; //minutes;
+        int duration = 30; //minutes;
         
         int sleeping_time = 5.0;
         int starting_value = 60/sleeping_time * duration;

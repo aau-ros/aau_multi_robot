@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     battery_simulate bat;
     bat.compute(); //force computation and publishing...
     bat.publish();
-    //boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
+    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
     docking doc;
@@ -36,6 +36,9 @@ int main(int argc, char** argv)
     //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
     //doc.wait_battery_info(); //only ok if threat thr_battery is active
+    
+    //doc.join_all_multicast_groups();
+    doc.start_join_timer();
     
     
 
@@ -52,7 +55,7 @@ int main(int argc, char** argv)
         
         ros::spinOnce();
         
-        doc.join_all_multicast_groups();
+        //doc.join_all_multicast_groups();
         
         doc.update_robot_position();
         

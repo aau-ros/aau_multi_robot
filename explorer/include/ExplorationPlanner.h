@@ -213,6 +213,7 @@ namespace explorationPlanner
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void findFrontiers();
             bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
+            bool determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool check_efficiency_of_goal(double x, double y);
             void clearVisitedAndSeenFrontiersFromClusters();
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);
@@ -324,6 +325,8 @@ namespace explorationPlanner
             double p_alpha_;
             double p_dist_for_goal_reached_;
             double p_same_frontier_dist_;
+            
+            std::vector<frontier_t> sorted_frontiers;
     };
 }
 

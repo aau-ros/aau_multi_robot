@@ -62,6 +62,7 @@ class docking
     void wait_battery_info();
     //void recompute_MST();
     void update_llh();
+    void start_join_timer();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -551,6 +552,16 @@ class docking
     bool target_ds_is_set();
     
     void timer_callback_recompute_ds_graph(const ros::TimerEvent &);
+    void timer_callback_join_all_mc_groups(const ros::TimerEvent &event);
+
+    
+    ros::Timer join_timer;
+    bool optimal_ds_set;
+    bool set_optimal_ds_given_id(int id);
+
+    bool set_optimal_ds_given_index(int index);
+    int old_optimal_ds_id;
+
 
 };
 

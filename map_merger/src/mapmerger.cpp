@@ -72,7 +72,7 @@ MapMerger::MapMerger()
     nodeHandle->param<int>("seconds_meta_timer",seconds_meta_timer,5);
     nodeHandle->param<int>("seconds_pub_timer",seconds_publish_timer,3);
     nodeHandle->param<int>("seconds_send_timer",seconds_send_timer,5);
-    nodeHandle->param<int>("seconds_recompute_transform",seconds_recompute_transform,5);
+    nodeHandle->param<int>("seconds_recompute_transform",seconds_recompute_transform,200);
     nodeHandle->param<int>("seconds_send_position",seconds_send_position,2);
     nodeHandle->param<double>("max_trans_robots",max_trans_robot,-1);
     nodeHandle->param<double>("max_rotation_robots",max_rotation_robot,5);
@@ -106,8 +106,8 @@ MapMerger::MapMerger()
     splitted = true;
     size=2048;
     has_local_map = false;
-    map_width = 2976;
-    map_height = 2976;
+    map_width = 29760;
+    map_height = 29760;
     /*
     robot_name="robot_0";
     robot_prefix="/robot_0";
@@ -388,7 +388,9 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
     }
     if(transforms->size() != map_data->size() && local_map != NULL )
     {
-        for(int i = 0; i < robots->size(); i++)
+        //F
+        //for(int i = 0; i < robots->size(); i++)
+        for(int i = 0; i < robots->size() && i < new_data_maps->size(); i++)
         {
             if(findTransformIndex(i) == -1 && new_data_maps->at(i) == true)
             {
@@ -455,7 +457,11 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
     }
     else
     {
-        ROS_ERROR("!!!Global map not ready!!!");
+        if(!global_map_ready)
+            ROS_ERROR("!!!Global map not ready!!!");
+        else if(global_map == NULL)
+            ROS_ERROR("Global map still not exists!");
+        
     }
     return;
 }
@@ -563,9 +569,13 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
     {
     	std::stringstream fn;
     	fn << robot_name << "_" << ros::Time::now() << "_local.pgm";
+    	 if(local_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
         cv::imwrite(fn.str(),mapToMat(local_map));
         fn.str("");
     	fn << robot_name << "_" << ros::Time::now() << "_old.pgm";
+    	if(local_map_old->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
         cv::imwrite(fn.str(),mapToMat(local_map_old));
     }
 #ifndef DEA_OPT_MAP_CHANGED
@@ -669,7 +679,19 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
         ROS_ERROR("Deleting global_map");
         delete global_map;
         global_map = new nav_msgs::OccupancyGrid();
+        
+        //F
+        global_map->header = local_map->header;
+        global_map->info = local_map->info;
+        //end F
+        
+        
         global_map->data.resize(local_map->data.size());
+        
+        //F
+        global_map->header = local_map->header;
+        global_map->info = local_map->info;
+        //end F
         
         //F
         //delete local_map_old;
@@ -1046,6 +1068,10 @@ void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
         //local_map_old->data = toInsert->data;
         local_map_old->info = local_map->info;
         ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
+        
+        //F
+        delete global_map;
+        
         global_map = new nav_msgs::OccupancyGrid();
         global_map->data = local_map->data;
         global_map->header = local_map->header;
@@ -1325,6 +1351,8 @@ void MapMerger::updateMap(nav_msgs::OccupancyGrid *mapToUpdate,int index_of_tran
     //convert the map to a mat, then transform the image, and then convert the mat to a map
     //and merge them
     ROS_DEBUG("Update:[%s]",mapToUpdate->header.frame_id.c_str());
+            if(mapToUpdate->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
     cv::Mat img = mapToMat(mapToUpdate);
     img = transformImage(img,transforms->at(index_of_transform));
     /*if(debug)
@@ -1434,7 +1462,11 @@ bool MapMerger::recomputeTransform(int mapDataIndex)
     nav_msgs::OccupancyGrid * map = map_data->at(mapDataIndex);
     std::string map_name = map->header.frame_id;
     ROS_DEBUG("Restransforming : [%s]",map_name.c_str());
+    if(local_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
     cv::Mat img_local = mapToMat(local_map);
+        if(map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
     cv::Mat img_other = mapToMat(map);
 
     int transIndex = findTransformIndex(mapDataIndex);
@@ -1507,7 +1539,11 @@ void MapMerger::computeTransform(int mapDataIndex)
     new_data_maps->at(mapDataIndex) = false;
    std::string map_name = whole_map->header.frame_id;
     ROS_DEBUG("Transforming : [%s]",map_name.c_str());
+    if(local_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
     cv::Mat img_local = mapToMat(local_map);
+    if(whole_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
     cv::Mat img_other = mapToMat(whole_map);
     StitchedMap mapStiched(img_local,img_other,max_trans_robot,max_rotation_robot,5,cv::Mat());
     //calculates the transformation between the local map and all the other maps, and
@@ -1767,6 +1803,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
             // log the global map 
             ROS_DEBUG("Storing global file...");
             file = full_log_path + std::string("/global.pgm");
+            if(global_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
             cv::Mat glo = mapToMat(global_map);
             circle(glo,Point(glo.rows/2,glo.cols/2),5,Scalar(0,0,0),2);
             if(global_map_ready)
@@ -1783,7 +1821,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
             // log the local map
             ROS_DEBUG("Storing local file...");
             file = full_log_path + std::string("/local.pgm");
-
+if(local_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
             cv::Mat loc = mapToMat(local_map);
             circle(loc,Point(loc.rows/2,loc.cols/2),5,Scalar(0,0,0),2);
             cv::imwrite(file.c_str(),loc);
@@ -1864,6 +1903,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         ROS_DEBUG("Storing local file...");
         file = full_log_path + std::string("/local.pgm");
 
+        if(local_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
         cv::Mat loc = mapToMat(local_map);
         circle(loc,Point(loc.rows/2,loc.cols/2),5,Scalar(0,0,0),2);
         cv::imwrite(file.c_str(),loc);
@@ -1872,6 +1913,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 
         ROS_DEBUG("Storing global file...");
         file = full_log_path + std::string("/global.pgm");
+        if(global_map->info.height == 0)
+            ROS_ERROR("ZERO!!!!");
         cv::Mat glo = mapToMat(global_map);
         circle(glo,Point(glo.rows/2,glo.cols/2),5,Scalar(0,0,0),2);
         if(global_map_ready)
