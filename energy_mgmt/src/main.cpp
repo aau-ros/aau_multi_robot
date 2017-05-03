@@ -50,8 +50,8 @@ int main(int argc, char** argv)
         ros::spinOnce();
         
         //bat.spin();
-        bat.compute();
-        bat.publish();
+        //bat.compute();
+        //bat.publish();
         
         ros::spinOnce();
         
