@@ -72,7 +72,7 @@ MapMerger::MapMerger()
     nodeHandle->param<int>("seconds_meta_timer",seconds_meta_timer,5);
     nodeHandle->param<int>("seconds_pub_timer",seconds_publish_timer,3);
     nodeHandle->param<int>("seconds_send_timer",seconds_send_timer,5);
-    nodeHandle->param<int>("seconds_recompute_transform",seconds_recompute_transform,200);
+    nodeHandle->param<int>("seconds_recompute_transform",seconds_recompute_transform,20);
     nodeHandle->param<int>("seconds_send_position",seconds_send_position,2);
     nodeHandle->param<double>("max_trans_robots",max_trans_robot,-1);
     nodeHandle->param<double>("max_rotation_robots",max_rotation_robot,5);
