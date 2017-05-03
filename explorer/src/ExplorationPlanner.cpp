@@ -4776,7 +4776,7 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
 
     if(sorted_frontiers.size() > 0)
     {
-        ROS_ERROR("%lu", sorted_frontiers.size());
+        //ROS_ERROR("%lu", sorted_frontiers.size());
         double robot_x, robot_y;
         
         //for(int i = sorted_frontiers.size(); i >= 0 && i > sorted_frontiers.size() - max_front; --i)
@@ -4784,20 +4784,20 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
         for(int i = sorted_frontiers.size() - 1; continue_bool && i >= 0 && i > sorted_frontiers.size() - max_front - 1; --i)
         {
             //continue_bool = false;
-            return;
-            ROS_ERROR("sort: %d", (int)sorted_frontiers.size() - 1 - i);
+            //return;
+            //ROS_ERROR("sort: %d", (int)sorted_frontiers.size() - 1 - i);
             if( ((int)sorted_frontiers.size() - 1 - i) < 0) {
                 ROS_FATAL("Somethign bad happened....");
                 return;
             }
             
             //TEMP
-            if((int)sorted_frontiers.size() - 1 - i >= 1)
-                return;
+            //if((int)sorted_frontiers.size() - 1 - i >= 1)
+            //    return;
                 
             for(int j = 0; j < sorted_frontiers.size()-1 && j < max_front; ++j)
             {
-                ROS_ERROR("sort2: %d", j);
+                //ROS_ERROR("sort2: %d", j);
                 /*
                  * cost function
                  * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
