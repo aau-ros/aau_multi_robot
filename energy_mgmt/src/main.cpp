@@ -69,7 +69,7 @@ int main(int argc, char** argv)
         
         doc.send_robot();
         
-        //doc.update_llh();
+        doc.update_llh();
         
         //doc.recompute_MST();
         
@@ -78,6 +78,8 @@ int main(int argc, char** argv)
 
         // sleep for 1/rate seconds
         loop_rate.sleep();
+        
+        ROS_ERROR("End of main loop");
     }
     
     //thr_spin.interrupt();

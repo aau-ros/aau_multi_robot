@@ -25,8 +25,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     nh_tilde.param<int>("ds_selection_policy", ds_selection_policy, -1);
     nh_tilde.param<int>("auction_duration", auction_timeout, 5); //TODO(minor) int?
     nh_tilde.param<int>("extra_auction_time", extra_time, 3);
-    nh_tilde.param<int>("reauctioning_timeout", reauctioning_timeout, 20);
-    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 10.0);
+    nh_tilde.param<int>("reauctioning_timeout", reauctioning_timeout, 10); //s
+    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 10.0); //m
     nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true);         // not used at the moment...
     nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
 
@@ -1176,15 +1176,17 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
     if (msg.get()->state == in_queue)
     {
-        //ROS_ERROR("\n\t\e[1;34mRobot in queue!!!\e[0m");
 
         /* Schedule next auction (a robot goes in queue only if it has lost an
          * auction started by itself) NB: NOOOO!!! it could win is auction, then
          * immediately lose a following one that was sovrapposing with the one
          * started by it, so when both the auction are completed, the robot will
          * seem to be lost only an auction started by another robot!!!*/
+        //timer_restart_auction.stop(); //reduntant ?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
+        
+        ROS_ERROR("Robot in queue!!!");
     }
     else if (msg.get()->state == going_charging)
     {
@@ -1212,7 +1214,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == auctioning)
     {
-        ROS_INFO("Robot need to recharge");
+        ROS_INFO("Robot needs to recharge");
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
@@ -1221,7 +1223,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == auctioning_2) {
         if(ds_selection_policy == 2) {
-            ROS_INFO("Robot need to recharge");
+            ROS_INFO("Robot needs to recharge");
             need_to_charge = true;
             if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                       // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
@@ -1455,7 +1457,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         /* Robot received a bid of an auction whose auctioned docking station is not
          * the one the robot is interested in
          * at the moment, so it won't participate to the auction */
-        ;  // ROS_INFO("Robot has no interested in participating to this auction");
+        ROS_INFO("Robot has no interested in participating to this auction");
     }
     else
     {
@@ -1500,19 +1502,15 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    ROS_INFO("Received bid for auction %d", auction_id);
-
-    if (auction_id != msg.get()->auction)
-    {
-        ROS_INFO("The received bid is not for the auction recently started by this "
-                 "robot: ignore it");
-        return;
-    }
-
     if (!managing_auction)
     {
-        ROS_INFO("The received bid has arrived too late, since the associated "
-                 "auction has already finished: ignore it");
+        ROS_INFO("Received a bid that has arrived too late, since the associated auction has already finished: ignore it");
+        return;
+    }
+    
+    if (auction_id != msg.get()->auction)
+    {
+        ROS_INFO("Received a bid that is not for the auction recently started by this robot: ignore it");
         return;
     }
 
@@ -1520,11 +1518,13 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
     for (std::vector<auction_bid_t>::iterator it = auction_bids.begin(); it != auction_bids.end(); it++)
         if ((*it).robot_id == msg.get()->robot)
         {
-            ROS_INFO("The robot has already received this bid: ignore it");
+            ROS_INFO("Received a bid that was already received before: ignore it");
             return;
         }
-
+        
+    ROS_INFO("Received bid for auction %d", auction_id);
     ROS_DEBUG("Store bid (%f) of robot %d for this auction", msg.get()->bid, msg.get()->robot);
+    
     auction_bid_t bid;
     bid.robot_id = msg.get()->robot;
     bid.bid = msg.get()->bid;
@@ -1575,7 +1575,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     if (winner == robot_id)
     {
         /* The robot won its own auction */
-        ROS_INFO("Winner of the auction");  // TODO(minor) specify which auction
+        ROS_ERROR("Winner of the auction");  // TODO(minor) specify which auction
 
         auction_winner = true;
         timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the
@@ -1585,7 +1585,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     else
     {
         /* The robot lost its own auction */
-        ROS_INFO("Robot lost its own auction");
+        ROS_ERROR("Robot lost its own auction");
         auction_winner = false;
     }
 
@@ -1603,7 +1603,6 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
     /* Computation completed */
     participating_to_auction--;
-    update_state_required = true;
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -1613,19 +1612,23 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
-    started_own_auction = true;  // otherwise a robot could not start the auction
-                                 // because the following if is true, then win
-                                 // another robot auction and stop the time, then
-                                 // lost another and not be reset in queue... //TODO(minor) not very clean...
-    ROS_INFO("Periodic re-auctioning");
+    ROS_ERROR("Periodic re-auctioning");
+    
+    //start auction only if no other one for teh same ds is on going: this is to avoid an "infinite loop" of auctions"
     if (participating_to_auction == 0)  // Notice that it is still possible that
                                         // two robots start an auction at the same
                                         // time...
         start_new_auction();
     else
     {
-        ROS_INFO("Robot is already participating to an auction: let's wait "
+        update_state_required = true;
+        started_own_auction = true;  // otherwise a robot could not start the auction
+                                     // because the following if is true, then win
+                                     // another robot auction and stop the time, then
+                                     // lost another and not be reset in queue... //TODO(minor) not very clean...
+        ROS_ERROR("Robot is already participating to an auction: let's wait "
                   "instead of starting another one...");
+        //timer_restart_auction.stop(); //reduntant?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
     }
@@ -1640,7 +1643,7 @@ void docking::start_new_auction()
         return;
     }
 
-    ROS_INFO("Starting new auction");
+    ROS_ERROR("Starting new auction");
     
     /* Keep track of robot bid */
     auction_bid_t bid;
@@ -1651,6 +1654,7 @@ void docking::start_new_auction()
     /* The robot is starting an auction */
     managing_auction = true;  // TODO(minor) reduntant w.r.t started_own_auction???
     started_own_auction = true;
+    update_state_required = true;
     participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
 
     /* Start auction timer to be notified of auction conclusion */
@@ -1707,19 +1711,19 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of
      * the auction whose result has been just
      * received */
-    if (msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS!
+    if (msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
     {
         ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
                                                                                     // acutally
                                                                                     // maybe
                                                                                     // it
                                                                                     // didn't participate because its
-                                                                                    // bid was lost...
+                                                                                    // bid was lost OR because only now its best_ds is the one of the auction...
 
         /* Since the robot received the result of an auction to which it took part,
          * explorer node must be informed of a
          * possible change in the robot state */
-        update_state_required = true;
+        update_state_required = true; //TODO maybe it would be better when it receive the bid?
 
         /* Check if the robot is the winner of the auction */
         if (robot_id == msg.get()->robot)
@@ -1830,7 +1834,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     if (update_state_required && participating_to_auction == 0)
     {
         /* An update of the robot state is required and it can be performed now */
-        ROS_INFO("Sending information to explorer node about the result of recent "
+        ROS_ERROR("Sending information to explorer node about the result of recent "
                  "auctions");
 
         /* Create the empty message to be sent */
@@ -1920,12 +1924,12 @@ void docking::update_robot_state()  // TODO(minor) simplify
     {
         /* Do nothing, just print some debug text */
         if (participating_to_auction > 0 && !update_state_required)
-            ROS_DEBUG("There are still pending auctions, and moreover no update is "
+            ROS_ERROR("There are still pending auctions, and moreover no update is "
                       "necessary for the moment");
         else if (!update_state_required)
-            ROS_DEBUG("No state update required");
+            ROS_ERROR("No state update required");
         else if (participating_to_auction > 0)
-            ROS_DEBUG("There are still pending auctions, cannot update robot state");
+            ROS_ERROR("There are still pending auctions, cannot update robot state");
         else
             ROS_FATAL("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
     }
