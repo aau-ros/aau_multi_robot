@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 // Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
-    while(ros::ok()){
+    while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
         ros::spinOnce();
         
@@ -79,8 +79,11 @@ int main(int argc, char** argv)
         // sleep for 1/rate seconds
         loop_rate.sleep();
         
-        ROS_ERROR("End of main loop");
+        //ROS_ERROR("End of main loop");
     }
+    
+    while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
+        ros::Duration(10).sleep();
     
     //thr_spin.interrupt();
     //thr_spin.join();

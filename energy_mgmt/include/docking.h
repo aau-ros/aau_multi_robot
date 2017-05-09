@@ -63,6 +63,7 @@ class docking
     //void recompute_MST();
     void update_llh();
     void start_join_timer();
+    bool finished_bool;
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 

@@ -452,7 +452,7 @@ class Explorer
             bool negotiation;
             int count = 0;
 
-            ROS_ERROR("****************** EXPLORE ******************");
+            ROS_INFO("****************** EXPLORE ******************");
 
             /*
             * Use mutex to lock the critical section (access to the costmap)
@@ -460,14 +460,14 @@ class Explorer
             */
             //ROS_ERROR("COSTMAP STUFF");
             costmap_mutex.lock();
-            ROS_ERROR("COSTMAP STUFF, lock aquired");
+            //ROS_ERROR("COSTMAP STUFF, lock aquired");
 
             exploration->transformToOwnCoordinates_frontiers();
             exploration->transformToOwnCoordinates_visited_frontiers();
 
-            ROS_ERROR("initialize planner");
+            //ROS_ERROR("initialize planner");
             exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
-            ROS_ERROR("planner initialized");
+            //ROS_ERROR("planner initialized");
             exploration->findFrontiers();
 
             exploration->clearVisitedFrontiers();
@@ -1205,7 +1205,7 @@ class Explorer
              * FRONTIER COORDINATION *
              *************************/
              
-            ROS_ERROR("FRONTIER COORDINATION");
+            ROS_INFO("FRONTIER COORDINATION");
 
             /* Produce frontier/cluster points for rviz */
             exploration->visualize_Cluster_Cells();
@@ -1445,7 +1445,7 @@ class Explorer
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
 
-        ROS_ERROR("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
@@ -1670,7 +1670,7 @@ class Explorer
         {
             costmap_mutex.lock();
             //ROS_ERROR("frontiers(): lock acquired");
-            ROS_INFO("frontiers(): lock acquired");
+            //ROS_INFO("frontiers(): lock acquired");
 
             /* Clean frontiers */
             exploration->clearSeenFrontiers(costmap2d_global);
@@ -1687,7 +1687,7 @@ class Explorer
 
             costmap_mutex.unlock();
             //ROS_ERROR("frontiers(): lock released");
-            ROS_INFO("frontiers(): lock released");
+            //ROS_INFO("frontiers(): lock released");
 
             ros::Rate(1).sleep();
         }
@@ -1715,7 +1715,7 @@ class Explorer
 
             costmap_mutex.lock();
             //ROS_ERROR("map_info(): lock acquired");
-            ROS_INFO("map_info(): lock acquired");
+            //ROS_INFO("map_info(): lock acquired");
 
             ros::Duration time = ros::Time::now() - time_start;
 
@@ -1739,7 +1739,7 @@ class Explorer
 
             costmap_mutex.unlock();
             //ROS_ERROR("map_info(): lock released");
-            ROS_INFO("map_info(): lock released");
+            //ROS_INFO("map_info(): lock released");
 
             // call map_merger to log data
             map_merger::LogMaps log;
@@ -2089,7 +2089,7 @@ class Explorer
 
         costmap_mutex.lock();
         //ROS_ERROR("iterate_global_costmap(): lock acquired");
-        ROS_INFO("iterate_global_costmap(): lock acquired");
+        //ROS_INFO("iterate_global_costmap(): lock acquired");
 
         exploration->transformToOwnCoordinates_frontiers();
         exploration->transformToOwnCoordinates_visited_frontiers();
@@ -2103,7 +2103,7 @@ class Explorer
 
         costmap_mutex.unlock();
         //ROS_ERROR("iterate_global_costmap(): lock released");
-        ROS_INFO("iterate_global_costmap(): lock released");
+        //ROS_INFO("iterate_global_costmap(): lock released");
 
         // exploration->visualize_Frontiers();
 
@@ -2865,7 +2865,7 @@ class Explorer
         tf::Stamped<tf::Pose> robotPose;
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
-        while(ros::ok()) {
+        while(ros::ok() && robot_state != finished) {
             ros::Duration(sleeping_time).sleep();
             //ROS_DEBUG("Checking...");
             if(exploration->getRobotPose(robotPose)) {
@@ -3096,11 +3096,11 @@ int main(int argc, char **argv)
     {
         costmap_mutex.lock();
         //ROS_ERROR("main(): lock acquired");
-        ROS_INFO("main(): lock acquired");
+        //ROS_INFO("main(): lock acquired");
         ros::spinOnce();
         costmap_mutex.unlock();
         //ROS_ERROR("main(): lock released");
-        ROS_INFO("main(): lock released");
+        //ROS_INFO("main(): lock released");
 
         ros::Duration(0.1).sleep();
     }

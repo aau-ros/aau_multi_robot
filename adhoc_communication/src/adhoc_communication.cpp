@@ -2034,7 +2034,7 @@ void sendBeacons()
                 time_since_last_beacon = getMillisecondsTime() - neighbor.ts;
                 if (time_since_last_beacon >= TIME_BEFORE_REMOVE_NEIGHBOR && neighbor.reachable)
                 {
-                    ROS_WARN("Remove neighbor: %s. Last beacon at %lu.", neighbor.hostname.c_str(),time_since_last_beacon);
+                    ROS_ERROR("Remove neighbor: %s. Last beacon at %lu.", neighbor.hostname.c_str(),time_since_last_beacon);
                     std_msgs::String msg;
                     msg.data = neighbor.hostname;
                     lock_neighbors.unlock();

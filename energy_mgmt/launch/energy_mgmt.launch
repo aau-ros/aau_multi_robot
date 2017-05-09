@@ -12,7 +12,7 @@
  <!--   <arg name="num_robots"/> 		-->
  
  
-    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
+    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)" required="true">
         <param name="num_robots" value="$(arg num_robots)" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
 

@@ -21,7 +21,7 @@
 <arg name="nack_threshold" default="10" />    
 
 
-<node unless="$(arg emulate)" launch-prefix="$(arg launch_prefix)" pkg="adhoc_communication" type="adhoc_communication" name="adhoc_communication" output="$(arg output)">
+<node unless="$(arg emulate)" launch-prefix="$(arg launch_prefix)" pkg="adhoc_communication" type="adhoc_communication" name="adhoc_communication" output="$(arg output)" required="true">
         <param name="robots_in_simulation" value="$(arg num_of_robots)" />
         <param name="robot_name" value="$(arg robot_name)" />
    <param name="nack_threshold" value="$(arg nack_threshold)" />

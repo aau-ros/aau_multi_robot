@@ -253,7 +253,7 @@ void ExplorationPlanner::Callbacks()
 void ExplorationPlanner::initialize_planner(std::string name,
 		costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global) {
 
-    ROS_ERROR("Initializing the planner");
+    ROS_INFO("Initializing the planner");
 
 	//copy the pointed costmap to be available in ExplorationPlanner
 
@@ -274,7 +274,7 @@ void ExplorationPlanner::initialize_planner(std::string name,
 	last_mode_ = FRONTIER_EXPLORE;
 	this->initialized_ = true;
 	
-	ROS_ERROR("Initialized");
+	//ROS_ERROR("Initialized");
 
 	/*
 	 * reset all counter variables, used to count the number of according blocks
@@ -626,11 +626,11 @@ void ExplorationPlanner::visualizeClustersConsole()
 
 bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
 {
-    ROS_ERROR("Transform frontier coordinates");
+    ROS_INFO("Transform frontier coordinates");
 
     store_frontier_mutex.lock();
     
-    ROS_ERROR("Transform frontier coordinates - lock acquired");
+    //ROS_ERROR("Transform frontier coordinates - lock acquired");
 
     for(int i = 0; i < frontiers.size(); i++)
     {
@@ -5000,9 +5000,9 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
  */
 void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-    ROS_INFO("waiting for lock");
+    //ROS_INFO("waiting for lock");
     store_frontier_mutex.lock();
-    ROS_INFO("lock acquired");
+    //ROS_INFO("lock acquired");
     
     tf::Stamped < tf::Pose > robotPose;
     if(!costmap_ros_->getRobotPose(robotPose))

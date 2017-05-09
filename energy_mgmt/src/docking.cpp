@@ -117,10 +117,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     best_ds = NULL;
     target_ds == NULL;
     best_ds = new ds_t;
-        if(best_ds == NULL)
+    if(best_ds == NULL)
         ROS_FATAL("Allocation failure!");
     target_ds = new ds_t;
-        if(target_ds == NULL)
+    if(target_ds == NULL)
         ROS_FATAL("Allocation failure!");
     target_ds->id = -1;
     
@@ -226,6 +226,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     going_to_ds = false;
     explorer_ready = false;
     optimal_ds_set = false;
+    finished_bool = false;
     group_name = "mc_robot_0";
     //group_name = "";
     my_counter = 0;
@@ -411,7 +412,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
          * compute_optimal_ds() because the distances could have changed, but we
          * accept this. */
 
-        if(old_optimal_ds_id > 10000)
+        if(old_optimal_ds_id > 10000) //can happen sometimes... why??
             ROS_ERROR("WHAT?????????????????????????");
 
         // TODO(minor) functions
@@ -787,11 +788,11 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         else if (old_optimal_ds_id != best_ds->id)
         {
             /* Debug output */
-            if (optimal_ds_set)
+            if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
                 ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, best_ds->id);
             else
                 ROS_INFO("Change optimal DS: (none) -> ds%d", best_ds->id);
-            if(best_ds->id > 10000)
+            if(best_ds->id > 10000) //can happen sometimes... buffer overflow somewhere?
                 ROS_ERROR("OH NO!!!!!!!!!!!!");
                 
             old_optimal_ds_id = best_ds->id;
@@ -1575,7 +1576,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     if (winner == robot_id)
     {
         /* The robot won its own auction */
-        ROS_ERROR("Winner of the auction");  // TODO(minor) specify which auction
+        ROS_INFO("Winner of the auction");  // TODO(minor) specify which auction
 
         auction_winner = true;
         timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the
@@ -1585,7 +1586,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     else
     {
         /* The robot lost its own auction */
-        ROS_ERROR("Robot lost its own auction");
+        ROS_INFO("Robot lost its own auction");
         auction_winner = false;
     }
 
@@ -1643,7 +1644,7 @@ void docking::start_new_auction()
         return;
     }
 
-    ROS_ERROR("Starting new auction");
+    ROS_INFO("Starting new auction");
     
     /* Keep track of robot bid */
     auction_bid_t bid;
@@ -1834,7 +1835,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     if (update_state_required && participating_to_auction == 0)
     {
         /* An update of the robot state is required and it can be performed now */
-        ROS_ERROR("Sending information to explorer node about the result of recent "
+        ROS_INFO("Sending information to explorer node about the result of recent "
                  "auctions");
 
         /* Create the empty message to be sent */
@@ -1924,12 +1925,12 @@ void docking::update_robot_state()  // TODO(minor) simplify
     {
         /* Do nothing, just print some debug text */
         if (participating_to_auction > 0 && !update_state_required)
-            ROS_ERROR("There are still pending auctions, and moreover no update is "
+            ROS_DEBUG("There are still pending auctions, and moreover no update is "
                       "necessary for the moment");
         else if (!update_state_required)
-            ROS_ERROR("No state update required");
+            ROS_DEBUG("No state update required");
         else if (participating_to_auction > 0)
-            ROS_ERROR("There are still pending auctions, cannot update robot state");
+            ROS_DEBUG("There are still pending auctions, cannot update robot state");
         else
             ROS_FATAL("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
     }
@@ -2689,6 +2690,8 @@ void docking::finalize() //TODO(minor) do better
     ros::Duration(5).sleep();
 
     // exit(0); //TODO(minor)
+    
+    finished_bool = true;
 }
 
 //DONE++
