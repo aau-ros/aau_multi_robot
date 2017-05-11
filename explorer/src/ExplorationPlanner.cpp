@@ -511,7 +511,10 @@ bool ExplorationPlanner::clusterFrontiers()
                                                     ROS_ERROR("Cannot convert coordinates successfully.");
                                                     continue;
                                                 }
-                                                cost = costmap_global_ros_->getCostmap()->getCost(mx, my);
+                                                
+                                                //F
+                                                //cost = costmap_global_ros_->getCostmap()->getCost(mx, my);
+                                                cost = getCost(costmap_global_ros_, mx, my);
 
                                                 if(cost == costmap_2d::FREE_SPACE)
                                                 {
@@ -534,7 +537,10 @@ bool ExplorationPlanner::clusterFrontiers()
                                                     ROS_ERROR("Cannot convert coordinates successfully.");
                                                     continue;
                                                 }
-                                                cost = costmap_global_ros_->getCostmap()->getCost(mx, my);
+                                                
+                                                //F
+                                                //cost = costmap_global_ros_->getCostmap()->getCost(mx, my);
+                                                cost = getCost(costmap_global_ros_, mx, my);
 
                                                 if(cost == costmap_2d::FREE_SPACE)
                                                 {
@@ -2541,7 +2547,13 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
 
 
 //                ROS_INFO("Calculating at position x: %d    y: %d", new_mx, new_my);
-                unsigned char cost = global_costmap->getCostmap()->getCost(new_mx, new_my);
+
+                //F
+                unsigned char cost;
+                //cost = global_costmap->getCostmap()->getCost(new_mx, new_my);
+                cost = getCost(global_costmap, new_mx, new_my);
+                
+                
 //                ROS_INFO("x position: %d       y position: %d", new_mx, new_my);
 //                ROS_INFO("Got Cost");
                 if(cost == costmap_2d::NO_INFORMATION)
@@ -2615,7 +2627,10 @@ bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costma
         new_mx = neighbours.at(j*2);
         new_my = neighbours.at(j*2+1);
 
-        unsigned char cost = global_costmap->getCostmap()->getCost(new_mx, new_my);
+        //F
+        unsigned char cost;
+        //cost = global_costmap->getCostmap()->getCost(new_mx, new_my);
+        cost = getCost(global_costmap, new_mx, new_my);
 
         if( cost == costmap_2d::FREE_SPACE)
         {
@@ -2628,7 +2643,11 @@ bool ExplorationPlanner::smartGoalBackoff(double x, double y, costmap_2d::Costma
                 inner_mx = inner_neighbours.at(i*2);
                 inner_my = inner_neighbours.at(i*2+1);
 
-                unsigned char inner_cost = global_costmap->getCostmap()->getCost(inner_mx, inner_my);
+                //F
+                unsigned char inner_cost;
+                //inner_cost = global_costmap->getCostmap()->getCost(inner_mx, inner_my);
+                inner_cost = getCost(global_costmap, inner_mx, inner_my);
+                
                 if( inner_cost != costmap_2d::FREE_SPACE)
                 {
                     back_off_goal_found = false;
@@ -6810,4 +6829,12 @@ inline int ExplorationPlanner::downleft(int point) {
 	}
 	return -1;
 
+}
+
+unsigned char ExplorationPlanner::getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y) {
+    if(cell_x >= costmap->getCostmap()->getSizeInCellsX() || cell_y >= costmap->getCostmap()->getSizeInCellsY() ) {
+        ROS_ERROR("Try to get the cost of a cell outside the costmap: returning LETHAL_OBSTACLE...");
+        return costmap_2d::LETHAL_OBSTACLE;
+    }
+    return costmap->getCostmap()->getCost(cell_x, cell_y);
 }

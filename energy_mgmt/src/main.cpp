@@ -49,6 +49,8 @@ int main(int argc, char** argv)
         // get updates from subscriptions
         ros::spinOnce();
         
+        doc.test();
+        
         //bat.spin();
         //bat.compute();
         //bat.publish();

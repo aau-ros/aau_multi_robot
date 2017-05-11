@@ -330,6 +330,15 @@ template<class message>
 void publishMessage(message m, string topic);
 
 
+#include <fake_network/SendMessage.h>
+#include <fake_network/NetworkMessage.h>
+#include "std_msgs/Empty.h"
+
+ros::ServiceClient sc_send_message;
+
+void publish_topic(const fake_network::NetworkMessage msg);
+
+
 std::string getListAsString(std::list<uint32_t> l);
 
 #ifdef DEBUG
@@ -473,7 +482,7 @@ void resendUnackLinkFrame(string hostname_src, uint32_t id, unsigned char* mac, 
         unack_link_frames_l.push_back(unack_link_frame);
     }
 
-    boost::thread cr(&resendLinkFrame, unack_link_frame);
+    //boost::thread cr(&resendLinkFrame, unack_link_frame);
 }
 
 void cleanRoutingTable()
@@ -507,6 +516,7 @@ void initFrameTypes()
 /* disconnection frame that comes from a downlink to disconnect from an uplink*/
 void processMcDisconnectUplink(McDisconnectFrame* f)
 {
+    /*
     if (!compareMac(f->header_.mac_destination, src_mac))
         return;
 
@@ -549,12 +559,13 @@ void processMcDisconnectUplink(McDisconnectFrame* f)
         joinMCGroup(req, res);
         groups_lock.lock();
     }
+    */
 }
 
 /* disconnection frame that comes from a uplink to rebuild the whole mc path*/
 void processMcDisconnectDownlink(McDisconnectFrame* f)
 {
-    sendLinkAck(f->eh_h_.eh_dest, src_mac, f->header_.id, "", false, FRAME_TYPE_MC_DISCONNECT);
+    //sendLinkAck(f->eh_h_.eh_dest, src_mac, f->header_.id, "", false, FRAME_TYPE_MC_DISCONNECT);
 
     boost::unique_lock<boost::mutex> groups_lock(mtx_mc_groups);
     McTree* group = mc_handler.getMcGroup(&f->mc_group_);
@@ -774,6 +785,7 @@ void initParams(ros::NodeHandle* n)
 
     //ROS_ERROR("mac from param %s",mac_as_string.c_str());
 
+/*
     if (mac_as_string.compare("") != 0)
     {
 
@@ -784,8 +796,10 @@ void initParams(ros::NodeHandle* n)
     interface = (unsigned char*) interface_as_string.data();
 
     initRobotMacList(&sim_robot_macs);
+*/
 
     /*SET TX POWER ON HARDWARE IF SIMULATION MODE IS OFF*/
+    /*
     if (simulation_mode == false)
     {
         std::string command = "iwconfig " + std::string((const char*) interface) + " txpower ";
@@ -794,6 +808,7 @@ void initParams(ros::NodeHandle* n)
             ROS_INFO("tx power changed in hardware to %u dbm", p_tx);
 
     }
+    */
 }
 
 bool isReachable(unsigned char mac[6])
@@ -881,7 +896,7 @@ void mcLostConnection(hostname_mac host)
     {
         McTree* t = trees.back();
 
-        ROS_ERROR("REMOVE DOWNLINK: GROUP[%s]  HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
+        ROS_WARN("REMOVE DOWNLINK: GROUP[%s]  HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
         trees.pop_back();
 
         /*disconnent from uplink if tree is just a connector*/
@@ -892,7 +907,7 @@ void mcLostConnection(hostname_mac host)
             req.action = false;
             req.group_name = t->group_name_;
             lock_g.unlock();
-            joinMCGroup(req, res);
+            //joinMCGroup(req, res);
             lock_g.lock();
         }
     }
@@ -902,7 +917,7 @@ void mcLostConnection(hostname_mac host)
         McTree* t = trees.back();
         trees.pop_back();
 
-        ROS_ERROR("LOST CONNECTION TO UPLINK GROUP[%s] HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
+        ROS_WARN("LOST CONNECTION TO UPLINK GROUP[%s] HOST[%s]", t->group_name_.c_str(), host.hostname.c_str());
 
         if (rebuild_mc_tree)
         {
@@ -1097,7 +1112,7 @@ void reconnectToMcGroup(std::string group_name)
                     req.group_name = group_name;
                     req.action = true;
                     lock_groups.unlock();
-                    joinMCGroup(req, res);
+                    //joinMCGroup(req, res);
                     lock_groups.lock();
 
                 } else
@@ -1122,7 +1137,7 @@ void reconnectToMcGroup(std::string group_name)
             disconnectDownlinks(t);
             req.action = false;
             lock_groups.unlock();
-            joinMCGroup(req, res);
+            //joinMCGroup(req, res);
             lock_groups.lock();
         }
     }
@@ -1142,7 +1157,7 @@ void joinAllMcGroups()
         req.group_name = "mc_robot_" + getIntAsString(c);
 
         ROS_ERROR("join %s", req.group_name.c_str());
-        joinMCGroup(req, res);
+        //joinMCGroup(req, res);
         sleepMS(100);
 
         {
@@ -1151,7 +1166,7 @@ void joinAllMcGroups()
             if (!mc_handler.getMcGroup(&req.group_name)->member)
             {
                 lock_mc_groups.unlock();
-                joinMCGroup(req, res);
+                //joinMCGroup(req, res);
                 lock_mc_groups.lock();
             }
         }

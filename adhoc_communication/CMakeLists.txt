@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   message_generation
+  fake_network
 )
 
 ## System dependencies are found with CMake's conventions
@@ -201,6 +202,7 @@ add_executable(adhoc_communication src/adhoc_communication.cpp ${MY_HEADERS})
 target_link_libraries(adhoc_communication ${catkin_LIBRARIES})
 #add_dependencies(adhoc_communication adhoc_communication_gencpp)
 add_dependencies(adhoc_communication adhoc_communication_generate_messages_cpp)
+add_dependencies(adhoc_communication fake_network_generate_messages_cpp)
 
 add_executable(communication_tester src/communication_tester.cpp)
 target_link_libraries(communication_tester ${catkin_LIBRARIES})
@@ -220,14 +222,6 @@ add_dependencies(communication_tester adhoc_communication_generate_messages_cpp)
    ${catkin_LIBRARIES}
  )
 
-
-
-add_custom_command(
-TARGET adhoc_communication
-COMMAND echo "Setting UID bit and changing owner to root of adhoc_communication node requiring root privileges using sudo."
-COMMAND sudo chown root ${CATKIN_DEVEL_PREFIX}/lib/adhoc_communication/adhoc_communication
-COMMAND sudo chmod +s ${CATKIN_DEVEL_PREFIX}/lib/adhoc_communication/adhoc_communication
-)
 
 #############
 ## Install ##

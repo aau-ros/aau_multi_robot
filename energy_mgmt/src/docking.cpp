@@ -207,6 +207,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sub_next_ds = nh.subscribe("next_ds", 10, &docking::next_ds_callback, this);
     
     pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
+    
+    pub_test = nh.advertise<std_msgs::Empty>("test", 10);
+    sub_test = nh.subscribe("test", 10, &docking::test_2, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -276,6 +279,11 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     mygraph.addEdge(1,2,10);
     //mygraph.print();
     
+}
+
+void docking::test() {
+    std_msgs::Empty msg;
+    //pub_test.publish(msg);
 }
 
 void docking::wait_for_explorer() {
@@ -1262,7 +1270,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    ROS_DEBUG("Received information from robot %d", msg.get()->id);
+    //ROS_ERROR("Received information from robot %d", msg.get()->id);
+    ROS_ERROR("(%.1f, %.1f)", msg.get()->x, msg.get()->y);
     if (DEBUG) //TODO(minor) move away...
     {
         debug_timers[msg.get()->id].stop();
@@ -2900,4 +2909,8 @@ bool docking::set_optimal_ds_given_index(int index) {
     best_ds = &ds[index];
     optimal_ds_set = true;
     return true;
+}
+
+void docking::test_2(const std_msgs::Empty &msg) {
+    ROS_ERROR("Test 2");
 }

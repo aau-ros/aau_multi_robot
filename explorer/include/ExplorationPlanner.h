@@ -252,6 +252,8 @@ namespace explorationPlanner
             bool sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_to_send, std::string topic);
             bool sendToMulticastAuction(std::string multi_cast_group, adhoc_communication::ExpAuction auction_to_send, std::string topic);
 
+
+            //F
             bool existFrontiers();
             bool existFrontiersReachableWithFullBattery(float max_available_distance);
             double distance_from_robot(double x, double y);
@@ -259,6 +261,8 @@ namespace explorationPlanner
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
             //bool get_robot_position(double *x, double *y);
             bool reachable_target(double x, double y);
+            unsigned char getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y);
+            
 
 
         private:

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(energy_mgmt)
+project(fake_network)
 
 #SET(GCC_COVERAGE_COMPILE_FLAGS "-g")
 #add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
@@ -10,12 +10,7 @@ project(energy_mgmt)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  costmap_2d
-  std_msgs
   message_generation
-  adhoc_communication
-  explorer
-  map_merger
 )
 
 ## System dependencies are found with CMake's conventions
@@ -53,16 +48,14 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  battery_state.msg
-  AuctionResult.msg
+  NetworkMessage.msg
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+   SendMessage.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -108,8 +101,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES battery docking
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger
+ CATKIN_DEPENDS roscpp rospy message_runtime
 #  DEPENDS system_lib
 )
 
@@ -125,36 +117,21 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-add_library(battery src/battery.cpp)
-add_library(battery_simulate src/battery_simulate.cpp)
-add_library(docking src/docking.cpp)
+## Declare a C++ executable
+add_executable(fake_network src/main.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(battery energy_mgmt_gencpp)
-add_dependencies(battery_simulate energy_mgmt_gencpp)
-add_dependencies(docking energy_mgmt_gencpp)
-add_dependencies(docking map_merger_cpp)
-
-## Declare a C++ executable
-add_executable(energy_mgmt src/main.cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(fake_network ${PROJECT_NAME}_gencpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-#add_dependencies(energy_mgmt adhoc_communication adhoc_communication_gencpp)
-add_dependencies(energy_mgmt map_merger map_merger_gencpp)
-#add_dependencies(energy_mgmt explorer explorer_gencpp)
-#add_dependencies(energy_mgmt energy_mgmt energy_mgmt_gencpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(energy_mgmt
-  battery
-  docking
-  battery_simulate
+target_link_libraries(fake_network
   ${catkin_LIBRARIES}
 )
 

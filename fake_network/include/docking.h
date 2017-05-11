@@ -64,11 +64,6 @@ class docking
     void update_llh();
     void start_join_timer();
     bool finished_bool;
-    void test();
-    void test_2(const std_msgs::Empty &msg);
-    
-    ros::Publisher pub_test;
-    ros::Subscriber sub_test;
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -303,6 +298,7 @@ class docking
 
     // F
     ros::Publisher pub_ds, pub_new_target_ds, pub_finish;
+    bool test;
     
     /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
     ds_t *best_ds;
