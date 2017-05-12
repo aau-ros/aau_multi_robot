@@ -548,7 +548,7 @@ class docking
     
     void wait_for_explorer_callback(const std_msgs::Empty &msg);
     
-    ros::Publisher pub_wait;
+    ros::Publisher pub_wait, pub_new_optimal_ds;
     ros::Subscriber sub_wait;
     
     std::string group_name;
@@ -567,7 +567,7 @@ class docking
     bool set_optimal_ds_given_index(int index);
     int old_optimal_ds_id;
 
-
+	bool no_jobs_received_yet;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

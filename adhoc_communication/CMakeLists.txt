@@ -77,6 +77,7 @@ find_package(catkin REQUIRED COMPONENTS
    ChangeMCMembership.srv
    SendExpAuction.srv
    SendExpFrontier.srv
+   SendExpFrontier2.srv
    SendMmMapUpdate.srv
    SendMmRobotPosition.srv
    SendQuaternion.srv

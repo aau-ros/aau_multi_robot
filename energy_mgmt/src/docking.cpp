@@ -210,6 +210,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     pub_test = nh.advertise<std_msgs::Empty>("test", 10);
     sub_test = nh.subscribe("test", 10, &docking::test_2, this);
+	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -230,6 +231,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     explorer_ready = false;
     optimal_ds_set = false;
     finished_bool = false;
+    no_jobs_received_yet = true;
     group_name = "mc_robot_0";
     //group_name = "";
     my_counter = 0;
@@ -666,10 +668,13 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                         }
                         */
                     }
-                    else
-                        compute_closest_ds();  // TODO(minor) although probably the robot will think
-                                               // that the exploration is over given how
-                                               // explorer works for the moment...
+                    else 
+						if(no_jobs_received_yet)
+	                        compute_closest_ds();  // TODO(minor) although probably the robot will think
+	                                               // that the exploration is over given how
+	                                               // explorer works for the moment...
+						else 
+                        	finished_bool = true;
                 }
             }
             else
@@ -768,7 +773,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
-                double theta_s = abs(alpha - rho) / (double)180;
+                double theta_s = fabs(alpha - rho) / (double)180;
 
                 /* d_f */
                 double d_f = numeric_limits<int>::max();
@@ -795,6 +800,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             ROS_DEBUG("No optimal DS has been selected yet");
         else if (old_optimal_ds_id != best_ds->id)
         {
+            finished_bool = false; //TODO(minor) find better place...
+            
             /* Debug output */
             if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
                 ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, best_ds->id);
@@ -813,6 +820,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
             /* Update parameter l4 */
             update_l4();
+            
+            /* Notify explorer about the optimal DS change */
+            adhoc_communication::EmDockingStation msg_optimal;
+            msg_optimal.x = best_ds->x;
+            msg_optimal.y = best_ds->y;
+            pub_new_optimal_ds.publish(msg_optimal);
 
         }
         else
@@ -1231,15 +1244,22 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
                                   // TODO(minor) only if the robot has not been just interrupted from recharging
     }
     else if (msg.get()->state == auctioning_2) {
-        if(ds_selection_policy == 2) {
-            ROS_INFO("Robot needs to recharge");
-            need_to_charge = true;
-            if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-                                      // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
-            {
-                ros::Duration(10).sleep();
-                start_new_auction();
-            }
+        if(ds_selection_policy == 2)
+		{
+			if(finished_bool) {
+                ROS_ERROR("No more frontiers..."); //TODO(minor) probably this checks are reduntant with the ones of explorer
+                std_msgs::Empty msg;
+                pub_finish.publish(msg);
+            } else {
+		        ROS_INFO("Robot needs to recharge");
+		        need_to_charge = true;
+		        if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
+		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+		        {
+		            ros::Duration(10).sleep();
+		            start_new_auction();
+		        }
+			}
         } else {
             ROS_ERROR("DS graph cannot be navigated with this strategy...");
             std_msgs::Empty msg;
@@ -1271,7 +1291,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
     //ROS_ERROR("Received information from robot %d", msg.get()->id);
-    ROS_ERROR("(%.1f, %.1f)", msg.get()->x, msg.get()->y);
+    //ROS_ERROR("(%.1f, %.1f)", msg.get()->x, msg.get()->y);
     if (DEBUG) //TODO(minor) move away...
     {
         debug_timers[msg.get()->id].stop();
@@ -1358,6 +1378,9 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     
     jobs = msg.get()->frontier_element;
     
+    if(jobs.size() > 0)
+        no_jobs_received_yet = false;
+    
     /* Update parameters l3 and l4 of charging likelihood function */
     update_l3();
     update_l4();
@@ -1406,7 +1429,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         s.id = msg.get()->id;
         abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
         s.vacant = msg.get()->vacant;
-        discovered_ds.push_back(s);
+        discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
         ROS_INFO("\e[1;34mNew docking station received: ds%d (%f, %f) \e[0m", s.id, s.x, s.y);
 
         /* Remove DS from the vector of undiscovered DSs */

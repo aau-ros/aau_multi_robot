@@ -15,13 +15,17 @@
 #include <adhoc_communication/ExpAuction.h>
 #include <adhoc_communication/MmPoint.h>
 #include <adhoc_communication/MmListOfPoints.h>
+#include <adhoc_communication/EmDockingStation.h>
 #include <map_merger/TransformPoint.h>
+#include <math.h>
 
 namespace explorationPlanner
 {
     class ExplorationPlanner
     {
         public:
+            
+        
             struct frontier_t
             {
                 int id;
@@ -79,6 +83,8 @@ namespace explorationPlanner
                 int cluster_id;
                 int identical_ids;
             };
+            
+
 
             boost::mutex store_frontier_mutex, store_visited_mutex, store_negotiation_mutex;
             boost::mutex publish_subscribe_mutex, callback_mutex, negotiation_mutex, negotiation_callback_mutex;
@@ -91,7 +97,7 @@ namespace explorationPlanner
             ros::Publisher pub_frontiers, pub_visited_frontiers, pub_negotion, pub_negotion_first, pub_Point;
             ros::Publisher pub_frontiers_points, pub_visited_frontiers_points;
             ros::Publisher pub_auctioning, pub_auctioning_status;
-            ros::Subscriber sub_frontiers, sub_visited_frontiers, sub_negotioation, sub_negotioation_first;
+            ros::Subscriber sub_frontiers, sub_visited_frontiers, sub_negotioation, sub_negotioation_first, sub_negotiation_2, sub_reply_negotiation;
             ros::Subscriber sub_control;
             ros::Subscriber sub_auctioning, sub_auctioning_status;
             ros::Subscriber sub_position, sub_robot;
@@ -152,7 +158,7 @@ namespace explorationPlanner
 
             navfn::NavfnROS nav;
 
-            ros::ServiceClient ssendFrontier, ssendAuction;
+            ros::ServiceClient ssendFrontier, ssendFrontier_2, ssendAuction;
 
             std::string trajectory_strategy;
             bool first_run, first_negotiation_run;
@@ -261,9 +267,25 @@ namespace explorationPlanner
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
             //bool get_robot_position(double *x, double *y);
             bool reachable_target(double x, double y);
-            unsigned char getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y);
+			unsigned char getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y);
+            bool my_negotiate();
+            void my_replyToNegotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
+            void my_negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
+            bool my_sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_list, std::string topic);
             
-
+            std::string robot_name_str;
+            double w1,w2,w3,w4;
+            std::vector<frontier_t> frontiers_under_auction;
+            frontier_t *my_selected_frontier;
+            bool winner_of_auction;
+            float my_bid;
+            bool my_energy_above_th;
+            void clean_frontiers_under_auction();
+            int my_error_counter;
+            bool recomputeGoal();
+            float optimal_ds_x, optimal_ds_y;
+            ros::Subscriber sub_new_optimal_ds;
+            void new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
         private:
             bool auction_running;
