@@ -59,18 +59,21 @@
 
 void shutDown()
 {
+    ROS_ERROR("shutDown");
     ros::shutdown();
     exit(0);
 }
 
 bool shutDownRos(adhoc_communication::ShutDown::Request &req, adhoc_communication::ShutDown::Response &res)
 {
+    ROS_ERROR("shutDownRos");
     boost::thread d(shutDown);
     return true;
 }
 
 bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communication::GetNeighbors::Response & res)
 {
+    //ROS_ERROR("getNeighbors");
     /* Description:
      * Service call to get a list of all direct connected neighbors of the node
      */
@@ -79,8 +82,10 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
     {
         hostname_mac current_frame = *it;
         string hn = current_frame.hostname;
+        //ROS_ERROR("%s", hn.c_str());
 
-        if (current_frame.reachable)
+        //TODO very bad here...
+        //if (current_frame.reachable)
             res.neigbors.push_back(hn);
     }
 
@@ -89,6 +94,7 @@ bool getNeighbors(adhoc_communication::GetNeighbors::Request &req, adhoc_communi
 
 bool getGroupStateF(adhoc_communication::GetGroupState::Request &req, adhoc_communication::GetGroupState::Response &res)
 {
+    ROS_ERROR("getGroupStateF");
     boost::unique_lock<boost::mutex> lock(mtx_mc_groups);
     McTree *t = mc_handler.getMcGroup(&req.group_name);
 
@@ -226,6 +232,7 @@ bool sendMap(adhoc_communication::SendOccupancyGrid::Request &req, adhoc_communi
 
 bool sendBroadcast(string& topic, string& data, uint8_t type, uint16_t range)
 {
+    ROS_ERROR("sendBroadcast");
     MultiHopBroadcastFrame b(topic, data, hostname, type, range);
     string n = b.getFrameAsNetworkString(src_mac);
     if (n.length() > ETHER_MAX_LEN)
@@ -238,6 +245,7 @@ bool sendBroadcast(string& topic, string& data, uint8_t type, uint16_t range)
 
 bool sendBroadcastString(adhoc_communication::BroadcastString::Request &req, adhoc_communication::BroadcastString::Response & res)
 {
+    ROS_ERROR("sendBroadcastString");
     /* Description:
      * Service call to send OccupancyGrid.
      */
@@ -245,9 +253,6 @@ bool sendBroadcastString(adhoc_communication::BroadcastString::Request &req, adh
     unsigned long time_call = getMillisecondsTime();
 #endif
     ROS_DEBUG("Service called to send broadcast string..");
-
-
-
 
     res.status = sendBroadcast(req.topic, req.data, FRAME_DATA_TYPE_ANY, req.hop_limit);
 
@@ -259,6 +264,7 @@ bool sendBroadcastString(adhoc_communication::BroadcastString::Request &req, adh
 
 bool sendBroadcastCMgrRobotUpdate(adhoc_communication::BroadcastCMgrRobotUpdate::Request &req, adhoc_communication::BroadcastCMgrRobotUpdate::Response & res)
 {
+    ROS_ERROR("sendBroadcastCMgrRobotUpdate");
     /* Description:
      * Service call to send OccupancyGrid.
      */
@@ -491,6 +497,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
 
 bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_communication::ChangeMCMembership::Response &res)
 {
+    ROS_ERROR("joinMCGroup");
     return false;
 }
 
@@ -719,7 +726,7 @@ int main(int argc, char **argv)
     ros::ServiceServer ss_publish_message = b_pub.advertiseService(robot_prefix + node_prefix + "/publish_message", publishMessageFromFakeNetwork);
     //ROS_ERROR("%s", ss_publish_message.getService().c_str());
     
-    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 10, publish_topic);
+    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 10000, publish_topic);
     
 
 

@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     //doc.wait_battery_info(); //only ok if threat thr_battery is active
     
     //doc.join_all_multicast_groups();
-    doc.start_join_timer();
+    //doc.start_join_timer();
     
     
 

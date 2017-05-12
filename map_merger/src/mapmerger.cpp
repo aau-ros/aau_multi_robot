@@ -735,15 +735,17 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
 void MapMerger::callback_got_position_network(const adhoc_communication::MmRobotPosition::ConstPtr &msg)
 {
     //ros::nodeHandle nodeHandle ("~");
+    //ROS_ERROR("callback_got_position_network");
     geometry_msgs::PoseStamped tmp = msg.get()->position;
     std::string source_host = msg.get()->src_robot;
-    //ROS_ERROR("Got position from:%s,robotssize:%i",source_host.c_str(),robots->size());
+    //ROS_ERROR("Got position from %s; robots->size(): %lu",source_host.c_str(),robots->size());
     for(int i = 0; i < robots->size(); i++)
     {
         //ROS_ERROR("i:%i",i);
         //ROS_ERROR("top of if, robot_name:%s",source_host.);
         std::string name = robots->at(i);
         //ROS_ERROR("got robot name %s",name.c_str());
+        //ROS_ERROR("%s, %s", name.c_str(), source_host.c_str());
         if(name == source_host)
        {
             //ROS_ERROR("enter if for %s",name.c_str());

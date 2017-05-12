@@ -556,7 +556,7 @@ void processMcDisconnectUplink(McDisconnectFrame* f)
         req.action = false;
         req.group_name = f->mc_group_;
         groups_lock.unlock();
-        joinMCGroup(req, res);
+        //joinMCGroup(req, res);
         groups_lock.lock();
     }
     */
@@ -785,7 +785,7 @@ void initParams(ros::NodeHandle* n)
 
     //ROS_ERROR("mac from param %s",mac_as_string.c_str());
 
-/*
+
     if (mac_as_string.compare("") != 0)
     {
 
@@ -793,10 +793,9 @@ void initParams(ros::NodeHandle* n)
     }
     //  ROS_ERROR("parameters int: %s mac: %s real mac %s",interface_as_string.c_str(),mac_as_string.c_str(), getMacAsCStr(src_mac));
 
-    interface = (unsigned char*) interface_as_string.data();
+    //interface = (unsigned char*) interface_as_string.data();
 
     initRobotMacList(&sim_robot_macs);
-*/
 
     /*SET TX POWER ON HARDWARE IF SIMULATION MODE IS OFF*/
     /*
@@ -1193,7 +1192,7 @@ void joinAllMcGroups()
        while ((t.group_name.compare("") == 0 || !t.member) && joinAttemps++ < 10) {
            req.action = true;
            req.group_name = "mc_robot_" + convertInt(c);
-           joinMCGroup(req, res);
+           //joinMCGroup(req, res);
            t = getActivatedMCTree("mc_robot_" + convertInt(c));
            ;
            ROS_ERROR("Join mc_robot_%u again", c);

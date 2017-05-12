@@ -2908,7 +2908,7 @@ void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
 }
 
 void docking::timer_callback_join_all_mc_groups(const ros::TimerEvent &event) {
-    join_all_multicast_groups();
+    //join_all_multicast_groups();
 }
 
 void docking::start_join_timer() {
