@@ -211,6 +211,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_test = nh.advertise<std_msgs::Empty>("test", 10);
     sub_test = nh.subscribe("test", 10, &docking::test_2, this);
 	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
+	
+	pub_robot_absolute_position = nh.advertise<adhoc_communication::EmRobot>("fake_network/robot_absolute_position", 10);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -1208,7 +1210,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
         
-        ROS_ERROR("Robot in queue!!!");
+        //ROS_ERROR("Robot in queue!!!");
     }
     else if (msg.get()->state == going_charging)
     {
@@ -1645,7 +1647,7 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
-    ROS_ERROR("Periodic re-auctioning");
+    ROS_INFO("Periodic re-auctioning");
     
     //start auction only if no other one for teh same ds is on going: this is to avoid an "infinite loop" of auctions"
     if (participating_to_auction == 0)  // Notice that it is still possible that
@@ -2790,6 +2792,16 @@ void docking::update_robot_position()
         ROS_ERROR("Call to service %s failed; not possible to update robot position for the moment",
                   sc_robot_pose.getService().c_str());
     */
+    
+    adhoc_communication::EmRobot msg;
+    msg.id = robot_id;
+    double x, y;
+    //ROS_ERROR("(%f, %f)", robot->x, robot->y);
+    rel_to_abs(robot->x, robot->y, &x, &y);
+    //ROS_ERROR("(%f, %f)", x, y);
+    msg.x = x;
+    msg.y = y;
+    pub_robot_absolute_position.publish(msg);
 }
 
 void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) { //TODO(minor) do better...

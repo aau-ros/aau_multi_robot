@@ -3,19 +3,53 @@
 #include "fake_network/SendMessage.h"
 #include "fake_network/NetworkMessage.h"
 #include "std_msgs/Empty.h"
+#include <explorer/RobotPosition.h>
+#include <adhoc_communication/EmRobot.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
+double wifi_range;
 ros::Publisher pub;
 std::vector<ros::ServiceServer> ss_send_message_list;
 std::vector<ros::ServiceClient> sc_publish_message_list;
 std::vector<ros::Publisher> pub_publish_message_list;
-    
+std::vector<ros::ServiceClient> sc_robot_position_list;
+std::vector<ros::Subscriber> sub_robot_position_list;
+std::vector<ros::ServiceServer> ss_robot_position_list;
+struct robot_t {
+    float x;
+    float y;
+};
+std::vector<robot_t> robot_list;
+std::vector<bool> reachability_list;
 
-bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMessage::Response &res);
+double euclidean_distance(double x1, double y1, double x2, double y2) {
+    return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) );
+}
+
+bool reachable(int src, int dst) {
+    for(int j=0; j < robot_list.size(); j++) {
+        if(reachability_list[j] == true)
+            continue;
+        if(euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y) <= wifi_range) {
+            if(j == dst) {
+                return true;
+            }
+            else {  
+                reachability_list[j] = true;
+                reachability_list[src] = true; //to avoid a "backtracking"
+                reachable(j, dst);  
+            }
+        }
+    }
+    return false;
+}
 
 bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMessage::Response &res) {
     //ROS_ERROR("Called!");
+    
+    std::fill(reachability_list.begin(), reachability_list.end(), false);
+    
     std_msgs::Empty msg;
     
     fake_network::NetworkMessage msg2;
@@ -41,16 +75,43 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
         if(source_robot_id == i) {
             //ROS_ERROR("skip");
             continue;
-        }    
+        }
         
+        if(reachable(source_robot_id, i)) {
+            //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
+            //sc_publish_message_list[i].call(srv_msg);
+            pub_publish_message_list[i].publish(msg2);
+        } else
+            ; //ROS_ERROR("robot are too far");
+        /*
+        if(euclidean_distance(robot_list[source_robot_id].x, robot_list[source_robot_id].y, robot_list[i].x, robot_list[i].y) <= wifi_range) {
+            //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
+            //sc_publish_message_list[i].call(srv_msg);
+            pub_publish_message_list[i].publish(msg2);
+        }
+        else {
+
+                
+        
+            for(int j=0; j < robot_list.size(); j++)
+                for(int j2=0; j2 < robot_list.size(); j2++)
+                    if(euclidean_distance(robot_list[j].x, robot_list[j].y, robot_list[j2].x, robot_list[j2].y) < wifi_range)
+        
+        }
             
-        //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
-        //sc_publish_message_list[i].call(srv_msg);
-        pub_publish_message_list[i].publish(msg2);
+        */
+            
+        
         //ROS_ERROR("returned");
     }
     
     return true;
+}
+
+void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
+    robot_list[msg.id].x = msg.x;
+    robot_list[msg.id].y = msg.y;
+    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
 }
 
 
@@ -58,6 +119,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "fake_network");
     ros::NodeHandle nh;
+    
+    wifi_range = 20;
 
     //pub = nh.advertise<std_msgs::Empty>("robot_1/test", 10);
     
@@ -66,13 +129,35 @@ int main(int argc, char** argv)
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
-        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10));  
+        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10));
+        sc_robot_position_list.push_back(nh.serviceClient<explorer::RobotPosition>(robot_prefix + "explorer/robot_pose"));
+        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 100, robot_absolute_position_callback));
+        //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
+        robot_t robot;
+        robot.x = 0;    //TODO not very good...
+        robot.y = 0;
+        robot_list.push_back(robot);
+        reachability_list.push_back(false);
     }
+    
+    explorer::RobotPosition robot_position;
     
     // Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
     while(ros::ok()){
+     
+        /*
+        for(int i = 0; i < 3; i++) {
+            if(sc_robot_position_list[i].call(robot_position)) {
+                robot_list[i].x = robot_position.response.x;
+                robot_list[i].y = robot_position.response.x;
+                
+            }
+            ROS_ERROR("(%f, %f)", robot_list[i].x, robot_list[i].y);
+        }
+        */
+    
         // get updates from subscriptions
         ros::spinOnce();
  

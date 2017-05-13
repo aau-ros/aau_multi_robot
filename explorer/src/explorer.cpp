@@ -522,7 +522,7 @@ class Explorer
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
                 if(available_distance <= 0) {
-                    ROS_ERROR("waiting battery info");
+                    //ROS_ERROR("waiting battery info");
                     continue;
                    }  
                     
@@ -1127,8 +1127,8 @@ class Explorer
                                 // moment... it could be solved using a service or using robot_state node
                                 if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
                                 {
-                                    ROS_ERROR("Robot cannot reach any frontier: starting auction to "
-                                              "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
+                                    //ROS_ERROR("Robot cannot reach any frontier: starting auction to "
+                                    //          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
                                                                                       // if the robot does not really start a
                                                                                       // new auction...
                                     update_robot_state_2(auctioning);
@@ -1328,7 +1328,7 @@ class Explorer
             if (robot_state == checking_vacancy)
             {
                 /* Robot reached frontier */
-                ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
+                //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
 
                 occupied_ds = false;
 
@@ -2694,19 +2694,19 @@ class Explorer
 
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m lost_own_auction_callback \e[0m");
+        ROS_INFO("\n\t\e[1;34m lost_own_auction_callback \e[0m");
         robot_state_next = going_queue_next;
     }
 
     void won_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m won_callback \e[0m");
+        ROS_INFO("\n\t\e[1;34m won_callback \e[0m");
         robot_state_next = going_charging_next;
     }
 
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("\n\t\e[1;34m lost_other_robot_callback \e[0m");
+        ROS_INFO("\n\t\e[1;34m lost_other_robot_callback \e[0m");
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         

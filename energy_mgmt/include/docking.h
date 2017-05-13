@@ -568,6 +568,8 @@ class docking
     int old_optimal_ds_id;
 
 	bool no_jobs_received_yet;
+	
+	ros::Publisher pub_robot_absolute_position;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
