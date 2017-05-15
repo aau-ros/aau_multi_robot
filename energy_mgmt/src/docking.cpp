@@ -1,5 +1,6 @@
 #include <docking.h>
 #define DEBUG false
+#define RESOLUTION 0.05
 
 //TODO(minor) ConstPtr
 
@@ -1135,8 +1136,9 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     /* Use euclidean distance if required by the caller */
     if (euclidean)
     {
-        double dx = goal_x - start_x;
-        double dy = goal_y - start_y;
+        double dx = (goal_x - start_x) * RESOLUTION; //TODO bad...
+        double dy = (goal_y - start_y) * RESOLUTION;
+        
         return sqrt(dx * dx + dy * dy);
     }
 
@@ -1154,9 +1156,9 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
         sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     }
     for (int i = 0; i < 10; i++)
-        if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0)
+        if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0) {
             return srv_msg.response.distance;
-        else
+        } else
             ros::Duration(1).sleep();
     
     
@@ -1278,6 +1280,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ;  // ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
     }
     else if (msg.get()->state == finished)
+    {
+        finalize();
+    }
+    else if (msg.get()->state == stuck)
     {
         finalize();
     }
@@ -2451,6 +2457,7 @@ void docking::compute_closest_ds()
     for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
     {
         double dist = distance_from_robot((*it).x, (*it).y);
+        //ROS_ERROR("ds%d: %f, %f", it->id, dist, distance_from_robot((*it).x, (*it).y, true));
         if (dist < 0)
             continue; //TODO(minor) sure?
         if (dist < min_dist)

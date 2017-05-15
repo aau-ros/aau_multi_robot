@@ -30,7 +30,7 @@ void handler(int sig) {
 
 int main(int argc, char **argv)
 {
-    signal(SIGSEGV, handler);
+    //signal(SIGSEGV, handler);
 #ifdef PROFILE
     const char  fname[3] = "TS";
     ProfilerStart(fname);

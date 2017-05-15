@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(map_merger)
+
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic")
+add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages

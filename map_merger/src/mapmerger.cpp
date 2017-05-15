@@ -269,6 +269,7 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
     adhoc_communication::MmControl tmp = *msg.get();
     if(tmp.update_numbers.size() == 0)
     {
+        ROS_DEBUG("size is 0");
         int min_x  = 9999;
         int min_y = 9999;
         int max_x = 0;
@@ -280,7 +281,14 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
             for(int column = 0; column < local_map->info.width;column+=2)
             {
                 int index = row * local_map->info.width + column;
-                if(local_map->data[index]!= -1)
+                
+                //F
+                //if(local_map->data[index]!= -1)
+                if(index >= local_map->info.width * local_map->info.height)
+                    ROS_ERROR("Accessing value outside map...");
+                    
+                if(index >= local_map->info.width * local_map->info.height || local_map->data[index]!= -1)
+                
                 {
                     if(min_x > row)
                         min_x = row;
@@ -319,8 +327,11 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
     }
     else
     {
-        if(tmp.update_numbers.at(0) == -1)
+        ROS_DEBUG("size is NOT 0");
+        if(tmp.update_numbers.at(0) == -1) {
+            ROS_DEBUG("nothing to do");
             return;
+        }
         int min_x = map_width;
         int min_y = map_height;
         int max_x = 0;
@@ -328,6 +339,15 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
 
         for(int i = 0; i < tmp.update_numbers.size();i++)
         {
+        
+            //F
+            if(tmp.update_numbers.at(i) >= update_list->size()) {
+                ROS_ERROR("std::out_of_range");
+                ROS_ERROR("ignoring access to avoid segmentation fault");
+                tmp.update_numbers.erase(tmp.update_numbers.begin() + i);
+                continue;
+            }
+            
             UpdateEntry *  cur = update_list->at(tmp.update_numbers.at(i));
             if(max_x < cur->getMaxX())
                 max_x = cur->getMaxX();
@@ -342,6 +362,8 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
         for(int i = 0; i < tmp.update_numbers.size();i++)
             ROS_INFO("Send %i",tmp.update_numbers.at(i));
         sendMapOverNetwork(tmp.src_robot,&tmp.update_numbers,min_x,min_y,max_x,max_y);
+        
+        ROS_DEBUG("callback_control() executed");
     }
 }
 
@@ -2030,7 +2052,6 @@ void MapMerger::callback_ask_other_robots(const ros::TimerEvent &e)
     {
         std::vector<int>* empty = new std::vector<int>();
         sendControlMessage(empty,robot_name);
-        //sendControlMessage(empty,robot_name);
         delete empty;
     }
 
@@ -2066,8 +2087,6 @@ void MapMerger::callback_ask_other_robots(const ros::TimerEvent &e)
                 neg->push_back(-1);
                 //twice to be sure and sleep to prevent problems
                 //first message might not be pbulished
-                //ros::Duration(1).sleep();
-               // sendControlMessage(neg,newRobotName);
                 ros::Duration(1).sleep();
                 sendControlMessage(empty,newRobotName);
                 delete empty;

@@ -72,7 +72,7 @@ class Explorer
     // TODO(minor) move in better place
     bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
-    ros::Publisher pub_robot, pub_wait;
+    ros::Publisher pub_robot, pub_wait, pub_finished_exploration;
     ros::Subscriber sub_wait;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
@@ -155,6 +155,8 @@ class Explorer
         
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
+        
+        pub_finished_exploration = nh.advertise<std_msgs::Empty>("finished_exploration", 10);
 
         ros::NodeHandle n;
         //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -404,6 +406,9 @@ class Explorer
         ros::Publisher pub_next_ds = nh.advertise<std_msgs::Empty>("next_ds", 1);
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
+        
+        
+
 
         /* Subscribe to battery management topic */
         sub = nh.subscribe("battery_state", 1, &Explorer::bat_callback, this);
@@ -416,7 +421,7 @@ class Explorer
         ROS_INFO("STARTING EXPLORATION");
 
         /* Start main loop (it loops till the end of the exploration) */
-        while (robot_state != finished)
+        while (robot_state != finished && robot_state != stuck)
         {
             /* Update robot state */
             update_robot_state();
@@ -1029,9 +1034,8 @@ class Explorer
                             /* The robot has found a reachable frontier: it can move toward it */
                             
                             //update_robot_state_2(coordinated_exploration);
-                            //ExplorationPlanner::frontier_t frontier;
                             //ROS_ERROR("STARTING NEGOTIATION");
-                            //exploration->my_negotiate();
+                            exploration->my_negotiate();
                             
                             for(int i = 0; i < 40; i++) {
                                 ros::Duration(0.1).sleep();
@@ -1433,8 +1437,8 @@ class Explorer
                 if (robot_state == going_charging)
                 {
                     ROS_ERROR("Robot cannot reach home for recharging!");
-                    exit_countdown--;
-                    ROS_ERROR("Shutdown in: %d", exit_countdown);
+                    //exit_countdown--;
+                    //ROS_ERROR("Shutdown in: %d", exit_countdown);
                     if (exit_countdown <= 0)
                         finalize_exploration();
                 }
@@ -1504,6 +1508,11 @@ class Explorer
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
+        
+        if(robot_state == finished) {
+            std_msgs::Empty msg;
+            pub_finished_exploration.publish(msg);
+        }            
         
     }
 
@@ -1746,7 +1755,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
 
-        while (ros::ok() && robot_state != finished)
+        while (ros::ok() && robot_state != finished && robot_state != stuck)
         {
             // double angle_robot = robotPose.getRotation().getAngle();
             // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
@@ -1763,7 +1772,9 @@ class Explorer
             map_progress_during_exploration.push_back(map_progress);
 
             double exploration_travel_path_global =
-                (double)exploration->exploration_travel_path_global * costmap_resolution;
+                //F
+                //(double)exploration->exploration_travel_path_global * costmap_resolution;
+                exploration->exploration_travel_path_global_meters;
 
             if (battery_charge_temp >= battery_charge)
                 energy_consumption += battery_charge_temp - battery_charge;
@@ -2818,6 +2829,10 @@ class Explorer
         ros::Duration(3).sleep();
         exit(-1);
     }
+    
+    void log_stucked() {
+        update_robot_state_2(stuck);
+    }
 
     bool robot_pose_callback(explorer::RobotPosition::Request &req, explorer::RobotPosition::Response &res)
     {
@@ -2894,38 +2909,63 @@ class Explorer
     }
     
     void safety_checks() {
-        int duration = 30; //minutes;
-        
-        int sleeping_time = 5.0;
-        int starting_value = 60/sleeping_time * duration;
-        int countdown = starting_value;
-        float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
-        tf::Stamped<tf::Pose> robotPose;
+    
+        double sleeping_time = 5.0;
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
-        while(ros::ok() && robot_state != finished) {
-            ros::Duration(sleeping_time).sleep();
+
+        int starting_value_moving = 2 * 60; //seconds
+        int starting_value_standing = 10 * 60; //seconds
+        ros::Duration countdown = ros::Duration(starting_value_standing);
+        
+        float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
+        
+        int prints_count = 1;
+        
+        tf::Stamped<tf::Pose> robotPose;
+        state_t prev_robot_state = fully_charged;
+            
+        ros::Time prev_time = ros::Time::now();   
+        while(ros::ok() && robot_state != finished && robot_state != stuck) {
+            
             //ROS_DEBUG("Checking...");
             if(exploration->getRobotPose(robotPose)) {
                 robot_x = robotPose.getOrigin().getX();
                 robot_y = robotPose.getOrigin().getY();
             }
-            if(robot_x == prev_robot_x && robot_y == prev_robot_y) {
-                if(countdown != starting_value && countdown*sleeping_time % 100 == 0)
-                    ROS_ERROR("Countdown to shutdown at %dmin...", countdown*sleeping_time/60);
-                else
-                    ROS_DEBUG("Countdown to shutdown at %dmin...", countdown*sleeping_time/60);
-                countdown--;
-                if(countdown < 0) {
+            if(prev_robot_state == robot_state && robot_x == prev_robot_x && robot_y == prev_robot_y) {
+                if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
+                    if(countdown <= ros::Duration(starting_value_moving - starting_value_moving * prints_count)) {
+                        ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                        ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                        prints_count++;   
+                    }
+                }
+                else {
+                    ; //ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
+                }
+                
+                countdown -= ros::Time::now() - prev_time;
+                prev_time = ros::Time::now();
+                
+                if(countdown < ros::Duration(0)) {
                     ROS_FATAL("Robot is not moving anymore");
-                    abort();
+                    //abort();
+                    log_stucked();
                 }
             } else {
                 ROS_DEBUG("Robot is moving");
-                countdown = starting_value;
+                if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
+                    countdown = ros::Duration(starting_value_moving);
+                else
+                    countdown = ros::Duration(starting_value_standing);
                 prev_robot_x = robot_x;
                 prev_robot_y = robot_y;
+                prev_robot_state = robot_state;
+                prints_count = 1;
             }
+            
+            ros::Duration(sleeping_time).sleep();
 
         }
     

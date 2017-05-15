@@ -7,8 +7,9 @@
 #include <adhoc_communication/EmRobot.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
+#define RESOLUTION 0.05
 
-double wifi_range;
+float wifi_range;
 ros::Publisher pub;
 std::vector<ros::ServiceServer> ss_send_message_list;
 std::vector<ros::ServiceClient> sc_publish_message_list;
@@ -22,15 +23,17 @@ struct robot_t {
 };
 std::vector<robot_t> robot_list;
 std::vector<bool> reachability_list;
+int num_robots;
 
 double euclidean_distance(double x1, double y1, double x2, double y2) {
-    return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) );
+    return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) ) * RESOLUTION; //TODO bad...
 }
 
 bool reachable(int src, int dst) {
-    for(int j=0; j < robot_list.size(); j++) {
+    for(int j=0; j < num_robots; j++) {
         if(reachability_list[j] == true)
             continue;
+        //ROS_ERROR("%f", euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y));
         if(euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y) <= wifi_range) {
             if(j == dst) {
                 return true;
@@ -71,7 +74,7 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     //ROS_ERROR("%s", source_robot_id_str.c_str());
     //ROS_ERROR("%d", source_robot_id);
     
-    for(int i=0; i < sc_publish_message_list.size(); i++) {
+    for(int i=0; i < num_robots; i++) {
         if(source_robot_id == i) {
             //ROS_ERROR("skip");
             continue;
@@ -82,7 +85,7 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
             //sc_publish_message_list[i].call(srv_msg);
             pub_publish_message_list[i].publish(msg2);
         } else
-            ; //ROS_ERROR("robot are too far");
+            ; //ROS_ERROR("robot_%d and robot_%d cannot communicate", source_robot_id, i);
         /*
         if(euclidean_distance(robot_list[source_robot_id].x, robot_list[source_robot_id].y, robot_list[i].x, robot_list[i].y) <= wifi_range) {
             //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
@@ -120,11 +123,12 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "fake_network");
     ros::NodeHandle nh;
     
-    wifi_range = 20;
+    nh.param<int>("fake_network/num_robots", num_robots, -1);
+    nh.param<float>("fake_network/wireless_range", wifi_range, 10);
 
     //pub = nh.advertise<std_msgs::Empty>("robot_1/test", 10);
     
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < num_robots; i++) {
         std::string robot_prefix = "robot_" + SSTR(i) + "/";
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));

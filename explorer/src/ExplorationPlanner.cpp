@@ -888,11 +888,15 @@ void ExplorationPlanner::trajectory_plan_10_frontiers()
  */
 void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
 {
-    int distance = trajectory_plan(target_x, target_y);
+    //F
+    //int distance = trajectory_plan(target_x, target_y);
+    double distance = trajectory_plan(target_x, target_y);
 
     if(distance >= 0) {
-        exploration_travel_path_global += distance;
-        exploration_travel_path_global_meters += distance * costmap_ros_->getCostmap()->getResolution();
+        //F
+        //exploration_travel_path_global += distance;
+        //exploration_travel_path_global_meters += distance * costmap_ros_->getCostmap()->getResolution();
+        exploration_travel_path_global_meters += distance;
     }
     else
         ROS_ERROR("Failed to compute distance!");
@@ -901,7 +905,21 @@ void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
 /**
  * Compute the length of the trajectory from the robots current position to a given target
  */
-int ExplorationPlanner::trajectory_plan(double target_x, double target_y)
+int ExplorationPlanner::reserve_trajectory_plan(double target_x, double target_y)
+{
+    if (!costmap_global_ros_->getRobotPose(robotPose))
+    {
+        ROS_ERROR("Failed to get RobotPose");
+        return -1;
+    }
+    //ROS_ERROR("%f", costmap_global_ros_->getCostmap()->getResolution());
+    return trajectory_plan(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), target_x, target_y);
+}
+
+/**
+ * Compute the length of the trajectory from the robots current position to a given target
+ */
+double ExplorationPlanner::trajectory_plan(double target_x, double target_y)
 {
     if (!costmap_global_ros_->getRobotPose(robotPose))
     {
@@ -915,7 +933,7 @@ int ExplorationPlanner::trajectory_plan(double target_x, double target_y)
 /**
  * Compute the length of the trajectory from a given start to a given target in number of grid cells
  */
-int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double target_x, double target_y)
+int ExplorationPlanner::reserve_trajectory_plan(double start_x, double start_y, double target_x, double target_y)
 {
     geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
     int distance;
@@ -976,6 +994,78 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
         */
         
         
+        return distance;
+    }
+    else
+    {
+        //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        return -1;
+    }
+}
+
+/**
+ * Compute the length of the trajectory from a given start to a given target in number of grid cells
+ */
+double ExplorationPlanner::trajectory_plan(double start_x, double start_y, double target_x, double target_y)
+{
+    geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
+    double distance;
+
+    std::vector<double> backoffGoal;
+    bool backoff_flag = smartGoalBackoff(target_x,target_y, costmap_global_ros_, &backoffGoal);
+
+    startPointSimulated.header.seq = start_point_simulated_message++;	// increase the sequence number
+    startPointSimulated.header.stamp = ros::Time::now();
+    startPointSimulated.header.frame_id = move_base_frame;
+    startPointSimulated.pose.position.x = start_x;
+    startPointSimulated.pose.position.y = start_y;
+    startPointSimulated.pose.position.z = 0;
+    startPointSimulated.pose.orientation.x = 0;
+    startPointSimulated.pose.orientation.y = 0;
+    startPointSimulated.pose.orientation.z = 0;
+    startPointSimulated.pose.orientation.w = 1;
+
+    goalPointSimulated.header.seq = goal_point_simulated_message++;	// increase the sequence number
+    goalPointSimulated.header.stamp = ros::Time::now();
+    goalPointSimulated.header.frame_id = move_base_frame;
+    if(backoff_flag == true)
+    {
+        goalPointSimulated.pose.position.x = backoffGoal.at(0);
+        goalPointSimulated.pose.position.y = backoffGoal.at(1);
+    }
+    else
+    {
+        goalPointSimulated.pose.position.x = target_x;
+        goalPointSimulated.pose.position.y = target_y;
+    }
+    goalPointSimulated.pose.position.z = 0;
+    goalPointSimulated.pose.orientation.x = 0;
+    goalPointSimulated.pose.orientation.y = 0;
+    goalPointSimulated.pose.orientation.z = 0;
+    goalPointSimulated.pose.orientation.w = 1;
+
+    std::vector<geometry_msgs::PoseStamped> global_plan;
+
+    bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    
+    if(successful == true)
+    {
+        //ROS_ERROR("Path from (%f, %f) to (%f, %f)", startPointSimulated.pose.position.x, startPointSimulated.pose.position.y, goalPointSimulated.pose.position.x, goalPointSimulated.pose.position.y);
+        //distance =  global_plan.size();
+        //for(int i=0; i < global_plan.size(); i++)
+            //ROS_ERROR("(%f, %f)", global_plan[i].pose.position.x, global_plan[i].pose.position.y);
+        
+        
+        distance = 0;
+        std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
+        geometry_msgs::PoseStamped prev_point = (*it);
+        it++;
+        for(; it != global_plan.end(); it++) {
+            distance += sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) ) * 0.05;
+            prev_point = (*it);
+        }
+        
+        //ROS_ERROR("%f", distance);
         return distance;
     }
     else
@@ -4237,7 +4327,8 @@ double ExplorationPlanner::distance_from_robot(double x, double y) {
         ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between target and robot");
         return -1;   
     }
-    return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough, since it is computed as resolution * number_of_grid_cells_between_the_two_points) distance in meters
+    //return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough, since it is computed as resolution * number_of_grid_cells_between_the_two_points) distance in meters
+    return trajectory_plan(x, y);
 }
 
 double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) {
@@ -4245,7 +4336,8 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
         ROS_DEBUG("Costmap is not ready yet: cannot compute the distance between given points");
         return -1;   
     }
-    return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
+    //return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
+    return trajectory_plan(x1, y1, x2, y2); //return a (very very rough) distance in meters
 }
 
 bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in meters!!!!
@@ -5362,7 +5454,7 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
                 
             for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
             {
-                continue;
+
                 //ROS_ERROR("sort2: %d", j);
                 /*
                  * cost function
@@ -5570,6 +5662,10 @@ void ExplorationPlanner::sort(int strategy)
     double pose_y = robotPose.getOrigin().getY();
     
     store_frontier_mutex.lock();
+    
+    //for (int i = frontiers.size()-1; i >= 0; i--) {
+    //    ROS_ERROR("frontier %d: (%f, %f)", i, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+    //}
 
     /*
      * Following Sort algorithm normalizes all distances to the
