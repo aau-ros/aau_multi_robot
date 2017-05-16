@@ -553,13 +553,15 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                             min_dist = dist2;
                                             min_ds = &ds.at(i);
                                         }
+                                        
+                                        break;
                                     }
                                 }
                             }
                             if (min_ds == NULL)
-                                return;  // this could happen if distance() always fails...
+                                return;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
 
-                            // compute closest DS //TODO(minor) notice that this works assuming taht the closest DS is reachable!! it would be better to check if the closest Ds is also really reachable... this check could be interesting also in other points of the code...
+                            // compute closest DS
                             min_dist = numeric_limits<int>::max();
                             ds_t *closest_ds;
                             for (int i = 0; i < ds.size(); i++)
@@ -701,7 +703,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 {
                     double dist = distance(best_ds->x, best_ds->y, jobs.at(i).x_coordinate, jobs.at(i).y_coordinate);
                     if (dist < 0) {
-                        ROS_ERROR("Computation of DS-frontier distance failed: ignore this frontier (i.e., do not consider it an EO)");
+                        //ROS_ERROR("Computation of DS-frontier distance failed: ignore this frontier (i.e., do not consider it an EO)");
                         continue;
                     }
                     if (dist < conservative_maximum_distance_with_return())
@@ -2452,7 +2454,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
 //DONE+
 void docking::compute_closest_ds()
 {
-    ROS_DEBUG("Using 'closest' strategy to compute optimal DS");
+    //ROS_DEBUG("Using 'closest' strategy to compute optimal DS");
     double min_dist = numeric_limits<int>::max();
     for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
     {

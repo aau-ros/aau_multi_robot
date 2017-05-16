@@ -4340,13 +4340,15 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
     return trajectory_plan(x1, y1, x2, y2); //return a (very very rough) distance in meters
 }
 
-bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in meters!!!!
+bool ExplorationPlanner::getRobotPose(tf::Stamped < tf::Pose > &robotPose) { //F returns position in meters or in cells? maybe cells...
     if(costmap_ros_ == NULL) {
         ROS_DEBUG("Costmap is not ready yet: cannot get robot pose");
         return false;   
     }
     return costmap_global_ros_->getRobotPose(robotPose);
 }
+
+//void ExplorationPlanner::robot_amcl_position_callback(geometry_msgs::PoseWithCovarianceStamped
 
 /*
 bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!!!!!!!

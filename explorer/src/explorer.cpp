@@ -58,6 +58,8 @@
 #define IMM_CHARGE 0
 #define DEBUG false
 
+
+
 boost::mutex costmap_mutex;
 
 void sleepok(int t, ros::NodeHandle &nh)
@@ -82,6 +84,7 @@ class Explorer
     float queue_distance, max_av_distance;
     float safety_coeff, min_distance_queue_ds;
     float stored_robot_x, stored_robot_y;
+    float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
 
     /*******************
@@ -177,6 +180,8 @@ class Explorer
         //ROS_ERROR("%f", queue_distance);
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
+        nh.param<float>("auction_timeout", auction_timeout, 3);
+        nh.param<float>("checking_vacancy_timeout", checking_vacancy_timeout, 3);
 
         ROS_INFO("Costmap width: %d", costmap_width);
         ROS_INFO("Frontier selection is set to: %d", frontier_selection);
@@ -250,7 +255,8 @@ class Explorer
         csv_file = log_path + std::string("periodical.log");
         csv_state_file = log_path + std::string("robot_state.log");
         log_file = log_path + std::string("exploration.log");
-        
+        exploration_start_end_log = log_path + std::string("exploration_start_end.log");
+         
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv_state << "#time,robot_state" << std::endl;
         fs_csv_state.close();
@@ -484,7 +490,7 @@ class Explorer
             costmap_mutex.unlock();
             //ROS_ERROR("PUBLISHING FRONTIERS");
             
-            tf::Stamped<tf::Pose> robotPose;
+            //tf::Stamped<tf::Pose> robotPose;
             
             if(!created) {
                 while(!exploration->getRobotPose(robotPose)) {
@@ -934,7 +940,7 @@ class Explorer
 
                 /* 7 ... Navigate to frontier that satisfies energy efficient cost
                    function with staying-alive path planning */
-                else if (frontier_selection == 17)
+                else if (frontier_selection == 17) //TODO
                     ;
                 
                 else if (frontier_selection == 7 || frontier_selection == 10)
@@ -959,15 +965,18 @@ class Explorer
                         else
                             if(ds_path_counter < ds_path_size - 1)
                             {
-                                double next_ds_x = path[ds_path_counter+1][0];
-                                double next_ds_y = path[ds_path_counter+1][0];
+                                //double next_ds_x = path[ds_path_counter+1][0];
+                                //double next_ds_y = path[ds_path_counter+1][0];
+                                double next_ds_x = complex_path[ds_path_counter+1].x;
+                                double next_ds_y = complex_path[ds_path_counter+1].y;
                                 double dist = -1;
                                 for(int i=0; i<5 || dist >= 0; i++) {
                                     dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
                                     ros::Duration(1).sleep();   
                                 }
                                 
-                                if(dist > available_distance * safety_coeff)
+                                if(dist > available_distance * safety_coeff) 
+                                    //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
                                         ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
@@ -979,8 +988,8 @@ class Explorer
                                 else {
                                     ROS_ERROR("Going to next DS in path");
                                     ds_path_counter++;
-                                    target_ds_x = path[ds_path_counter][0];
-                                    target_ds_y = path[ds_path_counter][1];
+                                    target_ds_x = complex_path[ds_path_counter].x; 
+                                    target_ds_y = complex_path[ds_path_counter].y; 
                                     std_msgs::Empty msg;
                                     pub_next_ds.publish(msg);
                                     update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
@@ -1002,12 +1011,28 @@ class Explorer
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
                         ROS_INFO("SORTING FRONTIERS...");
+                        
+                        ros::Time time = ros::Time::now();
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << "0" << ": " << "Sort frontiers with sort()" << std::endl;
+                        fs_exp_se_log.close();
+                        
                         exploration->sort(2);
                         exploration->sort(3);
+                        
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << std::endl;
+                        fs_exp_se_log << "0" << ": " << "Sort frontiers with sort_cost()" << std::endl;
+                        fs_exp_se_log.close();
+                        
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
+                        
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
+                        fs_exp_se_log.close();
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
@@ -1019,6 +1044,11 @@ class Explorer
                         else
                             goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                        
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
+                        fs_exp_se_log << std::endl;
+                        fs_exp_se_log.close();
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
                             goal_determined  = false;
@@ -1033,14 +1063,15 @@ class Explorer
                         {
                             /* The robot has found a reachable frontier: it can move toward it */
                             
-                            //update_robot_state_2(coordinated_exploration);
+                            //update_robot_state_2(coordinated_exploration); //TODO
                             //ROS_ERROR("STARTING NEGOTIATION");
                             exploration->my_negotiate();
                             
-                            for(int i = 0; i < 40; i++) {
+                            for(int i = 0; i < auction_timeout/0.1; i++) {
                                 ros::Duration(0.1).sleep();
                                 ros::spinOnce();
-                            } 
+                            }
+                            
                             //ROS_ERROR("End of negotiation");
                             ros::spinOnce();    
                             
@@ -1069,7 +1100,7 @@ class Explorer
 
                         else
                         {
-                            if(exploration->recomputeGoal()) {
+                            if(exploration->recomputeGoal()) { //TODO(IMPORTANT)
                                 ros::Duration(3).sleep();
                                 continue;
                             }
@@ -1337,7 +1368,7 @@ class Explorer
                 occupied_ds = false;
 
                 // TODO(minor) use a bterr way!!!
-                int i = 5;
+                int i = (int)checking_vacancy_timeout;
                 while (i > 0)
                 {
                     ros::Duration(1).sleep();
@@ -1472,7 +1503,6 @@ class Explorer
     }
     
     void store_current_position() {
-        tf::Stamped<tf::Pose> robotPose;
         while(!exploration->getRobotPose(robotPose)) {
             ROS_ERROR("Failed getting current position... retrying in a moment");
             ros::Duration(2).sleep();
@@ -1509,6 +1539,7 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
+        //TODO move this in update_robot_state, where the state is set to finished
         if(robot_state == finished) {
             std_msgs::Empty msg;
             pub_finished_exploration.publish(msg);
@@ -2412,10 +2443,10 @@ class Explorer
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
          * given about the actual driving state of the robot. */
-        if (!costmap2d_local->getRobotPose(robotPose))
-        {
-            ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
-        }
+        //if (!costmap2d_local->getRobotPose(robotPose))
+        //{
+        //    ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
+        //}
 
         actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
 
@@ -2551,10 +2582,10 @@ class Explorer
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
          * given about the actual driving state of the robot. */
-        if (!costmap2d_local->getRobotPose(robotPose))
-        {
-            ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
-        }
+        //if (!costmap2d_local->getRobotPose(robotPose))
+        //{
+        //    ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
+        //}
 
         actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
 
@@ -2653,10 +2684,10 @@ class Explorer
     {
         double angle = 45;
 
-        if (!costmap2d_local->getRobotPose(robotPose))
-        {
-            ROS_ERROR("Failed to get RobotPose");
-        }
+        //if (!costmap2d_local->getRobotPose(robotPose))
+        //{
+        //    ROS_ERROR("Failed to get RobotPose");
+        //}
 
         actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
         while (!ac.waitForServer(ros::Duration(10.0)))
@@ -2832,11 +2863,12 @@ class Explorer
     
     void log_stucked() {
         update_robot_state_2(stuck);
+        this->indicateSimulationEnd();
     }
 
     bool robot_pose_callback(explorer::RobotPosition::Request &req, explorer::RobotPosition::Response &res)
     {
-        tf::Stamped<tf::Pose> robotPose;
+        //tf::Stamped<tf::Pose> robotPose;
         if(!exploration->getRobotPose(robotPose))
             return false;
         res.x = robotPose.getOrigin().getX();
@@ -2922,7 +2954,7 @@ class Explorer
         
         int prints_count = 1;
         
-        tf::Stamped<tf::Pose> robotPose;
+        //tf::Stamped<tf::Pose> robotPose;
         state_t prev_robot_state = fully_charged;
             
         ros::Time prev_time = ros::Time::now();   
@@ -3016,9 +3048,9 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, csv_state_file, log_file;
+    std::string csv_file, csv_state_file, log_file, exploration_start_end_log;
     std::string log_path;
-    std::fstream fs_csv, fs_csv_state, fs;
+    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log;
 
     int number_of_recharges = 0;
 
