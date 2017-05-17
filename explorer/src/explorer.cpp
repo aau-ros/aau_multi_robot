@@ -481,7 +481,17 @@ class Explorer
             //ROS_ERROR("initialize planner");
             exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
             //ROS_ERROR("planner initialized");
+            
+            ros::Time time = ros::Time::now();
+            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+            fs_exp_se_log.close();
+            
             exploration->findFrontiers();
+            
+            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            fs_exp_se_log << ros::Time::now() - time << ": " << "Cler visisited/unreachable/seen frontiers" << std::endl;
+            fs_exp_se_log.close();
 
             exploration->clearVisitedFrontiers();
             exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
@@ -1021,7 +1031,7 @@ class Explorer
                         exploration->sort(3);
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << "0" << ": " << "Sort frontiers with sort_cost()" << std::endl;
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
                         fs_exp_se_log.close();
                         
                         exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
@@ -1046,7 +1056,6 @@ class Explorer
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
-                        fs_exp_se_log << std::endl;
                         fs_exp_se_log.close();
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
@@ -1307,6 +1316,9 @@ class Explorer
                                   "(%.2f,%.2f) as unreachable",
                                   final_goal.at(0), final_goal.at(1));
                         navigate_to_goal = false;  // navigate(final_goal);
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
+                        fs_exp_se_log.close();
                     }
                 }
                 else
@@ -1500,6 +1512,8 @@ class Explorer
             ROS_DEBUG("                                             ");
 
             ROS_INFO("DONE EXPLORING");
+            
+            fs_exp_se_log << std::endl;
         }
     }
     
@@ -2947,8 +2961,8 @@ class Explorer
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
 
-        int starting_value_moving = 2 * 60; //seconds
-        int starting_value_standing = 10 * 60; //seconds
+        int starting_value_moving = 15 * 60; //seconds
+        int starting_value_standing = 20 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_standing);
         
         float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
@@ -2968,7 +2982,7 @@ class Explorer
             }
             if(prev_robot_state == robot_state && robot_x == prev_robot_x && robot_y == prev_robot_y) {
                 if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
-                    if(countdown <= ros::Duration(starting_value_moving - starting_value_moving * prints_count)) {
+                    if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count)) {
                         ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                         ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                         prints_count++;   
@@ -2979,7 +2993,7 @@ class Explorer
                 }
                 
                 countdown -= ros::Time::now() - prev_time;
-                prev_time = ros::Time::now();
+                
                 
                 if(countdown < ros::Duration(0)) {
                     ROS_FATAL("Robot is not moving anymore");
@@ -2987,7 +3001,7 @@ class Explorer
                     log_stucked();
                 }
             } else {
-                ROS_DEBUG("Robot is moving");
+                //ROS_DEBUG("Robot is moving");
                 if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
                     countdown = ros::Duration(starting_value_moving);
                 else
@@ -2995,9 +3009,10 @@ class Explorer
                 prev_robot_x = robot_x;
                 prev_robot_y = robot_y;
                 prev_robot_state = robot_state;
-                prints_count = 1;
+                prints_count = 1;  
             }
             
+            prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
 
         }
