@@ -1021,7 +1021,6 @@ class Explorer
                         exploration->sort(3);
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << std::endl;
                         fs_exp_se_log << "0" << ": " << "Sort frontiers with sort_cost()" << std::endl;
                         fs_exp_se_log.close();
                         
