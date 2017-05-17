@@ -1064,15 +1064,17 @@ class Explorer
                             
                             //update_robot_state_2(coordinated_exploration); //TODO
                             //ROS_ERROR("STARTING NEGOTIATION");
-                            exploration->my_negotiate();
                             
+                            //ROS_ERROR("start frontier negotiation!");
+                            exploration->my_negotiate();
+                     
                             for(int i = 0; i < auction_timeout/0.1; i++) {
                                 ros::Duration(0.1).sleep();
                                 ros::spinOnce();
                             }
                             
                             //ROS_ERROR("End of negotiation");
-                            ros::spinOnce();    
+                            ros::spinOnce();
                             
                             if(exploration->winner_of_auction) {
                                 update_robot_state_2(moving_to_frontier);

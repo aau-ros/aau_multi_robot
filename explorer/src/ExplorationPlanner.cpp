@@ -40,6 +40,8 @@
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
+#define QUICK_SELECTION
+
 using namespace explorationPlanner;
 
 template <typename T>
@@ -4110,8 +4112,10 @@ void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDo
 
 bool ExplorationPlanner::my_negotiate()
 {
-    winner_of_auction = true;    
+    winner_of_auction = true;
     
+    #ifndef QUICK_SELECTION  
+     
     frontiers_under_auction.push_back(*my_selected_frontier);
 
     //ROS_ERROR("Publish fronter");
@@ -4127,6 +4131,8 @@ bool ExplorationPlanner::my_negotiate()
     negotiation_list.frontier_element.push_back(negotiation_element);
 
     my_sendToMulticast("mc_", negotiation_list, "send_frontier_for_coordinated_exploration");
+
+    #endif
 
     first_negotiation_run = false;
 }
@@ -4698,8 +4704,12 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
                     final_goal->push_back(frontiers.at(i).detected_by_robot);
                     final_goal->push_back(frontiers.at(i).id);
                     
+                    robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
+                    
                     my_selected_frontier = &frontiers.at(i);
                     
+#ifndef QUICK_SELECTION
+            
                     // robot position
                     double robot_x = robotPose.getOrigin().getX();
                     double robot_y = robotPose.getOrigin().getY();
@@ -4707,8 +4717,6 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
 					// frontier position
                     double frontier_x = frontiers.at(i).x_coordinate;
                     double frontier_y = frontiers.at(i).y_coordinate;
-
-                    robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
 
 					// calculate d_g
                     int d_g = trajectory_plan(frontier_x, frontier_y);
@@ -4736,6 +4744,8 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
                      my_bid = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
                     
                     my_error_counter = 0;
+
+#endif
 
                     store_frontier_mutex.unlock();
                     return true;
@@ -5412,6 +5422,9 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
  */
 void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
+
+#ifndef QUICK_SELECTION
+
     //ROS_INFO("waiting for lock");
     store_frontier_mutex.lock();
     //ROS_INFO("lock acquired");
@@ -5441,6 +5454,9 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
         for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
         //for(int i = frontiers.size(); i >= 0 && i > frontiers.size() - max_front - skipped_due_to_auction; --i)
         {
+        
+            
+        
             //continue_bool = false;
             //return;
             //ROS_ERROR("sort: %d", (int)frontiers.size() - 1 - i);
@@ -5533,6 +5549,8 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
     store_frontier_mutex.unlock();
     ROS_INFO("finished sort cost");
     
+#endif
+ 
 }
 
 void ExplorationPlanner::sort_cost_reserve(bool energy_above_th, int w1, int w2, int w3, int w4)
