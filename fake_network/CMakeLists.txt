@@ -55,6 +55,7 @@ add_message_files(
 add_service_files(
    FILES
    SendMessage.srv
+   RobotPosition.srv
 )
 
 ## Generate actions in the 'action' folder

@@ -28,7 +28,7 @@
 #include "nav_msgs/GetMap.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
-#include <explorer/RobotPosition.h>
+#include <fake_network/RobotPosition.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
@@ -2880,7 +2880,7 @@ class Explorer
         this->indicateSimulationEnd();
     }
 
-    bool robot_pose_callback(explorer::RobotPosition::Request &req, explorer::RobotPosition::Response &res)
+    bool robot_pose_callback(fake_network::RobotPosition::Request &req, fake_network::RobotPosition::Response &res)
     {
         //tf::Stamped<tf::Pose> robotPose;
         if(!exploration->getRobotPose(robotPose))

@@ -3,7 +3,7 @@
 #include "fake_network/SendMessage.h"
 #include "fake_network/NetworkMessage.h"
 #include "std_msgs/Empty.h"
-#include <explorer/RobotPosition.h>
+#include <fake_network/RobotPosition.h>
 #include <adhoc_communication/EmRobot.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10));
-        sc_robot_position_list.push_back(nh.serviceClient<explorer::RobotPosition>(robot_prefix + "explorer/robot_pose"));
+        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
         sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 100, robot_absolute_position_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
         reachability_list.push_back(false);
     }
     
-    explorer::RobotPosition robot_position;
+    fake_network::RobotPosition robot_position;
     
     // Frequency of loop
     double rate = 0.5; // Hz

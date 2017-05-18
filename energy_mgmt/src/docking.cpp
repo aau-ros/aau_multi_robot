@@ -158,8 +158,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* General services */
     //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
-    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    //sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose");
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
+    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");
     //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
@@ -323,11 +323,11 @@ void docking::wait_for_explorer() {
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/robot_pose");
-    sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_ERROR("No connection to service 'explorer/robot_pose': retrying...");
         ros::Duration(3).sleep();
-        sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     }
     ROS_INFO("Established persistent connection to service 'explorer/robot_pose'");    
     //ros::Duration(0.1).sleep();
@@ -2769,11 +2769,11 @@ void docking::update_robot_position()
 {   
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
     //ros::service::waitForService("explorer/robot_pose");
-    explorer::RobotPosition srv_msg;
+    fake_network::RobotPosition srv_msg;
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_FATAL("NO MORE CONNECTION!");
         ros::Duration(1).sleep();
-        sc_robot_pose = nh.serviceClient<explorer::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     }
     if (sc_robot_pose.call(srv_msg))
     {
@@ -2790,7 +2790,7 @@ void docking::update_robot_position()
     }
     /*
     ros::service::waitForService("explorer/robot_pose");  // TODO(minor) string name
-    explorer::RobotPosition srv_msg;
+    fake_network::RobotPosition srv_msg;
     if (sc_robot_pose.call(srv_msg))
     {
         robot->x = srv_msg.response.x;

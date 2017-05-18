@@ -60,7 +60,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-   RobotPosition.srv
+   #RobotPosition.srv
    Distance.srv
    DistanceFromRobot.srv
 )

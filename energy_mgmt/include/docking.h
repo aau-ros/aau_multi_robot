@@ -22,7 +22,7 @@
 #include <energy_mgmt/AuctionResult.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <explorer/RobotPosition.h>
+#include <fake_network/RobotPosition.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <sstream>
