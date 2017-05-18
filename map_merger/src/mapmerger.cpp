@@ -400,12 +400,15 @@ void MapMerger::callback_map_meta_data_local(const nav_msgs::MapMetaData::ConstP
 
 void MapMerger::callback_global_pub(const ros::TimerEvent &e)
 {
+    ROS_DEBUG("Publishing global map");
    // sendMetaData(5);
     if(robots->size() == 0)
     {
-        ROS_INFO("No other robots, publishing local map");
-        if(local_map != NULL && local_map->data.size() > 0)
+        ROS_DEBUG("No other robots, publishing local map");
+        if(local_map != NULL && local_map->data.size() > 0) {
             pub.publish(*local_map);
+            //ROS_ERROR("Published");
+        }
         return;
     }
     if(transforms->size() != map_data->size() && local_map != NULL )
@@ -1049,14 +1052,15 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
 
 void MapMerger::callback_map(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 {
-    ROS_DEBUG("Start callback_map");
+    ROS_INFO("Start callback_map");
     //get the message
     nav_msgs::OccupancyGrid tmp = *msg.get();
     nav_msgs::OccupancyGrid * toInsert = &tmp;
     //insert it into the list
     int index_robots = -1;
-    //ROS_INFO("Got map, frame_id:%s|size of data:%i",toInsert->header.frame_id.c_str(),toInsert->data.size());
-    if(toInsert->header.frame_id == local_map_frame_id)
+    //ROS_ERROR("Got map, frame_id:%s|size of data:%lu",toInsert->header.frame_id.c_str(),toInsert->data.size());
+    //ROS_ERROR("local_map_frame_id: %s", local_map_frame_id.c_str());
+    if(toInsert->header.frame_id == local_map_frame_id || toInsert->header.frame_id == "/" + local_map_frame_id)
     {
         processLocalMap(toInsert,index_robots);
         force_recompute_all = true;
@@ -1089,7 +1093,7 @@ void MapMerger::callback_map(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
 void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
 {
-    ROS_DEBUG("Process Local Map");
+    ROS_ERROR("Process Local Map");
     if(!has_local_map)
         return;
     local_map_new_data = true;

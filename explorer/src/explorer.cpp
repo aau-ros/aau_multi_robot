@@ -1022,9 +1022,8 @@ class Explorer
                          * efficiency */
                         ROS_INFO("SORTING FRONTIERS...");
                         
-                        ros::Time time = ros::Time::now();
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << "0" << ": " << "Sort frontiers with sort()" << std::endl;
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort()" << std::endl;
                         fs_exp_se_log.close();
                         
                         exploration->sort(2);
