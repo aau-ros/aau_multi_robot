@@ -1093,7 +1093,7 @@ void MapMerger::callback_map(const nav_msgs::OccupancyGrid::ConstPtr& msg)
 
 void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
 {
-    ROS_ERROR("Process Local Map");
+    ROS_INFO("Process Local Map");
     if(!has_local_map)
         return;
     local_map_new_data = true;
