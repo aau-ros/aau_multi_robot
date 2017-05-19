@@ -2542,8 +2542,7 @@ class Explorer
             }
             else
             {
-                ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y,
-                          pose_angle);
+                //ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y, pose_angle);
                 stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
                 prev_pose_x = pose_x;
                 prev_pose_y = pose_y;
@@ -2660,8 +2659,7 @@ class Explorer
             }
             else
             {
-                ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y,
-                          pose_angle);
+                //ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y, pose_angle);
                 stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
                 prev_pose_x = pose_x;
                 prev_pose_y = pose_y;
