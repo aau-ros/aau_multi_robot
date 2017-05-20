@@ -7254,7 +7254,7 @@ inline int ExplorationPlanner::downleft(int point) {
 
 unsigned char ExplorationPlanner::getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y) {
     if(cell_x >= costmap->getCostmap()->getSizeInCellsX() || cell_y >= costmap->getCostmap()->getSizeInCellsY() ) {
-        ROS_ERROR("Try to get the cost of a cell outside the costmap: returning LETHAL_OBSTACLE...");
+        //ROS_ERROR("Try to get the cost of a cell outside the costmap: returning LETHAL_OBSTACLE...");
         return costmap_2d::LETHAL_OBSTACLE;
     }
     return costmap->getCostmap()->getCost(cell_x, cell_y);

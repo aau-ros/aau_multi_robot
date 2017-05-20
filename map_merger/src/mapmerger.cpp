@@ -478,7 +478,7 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
         }
        // updateMapArea(-1,local_map,true);
         pub.publish(*global_map);
-        ROS_DEBUG("!!!After publishing global map!!!");
+        //ROS_ERROR("!!!After publishing global map!!!");
     }
     else
     {
@@ -561,7 +561,10 @@ void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
             map_to_merge->data = whole_map->data;
             map_to_merge->info = whole_map->info;
             map_to_merge->header = whole_map->header;
-            updateMap(map_to_merge,findTransformIndex(i));
+            
+            //F //TODO fake_map_merger
+            //updateMap(map_to_merge,findTransformIndex(i));
+            
             mergeMaps(map_to_merge);
             delete map_to_merge;
             new_data_maps->at(i) = false;
@@ -1311,7 +1314,7 @@ void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int mi
                     global_map->data[index_global_map] = mapToMerge->data[index_map_to_merge];
          }
     }
-     ROS_DEBUG("Merged maps succesfully");
+    ROS_DEBUG("Merged maps succesfully");
 }
 
 cv::Mat MapMerger::mapToMat(const nav_msgs::OccupancyGrid *map)
