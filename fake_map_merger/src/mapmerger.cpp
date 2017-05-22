@@ -450,7 +450,10 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
                       findTransformIndex(i),
                       map_data->size(),
                       transforms->size());
-            updateMap (map_to_merge,findTransformIndex(i));
+            
+            //F
+            //updateMap (map_to_merge,findTransformIndex(i));
+            
             mergeMaps(map_to_merge);
 
             delete map_to_merge;
@@ -768,7 +771,10 @@ void MapMerger::callback_send_map(const ros::TimerEvent &e)
             map_to_merge->data = whole_map->data;
             map_to_merge->info = whole_map->info;
             map_to_merge->header = whole_map->header;
-            updateMap(map_to_merge,findTransformIndex(i));
+            
+            //F
+            //updateMap(map_to_merge,findTransformIndex(i));
+            
             mergeMaps(map_to_merge);
             delete map_to_merge;
             ROS_INFO("Merged %i in map_data",i);
@@ -1626,7 +1632,10 @@ void MapMerger::computeTransform(int mapDataIndex)
         map_to_merge->data = whole_map->data;
         map_to_merge->info = whole_map->info;
         map_to_merge->header = whole_map->header;
-        updateMap(map_to_merge,findTransformIndex(mapDataIndex));
+        
+        //F
+        //updateMap(map_to_merge,findTransformIndex(mapDataIndex));
+        
         mergeMaps(map_to_merge);
         delete map_to_merge;
     }
