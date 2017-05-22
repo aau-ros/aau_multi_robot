@@ -3022,7 +3022,7 @@ class Explorer
             if(robot_is_moving() && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) { 
                 //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
                 //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
-                if(countdown <= ros::Duration(starting_value_moving))
+                if(countdown < ros::Duration(starting_value_moving))
                 {
                     ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                     ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
