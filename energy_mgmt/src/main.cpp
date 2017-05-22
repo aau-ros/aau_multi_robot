@@ -7,7 +7,12 @@
 
 int main(int argc, char** argv)
 {
+  
     ros::init(argc, argv, "energy_mgmt");
+    
+    if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+       ros::console::notifyLoggerLevelsChanged();
+    }
 
     // handle battery management for different robot platforms
     string platform;

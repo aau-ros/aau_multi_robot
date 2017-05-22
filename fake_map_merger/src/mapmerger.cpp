@@ -527,13 +527,16 @@ void MapMerger::callback_send_position(const ros::TimerEvent &e)
 
 void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
 {
+    /*
     if(transforms->size() == 0)
     {
         ROS_DEBUG("No transforms to recompute");
         return;
     }
+    */
     ROS_INFO("Recompute transforms");
 
+    /*
     int newTransforms = 0;
     for(int i = 0; i < map_data->size(); i++)
     {
@@ -549,11 +552,13 @@ void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
     if(newTransforms == 0)
         return;
     else
+    */
     {
         global_map_ready = false;
         global_map->data.clear();
         global_map->data.resize(local_map->data.size());
         std::copy(local_map->data.begin(),local_map->data.end(),global_map->data.begin());
+        ROS_DEBUG("map_data->size(): %lu", map_data->size());
         for(int i = 0; i < map_data->size(); i++)
         {
             nav_msgs::OccupancyGrid *whole_map = map_data->at(i);
@@ -578,7 +583,7 @@ void MapMerger::callback_recompute_transform(const ros::TimerEvent &e)
         
         //F
         ROS_DEBUG("Storing local file...");
-        std::string file = full_log_path + std::string("/local.pgm");
+        std::string file = full_log_path + std::string("/local_") + std::string(robot_name) + std::string(".pgm");
         if(local_map->info.height == 0)
                     ROS_ERROR("ZERO!!!!");
         cv::Mat loc = mapToMat(local_map);
@@ -1244,7 +1249,7 @@ void MapMerger::start()
     {
         ROS_INFO("Create timer to recompute the transformations all %i seconds",seconds_recompute_transform);
         //recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this);
-        recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this, true);
+        recompute_transform_timer = nodeHandle->createTimer(ros::Duration(seconds_recompute_transform),&MapMerger::callback_recompute_transform,this, true, true);
     }
     global_timer_pub = nodeHandle->createTimer(ros::Duration(seconds_publish_timer),&MapMerger::callback_global_pub,this);
     send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
@@ -1610,7 +1615,7 @@ void MapMerger::computeTransform(int mapDataIndex)
         }
         else
         {
-            ROS_DEBUG("Updateing transform for robot:%i",mapDataIndex);
+            ROS_DEBUG("Updating transform for robot:%i",mapDataIndex);
             transforms->at(findTransformIndex(mapDataIndex)) = mapStiched.H;
             lastTrans = mapStiched.cur_trans;
         }
@@ -1850,7 +1855,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         {
             // log the global map 
             ROS_DEBUG("Storing global file...");
-            file = full_log_path + std::string("/global.pgm");
+            file = full_log_path + std::string("/global_") + std::string(robot_name) + std::string(".pgm");
+            //ROS_ERROR("%s", file.c_str());
             if(global_map->info.height == 0)
             ROS_ERROR("ZERO!!!!");
             cv::Mat glo = mapToMat(global_map);
@@ -1868,7 +1874,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         {
             // log the local map
             ROS_DEBUG("Storing local file...");
-            file = full_log_path + std::string("/local.pgm");
+            file = full_log_path + std::string("/local_") + std::string(robot_name) + std::string(".pgm");
+            //ROS_ERROR("%s", file.c_str());
             if(local_map->info.height == 0)
                         ROS_ERROR("ZERO!!!!");
             cv::Mat loc = mapToMat(local_map);
@@ -1949,7 +1956,7 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         fs.close();
 
         ROS_DEBUG("Storing local file...");
-        file = full_log_path + std::string("/local.pgm");
+        file = full_log_path + std::string("/local_") + std::string(robot_name) + std::string(".pgm");
 
         if(local_map->info.height == 0)
             ROS_ERROR("ZERO!!!!");
@@ -1960,7 +1967,8 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
         ROS_DEBUG("Successfully logged local map.");
 
         ROS_DEBUG("Storing global file...");
-        file = full_log_path + std::string("/global.pgm");
+        file = full_log_path + std::string("/global_") + std::string(robot_name) + std::string(".pgm");
+        //ROS_ERROR("%s", file.c_str());
         if(global_map->info.height == 0)
             ROS_ERROR("ZERO!!!!");
         cv::Mat glo = mapToMat(global_map);

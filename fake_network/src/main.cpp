@@ -61,6 +61,7 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     msg2.data_type = req.data_type;
     msg2.topic = req.topic;
     
+
     //pub.publish(msg);
     //ROS_ERROR("%s", req.topic.c_str());
     
@@ -75,10 +76,15 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     //ROS_ERROR("%d", source_robot_id);
     
     for(int i=0; i < num_robots; i++) {
+    
         if(source_robot_id == i) {
             //ROS_ERROR("skip");
             continue;
         }
+        
+        //if(req.topic == "map_other")
+        //    ROS_ERROR("publishing map from robot %s to robot robot_%d", req.source_robot.c_str(), i);
+    
         
         if(reachable(source_robot_id, i)) {
             //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());

@@ -8,15 +8,17 @@ add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-roscpp
-rospy
-std_msgs
-message_generation
-tf
-costmap_2d
-navfn
-adhoc_communication
-map_merger)
+    roscpp
+    rospy
+    std_msgs
+    message_generation
+    tf
+    costmap_2d
+    navfn
+    global_planner
+    adhoc_communication
+    map_merger
+)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)

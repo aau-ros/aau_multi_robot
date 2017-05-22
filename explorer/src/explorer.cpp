@@ -120,6 +120,10 @@ class Explorer
           prev_pose_y(0),
           prev_pose_angle(0)
     {
+        if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
+           ros::console::notifyLoggerLevelsChanged();
+        }
+    
         // available_distance = 100; //F
         // F
         test = true;
@@ -371,7 +375,8 @@ class Explorer
     }
 
     void explore()  // TODO(minor) comments
-    {
+    {   
+        
         ROS_INFO("STARTING EXPLORATION");
         // TODO(minor) put to sleep also the other nodes
         /*
@@ -2151,6 +2156,7 @@ class Explorer
         robot_number << robot_id;
 
         std::string prefix = "/robot_";
+        
         std::string status_directory = "/simulation_status";
         std::string robo_name = prefix.append(robot_number.str());
         std::string file_suffix(".finished");
@@ -2875,6 +2881,31 @@ class Explorer
     
     void log_stucked() {
         update_robot_state_2(stuck);
+        
+        
+        std::stringstream robot_number;
+        robot_number << robot_id;
+
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_stuck";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_suffix(".stuck");
+
+        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + robo_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate end of exploration.",
+        status_file.c_str());
+        
         this->indicateSimulationEnd();
     }
 
@@ -2952,17 +2983,24 @@ class Explorer
         return true;
     }
     
+    bool robot_is_moving() {
+        if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == going_in_queue)
+            return true;
+        return false;
+    
+    }
+    
     void safety_checks() {
     
         double sleeping_time = 5.0;
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
 
-        int starting_value_moving = 15 * 60; //seconds
-        int starting_value_standing = 20 * 60; //seconds
-        ros::Duration countdown = ros::Duration(starting_value_standing);
+        int starting_value_moving = 3 * 60; //seconds
+        //int starting_value_standing = 10 * 60; //seconds
+        ros::Duration countdown = ros::Duration(starting_value_moving);
         
-        float prev_robot_x = 0, prev_robot_y = 0, robot_x = 0, robot_y = 0;
+        float prev_robot_x = 0, prev_robot_y = 0;
         
         int prints_count = 1;
         
@@ -2973,20 +3011,24 @@ class Explorer
         while(ros::ok() && robot_state != finished && robot_state != stuck) {
             
             //ROS_DEBUG("Checking...");
-            if(exploration->getRobotPose(robotPose)) {
-                robot_x = robotPose.getOrigin().getX();
-                robot_y = robotPose.getOrigin().getY();
-            }
-            if(prev_robot_state == robot_state && robot_x == prev_robot_x && robot_y == prev_robot_y) {
-                if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
-                    if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count)) {
-                        ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                        ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                        prints_count++;   
-                    }
+            //if(exploration->getRobotPose(robotPose)) {
+            //    robot_x = robotPose.getOrigin().getX();
+            //    robot_y = robotPose.getOrigin().getY();
+            //}
+            
+            //IMPORTANT: be careful that a robot could change state while it is stucked, since it may continuosly change between 'moving_to_fonrtier' to 'exploring' to compute and try rearching a new goal!!!
+            //if((int) prev_robot_state == (int) robot_state && pose_x == prev_robot_x && pose_y == prev_robot_y) {
+            //if( ((int) prev_robot_state == (int) robot_state) && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) {
+            if(robot_is_moving() && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) { 
+                //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
+                if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count)) {
+                    ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                    prints_count++;   
                 }
+                //}
                 else {
-                    ; //ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
+                    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
                 }
                 
                 countdown -= ros::Time::now() - prev_time;
@@ -2997,14 +3039,19 @@ class Explorer
                     //abort();
                     log_stucked();
                 }
+                
             } else {
                 //ROS_DEBUG("Robot is moving");
-                if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
+                //ROS_ERROR("state: %d - %d", prev_robot_state, robot_state);
+                //ROS_ERROR("x: %f - %f", prev_robot_x, pose_x);
+                //ROS_ERROR("y: %f - %f", prev_robot_y, pose_y);
+                //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
                     countdown = ros::Duration(starting_value_moving);
-                else
-                    countdown = ros::Duration(starting_value_standing);
-                prev_robot_x = robot_x;
-                prev_robot_y = robot_y;
+                //else
+                //    countdown = ros::Duration(starting_value_standing);
+                    
+                prev_robot_x = pose_x;
+                prev_robot_y = pose_y;
                 prev_robot_state = robot_state;
                 prints_count = 1;  
             }
