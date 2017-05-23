@@ -313,93 +313,96 @@ bool ExplorationPlanner::clusterFrontiers()
      */
 
     bool cluster_found_flag = false, same_id = false;
+    
+    store_frontier_mutex.lock();
 
-        for(int i = 0; i < frontiers.size(); i++)
+    for(int i = 0; i < frontiers.size(); i++)
+    {
+        ROS_DEBUG("Frontier at: %d   and cluster size: %lu",i, clusters.size());
+        cluster_found_flag = false;
+        bool frontier_used = false;
+        same_id = false;
+
+        for(int j = 0; j < clusters.size(); j++)
         {
-            ROS_DEBUG("Frontier at: %d   and cluster size: %lu",i, clusters.size());
-            cluster_found_flag = false;
-            bool frontier_used = false;
-            same_id = false;
-
-            for(int j = 0; j < clusters.size(); j++)
+            ROS_DEBUG("cluster %d contains %lu elements", j, clusters.at(j).cluster_element.size());
+            for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
             {
-                ROS_DEBUG("cluster %d contains %lu elements", j, clusters.at(j).cluster_element.size());
-                for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
-                {
-                   ROS_DEBUG("accessing cluster %d  and element: %d", j, n);
+               ROS_DEBUG("accessing cluster %d  and element: %d", j, n);
 
-                   if(fabs(frontiers.at(i).x_coordinate - clusters.at(j).cluster_element.at(n).x_coordinate) < MAX_NEIGHBOR_DIST && fabs(frontiers.at(i).y_coordinate - clusters.at(j).cluster_element.at(n).y_coordinate) < MAX_NEIGHBOR_DIST)
+               if(fabs(frontiers.at(i).x_coordinate - clusters.at(j).cluster_element.at(n).x_coordinate) < MAX_NEIGHBOR_DIST && fabs(frontiers.at(i).y_coordinate - clusters.at(j).cluster_element.at(n).y_coordinate) < MAX_NEIGHBOR_DIST)
+               {
+                   for(int m = 0; m < clusters.at(j).cluster_element.size(); m++)
                    {
-                       for(int m = 0; m < clusters.at(j).cluster_element.size(); m++)
-                       {
-                          ROS_DEBUG("checking id %d with element id: %d",frontiers.at(i).id,clusters.at(j).cluster_element.at(m).id);
+                      ROS_DEBUG("checking id %d with element id: %d",frontiers.at(i).id,clusters.at(j).cluster_element.at(m).id);
 
-                          if(robot_prefix_empty_param == true)
+                      if(robot_prefix_empty_param == true)
+                      {
+                          if(frontiers.at(i).id == clusters.at(j).cluster_element.at(m).id && frontiers.at(i).detected_by_robot_str.compare(clusters.at(j).cluster_element.at(m).detected_by_robot_str) == 0)
                           {
-                              if(frontiers.at(i).id == clusters.at(j).cluster_element.at(m).id && frontiers.at(i).detected_by_robot_str.compare(clusters.at(j).cluster_element.at(m).detected_by_robot_str) == 0)
-                              {
-                                  ROS_DEBUG("SAME ID FOUND !!!!!!!");
-                                  frontier_used = true;
-                                  same_id = true;
-                                  break;
-                              }
-                          }else
-                          {
-                              if(frontiers.at(i).id == clusters.at(j).cluster_element.at(m).id)
-                              {
-                                  ROS_DEBUG("SAME ID FOUND !!!!!!!");
-                                  frontier_used = true;
-                                  same_id = true;
-                                  break;
-                              }
+                              ROS_DEBUG("SAME ID FOUND !!!!!!!");
+                              frontier_used = true;
+                              same_id = true;
+                              break;
                           }
+                      }else
+                      {
+                          if(frontiers.at(i).id == clusters.at(j).cluster_element.at(m).id)
+                          {
+                              ROS_DEBUG("SAME ID FOUND !!!!!!!");
+                              frontier_used = true;
+                              same_id = true;
+                              break;
+                          }
+                      }
 
 
-                       }
-                       if(same_id == false)
-                       {
-                          cluster_found_flag = true;
-                       }
                    }
-                   if(same_id == true || cluster_found_flag == true)
+                   if(same_id == false)
                    {
-                       break;
+                      cluster_found_flag = true;
                    }
-                }
-                if(same_id == true)
+               }
+               if(same_id == true || cluster_found_flag == true)
+               {
+                   break;
+               }
+            }
+            if(same_id == true)
+            {
+                break;
+            }else
+            {
+                if(cluster_found_flag == true)
                 {
+                    ROS_DEBUG("Frontier: %d attached", frontiers.at(i).id);
+                    clusters.at(j).cluster_element.push_back(frontiers.at(i));
+                    frontier_used = true;
                     break;
-                }else
-                {
-                    if(cluster_found_flag == true)
-                    {
-                        ROS_DEBUG("Frontier: %d attached", frontiers.at(i).id);
-                        clusters.at(j).cluster_element.push_back(frontiers.at(i));
-                        frontier_used = true;
-                        break;
-                    }
                 }
-            }
-            if(cluster_found_flag == false && same_id == false)
-            {
-                ROS_DEBUG("ADD CLUSTER");
-                cluster_t cluster_new;
-                cluster_new.cluster_element.push_back(frontiers.at(i));
-                cluster_new.id = (robot_name * 10000) + cluster_id++;
-
-                cluster_mutex.lock();
-                clusters.push_back(cluster_new);
-                cluster_mutex.unlock();
-
-                ROS_DEBUG("Frontier: %d in new cluster", frontiers.at(i).id);
-                frontier_used = true;
-            }
-            if(frontier_used == false)
-            {
-                ROS_WARN("Frontier: %d not used", frontiers.at(i).id);
             }
         }
+        if(cluster_found_flag == false && same_id == false)
+        {
+            ROS_DEBUG("ADD CLUSTER");
+            cluster_t cluster_new;
+            cluster_new.cluster_element.push_back(frontiers.at(i));
+            cluster_new.id = (robot_name * 10000) + cluster_id++;
 
+            cluster_mutex.lock();
+            clusters.push_back(cluster_new);
+            cluster_mutex.unlock();
+
+            ROS_DEBUG("Frontier: %d in new cluster", frontiers.at(i).id);
+            frontier_used = true;
+        }
+        if(frontier_used == false)
+        {
+            ROS_WARN("Frontier: %d not used", frontiers.at(i).id);
+        }
+    }
+
+    store_frontier_mutex.unlock();
 
     /*
      * To finish the process finally check whether a cluster is close to another one.
@@ -625,6 +628,7 @@ bool ExplorationPlanner::clusterFrontiers()
     //        ROS_INFO("RUN WITHOUT MERGING: %d", run_without_merging);
         }
     }
+    
 }
 
 void ExplorationPlanner::visualizeClustersConsole()

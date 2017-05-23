@@ -588,8 +588,8 @@ class Explorer
                 * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
                 * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN
                 *       DISTANCE)
-                * 5 ... (missing)
-                * 6 ... (missing)
+                * 5 ... (missing description)
+                * 6 ... (missing description)
                 * 7 ... Sort frontiers in sensor range clock wise (starting from left of
                 *       robot) and sort the remaining frontiers from nearest to furthest
                 *       (EUCLIDEAN DISTANCE)
@@ -1028,11 +1028,13 @@ class Explorer
                         ROS_INFO("SORTING FRONTIERS...");
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort()" << std::endl;
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
                         fs_exp_se_log.close();
                         
                         exploration->sort(2);
                         exploration->sort(3);
+                        //exploration->clusterFrontiers();
+                        //exploration->sort(4);
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
@@ -2999,8 +3001,9 @@ class Explorer
         int starting_value_moving = 3 * 60; //seconds
         //int starting_value_standing = 10 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
+        ros::Duration countdown_2 = ros::Duration(10 * 60);
         
-        float prev_robot_x = 0, prev_robot_y = 0;
+        float prev_robot_x = 0, prev_robot_y = 0, prev_robot_x_2 = 0, prev_robot_y_2 = 0;
         
         int prints_count = 1;
         
@@ -3022,7 +3025,7 @@ class Explorer
             if(robot_is_moving() && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) { 
                 //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
                 //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
-                if(countdown < ros::Duration(starting_value_moving))
+                if(countdown < ros::Duration(60))
                 {
                     ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                     ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
@@ -3037,6 +3040,9 @@ class Explorer
                 
                 
                 if(countdown < ros::Duration(0)) {
+                
+                    
+                
                     ROS_FATAL("Robot is not moving anymore");
                     //abort();
                     log_stucked();
@@ -3057,6 +3063,16 @@ class Explorer
                 prev_robot_state = robot_state;
                 prints_count = 1;  
             }
+            
+            if( (robot_state == exploring || robot_state == moving_to_frontier) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
+                countdown_2 -= ros::Time::now() - prev_time;
+            }
+            else
+            {
+                prev_robot_x_2 = pose_x;
+                prev_robot_y_2 = pose_y;
+            }
+           
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
@@ -3110,7 +3126,7 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, csv_state_file, log_file, exploration_start_end_log;
+    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log;
     std::string log_path;
     std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log;
 
