@@ -1067,7 +1067,7 @@ double ExplorationPlanner::trajectory_plan(double start_x, double start_y, doubl
         geometry_msgs::PoseStamped prev_point = (*it);
         it++;
         for(; it != global_plan.end(); it++) {
-            distance += sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) ) * 0.05;
+            distance += sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) ) * costmap_global_ros_->getCostmap()->getResolution();
             prev_point = (*it);
         }
         
@@ -4074,6 +4074,7 @@ bool ExplorationPlanner::existFrontiers() {
 }
 
 bool ExplorationPlanner::recomputeGoal() {
+    ROS_ERROR("my_error_counter: %d", my_error_counter);
     return (my_error_counter > 0 && my_error_counter < 5) ? true : false;
 }
 
@@ -4400,7 +4401,9 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
         dist_home = sqrt(xh * xh + yh * yh) * 1.2; // 1.2 is extra reserve, just in case
     }
     else if(strategy == 2){
-        dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
+        //F
+        //dist_home = trajectory_plan(robot_home_x, robot_home_y) * costmap_ros_->getCostmap()->getResolution();
+        dist_home = trajectory_plan(robot_home_x, robot_home_y);
     }
     if(dist_home > 0 && dist_home >= available_distance)
         return false;
@@ -4605,7 +4608,7 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
     }
     store_frontier_mutex.lock();
 
-    // check if robot needs to go home right away
+    // check if robot needs to go recharging right away
     double dist_home;
     double dist_front;
     double closest = 9999;
@@ -4617,7 +4620,9 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
     else if(strategy == 2){
         dist_home = trajectory_plan(optimal_ds_x, optimal_ds_y) * costmap_ros_->getCostmap()->getResolution();
     }
+    //ROS_ERROR("available_distance: %f", available_distance);
     if(dist_home > 0 && dist_home >= available_distance) {
+        ROS_ERROR("Target DS is too far to reach a frontier...\noptimal_ds_x: %f, optimal_ds_y: %f, distance: %f, available distance: %f", optimal_ds_x, optimal_ds_y, dist_home, available_distance);
         store_frontier_mutex.unlock();
         return false;
     }
@@ -4637,6 +4642,7 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
                     return this->determine_goal_staying_alive_2(1, 1, available_distance, final_goal, count, robot_str_name, -1);
                 }
                 store_frontier_mutex.unlock();
+                ROS_ERROR("None of the %d checked frontiers is reachable! This shouldn't happen...", 8);
                 return false;
             }
 
@@ -4753,7 +4759,7 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
 
                     store_frontier_mutex.unlock();
                     return true;
-                }else{
+                } else{
                     ROS_INFO("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     store_frontier_mutex.unlock();
                     return false;

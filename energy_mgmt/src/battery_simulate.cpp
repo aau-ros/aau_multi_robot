@@ -32,7 +32,8 @@ battery_simulate::battery_simulate()
     total_energy = charge_max * 3600; // J (i.e, joule)       
     remaining_energy = total_energy;
     speed_linear = max_speed_linear;
-    maximum_running_time = max_speed_linear * mass / total_energy; // s
+    maximum_running_time = total_energy / (max_speed_linear * mass); // s
+    ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
     if(INFINITE_ENERGY) {
         total_energy = 10000;
@@ -65,6 +66,7 @@ battery_simulate::battery_simulate()
 
     sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);
     
+    ROS_ERROR("remaining distance: %f", state.remaining_distance);
     pub_full_battery_info.publish(state);
     
     time_last = ros::Time::now();

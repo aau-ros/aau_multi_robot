@@ -86,6 +86,7 @@ class Explorer
     float stored_robot_x, stored_robot_y;
     float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
+    int explorations;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -136,6 +137,7 @@ class Explorer
         max_av_distance = 0;
         available_distance = -1;
         already_navigated_DS_graph = false;
+        explorations = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -1051,6 +1053,7 @@ class Explorer
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
+                        //ROS_ERROR("available_distance: %f", available_distance);
                         if(DEBUG)
                             goal_determined = exploration->determine_goal_staying_alive_2(
                                 1, 2, available_distance * SAFETY_COEFF +
@@ -1092,9 +1095,15 @@ class Explorer
                             ros::spinOnce();
                             
                             if(exploration->winner_of_auction) {
-                                update_robot_state_2(moving_to_frontier);
+                                //explorations++;
+                                //if(explorations == 5)
+                                //    update_robot_state_2(auctioning);    
+                                //else
+                                    update_robot_state_2(moving_to_frontier);
+                                    
                                 exploration->clean_frontiers_under_auction();
                                 // detele_list_of_already_auctioned_frontiers...
+                                
                             } else {
                                 //ROS_ERROR("re-exploring");
                                 update_robot_state_2(exploring); //TODO(minor) not very good, i could be already in explorer (i could be in fully_charged, ...)...
@@ -1117,6 +1126,7 @@ class Explorer
                         else
                         {
                             if(exploration->recomputeGoal()) { //TODO(IMPORTANT)
+                                ROS_ERROR("Goal not found, trying to recompute goal...");
                                 ros::Duration(3).sleep();
                                 continue;
                             }
@@ -1542,8 +1552,10 @@ class Explorer
         robot_state = static_cast<state_t>(new_state);
         pub_robot.publish(msg);
 
-        if (robot_state == auctioning)
+        if (robot_state == auctioning) {
             need_to_recharge = true;
+            ROS_ERROR("auctioning!");   
+        }
         // else if(robot_state == exploring || robot_state == fully_charged)
         else if (robot_state == leaving_ds || robot_state == fully_charged)
             need_to_recharge = false;
@@ -1802,7 +1814,7 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_progress,local_map_progress,battery_state,"
+                  "global_map_explored_cells,global_map_progress,local_map_explored_cells,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
         fs_csv.close();
@@ -1822,6 +1834,7 @@ class Explorer
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time.toSec();
             map_progress_during_exploration.push_back(map_progress);
+            float percentage = (float) (map_progress.global_freespace * 100) / total_size();
 
             double exploration_travel_path_global =
                 //F
@@ -1834,7 +1847,7 @@ class Explorer
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << available_distance << ","
-                   << map_progress.global_freespace << "," << map_progress.local_freespace << "," << battery_charge
+                   << map_progress.global_freespace << "," << percentage << "," << map_progress.local_freespace << "," << battery_charge
                    << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
             fs_csv.close();
 
@@ -1876,6 +1889,12 @@ class Explorer
             }
         }
         return free;
+    }
+    
+    int total_size()
+    {
+        occupancy_grid_global = costmap2d_global->getCostmap()->getCharMap();
+        return costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY();
     }
 
     int local_costmap_size()
