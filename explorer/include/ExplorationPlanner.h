@@ -298,6 +298,7 @@ namespace explorationPlanner
             void home_position_(const geometry_msgs::PointStamped::ConstPtr& msg);
             void clearFrontiers();
             int isFrontier(int point);
+            int isFrontier_2(int point);
             bool isFree(int point);
             inline bool isValid(int point);
             inline void getAdjacentPoints(int point, int points[]);

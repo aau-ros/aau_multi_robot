@@ -55,6 +55,8 @@ public:
     void waitForRobotInformation();
     bool transformPointSRV(map_merger::TransformPoint::Request &req,
                            map_merger::TransformPoint::Response &res);
+    bool transformPointSRV_2(map_merger::TransformPoint::Request &req,
+                           map_merger::TransformPoint::Response &res);
     bool log_output_srv(map_merger::LogMaps::Request &req,
                         map_merger::LogMaps::Response &res);
     bool getHasLocalMap();

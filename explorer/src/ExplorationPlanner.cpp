@@ -2828,7 +2828,7 @@ void ExplorationPlanner::findFrontiers()
     int new_frontier_point = 0;
     for (unsigned int i = 0; i < num_map_cells_; i++)
     {
-        int new_frontier_point = isFrontier(i);
+        int new_frontier_point = isFrontier_2(i);
         if (new_frontier_point != 0)
         {
             /*
@@ -6865,7 +6865,96 @@ int ExplorationPlanner::isFrontier(int point) {
 	if (isFree(point)) {
 
 		/*
-		 * The point is a either a obstacle or a point with not enough
+		 * The point is either a obstacle or a point with not enough
+		 * information about
+		 * Therefore, check if the point is surrounded by other NO_INFORMATION
+		 * points. Then further space to explore is found ---> frontier
+		 */
+		//int Neighbours = 0;
+		//int points[((int)pow(8,Neighbours+1))+8]; // NEIGHBOURS points, each containing 8 adjacent points
+		int no_inf_count = 0;
+		int inscribed_count = 0;
+		int adjacent_points[16];
+		/*
+		 * Now take one point and lookup all adjacent points (surrounding points).
+		 * The variable adjacentPoints contains all neighboring point (up, right, left ...)
+		 */
+
+		/*
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[0]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[1]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[2]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[3]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[4]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[5]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[6]);
+		 ROS_DEBUG("Adjacent Point: %d",adjacentPoints[7]);
+		 */
+
+		//histogram[(int)occupancy_grid_array_[point]]++;
+
+		if ((int) occupancy_grid_array_[point] == costmap_2d::FREE_SPACE)//<= threshold_free)
+		{
+			getAdjacentPoints(point, adjacent_points);
+			for (int i = 0; i < 16; i++) // length of adjacent_points array
+			{
+                if (adjacent_points[i] < 0)
+                {
+                    continue;
+                }
+				if (occupancy_grid_array_[adjacent_points[i]] == costmap_2d::NO_INFORMATION) {
+					no_inf_count++;
+//                                        ROS_DEBUG("No information found!");
+				}
+                                else if (occupancy_grid_array_[adjacent_points[i]] == costmap_2d::LETHAL_OBSTACLE) {
+					/*
+					 * Do not break here ... In some scenarios it may happen that unknown and free space
+					 * form a border, but if just a small corridor is available there, it would not be
+					 * detected as frontier, since even one neighboring block is an inflated block.
+					 * Therefore do nothing, if even one unknown block is a neighbor of an free space
+					 * block, then it is a frontier!
+					 */
+
+					//inscribed_count++;
+//                                        ROS_DEBUG("Obstacle found");
+					return(0);
+				}
+			}
+
+			/*
+			 * Count the number of lethal obstacle (unknown space also included
+			 * here). If an inflated obstacle was detected ... the point is not
+			 * a possible frontier and should no longer be considered.
+			 * Otherwise, when all surronding blocks --> 64+7 are unknown just the
+			 * one in the middle is free space, then we found a frontier!!
+			 * On every found frontier, true is returned
+			 */
+			if (no_inf_count > 0)
+			{
+				/*
+				 * Above a adjacent Point is taken and compared with NO_INFORMATION.
+				 * If the point contains no information, the next surrounding point from that point
+				 * is taken and again compared with NO_INFORMATION. If there are at least
+				 * two points with no information surrounding a no information point, then return true!
+				 * (at least two points with no information means that there is sufficient space
+				 * with not enough information about)
+				 */
+
+                            //return(backoff(point));
+                           return(point);
+			}
+		}
+	}
+	return(0);
+}
+
+int ExplorationPlanner::isFrontier_2(int point) {
+
+
+	if (isFree(point)) {
+
+		/*
+		 * The point is either a obstacle or a point with not enough
 		 * information about
 		 * Therefore, check if the point is surrounded by other NO_INFORMATION
 		 * points. Then further space to explore is found ---> frontier
