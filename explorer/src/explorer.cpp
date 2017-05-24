@@ -374,6 +374,7 @@ class Explorer
         enum_string.push_back("moving_to_frontier_before_going_charging");
         enum_string.push_back("moving_to_frontier");
         enum_string.push_back("leaving_ds");
+        enum_string.push_back("dead");
     }
 
     void explore()  // TODO(minor) comments
@@ -1573,7 +1574,7 @@ class Explorer
         fs_csv_state.close();
         
         //TODO move this in update_robot_state, where the state is set to finished
-        if(robot_state == finished) {
+        if(robot_state == finished || robot_state == dead) {
             std_msgs::Empty msg;
             pub_finished_exploration.publish(msg);
         }            
@@ -1819,7 +1820,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
 
-        while (ros::ok() && robot_state != finished && robot_state != stuck)
+        while (ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead)
         {
             // double angle_robot = robotPose.getRotation().getAngle();
             // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
@@ -2895,9 +2896,9 @@ class Explorer
     }
     
     void abort() {
-        ROS_FATAL("Exploration is going to be brutally aborted...");
+        ROS_FATAL("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
-        exit(-1);
+        update_robot_state_2(dead);
     }
     
     void log_stucked() {
@@ -3188,7 +3189,8 @@ class Explorer
         moving_to_frontier_before_going_charging,  // TODO hmm...
         moving_to_frontier,                        // the robot has selected the next frontier to be
                                                    // reached, and it is moving toward it
-        leaving_ds                                 // the robot was recharging, but another robot stopped
+        leaving_ds,                                // the robot was recharging, but another robot stopped
+        dead
     };
     state_t robot_state;
 

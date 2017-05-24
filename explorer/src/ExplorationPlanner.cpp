@@ -4075,7 +4075,7 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::recomputeGoal() {
     ROS_ERROR("my_error_counter: %d", my_error_counter);
-    return (my_error_counter > 0 && my_error_counter < 5) ? true : false;
+    return (my_error_counter > 0 && my_error_counter < 3) ? true : false;
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
@@ -4760,8 +4760,9 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
                     store_frontier_mutex.unlock();
                     return true;
                 } else{
-                    ROS_INFO("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
+                    ROS_ERROR("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     store_frontier_mutex.unlock();
+                    my_error_counter++;
                     return false;
                 }
             }
