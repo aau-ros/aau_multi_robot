@@ -435,7 +435,7 @@ class Explorer
         ROS_INFO("STARTING EXPLORATION");
 
         /* Start main loop (it loops till the end of the exploration) */
-        while (robot_state != finished && robot_state != stuck)
+        while (robot_state != finished && robot_state != stuck && robot_state != dead)
         {
             /* Update robot state */
             update_robot_state();
@@ -1043,7 +1043,7 @@ class Explorer
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
                         fs_exp_se_log.close();
                         
-                        exploration->sort_cost(battery_charge > 50, w1, w2, w3, w4);
+                        exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
@@ -2899,6 +2899,7 @@ class Explorer
         ROS_FATAL("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
         update_robot_state_2(dead);
+        this->indicateSimulationEnd();
     }
     
     void log_stucked() {
@@ -3031,7 +3032,7 @@ class Explorer
         state_t prev_robot_state = fully_charged;
             
         ros::Time prev_time = ros::Time::now();   
-        while(ros::ok() && robot_state != finished && robot_state != stuck) {
+        while(ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead) {
             
             //ROS_DEBUG("Checking...");
             //if(exploration->getRobotPose(robotPose)) {

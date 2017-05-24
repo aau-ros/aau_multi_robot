@@ -1289,6 +1289,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         finalize();
     }
+    else if (msg.get()->state == dead)
+    {
+        finalize();
+    }
     else
     {
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");

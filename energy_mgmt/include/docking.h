@@ -239,7 +239,8 @@ class docking
 
         moving_to_frontier,  // the robot has selected the next frontier to be
                              // reached, and it is moving toward it
-        leaving_ds           // the robot was recharging, but another robot stopped
+        leaving_ds,          // the robot was recharging, but another robot stopped
+        dead
     };
 
     state_t robot_state;

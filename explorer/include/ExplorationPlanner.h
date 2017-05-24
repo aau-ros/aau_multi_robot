@@ -216,7 +216,9 @@ namespace explorationPlanner
             bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name);
             void sort(int strategy);
             void sort_reserve(int strategy);
+            void sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_reserve(bool energy_above_th, int w1, int w2, int w3, int w4);
             void simulate();
             void visualize_Frontiers();

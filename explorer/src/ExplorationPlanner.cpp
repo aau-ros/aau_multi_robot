@@ -40,7 +40,9 @@
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
-#define QUICK_SELECTION
+#define APPROACH 1
+//#define QUICK_SELECTION
+
 
 using namespace explorationPlanner;
 
@@ -4600,6 +4602,23 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
     }
 }
 
+void ExplorationPlanner::sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4)
+{
+    if(APPROACH == 0)
+        /* Original cost function */
+        sort_cost(energy_above_th, w1, w2, w3, w4);
+    else if(APPROACH == 1)
+        /* Cost function: (real distance = Disjktra's distance)
+         *     - (real) distance between the given frontier and target DS of the robot;
+         *     - distance on the graph of the DSs between the DS that is closest, according to the euclidean distance (not the real one!), to the given frontier and the robot; this distance is computed efficiently by the energy_mgmt node;
+         *     - d_r
+         *     - theta_rel
+         */
+        sort_cost_1(energy_above_th, w1, w2, w3, w4);
+    else
+        ROS_ERROR("INVALID APPROACH!!!");
+}
+
 bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id)
 {
     if (!costmap_ros_->getRobotPose(robotPose))
@@ -5465,9 +5484,138 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
         for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
         //for(int i = frontiers.size(); i >= 0 && i > frontiers.size() - max_front - skipped_due_to_auction; --i)
         {
-        
+          
+            //continue_bool = false;
+            //return;
+            //ROS_ERROR("sort: %d", (int)frontiers.size() - 1 - i);
+            if( ((int)frontiers.size() - 1 - i) < 0) {
+                ROS_FATAL("Somethign bad happened....");
+                store_frontier_mutex.unlock();
+                return;
+            }
             
+            //TEMP
+            //if((int)frontiers.size() - 1 - i >= 1)
+            //    return;
+                
+            for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
+            {
+
+                //ROS_ERROR("sort2: %d", j);
+                /*
+                 * cost function
+                 * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
+                 *
+                 * parameters
+                 * w1, ..., w4 .. weights
+                 * d_g         .. distance from the robot's current position to the frontier
+                 * d_gb        .. distance from the frontier to the charging station
+                 * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
+                 * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
+                 */
+
+                // robot position
+                robot_x = robotPose.getOrigin().getX();
+                robot_y = robotPose.getOrigin().getY();
+
+                // frontier position
+                double frontier_x = frontiers.at(j).x_coordinate;
+                double frontier_y = frontiers.at(j).y_coordinate;
+                double next_frontier_x = frontiers.at(j+1).x_coordinate;
+                double next_frontier_y = frontiers.at(j+1).y_coordinate;
+
+                // calculate d_g
+                int d_g = trajectory_plan(frontier_x, frontier_y);
+                int d_g_next = trajectory_plan(next_frontier_x, next_frontier_y);
+
+                // calculate d_gb
+                int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
+                int d_gb_next = trajectory_plan(next_frontier_x, next_frontier_y, robot_home_x, robot_home_y);
+
+                // calculate d_gbe
+                int d_gbe, d_gbe_next;
+                if(energy_above_th)
+                {
+                    d_gbe = -d_gb;
+                    d_gbe_next = -d_gb_next;
+                }
+                else
+                {
+                    d_gbe = d_gb;
+                    d_gbe_next = d_gb_next;
+                }
+
+                // calculate theta
+                double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+                double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+                double theta_g_next = atan2(robot_y - next_frontier_y, robot_x - next_frontier_x);
+                double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+                double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g_next) - M_PI));
+
+                // calculate cost function
+                double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+                double cost_next = w1 * d_g_next + w2 * d_gb_next + w3 * d_gbe_next + w4 * theta_next;
+
+                // sort frontiers according to cost function
+                //F ascending order
+                if(cost > cost_next)
+                {
+                    frontier_t temp = frontiers.at(j+1);
+                    frontiers.at(j+1) = frontiers.at(j);
+                    frontiers.at(j) = temp;
+                }
+            }
+        }
+        robot_last_x = robot_x;
+        robot_last_y = robot_y;
+    }
+    else
+    {
+        ROS_INFO("Sorting not possible, no frontiers available!!!");
+    }
+    
+    store_frontier_mutex.unlock();
+    ROS_INFO("finished sort cost");
+    
+#endif
+ 
+}
+
+void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4)
+{
+
+#ifndef QUICK_SELECTION
+
+    //ROS_INFO("waiting for lock");
+    store_frontier_mutex.lock();
+    //ROS_INFO("lock acquired");
+    
+    tf::Stamped < tf::Pose > robotPose;
+    if(!costmap_ros_->getRobotPose(robotPose))
+    {
+        ROS_ERROR("Failed to get RobotPose");
+        store_frontier_mutex.unlock();
+        return;
+    }
+    
+    my_energy_above_th = energy_above_th;
+    this-> w1 = w1;
+    this-> w2 = w2;
+    this-> w3 = w3;
+    this-> w4 = w4;
+
+    // process only eight frontiers
+    int max_front = 8;
+
+    if(frontiers.size() > 0)
+    {
+        //ROS_ERROR("%lu", frontiers.size());
+        double robot_x, robot_y;
         
+        for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
+        //for(int i = frontiers.size(); i >= 0 && i > frontiers.size() - max_front - skipped_due_to_auction; --i)
+        {
+            
             //continue_bool = false;
             //return;
             //ROS_ERROR("sort: %d", (int)frontiers.size() - 1 - i);
