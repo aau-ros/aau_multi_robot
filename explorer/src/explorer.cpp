@@ -2934,6 +2934,7 @@ class Explorer
 
     bool robot_pose_callback(fake_network::RobotPosition::Request &req, fake_network::RobotPosition::Response &res)
     {
+        
         //tf::Stamped<tf::Pose> robotPose;
         if(!exploration->getRobotPose(robotPose))
             return false;

@@ -41,7 +41,7 @@
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
-#define APPROACH 0
+#define APPROACH 1
 #define QUICK_SELECTION
 
 
@@ -221,7 +221,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 //        sub_auctioning_status = nh_auction_status.subscribe("/robot_1/auctionStatus", 1000, &ExplorationPlanner::auctionStatusCallback, this);
 //    }
 
-    sc_distance_frontier_robot = tmp.serviceClient<explorer::Distance>(robot_name + "distance_on_graph", true);
+    ros::NodeHandle nh;
+    sc_distance_frontier_robot = nh.serviceClient<explorer::Distance>("energy_mgmt/distance_on_graph", true);
 
     srand((unsigned)time(0));
 }
@@ -4776,13 +4777,13 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
 
                     // calculate cost function
                      my_bid = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
-                    
-                    my_error_counter = 0;
-
+             
 #endif
 
                     store_frontier_mutex.unlock();
+                    my_error_counter = 0;
                     return true;
+                    
                 } else{
                     ROS_ERROR("No frontier in energetic range (%.2f < %.2f + %.2f)", available_distance, dist_front * costmap_ros_->getCostmap()->getResolution(), dist_home * costmap_ros_->getCostmap()->getResolution());
                     store_frontier_mutex.unlock();
@@ -4906,7 +4907,7 @@ bool ExplorationPlanner::determine_goal_staying_alive_2(int mode, int strategy, 
         }
     }
     
-    store_frontier_mutex.unlock();
+    store_frontier_mutex.unlock(); //probablt useless here...
     
 }
 
@@ -5591,7 +5592,7 @@ void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w
     ROS_ERROR("calling %s", sc_distance_frontier_robot.getService().c_str());
     explorer::Distance distance_srv_msg;
     distance_srv_msg.request.x1 = 10;
-    ros::service::waitForService("distance_on_graph");
+    ros::service::waitForService("energy_mgmt/distance_on_graph");
     if(sc_distance_frontier_robot.call(distance_srv_msg))
         ROS_ERROR("call ok!");
     else

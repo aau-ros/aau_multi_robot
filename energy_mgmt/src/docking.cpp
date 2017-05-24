@@ -164,7 +164,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
 
-    ss_distance_robot_frontier_on_graph = nh.advertiseService("distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
+    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
     ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
     /* Subscribers */
@@ -2967,5 +2967,25 @@ void docking::test_2(const std_msgs::Empty &msg) {
 
 bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res) {
     ROS_ERROR("called!");
+    
+    int index_closest_ds_to_frontier, index_closest_ds_to_robot;
+    double x1, y1, robot_x, robot_y; //TODO
+    double min_dist_frontier = numeric_limits<int>::max(), min_dist_robot = numeric_limits<int>::max();
+    for(int i; i < ds.size(); i++) {
+        double dist = distance(ds[i].x, ds[i].y, x1, y1, true);
+        if( dist < min_dist_frontier ) {
+            min_dist_frontier = dist;
+            index_closest_ds_to_frontier = i;
+        }
+        dist = distance(ds[i].x, ds[i].y, robot_x, robot_y, true);
+        if(dist < min_dist_robot)
+        {
+            min_dist_robot = dist;
+            index_closest_ds_to_robot = i;
+        }
+    }
+    
+    //compute_path(index_closest_ds_to_robot, index_closest_ds_to_robot);
+    
     return true;
 }
