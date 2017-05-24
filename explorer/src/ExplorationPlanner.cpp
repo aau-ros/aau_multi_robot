@@ -41,7 +41,7 @@
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
-#define APPROACH 1
+#define APPROACH 0
 #define QUICK_SELECTION
 
 
@@ -5590,6 +5590,8 @@ void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w
 {
     ROS_ERROR("calling %s", sc_distance_frontier_robot.getService().c_str());
     explorer::Distance distance_srv_msg;
+    distance_srv_msg.request.x1 = 10;
+    ros::service::waitForService("distance_on_graph");
     if(sc_distance_frontier_robot.call(distance_srv_msg))
         ROS_ERROR("call ok!");
     else

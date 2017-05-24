@@ -46,6 +46,8 @@ int main(int argc, char** argv)
     //doc.start_join_timer();
     
     
+    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    
 
 // Frequency of loop
     double rate = 0.5; // Hz
