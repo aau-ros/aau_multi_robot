@@ -41,7 +41,7 @@
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
-#define APPROACH 1
+#define APPROACH -1
 #define QUICK_SELECTION
 
 

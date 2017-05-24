@@ -2967,6 +2967,7 @@ void docking::test_2(const std_msgs::Empty &msg) {
 
 bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res) {
     ROS_ERROR("called!");
+    return true;
     
     int index_closest_ds_to_frontier, index_closest_ds_to_robot;
     double x1, y1, robot_x, robot_y; //TODO
