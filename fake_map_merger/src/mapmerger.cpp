@@ -342,8 +342,8 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
         
             //F
             if(tmp.update_numbers.at(i) >= update_list->size()) {
-                ROS_ERROR("std::out_of_range");
-                ROS_ERROR("ignoring access to avoid segmentation fault");
+                //ROS_ERROR("std::out_of_range");
+                //ROS_ERROR("ignoring access to avoid segmentation fault");
                 tmp.update_numbers.erase(tmp.update_numbers.begin() + i);
                 continue;
             }

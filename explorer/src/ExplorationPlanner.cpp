@@ -4080,7 +4080,7 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::recomputeGoal() {
     ROS_ERROR("my_error_counter: %d", my_error_counter);
-    return (my_error_counter > 0 && my_error_counter < 3) ? true : false;
+    return (my_error_counter > 0 && my_error_counter < 2) ? true : false;
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
@@ -4618,6 +4618,8 @@ void ExplorationPlanner::sort_cost_with_approach(bool energy_above_th, int w1, i
          *     - theta_rel
          */
         sort_cost_1(energy_above_th, w1, w2, w3, w4);
+    else if(APPROACH == -1)
+        return;
     else
         ROS_ERROR("INVALID APPROACH!!!");
 }
@@ -5586,6 +5588,13 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
 
 void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
+    ROS_ERROR("calling %s", sc_distance_frontier_robot.getService().c_str());
+    explorer::Distance distance_srv_msg;
+    if(sc_distance_frontier_robot.call(distance_srv_msg))
+        ROS_ERROR("call ok!");
+    else
+        ROS_ERROR("call failed");
+    
 
 #ifndef QUICK_SELECTION
 
