@@ -165,7 +165,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
 
     ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
-    ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
+    //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 10, &docking::cb_battery, this);

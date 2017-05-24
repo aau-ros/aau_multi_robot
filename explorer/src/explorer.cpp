@@ -35,6 +35,7 @@
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/MmPoint.h>
 //#include <robot_state/GetRobotState.h>
+#include <std_msgs/Int16.h>
 
 //#define PROFILE
 
@@ -75,7 +76,7 @@ class Explorer
     bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
     ros::Publisher pub_robot, pub_wait, pub_finished_exploration;
-    ros::Subscriber sub_wait;
+    ros::Subscriber sub_wait, sub_free_cells_count;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
@@ -87,6 +88,7 @@ class Explorer
     float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
     int explorations;
+    int free_cells_count;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -145,6 +147,10 @@ class Explorer
 
         /* Robot state publishers */
         pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);  // to publish vacancy check requests
+        
+        ros::NodeHandle nh2;
+        sub_free_cells_count = nh2.subscribe("free_cells_count", 10, &Explorer::free_cells_count_callback, this);
+        //ROS_ERROR("%s", sub_free_cells_count.getTopic().c_str());
 
         /* Robot state subscribers */
 
@@ -1835,7 +1841,7 @@ class Explorer
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time.toSec();
             map_progress_during_exploration.push_back(map_progress);
-            float percentage = (float) (map_progress.global_freespace * 100) / total_size();
+            float percentage = (float) (map_progress.global_freespace * 100) / free_cells_count;
 
             double exploration_travel_path_global =
                 //F
@@ -3012,6 +3018,11 @@ class Explorer
             return true;
         return false;
     
+    }
+    
+    void free_cells_count_callback(const std_msgs::Int16 msg) {
+        //ROS_ERROR("YESS!!!");
+        free_cells_count = msg.data;
     }
     
     void safety_checks() {
