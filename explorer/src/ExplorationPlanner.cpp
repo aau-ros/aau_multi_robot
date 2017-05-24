@@ -41,7 +41,7 @@
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
 #define APPROACH 1
-//#define QUICK_SELECTION
+#define QUICK_SELECTION
 
 
 using namespace explorationPlanner;
