@@ -19,6 +19,7 @@
 #include <adhoc_communication/EmDockingStation.h>
 #include <map_merger/TransformPoint.h>
 #include <math.h>
+#include <std_msgs/Int32.h>
 
 namespace explorationPlanner
 {
@@ -294,6 +295,8 @@ namespace explorationPlanner
             ros::Subscriber sub_new_optimal_ds;
             void new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
             ros::ServiceClient sc_distance_frontier_robot;
+            void new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg);
+            ros::Subscriber sub_new_ds_on_graph;
 
         private:
             bool auction_running;
@@ -365,6 +368,19 @@ namespace explorationPlanner
             double p_same_frontier_dist_;
             
             std::vector<frontier_t> sorted_frontiers;
+            int num_ds;
+            void ds_count_callback(const std_msgs::Int32 msg);
+            ros::Subscriber sub_ds_count;
+            struct ds_t
+            {
+                int id;
+                double x;
+                double y;
+                bool vacant;
+            };
+            std::vector<ds_t> ds_list;
+            std::vector<std::vector<float> > ds_graph;
+            bool recompute_ds_graph;
     };
 }
 

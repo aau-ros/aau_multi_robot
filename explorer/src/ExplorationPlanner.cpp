@@ -83,6 +83,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     my_error_counter = 0;
     optimal_ds_x = 0;
     optimal_ds_y = 0;
+    num_ds = -1;
+    recompute_ds_graph = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -183,6 +185,12 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     sub_reply_negotiation = nh_negotiation.subscribe(robo_name+"/reply_to_frontier", 10000, &ExplorationPlanner::my_replyToNegotiationCallback, this);
     
     sub_new_optimal_ds = nh.subscribe(robo_name+"/explorer/new_optimal_ds", 10000, &ExplorationPlanner::new_optimal_ds_callback, this);
+    
+    sub_new_ds_on_graph = nh.subscribe("new_ds_on_graph", 10000, &ExplorationPlanner::new_ds_on_graph_callback, this);
+    sub_ds_count = nh.subscribe("ds_count", 10, &ExplorationPlanner::ds_count_callback, this);
+    //ROS_ERROR("%s", sub_new_ds_on_graph.getTopic().c_str());
+    //ROS_ERROR("%s", sub_ds_count.getTopic().c_str());
+    
     
 
     // TODO
@@ -4608,6 +4616,24 @@ bool ExplorationPlanner::determine_goal_staying_alive(int mode, int strategy, do
 
 void ExplorationPlanner::sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
+    if(recompute_ds_graph) {
+        recompute_ds_graph = false;
+        for(int i=0; i < ds_list.size(); i++)
+            for(int j=0; j < ds_list.size(); j++)
+                if(ds_graph[i][j] >= 0 || i == j)
+                    continue;
+                else {
+                    double dist = trajectory_plan(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].x);
+                    if(dist < 0) {
+                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+                        recompute_ds_graph = true;
+                    }
+                    else {
+                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
+                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
+                    }
+                }
+    }
     if(APPROACH == 0)
         /* Original cost function */
         sort_cost(energy_above_th, w1, w2, w3, w4);
@@ -5587,16 +5613,90 @@ void ExplorationPlanner::sort_cost(bool energy_above_th, int w1, int w2, int w3,
  
 }
 
+void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg) {
+    //ROS_ERROR("RECEVIED!");
+    
+    if(num_ds <= 0) {       
+        num_ds = msg.total_number_of_ds;
+        //ds_list.resize(num_ds);
+        for (int i = 0; i < num_ds; i++)
+        {
+            std::vector<float> temp_f;
+            for (int j = 0; j < num_ds; j++) {
+                temp_f.push_back(-1);
+            }
+            ds_graph.push_back(temp_f);
+        }
+    }
+    
+    ds_t ds;
+    ds.x = msg.x;
+    ds.y = msg.y;
+    ds.id = msg.id;
+    ROS_ERROR("%d, %f, %f", ds.id, ds.x, ds.y);
+    for(int i=0; i < ds_list.size(); i++) {
+        double dist = trajectory_plan(ds_list[i].x, ds_list[i].y, ds.x, ds.y);
+        if(dist < 0) {
+            ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+            recompute_ds_graph = true;
+        }
+        else {
+            if(ds_list[i].id >= ds_graph.size() || ds.id >= ds_graph.size() || ds_list[i].id >= ds_graph[ds_list[i].id].size() || ds.id >= ds_graph[ds.id].size()) {
+                ROS_FATAL("!!!OUT OF RANGE!!! %d, %d, %lu", ds_list[i].id, ds.id, ds_graph.size());
+                return;   
+            }
+            ds_graph[ds_list[i].id][ds.id] = dist;
+            ds_graph[ds.id][ds_list[i].id] = dist;
+        }
+    }
+    ds_graph[ds.id][ds.id] = 0;
+    for(int i=0; i < ds_list.size(); i++)
+        for(int j=0; j < ds_list.size(); j++)
+            ROS_ERROR("%f", ds_graph[i][j]);
+    ds_list.push_back(ds);
+}
+
+void ExplorationPlanner::ds_count_callback(const std_msgs::Int32 msg) {
+    ROS_ERROR("count received! %d", msg.data);
+    if(num_ds <= 0) {       
+        num_ds = msg.data;
+        //ds_list.resize(num_ds);
+        for (int i = 0; i < num_ds; i++)
+        {
+            std::vector<float> temp_f;
+            for (int j = 0; j < num_ds; j++) {
+                temp_f.push_back(-1);
+            }
+            ds_graph.push_back(temp_f);
+        }
+    }
+}
+
 void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
     //ROS_ERROR("calling %s", sc_distance_frontier_robot.getService().c_str());
-    explorer::Distance distance_srv_msg;
-    distance_srv_msg.request.x1 = 10;
-    ros::service::waitForService("energy_mgmt/distance_on_graph");
+    //explorer::Distance distance_srv_msg;
+    //distance_srv_msg.request.x1 = 10;
+    //ros::service::waitForService("energy_mgmt/distance_on_graph");
+    //publish_frontier_list();
+    
+    /*
     if(sc_distance_frontier_robot.call(distance_srv_msg))
         ; //ROS_ERROR("call ok!");
     else
         ROS_ERROR("call failed!!!");
+    */
+    
+    /*
+    while(num_ds <= 0) {
+        ROS_ERROR("waiting DS count");
+        ros::Duration(2).sleep();
+        ros::spinOnce();
+    }
+    */
+    
+    if(num_ds <= 0)
+        return;
     
 
 #ifndef QUICK_SELECTION

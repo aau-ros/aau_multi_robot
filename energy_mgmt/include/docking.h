@@ -29,6 +29,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <dsgraph.h>
+#include <std_msgs/Int32.h>
 
 #define PI 3.14159265
 
@@ -67,7 +68,7 @@ class docking
     void test();
     void test_2(const std_msgs::Empty &msg);
     
-    ros::Publisher pub_test;
+    ros::Publisher pub_test, pub_new_ds_on_graph, pub_ds_count;
     ros::Subscriber sub_test;
     
     /**

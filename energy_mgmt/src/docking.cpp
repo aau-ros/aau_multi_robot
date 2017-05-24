@@ -216,6 +216,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
 	
 	pub_robot_absolute_position = nh.advertise<adhoc_communication::EmRobot>("fake_network/robot_absolute_position", 10);
+	
+	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 10);
+	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -397,11 +400,12 @@ void docking::preload_docking_stations()
     std::vector<ds_t>::iterator it;
     for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
         ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
+        
 }
 
 void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in distance computation??
 //TODO(minor) maybe there are more efficient for some steps; for instance, i coudl keep track somewhere of the DS with EOs and avoid recomputing them two times in the same call of this funcion...
-{
+{   
     ROS_DEBUG("Compute optimal DS");
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
@@ -1392,7 +1396,9 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     }
     */
     
+    //boost::mutex frontiers_mutex.lock();
     jobs = msg.get()->frontier_element;
+    //frontiers_mutex.lock();
     
     if(jobs.size() > 0)
         no_jobs_received_yet = false;
@@ -2634,6 +2640,20 @@ void docking::check_reachable_ds()
         if (reachable)
         {
             ROS_INFO("ds%d is now reachable", (*it).id);
+            
+            adhoc_communication::EmDockingStation new_ds_msg;
+            new_ds_msg.id = it->id;
+            new_ds_msg.x = it->x;
+            new_ds_msg.y = it->y;
+            //ROS_ERROR("publishing on %s", pub_new_ds_on_graph.getTopic().c_str());
+            //TODO publishing here just to avoid to publish the message too early, but of course this is not a good place, and it is not necessary to publish the message every time
+            //std_msgs::Int32 ds_count_msg;
+            //ds_count_msg.data = num_ds;
+            //ROS_ERROR("publishing on topic %s", pub_ds_count.getTopic().c_str());
+            //pub_ds_count.publish(ds_count_msg);
+            new_ds_msg.total_number_of_ds = num_ds;
+            pub_new_ds_on_graph.publish(new_ds_msg);
+            
             new_ds_discovered = true;
             ds_t new_ds; 
             new_ds.id = it->id;
@@ -2649,6 +2669,7 @@ void docking::check_reachable_ds()
             
             it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
             
+
             
             if(id1 != id2)
                 ROS_ERROR("ERROR");
@@ -2707,6 +2728,8 @@ void docking::check_reachable_ds()
         
         //timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, true, false); //TODO(minor) timeout
     }
+    
+    
     
 }
 
