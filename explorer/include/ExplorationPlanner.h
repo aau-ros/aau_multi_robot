@@ -293,6 +293,7 @@ namespace explorationPlanner
             float optimal_ds_x, optimal_ds_y;
             ros::Subscriber sub_new_optimal_ds;
             void new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+            ros::ServiceClient sc_distance_frontier_robot;
 
         private:
             bool auction_running;

@@ -571,6 +571,9 @@ class docking
 	bool no_jobs_received_yet;
 	
 	ros::Publisher pub_robot_absolute_position;
+	
+	bool distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res);
+	ros::ServiceServer ss_distance_robot_frontier_on_graph;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

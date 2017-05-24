@@ -164,6 +164,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
 
+    ss_distance_robot_frontier_on_graph = nh.advertiseService("distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 10, &docking::cb_battery, this);
@@ -2961,4 +2962,8 @@ bool docking::set_optimal_ds_given_index(int index) {
 
 void docking::test_2(const std_msgs::Empty &msg) {
     ROS_ERROR("Test 2");
+}
+
+bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res) {
+    ROS_ERROR("called!");
 }

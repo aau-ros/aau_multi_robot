@@ -3085,8 +3085,15 @@ class Explorer
                 prints_count = 1;  
             }
             
-            if( (robot_state == exploring || robot_state == moving_to_frontier) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
+            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
                 countdown_2 -= ros::Time::now() - prev_time;
+                
+                if(countdown_2 < ros::Duration(0)) {
+                
+                    ROS_FATAL("Robot is not moving from 10 minutes!");
+                    //abort();
+                    log_stucked();
+                }
             }
             else
             {

@@ -31,6 +31,7 @@
 #include <map_merger/TransformPoint.h>
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
+#include "explorer/Distance.h"
 
 #define MAX_DISTANCE 2000           // max distance to starting point
 #define MAX_GOAL_RANGE 0.7          // min distance between frontiers during search [meters]
@@ -219,6 +220,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 //        sub_position = nh_position.subscribe("/robot_0/all_positions", 1000, &ExplorationPlanner::positionCallback, this);
 //        sub_auctioning_status = nh_auction_status.subscribe("/robot_1/auctionStatus", 1000, &ExplorationPlanner::auctionStatusCallback, this);
 //    }
+
+    sc_distance_frontier_robot = tmp.serviceClient<explorer::Distance>(robot_name + "distance_on_graph", true);
 
     srand((unsigned)time(0));
 }
