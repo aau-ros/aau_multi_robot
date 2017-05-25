@@ -3058,7 +3058,7 @@ class Explorer
     void free_cells_count_callback(const std_msgs::Int32 msg) {
         //ROS_ERROR("YESS!!!");
         free_cells_count = msg.data;
-        ROS_ERROR("received count: %d", free_cells_count);
+        //ROS_ERROR("received count: %d", free_cells_count);
     }
     
     void safety_checks() {
