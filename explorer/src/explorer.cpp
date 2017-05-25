@@ -77,7 +77,7 @@ class Explorer
     bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
     ros::Publisher pub_robot, pub_wait, pub_finished_exploration;
-    ros::Subscriber sub_wait, sub_free_cells_count;
+    ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
@@ -89,7 +89,7 @@ class Explorer
     float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
     int explorations;
-    int free_cells_count;
+    int free_cells_count, discovered_free_cells_count;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -151,6 +151,8 @@ class Explorer
         
         ros::NodeHandle nh2;
         sub_free_cells_count = nh2.subscribe("free_cells_count", 10, &Explorer::free_cells_count_callback, this);
+        sub_discovered_free_cells_count = nh2.subscribe("discovered_free_cells_count", 10, &Explorer::discovered_free_cells_count_callback, this);
+        
         //ROS_ERROR("%s", sub_free_cells_count.getTopic().c_str());
 
         /* Robot state subscribers */
@@ -1852,11 +1854,12 @@ class Explorer
 
             ros::Duration time = ros::Time::now() - time_start;
 
-            map_progress.global_freespace = global_costmap_size();
+            //map_progress.global_freespace = global_costmap_size();
+            map_progress.global_freespace = discovered_free_cells_count;
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time.toSec();
             map_progress_during_exploration.push_back(map_progress);
-            if(free_cells_count <= 0)
+            if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
                 percentage = -1;
             else
                 percentage = (float) (map_progress.global_freespace * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
@@ -3059,6 +3062,12 @@ class Explorer
         //ROS_ERROR("YESS!!!");
         free_cells_count = msg.data;
         //ROS_ERROR("received count: %d", free_cells_count);
+    }
+    
+    void discovered_free_cells_count_callback(const std_msgs::Int32 msg) {
+        //ROS_ERROR("YESS!!!");
+        discovered_free_cells_count = msg.data;
+        //ROS_ERROR("received count: %d", discovered_free_cells_count);
     }
     
     void safety_checks() {

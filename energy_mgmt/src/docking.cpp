@@ -1210,13 +1210,13 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
     if (msg.get()->state == in_queue)
     {
-
+        ROS_DEBUG("Starting timer_restart_auction");
         /* Schedule next auction (a robot goes in queue only if it has lost an
-         * auction started by itself) NB: NOOOO!!! it could win is auction, then
+         * auction started by itself? NOOOO!!! it could win is auction, then
          * immediately lose a following one that was sovrapposing with the one
-         * started by it, so when both the auction are completed, the robot will
+         * started by it, so when both auctions are completed, the robot will
          * seem to be lost only an auction started by another robot!!!*/
-        //timer_restart_auction.stop(); //reduntant ?
+        timer_restart_auction.stop(); //reduntant ?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
         
@@ -1683,7 +1683,7 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
                                      // lost another and not be reset in queue... //TODO(minor) not very clean...
         ROS_ERROR("Robot is already participating to an auction: let's wait "
                   "instead of starting another one...");
-        //timer_restart_auction.stop(); //reduntant?
+        timer_restart_auction.stop(); //reduntant?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
         timer_restart_auction.start();
     }
@@ -1713,6 +1713,7 @@ void docking::start_new_auction()
     participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
 
     /* Start auction timer to be notified of auction conclusion */
+    timer_finish_auction.stop();
     timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
     timer_finish_auction.start();
 
