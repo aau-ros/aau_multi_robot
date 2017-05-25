@@ -1118,10 +1118,12 @@ class Explorer
                             ros::spinOnce();
                             
                             if(exploration->winner_of_auction) {
-                                //explorations++;
-                                //if(explorations == 5)
-                                //    update_robot_state_2(auctioning);    
-                                //else
+                                explorations++;
+                                if( (explorations == 5 || explorations == 7) && robot_id == 0) {
+                                    //ROS_ERROR("auctioning");
+                                    update_robot_state_2(auctioning);    
+                                }
+                                else
                                     update_robot_state_2(moving_to_frontier);
                                     
                                 exploration->clean_frontiers_under_auction();
