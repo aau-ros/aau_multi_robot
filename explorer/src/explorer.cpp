@@ -141,6 +141,8 @@ class Explorer
         available_distance = -1;
         already_navigated_DS_graph = false;
         explorations = 0;
+        discovered_free_cells_count = 0;
+        free_cells_count = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -1839,7 +1841,7 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_explored_cells,global_map_progress,local_map_explored_cells,battery_state,"
+                  "global_map_explored_cells,global_map_explored_cells_2,global_map_progress_percentage,local_map_explored_cells,total_number_of_cells,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
         fs_csv.close();
@@ -1856,15 +1858,15 @@ class Explorer
 
             ros::Duration time = ros::Time::now() - time_start;
 
-            //map_progress.global_freespace = global_costmap_size();
-            map_progress.global_freespace = discovered_free_cells_count;
+            map_progress.global_freespace = global_costmap_size();
+            //map_progress.global_freespace = discovered_free_cells_count;
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time.toSec();
             map_progress_during_exploration.push_back(map_progress);
             if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
                 percentage = -1;
             else
-                percentage = (float) (map_progress.global_freespace * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
+                percentage = (float) (discovered_free_cells_count * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
 
             //ROS_ERROR("%.0f", map_progress.global_freespace);
             //ROS_ERROR("%d", free_cells_count);
@@ -1880,8 +1882,9 @@ class Explorer
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << available_distance << ","
-                   << map_progress.global_freespace << "," << percentage << "," << map_progress.local_freespace << "," << battery_charge
-                   << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
+                   << map_progress.global_freespace << "," << discovered_free_cells_count << "," << percentage << "," 
+                   << map_progress.local_freespace << "," << free_cells_count << "," 
+                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
             fs_csv.close();
 
             costmap_mutex.unlock();

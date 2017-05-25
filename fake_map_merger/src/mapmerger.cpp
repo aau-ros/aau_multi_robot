@@ -457,6 +457,7 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
             mergeMaps(map_to_merge);
 
             delete map_to_merge;
+            
         }
     }
 
@@ -481,6 +482,25 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
         }
        // updateMapArea(-1,local_map,true);
         pub.publish(*global_map);
+        
+        int obstacle_cells_count = 0;
+        //int free_cells_count = 0;
+        int discovered_free_cells_count = 0;
+        for(int i=0; i < global_map->data.size(); i++)
+        if(global_map->data[i] == 100)
+            obstacle_cells_count++;
+        else if(global_map->data[i] == 0)
+            discovered_free_cells_count++;
+        else if(global_map->data[i] == -1) //unknown 
+            ;
+        else
+            ROS_ERROR("Invalid value!");
+            
+        std_msgs::Int32 count_msg;
+        count_msg.data = discovered_free_cells_count;
+        //ROS_ERROR("publishing");
+        pub_discovered_free_cells_count.publish(count_msg);
+        
         //ROS_ERROR("!!!After publishing global map!!!");
     }
     else
@@ -1128,7 +1148,7 @@ void MapMerger::processLocalMap(nav_msgs::OccupancyGrid * toInsert,int index)
         ROS_INFO("%p|%p",&local_map->data,&local_map_old->data);
         
         //F
-        delete global_map;
+        //delete global_map;
         
         global_map = new nav_msgs::OccupancyGrid();
         global_map->data = local_map->data;
@@ -1246,6 +1266,9 @@ void MapMerger::start()
   
     ROS_INFO("Init Subscriber");
     pub = nodeHandle->advertise<nav_msgs::OccupancyGrid>("global_map",3);
+    ros::NodeHandle mynh;
+    pub_discovered_free_cells_count = mynh.advertise<std_msgs::Int32>("discovered_free_cells_count", 10);
+    
     my_pos_pub = nodeHandle->advertise<visualization_msgs::MarkerArray>("position_"+robot_name,3);
     //because i hat to send them in a occupancy grid, i send them as int, so i lose the numbers
     //after the comma

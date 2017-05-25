@@ -37,6 +37,8 @@
 #include "adhoc_communication/ExpFrontierElement.h"
 #include "visualization_msgs/MarkerArray.h"
 
+#include <std_msgs/Int32.h>
+
 
 enum MapMergerLog{
     LOG_GLOBAL_MAP          = 0x01,
@@ -168,6 +170,7 @@ private:
     std::vector<int> * pos_seq_other;
     int pos_seq_my;
     bool turning;
+    ros::Publisher pub_discovered_free_cells_count;
 };
 
 #endif // MAPMERGER_H
