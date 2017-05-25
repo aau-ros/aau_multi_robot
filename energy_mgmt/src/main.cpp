@@ -4,6 +4,7 @@
 #include <battery_simulate.h>
 #include <docking.h>
 #include <boost/thread.hpp>
+#include <geometry_msgs/Twist.h>
 
 int main(int argc, char** argv)
 {
@@ -52,6 +53,8 @@ int main(int argc, char** argv)
 // Frequency of loop
     double rate = 0.5; // Hz
     ros::Rate loop_rate(rate);
+    ros::NodeHandle nh;
+    //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
     while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
         ros::spinOnce();
@@ -89,6 +92,18 @@ int main(int argc, char** argv)
         loop_rate.sleep();
         
         //ROS_ERROR("End of main loop");
+        
+        /*
+                                geometry_msgs::Twist cmd_vel;
+                        cmd_vel.linear.x = 0.0;
+                        cmd_vel.linear.y = 0.0;
+                        //cmd_vel.linear.z = 0.0;
+                        //cmd_vel.angular.x = 0.0;
+                        //cmd_vel.angular.y = 0.0;
+                        cmd_vel.angular.z = 0.5;
+                        ROS_ERROR("%s",  pub_cmd_vel.getTopic().c_str());
+                        pub_cmd_vel.publish(cmd_vel);
+                        */
     }
     
     while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise

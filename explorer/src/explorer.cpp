@@ -1840,6 +1840,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
 
+        float percentage;
         while (ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead)
         {
             // double angle_robot = robotPose.getRotation().getAngle();
@@ -1855,7 +1856,10 @@ class Explorer
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time.toSec();
             map_progress_during_exploration.push_back(map_progress);
-            float percentage = (float) (map_progress.global_freespace * 100) / free_cells_count;
+            if(free_cells_count <= 0)
+                percentage = -1;
+            else
+                percentage = (float) (map_progress.global_freespace * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
 
             double exploration_travel_path_global =
                 //F
