@@ -35,7 +35,7 @@
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/MmPoint.h>
 //#include <robot_state/GetRobotState.h>
-#include <std_msgs/Int16.h>
+#include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
 
 //#define PROFILE
@@ -1861,6 +1861,9 @@ class Explorer
             else
                 percentage = (float) (map_progress.global_freespace * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
 
+            //ROS_ERROR("%.0f", map_progress.global_freespace);
+            //ROS_ERROR("%d", free_cells_count);
+            //ROS_ERROR("%f", percentage);
             double exploration_travel_path_global =
                 //F
                 //(double)exploration->exploration_travel_path_global * costmap_resolution;
@@ -1901,18 +1904,32 @@ class Explorer
 
     int global_costmap_size()
     {
-        occupancy_grid_global = costmap2d_global->getCostmap()->getCharMap();
-        int num_map_cells_ =
-            costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY();
+        //occupancy_grid_global = costmap2d_global->getCostmap()->getCharMap();
+        //int num_map_cells_ =
+        //    costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY();
         int free = 0;
 
+        /*
         for (unsigned int i = 0; i < num_map_cells_; i++)
         {
-            if ((int)occupancy_grid_global[i] == costmap_2d::FREE_SPACE)
+            if ((int) occupancy_grid_global[i] == costmap_2d::FREE_SPACE)
+            getCost(cell_x, cell_y)
             {
                 free++;
             }
         }
+        */
+        
+        //ROS_ERROR("%d", costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY());
+        
+        for (unsigned int i = 0; i < costmap2d_global->getCostmap()->getSizeInCellsX(); i++)
+            for (unsigned int j = 0; j < costmap2d_global->getCostmap()->getSizeInCellsY(); j++)
+            {
+                if (costmap2d_global->getCostmap()->getCost(i,j) == costmap_2d::FREE_SPACE)
+                    free++;
+            }
+        
+        //ROS_ERROR("%d", free);
         return free;
     }
     
@@ -3038,9 +3055,10 @@ class Explorer
     
     }
     
-    void free_cells_count_callback(const std_msgs::Int16 msg) {
+    void free_cells_count_callback(const std_msgs::Int32 msg) {
         //ROS_ERROR("YESS!!!");
         free_cells_count = msg.data;
+        ROS_ERROR("received count: %d", free_cells_count);
     }
     
     void safety_checks() {
