@@ -36,6 +36,7 @@
 #include <adhoc_communication/MmPoint.h>
 //#include <robot_state/GetRobotState.h>
 #include <std_msgs/Int16.h>
+#include <geometry_msgs/Twist.h>
 
 //#define PROFILE
 
@@ -1069,6 +1070,19 @@ class Explorer
                         else
                             goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                        
+                        /*
+                        geometry_msgs::Twist cmd_vel;
+                        cmd_vel.linear.x = 0.0;
+                        cmd_vel.linear.y = 0.0;
+                        cmd_vel.linear.z = 0.0;
+                        cmd_vel.angular.x = 0.0;
+                        cmd_vel.angular.y = 0.0;
+                        cmd_vel.angular.z = 0.5;
+                        ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+                        ROS_ERROR("%s",  pub_cmd_vel.getTopic().c_str());
+                        pub_cmd_vel.publish(cmd_vel);
+                        */
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
@@ -3027,16 +3041,17 @@ class Explorer
     
     void safety_checks() {
     
+        bool already_perfomed_recovery_procedure = false;
         double sleeping_time = 10.0;
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = 3 * 60; //seconds
-        //int starting_value_standing = 10 * 60; //seconds
+        int starting_value_countdown_2 = 5 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
-        ros::Duration countdown_2 = ros::Duration(10 * 60);
+        ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         
-        float prev_robot_x = 0, prev_robot_y = 0, prev_robot_x_2 = 0, prev_robot_y_2 = 0;
+        float prev_robot_x = 0, prev_robot_y = 0, prev_robot_x_2 = 0, prev_robot_y_2 = 0, stuck_x = 0, stuck_y = 0;
         
         int prints_count = 1;
         
@@ -3102,17 +3117,39 @@ class Explorer
                 
                 if(countdown_2 < ros::Duration(0)) {
                 
-                    ROS_FATAL("Robot is not moving from 10 minutes!");
-                    //abort();
-                    log_stucked();
+                    /*
+                    if(!already_perfomed_recovery_procedure) {
+                        ROS_ERROR("Trying to recover from stuck...");
+                        stuck_x = pose_x;
+                        stuck_y = pose_y;
+                        geometry_msgs::Twist msg;
+                        msg.linear.y = -1;
+                        ros::NodeHandle nh;
+                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+                        pub.publish(msg);
+                        already_perfomed_recovery_procedure = true;
+                        countdown = ros::Duration(starting_value_moving);
+                        countdown_2 = ros::Duration(starting_value_countdown_2);
+                    }
+                    else {
+                    */
+                        ROS_FATAL("Robot is not moving from 10 minutes!");
+                        //abort();
+                        log_stucked();
+                    //}
                 }
             }
             else
             {
                 prev_robot_x_2 = pose_x;
                 prev_robot_y_2 = pose_y;
+                countdown_2 = ros::Duration(starting_value_countdown_2);
             }
-           
+            
+            //ROS_ERROR("%f, %f", pose_x, pose_y);
+
+            if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
+                already_perfomed_recovery_procedure = false;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
