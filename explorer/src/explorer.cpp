@@ -90,6 +90,7 @@ class Explorer
     bool already_navigated_DS_graph;
     int explorations;
     int free_cells_count, discovered_free_cells_count;
+    float percentage;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -1608,10 +1609,18 @@ class Explorer
     }
 
     void update_robot_state()
-    {
+    {       
+        if(percentage >= 100)
+            ROS_ERROR("Strange value...");
+    
+        if(percentage >= 100 && robot_state_next != finished_next && robot_state != finished) {
+            ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
+            robot_state_next = finished_next;
+        }
+    
         // TODO(minor) ???
         ros::spinOnce();
-        if(robot_state_next == finish_next) {
+        if(robot_state_next == finished_next) {
             ROS_INFO("Have to finish...");
             finalize_exploration();
         }
@@ -1846,7 +1855,6 @@ class Explorer
                << std::endl;
         fs_csv.close();
 
-        float percentage;
         while (ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead)
         {
             // double angle_robot = robotPose.getRotation().getAngle();
@@ -2941,7 +2949,7 @@ class Explorer
     }
     
     void finish_callback(const std_msgs::Empty &msg) {
-        robot_state_next = finish_next;
+        robot_state_next = finished_next;
     }
     
     void abort() {
@@ -3306,7 +3314,7 @@ class Explorer
         going_queue_next,
         fully_charged_next,
         current_state,
-        finish_next
+        finished_next
     };
     state_next_t robot_state_next;
 
