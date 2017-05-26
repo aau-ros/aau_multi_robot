@@ -1556,10 +1556,10 @@ class Explorer
 
             ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
-
-            ROS_INFO("DONE EXPLORING");
             
             fs_exp_se_log << std::endl;
+            
+            ROS_INFO("DONE EXPLORING");
         }
     }
     
@@ -1619,6 +1619,8 @@ class Explorer
             ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             robot_state_next = finished_next;
         }
+        
+        ROS_DEBUG("Updating robot state...");
     
         // TODO(minor) ???
         ros::spinOnce();
@@ -1734,7 +1736,7 @@ class Explorer
                 update_robot_state_2(going_checking_vacancy);
             }
             else
-                ;  // ROS_ERROR("\n\t\e[1;34m already charging (or approaching charging, etc.) \e[0m");
+                ROS_INFO("already charging (or approaching charging, etc.)");
         }
 
         /* Check if the robot should go in a queue */
@@ -1807,6 +1809,10 @@ class Explorer
                     update_robot_state_2(leaving_ds);
                 }
             }
+        }
+        else {
+            ROS_ERROR("Invalid next state");
+            ROS_DEBUG("Invalid next state");
         }
 
         /* Reset next state */
@@ -3047,6 +3053,9 @@ class Explorer
         /* Get robot position */
         pose_x = pose->pose.pose.position.x;
         pose_y = pose->pose.pose.position.y;
+        
+        //if(robot_id == 1)
+        //    ROS_ERROR("%.2f: %.1f, %.1f", pose_angle, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
     }
 
     void feedbackCallback(const move_base_msgs::MoveBaseActionFeedback::ConstPtr &msg)
