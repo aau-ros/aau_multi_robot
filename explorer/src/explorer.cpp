@@ -1557,7 +1557,9 @@ class Explorer
             ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
             
+            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_exp_se_log << std::endl;
+            fs_exp_se_log.close();
             
             ROS_INFO("DONE EXPLORING");
         }
