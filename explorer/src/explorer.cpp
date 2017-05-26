@@ -452,7 +452,7 @@ class Explorer
             /* Update robot state */
             update_robot_state();
 
-            //ROS_ERROR("EXPLORING");  // TODO(minor) here???
+            ROS_INFO("EXPLORING");  // TODO(minor) here???
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -1561,6 +1561,8 @@ class Explorer
             
             ROS_INFO("DONE EXPLORING");
         }
+        
+        ROS_INFO("out of while loop of explore()");
     }
     
     void store_current_position() {
@@ -1624,12 +1626,12 @@ class Explorer
     
         // TODO(minor) ???
         ros::spinOnce();
+        
         if(robot_state_next == finished_next) {
             ROS_INFO("Have to finish...");
             finalize_exploration();
         }
         
-
         /* If the next state is equal to the current one, do nothing */
         else if (robot_state_next == current_state)
             ROS_DEBUG("Next state is equal to the current state: do nothing");
@@ -1647,6 +1649,7 @@ class Explorer
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
             ROS_ERROR("Strange case: ideally, it should not happen...");
+            ROS_INFO("Strange case: ideally, it should not happen...");
           
             /*
             if (DS_SELECTION_POLICY == 2 && moving_along_path)  
@@ -3143,10 +3146,8 @@ class Explorer
                 
                 
                 if(countdown < ros::Duration(0)) {
-                
-                    
-                
                     ROS_FATAL("Robot is not moving anymore");
+                    ROS_INFO("Robot is not moving anymore");
                     //abort();
                     log_stucked();
                 }
@@ -3189,6 +3190,7 @@ class Explorer
                     else {
                     */
                         ROS_FATAL("Robot is not moving from 10 minutes!");
+                        ROS_INFO("Robot is not moving from 10 minutes!");
                         //abort();
                         log_stucked();
                     //}
