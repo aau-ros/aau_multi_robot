@@ -493,7 +493,7 @@ class Explorer
             */
             //ROS_ERROR("COSTMAP STUFF");
             costmap_mutex.lock();
-            //ROS_ERROR("COSTMAP STUFF, lock aquired");
+            ROS_DEBUG("COSTMAP STUFF, lock aquired");
 
             exploration->transformToOwnCoordinates_frontiers();
             exploration->transformToOwnCoordinates_visited_frontiers();
@@ -1047,7 +1047,7 @@ class Explorer
                         fs_exp_se_log.close();
                         
                         exploration->sort(2);
-                        exploration->sort(3);
+                        //exploration->sort(3);
                         //exploration->clusterFrontiers();
                         //exploration->sort(4);
                         
@@ -1055,7 +1055,7 @@ class Explorer
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
                         fs_exp_se_log.close();
                         
-                        exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
+                        //exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
@@ -1067,13 +1067,15 @@ class Explorer
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
                         //ROS_ERROR("available_distance: %f", available_distance);
-                        if(DEBUG)
-                            goal_determined = exploration->determine_goal_staying_alive_2(
-                                1, 2, available_distance * SAFETY_COEFF +
-                                          available_distance * SAFETY_COEFF * INCR * number_of_recharges,
-                                &final_goal, count, &robot_str, -1);
-                        else
-                            goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+//                        if(DEBUG)
+//                            goal_determined = exploration->determine_goal_staying_alive_2(
+//                                1, 2, available_distance * SAFETY_COEFF +
+//                                          available_distance * SAFETY_COEFF * INCR * number_of_recharges,
+//                                &final_goal, count, &robot_str, -1);
+//                        else
+                            //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                        
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
                         /*
@@ -2839,7 +2841,6 @@ class Explorer
 
     void won_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_INFO("\n\t\e[1;34m won_callback \e[0m");
         robot_state_next = going_charging_next;
     }
 
@@ -2881,6 +2882,7 @@ class Explorer
         target_ds_x = msg.get()->point.x;
         target_ds_y = msg.get()->point.y;
         ROS_DEBUG("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
+        exploration->new_target_ds(target_ds_x, target_ds_y);
 
         // TODO(minor)
         /*

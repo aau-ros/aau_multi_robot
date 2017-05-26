@@ -39,6 +39,7 @@ namespace explorationPlanner
                 double y_coordinate;
                 int distance_to_robot;
                 int dist_to_robot;
+                float cost;
             } frontier, unreachable_frontier;
 
             struct responded_t
@@ -219,6 +220,8 @@ namespace explorationPlanner
             void sort_reserve(int strategy);
             void sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void my_sort_cost_4(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_reserve(bool energy_above_th, int w1, int w2, int w3, int w4);
             void simulate();
@@ -228,6 +231,7 @@ namespace explorationPlanner
             void clear_Visualized_Cluster_Cells(std::vector<int> ids);
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void findFrontiers();
+            bool my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool determine_goal_staying_alive_2_reserve(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
@@ -297,6 +301,7 @@ namespace explorationPlanner
             ros::ServiceClient sc_distance_frontier_robot;
             void new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg);
             ros::Subscriber sub_new_ds_on_graph;
+            float new_target_ds(float new_target_ds_x, float new_target_ds_y);
 
         private:
             bool auction_running;
@@ -381,6 +386,11 @@ namespace explorationPlanner
             std::vector<ds_t> ds_list;
             std::vector<std::vector<float> > ds_graph;
             bool recompute_ds_graph;
+            float euclidean_distance(float x1, float y1, float x2, float y2);
+            float target_ds_x, target_ds_y;
+            bool target_ds_set;
+            
+            
     };
 }
 
