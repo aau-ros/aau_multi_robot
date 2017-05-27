@@ -897,7 +897,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
         if (ds[i].vacant == true)
             ++num_ds_vacant;
     }
-    ROS_DEBUG("Number of vacant DS: %d", num_ds_vacant);
+    //ROS_DEBUG("Number of vacant DS: %d", num_ds_vacant);
 
     /* Count active robots */
     int num_robots_active = 0;
@@ -906,7 +906,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
         if (robots[i].state == active)
             ++num_robots_active;
     }
-    ROS_DEBUG("Number of active robots DS: %d", num_robots_active);
+    //ROS_DEBUG("Number of active robots DS: %d", num_robots_active);
 
     /* Sanity checks */
     if (num_ds_vacant < 0)
@@ -942,10 +942,10 @@ void docking::update_l2()
     ROS_DEBUG("Update l2");
     
     double time_run = battery.remaining_time_run;
-    ROS_DEBUG("Remaining running time: %.3fs", time_run);
+    //ROS_DEBUG("Remaining running time: %.3fs", time_run);
     
     double time_charge = battery.remaining_time_charge;
-    ROS_DEBUG("Remaining time until recharge completion: %.3fs", time_charge);
+    //ROS_DEBUG("Remaining time until recharge completion: %.3fs", time_charge);
 
     /* Sanity checks */
     if (time_charge < 0)
@@ -994,8 +994,8 @@ void docking::update_l3()
         if (dist <= conservative_maximum_distance_with_return()) //NB I'm considering the frontiers that are reachable, possibly, with a recharging, whereare previopusly I've count just the unvisited frontiers, not matter if they are reachable or not...
             ++num_jobs_close;
     }
-    ROS_DEBUG("Number of frontiers: %d", num_jobs);
-    ROS_DEBUG("Number of reachable frontiers: %d", num_jobs_close);
+    //ROS_DEBUG("Number of frontiers: %d", num_jobs);
+    //ROS_DEBUG("Number of reachable frontiers: %d", num_jobs_close);
     
     /* If the execution flow reaches this point, the (re)computation of l3 succeeded */
     recompute_llh = false;
@@ -1026,9 +1026,6 @@ void docking::update_l3()
     else
         l3 = (num_jobs - num_jobs_close) / num_jobs;
         
-        
-
-    
 }
 
 void docking::update_l4() //TODO(minor) comments
@@ -1059,7 +1056,7 @@ void docking::update_l4() //TODO(minor) comments
             break;
         }
     }
-    ROS_DEBUG("Distance to optimal DS: %.3f", dist_ds);
+    //ROS_DEBUG("Distance to optimal DS: %.3f", dist_ds);
 
     // get distance to closest job
     double dist_job = numeric_limits<int>::max();
@@ -1075,7 +1072,7 @@ void docking::update_l4() //TODO(minor) comments
         if (dist_job_temp < dist_job)
             dist_job = dist_job_temp;
     }
-    ROS_DEBUG("Distance to closest frontier: %.3f", dist_job);
+    //ROS_DEBUG("Distance to closest frontier: %.3f", dist_job);
     
     recompute_llh = false;
 
@@ -1274,6 +1271,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 			}
         } else {
             ROS_ERROR("DS graph cannot be navigated with this strategy...");
+            ROS_INFO("DS graph cannot be navigated with this strategy...");
             std_msgs::Empty msg;
             pub_finish.publish(msg);
         }   
@@ -1903,7 +1901,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
          * wouldn't be in this then-branch */
         if (!auction_winner)
         {
-            if (started_own_auction)  // TODO(minor) should be better to use a variqable that
+            if (started_own_auction) {  // TODO(minor) should be better to use a variqable that
                                       // keep track of teh fact that the robot started
                                       // its own auction, since if !auction_winner is
                                       // true, it is already enough to know that the
@@ -1911,13 +1909,17 @@ void docking::update_robot_state()  // TODO(minor) simplify
                                       // auction)...
                                       /* Notify explorer node about the lost of an auction started by the
                                        * robot itself */
-                pub_lost_own_auction.publish(msg);
+                pub_lost_own_auction.publish(msg);  
+                ROS_INFO("pub_lost_own_auction");
+            }
 
             /* If the robot has lost an auction that was not started by it, notify
              * explorer (because if the robot was
              * recharging, it has to leave the docking station) */
-            else
+            else {
                 pub_lost_other_robot_auction.publish(msg);
+                ROS_INFO("pub_lost_other_robot_auction");
+            }
         }
 
         /* Robot is the winner of at least one auction, notify explorer */
@@ -1962,6 +1964,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
 
                 /* Notify explorer node about the victory */
                 pub_won_auction.publish(msg);  // TODO(minor) it is important that this is after the other pub!!!! can we do better?
+                ROS_INFO("pub_won_auction");
             }
             else
                 ROS_INFO("The robot has already won an auction: ignore the result of "

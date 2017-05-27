@@ -274,6 +274,7 @@ class Explorer
         csv_state_file = log_path + std::string("robot_state.log");
         log_file = log_path + std::string("exploration.log");
         exploration_start_end_log = log_path + std::string("exploration_start_end.log");
+        major_errors_file = original_log_path + std::string("major_errors.log");
          
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv_state << "#time,robot_state" << std::endl;
@@ -1385,18 +1386,17 @@ class Explorer
                             move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
                             ROS_INFO("NOW it is ok...");
                         }
-                else
-                    ROS_INFO("Starting owm auction...");
                 
                 while (robot_state == auctioning || robot_state == auctioning_2 )  // TODO(minor) better management of the while loop
                 {
                     
-                    // ROS_ERROR("\n\t\e[1;34mAuctioning...\e[0m");
+                    ROS_INFO("Auctioning...");
                     ros::Duration(0.1).sleep();
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
 
                     update_robot_state();
                 }
+                
                 ROS_INFO("Auction completed");
             }
 
@@ -1579,6 +1579,8 @@ class Explorer
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
 
+        previous_state = robot_state;
+        
         ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
@@ -1606,8 +1608,16 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
+        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2) ) {
+            major_errors_file = original_log_path + std::string("major_errors.log");
+            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            major_errors_fstream << "stucked after auction!!!" << std::endl;
+            major_errors_fstream.close();
+        }
+            
+        
         //TODO move this in update_robot_state, where the state is set to finished
-        if(robot_state == finished || robot_state == dead) {
+        if(robot_state == finished || robot_state == dead || robot_state == stuck) {
             std_msgs::Empty msg;
             pub_finished_exploration.publish(msg);
         }            
@@ -2013,6 +2023,8 @@ class Explorer
          */
 
         nh.param<std::string>("log_path", log_path, "");
+
+        original_log_path = log_path;
 
         std::stringstream robot_number;
         robot_number << robot_id;
@@ -2846,18 +2858,19 @@ class Explorer
 
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_INFO("\n\t\e[1;34m lost_own_auction_callback \e[0m");
+        ROS_INFO("lost_own_auction_callback");
         robot_state_next = going_queue_next;
     }
 
     void won_callback(const std_msgs::Empty::ConstPtr &msg)
     {
+        ROS_INFO("won_callback");
         robot_state_next = going_charging_next;
     }
 
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_INFO("\n\t\e[1;34m lost_other_robot_callback \e[0m");
+        ROS_INFO("lost_other_robot_callback");
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
@@ -2962,6 +2975,7 @@ class Explorer
     }
     
     void finish_callback(const std_msgs::Empty &msg) {
+        ROS_INFO("finish_callback");
         robot_state_next = finished_next;
     }
     
@@ -3262,9 +3276,9 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log;
-    std::string log_path;
-    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log;
+    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log, major_errors_file;
+    std::string log_path, original_log_path;
+    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log, major_errors_fstream;
 
     int number_of_recharges = 0;
 
@@ -3308,7 +3322,7 @@ class Explorer
         leaving_ds,                                // the robot was recharging, but another robot stopped
         dead
     };
-    state_t robot_state;
+    state_t robot_state, previous_state;
 
     // TODO
 
