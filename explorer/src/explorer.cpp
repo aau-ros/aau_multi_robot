@@ -161,18 +161,18 @@ class Explorer
         /* Robot state subscribers */
 
         sub_check_vacancy =
-            nh.subscribe("adhoc_communication/reply_for_vacancy", 1, &Explorer::reply_for_vacancy_callback,
+            nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
                          this);  // to receive replies for vacancy checks
 
         // TODO(minor) improve this
-        sub_lost_own_auction = nh.subscribe("lost_own_auction", 1, &Explorer::lost_own_auction_callback,
+        sub_lost_own_auction = nh.subscribe("lost_own_auction", 10, &Explorer::lost_own_auction_callback,
                                             this);  // to know when a robot lost its own auction
         sub_won_auction =
             nh.subscribe("won_auction", 1, &Explorer::won_callback, this);  // to know when a robot won an auction
-        sub_lost_other_robot_auction = nh.subscribe("lost_other_robot_auction", 1, &Explorer::lost_other_robot_callback,
+        sub_lost_other_robot_auction = nh.subscribe("lost_other_robot_auction", 10, &Explorer::lost_other_robot_callback,
                                                     this);  // to know when a robot lost another robot auction
 
-        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 1);  // to publish robot state updates
+        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 10);  // to publish robot state updates
         
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
@@ -422,13 +422,13 @@ class Explorer
         ros::Subscriber sub, sub2, sub3, pose_sub, sub_finish;
 
         ros::Subscriber my_sub =
-            nh.subscribe("charging_completed", 1, &Explorer::battery_charging_completed_callback, this);
+            nh.subscribe("charging_completed", 10, &Explorer::battery_charging_completed_callback, this);
 
-        ros::Subscriber sub_new_target_ds = nh.subscribe("new_target_docking_station_selected", 1,
+        ros::Subscriber sub_new_target_ds = nh.subscribe("new_target_docking_station_selected", 10,
                                                          &Explorer::new_target_docking_station_selected_callback, this);
 
         ros::Subscriber sub_moving_along_path =
-            nh.subscribe("moving_along_path", 1, &Explorer::moving_along_path_callback, this);
+            nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
             
         ros::Publisher pub_next_ds = nh.advertise<std_msgs::Empty>("next_ds", 1);
 
@@ -438,12 +438,12 @@ class Explorer
 
 
         /* Subscribe to battery management topic */
-        sub = nh.subscribe("battery_state", 1, &Explorer::bat_callback, this);
+        sub = nh.subscribe("battery_state", 10, &Explorer::bat_callback, this);
 
         /* Subscribe to robot pose to check if robot is stuck */
-        pose_sub = nh.subscribe("amcl_pose", 1, &Explorer::poseCallback, this);
+        pose_sub = nh.subscribe("amcl_pose", 10, &Explorer::poseCallback, this);
         
-        sub_finish = nh.subscribe("explorer/finish", 1, &Explorer::finish_callback, this);
+        sub_finish = nh.subscribe("explorer/finish", 10, &Explorer::finish_callback, this);
 
         ROS_INFO("STARTING EXPLORATION");
 
