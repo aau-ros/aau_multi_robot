@@ -1697,7 +1697,6 @@ class Explorer
             else
             */
             {
-                // update_robot_state_2(exploring);
                 update_robot_state_2(leaving_ds);
             }
         }
@@ -1737,6 +1736,7 @@ class Explorer
             else
             */
             {
+                ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
             }
         }
@@ -1747,7 +1747,7 @@ class Explorer
             if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
                 robot_state != checking_vacancy)
             {
-                // robot_state = going_charging;
+                ROS_INFO("preparing for going_checking_vacancy");
                 update_robot_state_2(going_checking_vacancy);
             }
             else
@@ -1763,7 +1763,7 @@ class Explorer
             // necessary...
             if (robot_state == in_queue)
             {
-                ROS_INFO("\n\t\e[1;34m already in_queue... \e[0m");
+                ROS_INFO("already in_queue...");
                 update_robot_state_2(in_queue); //VERY IMPORTANT: necessary to force restarting of periodic auction timer!!!!!!!!
             }
 
@@ -1784,6 +1784,7 @@ class Explorer
             /* Otherwise, really prepare the robot to go in queue */
             else
             {
+                ROS_DEBUG("prearing for going_in_queue");
                 update_robot_state_2(going_in_queue);
             }
         }
@@ -1820,9 +1821,12 @@ class Explorer
                 else
                 */
                 {
-                    // update_robot_state_2(exploring);
+                    ROS_DEBUG("prearing for leaving_ds");
                     update_robot_state_2(leaving_ds);
                 }
+            } else {
+                ROS_INFO("reforce exploring");
+                //update_robot_state_2(exploring); 
             }
         }
         else {
