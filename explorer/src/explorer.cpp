@@ -1125,7 +1125,7 @@ class Explorer
                             
                             if(exploration->winner_of_auction) {
                                 explorations++;
-                                if( (explorations == 5 || explorations == 7) && robot_id == 0) {
+                                if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
                                     //ROS_ERROR("auctioning");
                                     update_robot_state_2(auctioning);    
                                 }
@@ -1578,19 +1578,17 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-
-        previous_state = robot_state;
-        
         ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
+        previous_state = robot_state;
         robot_state = static_cast<state_t>(new_state);
         pub_robot.publish(msg);
 
         if (robot_state == auctioning) {
             need_to_recharge = true;
-            ROS_ERROR("auctioning!");   
+            //ROS_ERROR("auctioning!");   
         }
         // else if(robot_state == exploring || robot_state == fully_charged)
         else if (robot_state == leaving_ds || robot_state == fully_charged)
@@ -1625,19 +1623,18 @@ class Explorer
     }
 
     void update_robot_state()
-    {       
-        if(percentage >= 100)
-            ROS_ERROR("Strange value...");
-    
+    {
+        ROS_DEBUG("Updating robot state...");
+        
+        // TODO(minor) do we need the spin?
+        ros::spinOnce();
+     
         if(percentage >= 100 && robot_state_next != finished_next && robot_state != finished) {
+            if(percentage > 100)
+                ROS_ERROR("Strange value...");
             ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             robot_state_next = finished_next;
         }
-        
-        ROS_DEBUG("Updating robot state...");
-    
-        // TODO(minor) ???
-        ros::spinOnce();
         
         if(robot_state_next == finished_next) {
             ROS_INFO("Have to finish...");
