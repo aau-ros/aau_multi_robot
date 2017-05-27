@@ -221,6 +221,8 @@ namespace explorationPlanner
             void sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
             void smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void my_sort_cost_2(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_4(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_reserve(bool energy_above_th, int w1, int w2, int w3, int w4);

@@ -60,7 +60,7 @@
 #define IMM_CHARGE 0
 #define DEBUG false
 
-
+bool exploration_finished;
 
 boost::mutex costmap_mutex;
 
@@ -448,7 +448,7 @@ class Explorer
         ROS_INFO("STARTING EXPLORATION");
 
         /* Start main loop (it loops till the end of the exploration) */
-        while (robot_state != finished && robot_state != stuck && robot_state != dead)
+        while (!exploration_finished)
         {
             /* Update robot state */
             update_robot_state();
@@ -1822,7 +1822,8 @@ class Explorer
                     update_robot_state_2(leaving_ds);
                 }
             } else {
-                ROS_INFO("reforce exploring");
+                ROS_ERROR("forging exploring... are we sure that this case is legal?");
+                ROS_ERROR("forging exploring... are we sure that this case is legal?");
                 //update_robot_state_2(exploring); 
             }
         }
@@ -1879,7 +1880,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
 
-        while (ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead)
+        while (ros::ok() && !exploration_finished)
         {
             // double angle_robot = robotPose.getRotation().getAngle();
             // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
@@ -2279,6 +2280,8 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
+        
+        exploration_finished = true;
         
     }
 
@@ -2875,8 +2878,11 @@ class Explorer
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
-        else if (robot_state_next != fully_charged_next)
-            robot_state_next = exploring_next;
+        else if (robot_state_next != fully_charged_next) //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the next state...
+            if (need_to_recharge)
+                robot_state_next = going_queue_next;
+            else
+                robot_state_next = exploring_next;
     }
 
     // TODO(minor) use this instead than all the other auction callbacks
@@ -3134,7 +3140,7 @@ class Explorer
         state_t prev_robot_state = fully_charged;
             
         ros::Time prev_time = ros::Time::now();   
-        while(ros::ok() && robot_state != finished && robot_state != stuck && robot_state != dead) {
+        while(ros::ok() && !exploration_finished) {
             
             //ROS_DEBUG("Checking...");
             //if(exploration->getRobotPose(robotPose)) {
@@ -3229,6 +3235,8 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         }
+        
+        ROS_INFO("safety checks have been stopped");
     
     }
 
@@ -3396,6 +3404,8 @@ int main(int argc, char **argv)
     HeapProfilerStart(fname);
 #endif
 
+    exploration_finished = false;
+
     /*
      * ROS::init() function needs argc and argv to perform
      * any argument and remapping that is provided by the
@@ -3434,14 +3444,15 @@ int main(int argc, char **argv)
      */
     while (ros::ok())
     {
-        costmap_mutex.lock();
-        //ROS_ERROR("main(): lock acquired");
-        //ROS_INFO("main(): lock acquired");
-        ros::spinOnce();
-        costmap_mutex.unlock();
-        //ROS_ERROR("main(): lock released");
-        //ROS_INFO("main(): lock released");
-
+        if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
+            costmap_mutex.lock();
+            //ROS_ERROR("main(): lock acquired");
+            //ROS_INFO("main(): lock acquired");
+            ros::spinOnce();
+            costmap_mutex.unlock();
+            //ROS_ERROR("main(): lock released");
+            //ROS_INFO("main(): lock released");
+        }
         ros::Duration(0.1).sleep();
     }
 
@@ -3450,7 +3461,7 @@ int main(int argc, char **argv)
     thr_map.interrupt();
     thr_explore.join();
     thr_map.join();
-// TODO thr_frontiers...
+    // TODO thr_frontiers...
 
 #ifdef PROFILE
     HeapProfilerStop();
