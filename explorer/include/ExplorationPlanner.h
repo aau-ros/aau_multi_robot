@@ -297,6 +297,7 @@ namespace explorationPlanner
             void clean_frontiers_under_auction();
             int my_error_counter;
             bool recomputeGoal();
+            int optimal_ds_id;
             float optimal_ds_x, optimal_ds_y;
             ros::Subscriber sub_new_optimal_ds;
             void new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);

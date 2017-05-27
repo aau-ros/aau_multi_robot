@@ -46,6 +46,78 @@
 
 int limit_search = 15;
 
+// A utility function to find the vertex with minimum distance value, from
+// the set of vertices not yet included in shortest path tree
+int minDistance(int dist[], unsigned long size, bool sptSet[])
+{
+   // Initialize min value
+   int min = INT_MAX, min_index;
+  
+   for (int v = 0; v < size; v++)
+     if (sptSet[v] == false && dist[v] <= min)
+         min = dist[v], min_index = v;
+  
+   return min_index;
+}
+  
+// A utility function to print the constructed distance array
+int printSolution(int dist[], unsigned long size)
+{
+   printf("Vertex   Distance from Source\n");
+   for (int i = 0; i < size; i++)
+      printf("%d \t\t %d\n", i, dist[i]);
+}
+  
+// Funtion that implements Dijkstra's shortest path algorithm
+// from a given source node to a given destination node
+// for a graph represented using adjacency matrix representation
+float dijkstra(std::vector <std::vector<float> > graph, int src, int dest)
+{   
+    unsigned long V = graph.size();
+     int dist[V];     // The output array.  dist[i] will hold the shortest
+                      // distance from src to i
+  
+     bool sptSet[V]; // sptSet[i] will true if vertex i is included in shortest
+                     // path tree or shortest distance from src to i is finalized
+  
+     // Initialize all distances as INFINITE and stpSet[] as false
+     for (int i = 0; i < V; i++)
+        dist[i] = INT_MAX, sptSet[i] = false;
+  
+     // Distance of source vertex from itself is always 0
+     dist[src] = 0;
+  
+     // Find shortest path for all vertices
+     for (int count = 0; count < V-1; count++)
+     {
+       // Pick the minimum distance vertex from the set of vertices not
+       // yet processed. u is always equal to src in first iteration.
+       int u = minDistance(dist, V, sptSet);
+  
+       // Mark the picked vertex as processed
+       sptSet[u] = true;
+  
+       // Update dist value of the adjacent vertices of the picked vertex.
+       for (int v = 0; v < V; v++) {
+  
+         // Update dist[v] only if is not in sptSet, there is an edge from 
+         // u to v, and total weight of path from src to  v through u is 
+         // smaller than current value of dist[v]
+         if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX 
+                                       && dist[u]+graph[u][v] < dist[v])
+            dist[v] = dist[u] + graph[u][v];
+            
+         if(u == dest)
+            break;
+       
+       }
+     }
+  
+     // print the constructed distance array
+     //printSolution(dist, V);
+     return (float) dist[dest];
+}
+
 using namespace explorationPlanner;
 
 template <typename T>
@@ -4129,6 +4201,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
 }
 
 void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    optimal_ds_id = msg.get()->id;
     optimal_ds_x = msg.get()->x;
     optimal_ds_y = msg.get()->y;
     //ROS_ERROR("!!!!!!");
@@ -6039,7 +6112,7 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
     store_frontier_mutex.lock();
     //ROS_INFO("lock acquired");
     
-    int index_closest_ds_to_robot;
+    int index_closest_ds_to_robot, index_optimal_ds;
     double min_dist = std::numeric_limits<double>::max();
     for(int i=0; i < ds_list.size(); i++) {
         double distance = euclidean_distance(robot_x, robot_y, ds_list.at(i).x, ds_list.at(i).y);
@@ -6047,6 +6120,8 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
             min_dist = distance;
             index_closest_ds_to_robot = i;
         }
+        if(ds_list.at(i).id == optimal_ds_id)
+            index_optimal_ds = i;
     }
     
     for(int i=0; i < frontiers.size(); i++) {
@@ -6060,7 +6135,24 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
             }
         }
         
-        //real_distance_between_DSs(ds_list.at(index_closest_ds_to_frontier).x, ds_list.at(index_closest_ds_to_frontier).y, ds_list.at(index_closest_ds_to_robot).x, ds_list.at(index_closest_ds_to_robot).y)
+        double d_gbe = dijkstra(ds_graph, index_optimal_ds, index_closest_ds_to_robot);
+        double d_g = dijkstra(ds_graph, index_closest_ds_to_frontier, index_closest_ds_to_robot);
+        double cost = d_g + d_gbe;
+        frontiers.at(i).cost = cost;
+        
+        if(sorted_frontiers.size() == 0)
+            sorted_frontiers.push_back(frontiers.at(i));
+        else 
+            for(int k=0; k<sorted_frontiers.size(); k++)
+                if(cost < sorted_frontiers.at(k).cost) {
+                    sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(i));
+                    if(sorted_frontiers.size() > limit_search)
+                        ROS_ERROR("somethign went wrong...");
+                    else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation //TODO make parameter/define
+                        sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
+                    break;
+                    }
+        
   
     }
     
@@ -8376,3 +8468,4 @@ float ExplorationPlanner::new_target_ds(float new_target_ds_x, float new_target_
     target_ds_y = new_target_ds_y;
     target_ds_set = true;
 }
+

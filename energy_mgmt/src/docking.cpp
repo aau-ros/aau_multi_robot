@@ -834,6 +834,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             
             /* Notify explorer about the optimal DS change */
             adhoc_communication::EmDockingStation msg_optimal;
+            msg_optimal.id = best_ds->id;
             msg_optimal.x = best_ds->x;
             msg_optimal.y = best_ds->y;
             pub_new_optimal_ds.publish(msg_optimal);
