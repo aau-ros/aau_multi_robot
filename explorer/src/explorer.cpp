@@ -91,6 +91,7 @@ class Explorer
     int explorations;
     int free_cells_count, discovered_free_cells_count;
     float percentage;
+    int failures_going_home;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -144,6 +145,7 @@ class Explorer
         explorations = 0;
         discovered_free_cells_count = 0;
         free_cells_count = 0;
+        failures_going_home = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -1461,7 +1463,10 @@ class Explorer
                 else if (robot_state == going_in_queue)
                     ROS_INFO("Travelling to DS to go in queue");
                 else
-                    ROS_INFO("Robot can finally prepare itself to recharge");
+                    if(faliures_going_home != 0)
+                        ROS_INFO("Robot can finally prepare itself to recharge");
+                    else
+                        ROS_INFO("tying againt to reach DS");
 
                 counter++;  // TODO(minor) what is this counter?
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
@@ -1472,7 +1477,9 @@ class Explorer
             if (navigate_to_goal == true)  // IMPORTANT do not put an else-if //TODO(minor) sure??
             {
                 /* Result of navigation successful */
-
+                ROS_INFO("navigation to goal succeeded");
+                failures_going_home = 0;
+                
                 /* If the robot was going in a queue, if it has reached the goal it means that it reached the queue */
                 if (robot_state == going_in_queue)
                 {
@@ -1523,14 +1530,25 @@ class Explorer
             else
             {
                 /* Robot could not reach goal */
+                ROS_INFO("Robot could not reach goal");
 
                 if (robot_state == going_charging)
                 {
-                    ROS_ERROR("Robot cannot reach home for recharging!");
+                    ROS_ERROR("Robot cannot reach DS for recharging!");
+                    ROS_INFO("Robot cannot reach DS for recharging!");
+                    failures_going_home++; //TODO change name from *_home to *_ds
+                    if(failures_going_home >= 5) {
+                        ROS_INFO("tried too many times to reach DS... terminating exploration...");
+                        log_stuck();
+                    }
+                    else 
+                        ROS_INFO("retrying to reach DS...");
+                    
+                    
                     //exit_countdown--;
                     //ROS_ERROR("Shutdown in: %d", exit_countdown);
-                    if (exit_countdown <= 0)
-                        finalize_exploration();
+                    //if (exit_countdown <= 0)
+                    //    finalize_exploration();
                 }
 
                 else if (robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
@@ -1606,7 +1624,7 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
-        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2) ) {
+        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || previous_state == going_charging) ) {
             major_errors_file = original_log_path + std::string("major_errors.log");
             major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             major_errors_fstream << "stucked after auction!!!" << std::endl;
@@ -1769,7 +1787,7 @@ class Explorer
             /* If the robot is already preparing to enter in a queue, do nothing */
             else if (robot_state == going_in_queue)
             {
-                ROS_INFO("\n\t\e[1;34m aready going_in_queue... \e[0m");
+                ROS_INFO("already going_in_queue...");
             }
 
             /* If the robot is going to charge, let it charge at least a little: the other robot will start later a new
@@ -1777,7 +1795,7 @@ class Explorer
             // TODO(minor) something probably went wrong in this case...
             else if (robot_state == going_charging)
             {
-                ROS_INFO("\n\t\e[1;34m i want to charge a little, first... \e[0m");
+                ROS_INFO("i want to charge a little, first...");
             }
 
             /* Otherwise, really prepare the robot to go in queue */
