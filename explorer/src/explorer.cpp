@@ -1586,7 +1586,7 @@ class Explorer
         robot_state = static_cast<state_t>(new_state);
         pub_robot.publish(msg);
 
-        if (robot_state == auctioning) {
+        if (robot_state == auctioning || robot_state == auctioning_2) {
             need_to_recharge = true;
             //ROS_ERROR("auctioning!");   
         }
@@ -1643,7 +1643,10 @@ class Explorer
         
         /* If the next state is equal to the current one, do nothing */
         else if (robot_state_next == current_state)
+        {
             ROS_DEBUG("Next state is equal to the current state: do nothing");
+        } 
+       
 
         // TODO(minor) does this works???
         /* If a robot has already begun charging, and then discover that it has lost
@@ -1657,9 +1660,6 @@ class Explorer
         // maybe...
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
-            ROS_ERROR("Strange case: ideally, it should not happen...");
-            ROS_INFO("Strange case: ideally, it should not happen...");
-          
             /*
             if (DS_SELECTION_POLICY == 2 && moving_along_path)  
                 if(OPP_ONLY_TWO_DS)
@@ -1693,9 +1693,11 @@ class Explorer
                     
             else
             */
-            {
+            //{
+                ROS_ERROR("Strange case: ideally, it should not happen...");
+                ROS_INFO("Strange case: ideally, it should not happen...");
                 update_robot_state_2(leaving_ds);
-            }
+            //}
         }
 
         /* If the robot has completed the recharging process, set it to
@@ -1732,10 +1734,10 @@ class Explorer
 
             else
             */
-            {
+            //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
-            }
+            //}
         }
 
         /* */
@@ -1817,10 +1819,10 @@ class Explorer
                     }
                 else
                 */
-                {
+                //{
                     ROS_DEBUG("prearing for leaving_ds");
                     update_robot_state_2(leaving_ds);
-                }
+                //}
             } else {
                 ROS_ERROR("forging exploring... are we sure that this case is legal?");
                 ROS_ERROR("forging exploring... are we sure that this case is legal?");
@@ -2878,11 +2880,14 @@ class Explorer
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
-        else if (robot_state_next != fully_charged_next) //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the next state...
+        else if (robot_state_next != fully_charged_next) { //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the next state...
             if (need_to_recharge)
                 robot_state_next = going_queue_next;
             else
                 robot_state_next = exploring_next;
+                
+        } else
+            ROS_INFO("ignoring");
     }
 
     // TODO(minor) use this instead than all the other auction callbacks
