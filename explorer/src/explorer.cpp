@@ -1636,6 +1636,7 @@ class Explorer
         if(robot_state == finished || robot_state == dead || robot_state == stuck) {
             std_msgs::Empty msg;
             pub_finished_exploration.publish(msg);
+            exploration_finished = true;
         }            
         
     }
@@ -1842,8 +1843,8 @@ class Explorer
                     update_robot_state_2(leaving_ds);
                 //}
             } else {
-                ROS_ERROR("forging exploring... are we sure that this case is legal?");
-                ROS_ERROR("forging exploring... are we sure that this case is legal?");
+                /* This happens when a robot lost another robot auction, but it doesn't need to recharge */
+                ROS_INFO("keep exploring..."); 
                 //update_robot_state_2(exploring); 
             }
         }
@@ -2300,8 +2301,6 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
-        
-        exploration_finished = true;
         
     }
 

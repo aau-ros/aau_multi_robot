@@ -6058,7 +6058,7 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
             for(int k=0; k<sorted_frontiers.size(); k++)
                 if(cost < sorted_frontiers.at(k).cost) {
                     sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(j));
-                    if(sorted_frontiers.size() > limit_search)
+                    if(sorted_frontiers.size() > limit_search*3)
                         ROS_ERROR("somethign went wrong...");
                     else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation //TODO make parameter/define
                         sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
@@ -6146,7 +6146,7 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
             for(int k=0; k<sorted_frontiers.size(); k++)
                 if(cost < sorted_frontiers.at(k).cost) {
                     sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(i));
-                    if(sorted_frontiers.size() > limit_search)
+                    if(sorted_frontiers.size() > limit_search*3)
                         ROS_ERROR("somethign went wrong...");
                     else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation //TODO make parameter/define
                         sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
@@ -6293,7 +6293,7 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
                 for(int k=0; k<sorted_frontiers.size(); k++)
                     if(cost < sorted_frontiers.at(k).cost) {
                         sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(j));
-                        if(sorted_frontiers.size() > limit_search)
+                        if(sorted_frontiers.size() > limit_search*3)
                             ROS_ERROR("somethign went wrong...");
                         else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation
                             sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
