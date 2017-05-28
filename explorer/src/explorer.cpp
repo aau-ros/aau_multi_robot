@@ -1463,7 +1463,7 @@ class Explorer
                 else if (robot_state == going_in_queue)
                     ROS_INFO("Travelling to DS to go in queue");
                 else
-                    if(faliures_going_home != 0)
+                    if(failures_going_home != 0)
                         ROS_INFO("Robot can finally prepare itself to recharge");
                     else
                         ROS_INFO("tying againt to reach DS");
@@ -1539,7 +1539,7 @@ class Explorer
                     failures_going_home++; //TODO change name from *_home to *_ds
                     if(failures_going_home >= 5) {
                         ROS_INFO("tried too many times to reach DS... terminating exploration...");
-                        log_stuck();
+                        log_stucked();
                     }
                     else 
                         ROS_INFO("retrying to reach DS...");
