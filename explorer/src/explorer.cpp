@@ -1330,8 +1330,8 @@ class Explorer
             ROS_INFO("FRONTIER COORDINATION");
 
             /* Produce frontier/cluster points for rviz */
-            exploration->visualize_Cluster_Cells();
-            exploration->visualize_Frontiers();
+            //exploration->visualize_Cluster_Cells();
+            //exploration->visualize_Frontiers();
 
             /* Navigate robot to next frontier */
             
@@ -1351,6 +1351,7 @@ class Explorer
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
+                    ROS_INFO("final_goal size: %lu", final_goal.size());
                     if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
                                                       &backoffGoal))
                     {
@@ -1872,11 +1873,12 @@ class Explorer
 
             /* Publish frontiers */
             exploration->publish_frontier_list();
-            exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really were since it publish
+            exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
                                                            // only the frontier visited by this robot...
 
             /* Publish frontier points for rviz */
             exploration->visualize_Frontiers();
+            //exploration->visualize_Clusters();
 
             costmap_mutex.unlock();
             //ROS_ERROR("frontiers(): lock released");

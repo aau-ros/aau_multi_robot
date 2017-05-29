@@ -40,6 +40,7 @@ namespace explorationPlanner
                 int distance_to_robot;
                 int dist_to_robot;
                 float cost;
+                int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
             } frontier, unreachable_frontier;
 
             struct responded_t
@@ -235,8 +236,8 @@ namespace explorationPlanner
             void findFrontiers();
             bool my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
-            bool determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
-            bool determine_goal_staying_alive_2_reserve(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
+            //bool determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
+            //bool determine_goal_staying_alive_2_reserve(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             bool check_efficiency_of_goal(double x, double y);
             void clearVisitedAndSeenFrontiersFromClusters();
             void clearSeenFrontiers(costmap_2d::Costmap2DROS *global_costmap);
@@ -393,6 +394,9 @@ namespace explorationPlanner
             float target_ds_x, target_ds_y;
             bool target_ds_set;
             
+            void acquire_mutex(boost::mutex *mutex, std::string function_name);
+            void release_mutex(boost::mutex *mutex, std::string function_name);
+            bool storeFrontier_without_locking(double x, double y, int detected_by_robot, std::string detected_by_robot_str, int id);
             
     };
 }
