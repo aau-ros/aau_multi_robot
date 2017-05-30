@@ -456,6 +456,8 @@ class Explorer
             update_robot_state();
 
             ROS_INFO("EXPLORING");  // TODO(minor) here???
+            
+            ros::Time time_2 = ros::Time::now();
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -1097,6 +1099,15 @@ class Explorer
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
                         fs_exp_se_log.close();
+                        
+                        ros::Duration d = ros::Time::now() - time_2;
+                        if(d > ros::Duration(5 * 60)) {
+                            ROS_ERROR("very slow...");
+                            major_errors_file = original_log_path + std::string("major_errors.log");
+                            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                            major_errors_fstream << "very slow!!!" << std::endl;
+                            major_errors_fstream.close();
+                        }
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
                             goal_determined  = false;
