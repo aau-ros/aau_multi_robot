@@ -511,6 +511,7 @@ bool publishMessageFromFakeNetwork(fake_network::SendMessage::Request &req, fake
 void publish_topic(const fake_network::NetworkMessage network_msg) {
     //ROS_ERROR("Called!");
     //ROS_ERROR("%s", network_msg.topic.c_str());
+
     try
     {
         std::string payload = network_msg.payload;

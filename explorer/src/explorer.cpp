@@ -513,7 +513,7 @@ class Explorer
             exploration->findFrontiers();
             
             fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << ros::Time::now() - time << ": " << "Cler visisited/unreachable/seen frontiers" << std::endl;
+            fs_exp_se_log << ros::Time::now() - time << ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
             fs_exp_se_log.close();
 
             exploration->clearVisitedFrontiers();
@@ -1884,7 +1884,7 @@ class Explorer
             //ROS_ERROR("frontiers(): lock released");
             //ROS_INFO("frontiers(): lock released");
 
-            ros::Rate(1).sleep();
+            ros::Rate(5).sleep();
         }
     }
 
@@ -2303,6 +2303,15 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
+        
+        if(percentage < 50 && robot_state != stuck) {
+            major_errors_file = original_log_path + std::string("major_errors.log");
+            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            major_errors_fstream << "low percentage!!!" << std::endl;
+            major_errors_fstream.close();
+        
+        }
+            
         
     }
 
@@ -3151,8 +3160,8 @@ class Explorer
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
 
-        int starting_value_moving = 3 * 60; //seconds
-        int starting_value_countdown_2 = 5 * 60; //seconds
+        int starting_value_moving = 5 * 60; //seconds
+        int starting_value_countdown_2 = 7 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         

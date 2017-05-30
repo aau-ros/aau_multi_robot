@@ -1282,8 +1282,11 @@ void MapMerger::start()
     }
     global_timer_pub = nodeHandle->createTimer(ros::Duration(seconds_publish_timer),&MapMerger::callback_global_pub,this);
     send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
+    //ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
+    //                                                      &MapMerger::transformPointSRV_2,
+    //                                                      this);
     ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
-                                                          &MapMerger::transformPointSRV_2,
+                                                          &MapMerger::simpleTransformPointSRV,
                                                           this);
     ros::ServiceServer log_output_srv = nodeHandle->advertiseService("logOutput",
                                                                      &MapMerger::log_output_srv,
@@ -2014,8 +2017,93 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 }
 
 
-bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
+//bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
+//{
+//    //need transform
+//    int index_transform = -1;
+//    if(req.point.src_robot == robot_name)
+//        ROS_ERROR("Transform my own point!");
+//    for(int i = 0; i < robots->size();i++)
+//    {
+//        if(robots->at(i) == req.point.src_robot)
+//        {
+//            ROS_DEBUG("Found %s with %s at %i",
+//                      robots->at(i).c_str(),
+//                      req.point.src_robot.c_str(),
+//                      i);
+//            index_transform = findTransformIndex(i);
+//            break;
+//        }
+//    }
+//    if(index_transform == -1)
+//    {
+//        ROS_WARN("Could not transform point, no transform matrix found for %s",
+//                 req.point.src_robot.c_str());
+//        return false;
+//    }
+//    cv::Mat trans = transforms->at(index_transform);
+//    cv::Point org_point(map_width / 2 +req.point.x / 0.05,
+//                        map_height / 2 +req.point.y / 0.05);
+//    cv::Point homogeneous;
+//    std::vector<cv::Point> inPts,outPts;
+//    inPts.push_back(org_point);
+//    outPts.push_back(homogeneous);
+//    cv::Size s;
+//    s.height = map_height; //* 0.05;
+//    s.width = map_width ;//* 0.05;
+//    cv::transform(inPts,outPts,trans);
+//    res.point.x = (outPts.at(0).x - map_width / 2) * 0.05;
+//    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
+//    res.point.src_robot = robot_hostname;
+//    return true;
+//}
+
+//bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
+//{
+//    //ROS_ERROR("transforming...");
+//    //need transform
+//    int index_transform = -1;
+//    if(req.point.src_robot == robot_name)
+//        ROS_ERROR("Transform my own point!");
+//    for(int i = 0; i < robots->size();i++)
+//    {
+//        if(robots->at(i) == req.point.src_robot)
+//        {
+//            ROS_DEBUG("Found %s with %s at %i",
+//                      robots->at(i).c_str(),
+//                      req.point.src_robot.c_str(),
+//                      i);
+//            index_transform = findTransformIndex(i);
+//            break;
+//        }
+//    }
+//    if(index_transform == -1)
+//    {
+//        ROS_DEBUG("Could not transform point, no transform matrix found for %s",
+//                 req.point.src_robot.c_str());
+//        return false;
+//    }
+//    cv::Mat trans = transforms->at(index_transform);
+//    cv::Point org_point(map_width / 2 +req.point.x / 0.05,
+//                        map_height / 2 +req.point.y / 0.05);
+//    cv::Point homogeneous;
+//    std::vector<cv::Point> inPts,outPts;
+//    inPts.push_back(org_point);
+//    outPts.push_back(homogeneous);
+//    cv::Size s;
+//    s.height = map_height; //* 0.05;
+//    s.width = map_width ;//* 0.05;
+//    cv::transform(inPts,outPts,trans);
+//    res.point.x = (outPts.at(0).x - map_width / 2) * 0.05;
+//    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
+//    res.point.src_robot = robot_hostname;
+//    //ROS_ERROR("trasformed correctly");
+//    return true;
+//}
+
+bool MapMerger::simpleTransformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {
+    //ROS_ERROR("transforming...");
     //need transform
     int index_transform = -1;
     if(req.point.src_robot == robot_name)
@@ -2055,46 +2143,6 @@ bool MapMerger::transformPointSRV(map_merger::TransformPoint::Request &req, map_
     return true;
 }
 
-bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
-{
-    //need transform
-    int index_transform = -1;
-    if(req.point.src_robot == robot_name)
-        ROS_ERROR("Transform my own point!");
-    for(int i = 0; i < robots->size();i++)
-    {
-        if(robots->at(i) == req.point.src_robot)
-        {
-            ROS_DEBUG("Found %s with %s at %i",
-                      robots->at(i).c_str(),
-                      req.point.src_robot.c_str(),
-                      i);
-            index_transform = findTransformIndex(i);
-            break;
-        }
-    }
-    if(index_transform == -1)
-    {
-        ROS_WARN("Could not transform point, no transform matrix found for %s",
-                 req.point.src_robot.c_str());
-        return false;
-    }
-    cv::Mat trans = transforms->at(index_transform);
-    cv::Point org_point(map_width / 2 +req.point.x / 0.05,
-                        map_height / 2 +req.point.y / 0.05);
-    cv::Point homogeneous;
-    std::vector<cv::Point> inPts,outPts;
-    inPts.push_back(org_point);
-    outPts.push_back(homogeneous);
-    cv::Size s;
-    s.height = map_height; //* 0.05;
-    s.width = map_width ;//* 0.05;
-    cv::transform(inPts,outPts,trans);
-    res.point.x = (outPts.at(0).x - map_width / 2) * 0.05;
-    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
-    res.point.src_robot = robot_hostname;
-    return true;
-}
 
 void MapMerger::sendBackAskedMapData(string robotName, std::vector<int> missingUpdates)
 {

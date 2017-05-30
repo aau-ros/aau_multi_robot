@@ -36,13 +36,13 @@
 #define MAX_DISTANCE 2000           // max distance to starting point
 #define MAX_GOAL_RANGE 3.0 //0.7          // min distance between frontiers during search [meters]
 #define MINIMAL_FRONTIER_RANGE 0.7  // min distance between frontiers during selection [meters]
-#define INNER_DISTANCE 8            // radius around backoff goal point without obstacles [cells]
+#define INNER_DISTANCE 10 //8            // radius around backoff goal point without obstacles [cells]
 #define MAX_NEIGHBOR_DIST 1         // max distance between frontiers within a cluster
 #define CLUSTER_MERGING_DIST 0.8    // merge clusters that are closer toghether than this distance
 #define CLOSE_FRONTIER_RANGE 11     // distance within which frontiers are selected clock wise (for left most frontier strategy) [meters]
 
 #define APPROACH 4
-#define QUICK_SELECTION
+//#define QUICK_SELECTION
 
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
@@ -162,6 +162,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     num_ds = -1;
     recompute_ds_graph = false;
     target_ds_set = false;
+    retrying_searching_frontiers = 0;
+    received_scan = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -852,7 +854,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
                 ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
                 ROS_DEBUG("Old x: %f   y: %f", frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
 
-                ROS_ERROR("calling client");
+                //ROS_ERROR("calling client");
                 if(client.call(service_message))
                 {
                     frontiers.at(i).x_coordinate = service_message.response.point.x;
@@ -869,7 +871,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
                     ROS_DEBUG("New x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
                 }
                 else
-                    ROS_ERROR("FAILED!");
+                    ; //ROS_ERROR("FAILED!");
             }
         }
     }
@@ -979,7 +981,7 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
                     ROS_DEBUG("New visited x: %.1f   y: %.1f",service_message.response.point.x, service_message.response.point.y);
                 }
                 else
-                    ROS_ERROR("FAILED!!!!");
+                    ; //ROS_ERROR("FAILED!!!!");
             }
         }
     }
@@ -2333,6 +2335,7 @@ int ExplorationPlanner::checkClustersID(adhoc_communication::ExpCluster cluster_
 void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
     // TODO: Allow only frontiers that are not too close to walls
+    //ROS_ERROR("frontierCallback, %lu", msg.get()->frontier_element.size());
 
     adhoc_communication::ExpFrontierElement frontier_element;
     for(int i = 0; i < msg.get()->frontier_element.size(); i++)
@@ -2343,10 +2346,10 @@ void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier
         {
             if(robot_prefix_empty_param == true)
             {
-//                ROS_ERROR("FrontierCallback ... ");
+                //ROS_ERROR("FrontierCallback ... ");
                 if(frontiers.at(j).detected_by_robot_str.compare(frontier_element.detected_by_robot_str) == 0 && frontier_element.id == frontiers.at(j).id)
                 {
-//                    ROS_ERROR("Same Detected ...");
+                    ROS_ERROR("Same Detected ...");
                     result = false;
                     break;
                 }
@@ -2355,16 +2358,15 @@ void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier
             {
                 if(frontier_element.detected_by_robot == robot_name)
                 {
+                    //ROS_ERROR("This frontier was detected by this robot: ignoring");
                     result = false;
                     break;
                 }
-                else
+                else if (frontier_element.id == frontiers.at(j).id)
                 {
-                    if (frontier_element.id == frontiers.at(j).id)
-                    {
-                        result = false;
-                        break;
-                    }
+                    //ROS_ERROR("This frontier has been already received: ignoring");
+                    result = false;
+                    break;
                 }
             }
         }
@@ -2373,11 +2375,12 @@ void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier
 
             if(robot_prefix_empty_param == true)
             {
-                ROS_ERROR("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
+                //ROS_ERROR("Received New Frontier with ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
                 storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
-            }else
+            }
+            else
             {
-                ROS_ERROR("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
+                //ROS_ERROR("Received New Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
                 if(frontier_element.detected_by_robot != robot_name)
                 {
                     storeFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, "", frontier_element.id);
@@ -2440,6 +2443,10 @@ bool ExplorationPlanner::publish_frontier_list()
     //ROS_ERROR("%lu", frontiers.size());
     for(int i = 0; i<frontiers.size(); i++)
     {
+        /* Send only frontiers detected by this robot (to avoid creating very huge message, which would require a lot of time to be completely analyzed) */
+        if(frontiers.at(i).detected_by_robot != robot_name)
+            continue;
+            
         adhoc_communication::ExpFrontierElement frontier_element;
 
         frontier_element.id = frontiers.at(i).id;
@@ -2987,6 +2994,7 @@ void ExplorationPlanner::findFrontiers()
      
      //F
             acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+            
     for (unsigned int i = 0; i < allFrontiers.size(); ++i)
     {
         geometry_msgs::PoseStamped finalFrontier;
@@ -3076,9 +3084,18 @@ void ExplorationPlanner::findFrontiers()
             goal_buffer_y.push_back(start_points.at(1)+(start_points.at(3)-start_points.at(1))/2);
         }
     }
-
-            //F
-            release_mutex(&store_frontier_mutex, __FUNCTION__);
+  
+    if(!received_scan && (allFrontiers.size() == 0 || (allFrontiers.size() != 0 && frontiers.size() == 0) ) ) {
+        ROS_ERROR("Apparently no laser scan has been received yet: retying later...");
+        retrying_searching_frontiers++;
+    }
+    else {
+        retrying_searching_frontiers = 0;
+        received_scan = true;   
+    }
+    
+    //F
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
     ROS_INFO("Size of all frontiers in the list: %lu", frontiers.size());
 }
 
@@ -4213,7 +4230,7 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::recomputeGoal() {
     ROS_ERROR("my_error_counter: %d", my_error_counter);
-    return (my_error_counter > 0 && my_error_counter < 2) ? true : false;
+    return (retrying_searching_frontiers > 0 && retrying_searching_frontiers < 5 && my_error_counter > 0 && my_error_counter < 2) ? true : false;
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
@@ -4325,7 +4342,6 @@ bool ExplorationPlanner::my_sendToMulticast(std::string multi_cast_group, adhoc_
 
 void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
-    ROS_ERROR("Received frontier (%.2f, %.2f)", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate);
     ROS_DEBUG("Received frontier (%.2f, %.2f)", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate);
     
     // send a reply only if the frontier is between the 8 frontiers with lowest cost, since only the first eight are ordered...
@@ -4370,101 +4386,150 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
         //ROS_ERROR("FAILED!");
         return;   
     }
-    //ROS_ERROR("Here!");
-    //for(int i = frontiers.size() - 1; i >= 0 && i > frontiers.size() - max_front; --i) {
-    //for(int i = frontiers.size() - 1; i >= 0 && i > frontiers.size(); --i) {
-    for(int i = 0; i < frontiers.size() && i < max_front; i++) {
-        
-        double x, y;
-        if(frontiers.at(i).detected_by_robot != robot_name) {
-            //ROS_ERROR("Robot taht disc.: %d -> Transform also this one in my coordinate_system", frontiers.at(i).detected_by_robot);
-            service_message.request.point.x = frontiers.at(i).x_coordinate;
-            service_message.request.point.y = frontiers.at(i).y_coordinate;
-            service_message.request.point.src_robot = frontiers.at(i).detected_by_robot;
-            //ROS_ERROR("Robot taht disc.: %d", frontiers.at(i).detected_by_robot);   
-            //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
-            
-            //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+    
+    // robot position
+    robot_x = robotPose.getOrigin().getX();
+    robot_y = robotPose.getOrigin().getY();
 
-            //ROS_ERROR("calling client");
-            if(client.call(service_message))
-                ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
-            else {
-                //ROS_ERROR("FAILED!");
-                continue;   
-            }
-        
-        } else {
-            x = frontiers.at(i).x_coordinate;
-            y = frontiers.at(i).y_coordinate;
-        }
-        
-        //release_mutex(&store_frontier_mutex, __FUNCTION__);
-        //ROS_INFO(" Transform frontier coordinates DONE");
-        //ROS_ERROR("(%f, %f) -> %f", x, y, fabs(x - service_message.response.point.x));
-        double accurancy = 0.7;
-        if( fabs(x - service_message.response.point.y) < accurancy && fabs(y - service_message.response.point.y) < accurancy ){
-            
-            // robot position
-            robot_x = robotPose.getOrigin().getX();
-            robot_y = robotPose.getOrigin().getY();
+    // frontier position
+    double frontier_x = msg.get()->frontier_element[0].x_coordinate;
+    double frontier_y = msg.get()->frontier_element[0].y_coordinate;
 
-            // frontier position
-            double frontier_x = msg.get()->frontier_element[0].x_coordinate;
-            double frontier_y = msg.get()->frontier_element[0].y_coordinate;
+    // calculate d_g
+    int d_g = trajectory_plan(frontier_x, frontier_y);
 
-            // calculate d_g
-            int d_g = trajectory_plan(frontier_x, frontier_y);
+    // calculate d_gb
+    int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
 
-            // calculate d_gb
-            int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
-
-            // calculate d_gbe
-            int d_gbe;
-            if(energy_above_th)
-            {
-                d_gbe = -d_gb;
-            }
-            else
-            {
-                d_gbe = d_gb;
-            }
-
-            // calculate theta
-            double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-            double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-            double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
-
-            // calculate cost function
-            double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
-           
-            //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
-            
-            adhoc_communication::ExpFrontier negotiation_list;
-            adhoc_communication::ExpFrontierElement negotiation_element;
-            //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
-            //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
-            //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
-            //negotiation_element.id = my_selected_frontier->id;
-            negotiation_element.bid = cost;
-            
-            negotiation_list.frontier_element.push_back(negotiation_element);
-            
-            my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
-            break;
-        } 
-        else {
-            //ROS_ERROR("%d != %d", frontiers[i].id, msg.get()->frontier_element[0].id);
-            ; //ROS_ERROR("(%.2f, %.2f) - (%.2f, %.2f)", frontiers[i].x_coordinate,  frontiers[i].y_coordinate, msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
-        }
+    // calculate d_gbe
+    int d_gbe;
+    if(energy_above_th)
+    {
+        d_gbe = -d_gb;
     }
+    else
+    {
+        d_gbe = d_gb;
+    }
+
+    // calculate theta
+    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+
+    // calculate cost function
+    double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+   
+    //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
+    
+    adhoc_communication::ExpFrontier negotiation_list;
+    adhoc_communication::ExpFrontierElement negotiation_element;
+    //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
+    //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
+    //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
+    //negotiation_element.id = my_selected_frontier->id;
+    negotiation_element.bid = cost;
+    
+    negotiation_list.frontier_element.push_back(negotiation_element);
+    
+    my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
+    
+    
+//    //ROS_ERROR("Here!");
+//    //for(int i = frontiers.size() - 1; i >= 0 && i > frontiers.size() - max_front; --i) {
+//    //for(int i = frontiers.size() - 1; i >= 0 && i > frontiers.size(); --i) {
+//    for(int i = 0; i < frontiers.size() && i < max_front; i++) {
+//        
+//        double x, y;
+//        if(frontiers.at(i).detected_by_robot != robot_name) {
+//            //ROS_ERROR("Robot taht disc.: %d -> Transform also this one in my coordinate_system", frontiers.at(i).detected_by_robot);
+//            service_message.request.point.x = frontiers.at(i).x_coordinate;
+//            service_message.request.point.y = frontiers.at(i).y_coordinate;
+//            service_message.request.point.src_robot = frontiers.at(i).detected_by_robot;
+//            //ROS_ERROR("Robot taht disc.: %d", frontiers.at(i).detected_by_robot);   
+//            //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
+//            
+//            //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+
+//            //ROS_ERROR("calling client");
+//            if(client.call(service_message))
+//                ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
+//            else {
+//                //ROS_ERROR("FAILED!");
+//                continue;   
+//            }
+//        
+//        } else {
+//            x = frontiers.at(i).x_coordinate;
+//            y = frontiers.at(i).y_coordinate;
+//        }
+//        
+//        //release_mutex(&store_frontier_mutex, __FUNCTION__);
+//        //ROS_INFO(" Transform frontier coordinates DONE");
+//        //ROS_ERROR("(%f, %f) -> %f", x, y, fabs(x - service_message.response.point.x));
+//        double accurancy = 0.7;
+//        if( fabs(x - service_message.response.point.y) < accurancy && fabs(y - service_message.response.point.y) < accurancy ){
+//            
+//            // robot position
+//            robot_x = robotPose.getOrigin().getX();
+//            robot_y = robotPose.getOrigin().getY();
+
+//            // frontier position
+//            double frontier_x = msg.get()->frontier_element[0].x_coordinate;
+//            double frontier_y = msg.get()->frontier_element[0].y_coordinate;
+
+//            // calculate d_g
+//            int d_g = trajectory_plan(frontier_x, frontier_y);
+
+//            // calculate d_gb
+//            int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
+
+//            // calculate d_gbe
+//            int d_gbe;
+//            if(energy_above_th)
+//            {
+//                d_gbe = -d_gb;
+//            }
+//            else
+//            {
+//                d_gbe = d_gb;
+//            }
+
+//            // calculate theta
+//            double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+//            double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+//            double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+
+//            // calculate cost function
+//            double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+//           
+//            //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
+//            
+//            adhoc_communication::ExpFrontier negotiation_list;
+//            adhoc_communication::ExpFrontierElement negotiation_element;
+//            //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
+//            //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
+//            //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
+//            //negotiation_element.id = my_selected_frontier->id;
+//            negotiation_element.bid = cost;
+//            
+//            negotiation_list.frontier_element.push_back(negotiation_element);
+//            
+//            my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
+//            break;
+//        } 
+//        else {
+//            //ROS_ERROR("%d != %d", frontiers[i].id, msg.get()->frontier_element[0].id);
+//            ; //ROS_ERROR("(%.2f, %.2f) - (%.2f, %.2f)", frontiers[i].x_coordinate,  frontiers[i].y_coordinate, msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+//        }
+//    }
     
     
 }
 
 void ExplorationPlanner::my_replyToNegotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg) {
     //ROS_ERROR("REPLY!!!!");
-    //ROS_ERROR("%f vs %f", my_bid, msg.get()->frontier_element[0].bid);
+    ROS_DEBUG("%f vs %f", my_bid, msg.get()->frontier_element[0].bid);
     if(my_bid > msg.get()->frontier_element[0].bid ) //they are cost, so the higher the worse
         winner_of_auction = false;    
 }
@@ -5944,139 +6009,139 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
      return false;
 }
 
-void ExplorationPlanner::smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4)
-{
+//void ExplorationPlanner::smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4)
+//{
 
-    //ROS_INFO("waiting for lock");
-    //store_frontier_mutex.lock();
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    //ROS_INFO("lock acquired");
-    
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        return;
-    }
-    
-    my_energy_above_th = energy_above_th;
-    this-> w1 = w1;
-    this-> w2 = w2;
-    this-> w3 = w3;
-    this-> w4 = w4;
+//    //ROS_INFO("waiting for lock");
+//    //store_frontier_mutex.lock();
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    //ROS_INFO("lock acquired");
+//    
+//    tf::Stamped < tf::Pose > robotPose;
+//    if(!costmap_ros_->getRobotPose(robotPose))
+//    {
+//        ROS_ERROR("Failed to get RobotPose");
+//        release_mutex(&store_frontier_mutex, __FUNCTION__);
+//        return;
+//    }
+//    
+//    my_energy_above_th = energy_above_th;
+//    this-> w1 = w1;
+//    this-> w2 = w2;
+//    this-> w3 = w3;
+//    this-> w4 = w4;
 
-    // process only eight frontiers
-    //int max_front = 8;
-    int max_front = frontiers.size();
-    sorted_frontiers.clear();
-    
-    if(frontiers.size() > 0)
-    {
-        //ROS_ERROR("%lu", frontiers.size());
-        double robot_x, robot_y;
+//    // process only eight frontiers
+//    //int max_front = 8;
+//    int max_front = frontiers.size();
+//    sorted_frontiers.clear();
+//    
+//    if(frontiers.size() > 0)
+//    {
+//        //ROS_ERROR("%lu", frontiers.size());
+//        double robot_x, robot_y;
 
-        //continue_bool = false;
-        //return;
-        //ROS_ERROR("sort: %d", (int)frontiers.size() - 1 - i);
-        //if( ((int)frontiers.size() - 1 - i) < 0) {
-        //    ROS_FATAL("Somethign bad happened....");
-        //    release_mutex(&store_frontier_mutex, __FUNCTION__);
-        //    return;
-        //}
-        
-        //TEMP
-        //if((int)frontiers.size() - 1 - i >= 1)
-        //    return;
-            
-        for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
-        {
+//        //continue_bool = false;
+//        //return;
+//        //ROS_ERROR("sort: %d", (int)frontiers.size() - 1 - i);
+//        //if( ((int)frontiers.size() - 1 - i) < 0) {
+//        //    ROS_FATAL("Somethign bad happened....");
+//        //    release_mutex(&store_frontier_mutex, __FUNCTION__);
+//        //    return;
+//        //}
+//        
+//        //TEMP
+//        //if((int)frontiers.size() - 1 - i >= 1)
+//        //    return;
+//            
+//        for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
+//        {
 
-            //ROS_ERROR("sort2: %d", j);
-            /*
-             * cost function
-             * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
-             *
-             * parameters
-             * w1, ..., w4 .. weights
-             * d_g         .. distance from the robot's current position to the frontier
-             * d_gb        .. distance from the frontier to the charging station
-             * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
-             * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
-             */
+//            //ROS_ERROR("sort2: %d", j);
+//            /*
+//             * cost function
+//             * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
+//             *
+//             * parameters
+//             * w1, ..., w4 .. weights
+//             * d_g         .. distance from the robot's current position to the frontier
+//             * d_gb        .. distance from the frontier to the charging station
+//             * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
+//             * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
+//             */
 
-            // robot position
-            robot_x = robotPose.getOrigin().getX();
-            robot_y = robotPose.getOrigin().getY();
+//            // robot position
+//            robot_x = robotPose.getOrigin().getX();
+//            robot_y = robotPose.getOrigin().getY();
 
-            // frontier position
-            double frontier_x = frontiers.at(j).x_coordinate;
-            double frontier_y = frontiers.at(j).y_coordinate;
-            double next_frontier_x = frontiers.at(j+1).x_coordinate;
-            double next_frontier_y = frontiers.at(j+1).y_coordinate;
+//            // frontier position
+//            double frontier_x = frontiers.at(j).x_coordinate;
+//            double frontier_y = frontiers.at(j).y_coordinate;
+//            double next_frontier_x = frontiers.at(j+1).x_coordinate;
+//            double next_frontier_y = frontiers.at(j+1).y_coordinate;
 
-            // calculate d_g
-            int d_g = trajectory_plan(frontier_x, frontier_y);
-            int d_g_next = trajectory_plan(next_frontier_x, next_frontier_y);
+//            // calculate d_g
+//            int d_g = trajectory_plan(frontier_x, frontier_y);
+//            int d_g_next = trajectory_plan(next_frontier_x, next_frontier_y);
 
-            // calculate d_gb
-            int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
-            int d_gb_next = trajectory_plan(next_frontier_x, next_frontier_y, robot_home_x, robot_home_y);
+//            // calculate d_gb
+//            int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
+//            int d_gb_next = trajectory_plan(next_frontier_x, next_frontier_y, robot_home_x, robot_home_y);
 
-            // calculate d_gbe
-            int d_gbe, d_gbe_next;
-            if(energy_above_th)
-            {
-                d_gbe = -d_gb;
-                d_gbe_next = -d_gb_next;
-            }
-            else
-            {
-                d_gbe = d_gb;
-                d_gbe_next = d_gb_next;
-            }
+//            // calculate d_gbe
+//            int d_gbe, d_gbe_next;
+//            if(energy_above_th)
+//            {
+//                d_gbe = -d_gb;
+//                d_gbe_next = -d_gb_next;
+//            }
+//            else
+//            {
+//                d_gbe = d_gb;
+//                d_gbe_next = d_gb_next;
+//            }
 
-            // calculate theta
-            double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-            double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-            double theta_g_next = atan2(robot_y - next_frontier_y, robot_x - next_frontier_x);
-            double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
-            double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g_next) - M_PI));
+//            // calculate theta
+//            double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+//            double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+//            double theta_g_next = atan2(robot_y - next_frontier_y, robot_x - next_frontier_x);
+//            double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+//            double theta_next = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g_next) - M_PI));
 
-            // calculate cost function
-            double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
-            double cost_next = w1 * d_g_next + w2 * d_gb_next + w3 * d_gbe_next + w4 * theta_next;
+//            // calculate cost function
+//            double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+//            double cost_next = w1 * d_g_next + w2 * d_gb_next + w3 * d_gbe_next + w4 * theta_next;
 
-            // sort frontiers according to cost function
-            //F ascending order
-            if(cost > cost_next)
-            {
-                frontier_t temp = frontiers.at(j+1);
-                frontiers.at(j+1) = frontiers.at(j);
-                frontiers.at(j) = temp;
-            }
-            
-            //bool to_be_inserted
-            //if(sorted_frontiers.size() == 0)
-            //    sorted_frontier.push_back(frontiers.at(j));
-            //else
-            //    for(int k=0; k < sorted_frontiers.size(); k++)
-            //        if(   
-            
-        }
-        
-        robot_last_x = robot_x;
-        robot_last_y = robot_y;
-    }
-    else
-    {
-        ROS_INFO("Sorting not possible, no frontiers available!!!");
-    }
-    
-    release_mutex(&store_frontier_mutex, __FUNCTION__);
-    ROS_INFO("finished sort cost");
-  
-}
+//            // sort frontiers according to cost function
+//            //F ascending order
+//            if(cost > cost_next)
+//            {
+//                frontier_t temp = frontiers.at(j+1);
+//                frontiers.at(j+1) = frontiers.at(j);
+//                frontiers.at(j) = temp;
+//            }
+//            
+//            //bool to_be_inserted
+//            //if(sorted_frontiers.size() == 0)
+//            //    sorted_frontier.push_back(frontiers.at(j));
+//            //else
+//            //    for(int k=0; k < sorted_frontiers.size(); k++)
+//            //        if(   
+//            
+//        }
+//        
+//        robot_last_x = robot_x;
+//        robot_last_y = robot_y;
+//    }
+//    else
+//    {
+//        ROS_INFO("Sorting not possible, no frontiers available!!!");
+//    }
+//    
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+//    ROS_INFO("finished sort cost");
+//  
+//}
 
 void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
@@ -6112,18 +6177,7 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
         double cost = x * x + y * y;
         frontiers.at(j).cost = cost;
         
-        if(sorted_frontiers.size() == 0)
-            sorted_frontiers.push_back(frontiers.at(j));
-        else 
-            for(int k=0; k<sorted_frontiers.size(); k++)
-                if(cost < sorted_frontiers.at(k).cost) {
-                    sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(j));
-                    if(sorted_frontiers.size() > limit_search*3)
-                        ROS_ERROR("somethign went wrong...");
-                    else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation //TODO make parameter/define
-                        sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
-                    break;
-                    }
+        add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));
         
     }
         
@@ -6144,6 +6198,14 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
         release_mutex(&store_frontier_mutex, __FUNCTION__);
         return;
     }
+    
+    if(ds_list.size() == 0) {
+        ROS_INFO("No DS is currently known: falling back to closest st");
+        my_sort_cost_2(energy_above_th, w1, w2, w3, w4);
+        return;   
+    }
+    
+    ROS_INFO("Using this strategy");
     
     // robot position
     double robot_x = robotPose.getOrigin().getX();
@@ -6173,7 +6235,7 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     //ROS_INFO("lock acquired");
     
-    int index_closest_ds_to_robot, index_optimal_ds;
+    int index_closest_ds_to_robot = -1, index_optimal_ds = -1;
     double min_dist = std::numeric_limits<double>::max();
     for(int i=0; i < ds_list.size(); i++) {
         double distance = euclidean_distance(robot_x, robot_y, ds_list.at(i).x, ds_list.at(i).y);
@@ -6187,34 +6249,31 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
     
     for(int i=0; i < frontiers.size(); i++) {
         double min_dist = std::numeric_limits<double>::max();
-        int index_closest_ds_to_frontier;
+        int index_closest_ds_to_frontier = -1;
         for(int j=0; j < ds_list.size(); j++) {
-            double distance = euclidean_distance(frontiers.at(i).x_coordinate, frontiers.at(j).y_coordinate, ds_list.at(j).x, ds_list.at(j).y);
+            double distance = euclidean_distance(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, ds_list.at(j).x, ds_list.at(j).y);
             if(distance < min_dist) {
                 min_dist = distance;
                 index_closest_ds_to_frontier = j;
             }
         }
         
+        if(index_optimal_ds >= ds_graph.size() || index_closest_ds_to_robot >= ds_graph[index_optimal_ds].size() || index_closest_ds_to_robot < 0 || index_optimal_ds < 0 || index_closest_ds_to_frontier < 0)
+            ROS_ERROR("invalid index(-ces)"); //: %d, %d, %lu", index_optimal_ds, index_closest_ds_to_robot, ds_graph.size());
+            //ROS_ERROR("index_optimal_ds is too high; ds_graph size: %lu; index_optimal_ds: %d", ds_graph.size(), index_optimal_ds);
+        
         //double d_gbe = dijkstra(ds_graph, index_optimal_ds, index_closest_ds_to_robot);
         double d_gbe = ds_graph[index_optimal_ds][index_closest_ds_to_robot];
+        if(d_gbe < 0)
+            ROS_ERROR("Invalid value");
         //double d_g = dijkstra(ds_graph, index_closest_ds_to_frontier, index_closest_ds_to_robot);
         double d_g = ds_graph[index_closest_ds_to_frontier][index_closest_ds_to_robot];
+        if(d_g < 0)
+            ROS_ERROR("Invalid value");
         double cost = d_g + d_gbe;
         frontiers.at(i).cost = cost;
         
-        if(sorted_frontiers.size() == 0)
-            sorted_frontiers.push_back(frontiers.at(i));
-        else 
-            for(int k=0; k<sorted_frontiers.size(); k++)
-                if(cost < sorted_frontiers.at(k).cost) {
-                    sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(i));
-                    if(sorted_frontiers.size() > limit_search*3)
-                        ROS_ERROR("somethign went wrong...");
-                    else if(sorted_frontiers.size() == limit_search*3) // times 3 to keep into account possible failures in the distance computation //TODO make parameter/define
-                        sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
-                    break;
-                    }
+        add_to_sorted_fontiers_list_if_convinient(frontiers.at(i));
         
   
     }
@@ -6351,23 +6410,7 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
             
             frontiers.at(j).cost = cost;
             
-            int k;
-            bool inserted = false;
-            for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
-                if(cost < sorted_frontiers.at(k).cost) {
-                    sorted_frontiers.insert(sorted_frontiers.begin() + k, frontiers.at(j));
-                    if(sorted_frontiers.size() > limit_search*3 + 1)
-                        ROS_ERROR("somethign went wrong...");
-                    else if(sorted_frontiers.size() == limit_search*3 + 1) // times 3 to keep into account possible failures in the distance computation
-                        sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
-                    inserted = true;
-                    }
-            if(!inserted && k < limit_search*3 - 2) //TODO do we need the -2?
-                sorted_frontiers.push_back(frontiers.at(j));
-                
-            if(sorted_frontiers.size() > limit_search*3)
-                    ROS_ERROR("somethign went wrong...");
-                    
+            add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));        
         }
         
         robot_last_x = robot_x;
@@ -8598,4 +8641,24 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
     }
 
     return true;
+}
+
+void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t frontier)
+{
+    int k;
+    bool inserted = false;
+    for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
+        if(frontier.cost < sorted_frontiers.at(k).cost) {
+            sorted_frontiers.insert(sorted_frontiers.begin() + k, frontier);
+            if(sorted_frontiers.size() > limit_search*3 + 1)
+                ROS_ERROR("somethign went wrong...");
+            else if(sorted_frontiers.size() == limit_search*3 + 1) // times 3 to keep into account possible failures in the distance computation
+                sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
+            inserted = true;
+            }
+    if(!inserted && k < limit_search*3 - 2) //TODO do we need the -2?
+        sorted_frontiers.push_back(frontier);
+        
+    if(sorted_frontiers.size() > limit_search*3)
+            ROS_ERROR("somethign went wrong...");
 }

@@ -171,6 +171,7 @@ private:
     int pos_seq_my;
     bool turning;
     ros::Publisher pub_discovered_free_cells_count;
+    bool simpleTransformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res);
 };
 
 #endif // MAPMERGER_H

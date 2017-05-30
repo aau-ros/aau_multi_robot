@@ -75,6 +75,9 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     //ROS_ERROR("%s", source_robot_id_str.c_str());
     //ROS_ERROR("%d", source_robot_id);
     
+    //if(msg2.topic == "send_frontier_for_coordinated_exploration")
+    //    ROS_ERROR("YES!");
+    
     for(int i=0; i < num_robots; i++) {
     
         if(source_robot_id == i) {

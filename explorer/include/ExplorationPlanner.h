@@ -221,7 +221,7 @@ namespace explorationPlanner
             void sort_reserve(int strategy);
             void sort_cost_with_approach(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
-            void smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
+            //void smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_2(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_4(bool energy_above_th, int w1, int w2, int w3, int w4);
@@ -397,6 +397,9 @@ namespace explorationPlanner
             void acquire_mutex(boost::mutex *mutex, std::string function_name);
             void release_mutex(boost::mutex *mutex, std::string function_name);
             bool storeFrontier_without_locking(double x, double y, int detected_by_robot, std::string detected_by_robot_str, int id);
+            int retrying_searching_frontiers;
+            bool received_scan;
+            void add_to_sorted_fontiers_list_if_convinient(frontier_t frontier);
             
     };
 }

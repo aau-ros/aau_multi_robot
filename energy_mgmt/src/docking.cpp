@@ -1309,7 +1309,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    //ROS_ERROR("Received information from robot %d", msg.get()->id);
+    //ROS_DEBUG("Received information from robot %d", msg.get()->id);
     //ROS_ERROR("(%.1f, %.1f)", msg.get()->x, msg.get()->y);
     if (DEBUG) //TODO(minor) move away...
     {
