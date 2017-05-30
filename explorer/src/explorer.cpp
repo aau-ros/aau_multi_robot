@@ -1557,7 +1557,7 @@ class Explorer
                     if (robot_state == moving_to_frontier)
                     {
                         update_robot_state_2(exploring);
-                        ROS_ERROR("Robot could not reach goal - explore again");
+                        ROS_ERROR("Robot could not reach goal: mark goal as unreachable and explore again");
                     }
                     else
                         update_robot_state_2(going_charging);  // TODO(minor) if
@@ -3161,7 +3161,7 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = 5 * 60; //seconds
-        int starting_value_countdown_2 = 7 * 60; //seconds
+        int starting_value_countdown_2 = 20 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         
@@ -3224,45 +3224,46 @@ class Explorer
                 prints_count = 1;  
             }
             
-            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
-                countdown_2 -= ros::Time::now() - prev_time;
-                
-                if(countdown_2 < ros::Duration(0)) {
-                
-                    /*
-                    if(!already_perfomed_recovery_procedure) {
-                        ROS_ERROR("Trying to recover from stuck...");
-                        stuck_x = pose_x;
-                        stuck_y = pose_y;
-                        geometry_msgs::Twist msg;
-                        msg.linear.y = -1;
-                        ros::NodeHandle nh;
-                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-                        pub.publish(msg);
-                        already_perfomed_recovery_procedure = true;
-                        countdown = ros::Duration(starting_value_moving);
-                        countdown_2 = ros::Duration(starting_value_countdown_2);
-                    }
-                    else {
-                    */
-                        ROS_FATAL("Robot is not moving from 10 minutes!");
-                        ROS_INFO("Robot is not moving from 10 minutes!");
-                        //abort();
-                        log_stucked();
-                    //}
-                }
-            }
-            else
-            {
-                prev_robot_x_2 = pose_x;
-                prev_robot_y_2 = pose_y;
-                countdown_2 = ros::Duration(starting_value_countdown_2);
-            }
-            
-            //ROS_ERROR("%f, %f", pose_x, pose_y);
+//            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
+//                countdown_2 -= ros::Time::now() - prev_time;
+//                
+//                if(countdown_2 < ros::Duration(0)) {
+//                
+//                    /*
+//                    if(!already_perfomed_recovery_procedure) {
+//                        ROS_ERROR("Trying to recover from stuck...");
+//                        stuck_x = pose_x;
+//                        stuck_y = pose_y;
+//                        geometry_msgs::Twist msg;
+//                        msg.linear.y = -1;
+//                        ros::NodeHandle nh;
+//                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+//                        pub.publish(msg);
+//                        already_perfomed_recovery_procedure = true;
+//                        countdown = ros::Duration(starting_value_moving);
+//                        countdown_2 = ros::Duration(starting_value_countdown_2);
+//                    }
+//                    else {
+//                    */
+//                        ROS_FATAL("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+//                        ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
 
-            if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
-                already_perfomed_recovery_procedure = false;
+//                        //abort();
+//                        log_stucked();
+//                    //}
+//                }
+//            }
+//            else
+//            {
+//                prev_robot_x_2 = pose_x;
+//                prev_robot_y_2 = pose_y;
+//                countdown_2 = ros::Duration(starting_value_countdown_2);
+//            }
+//            
+//            //ROS_ERROR("%f, %f", pose_x, pose_y);
+
+//            if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
+//                already_perfomed_recovery_procedure = false;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
