@@ -496,9 +496,11 @@ class Explorer
             * Use mutex to lock the critical section (access to the costmap)
             * since rosspin tries to update the costmap continuously
             */
-            //ROS_ERROR("COSTMAP STUFF");
+            ROS_DEBUG("COSTMAP STUFF");
+            print_mutex_info("explore()", "acquiring");
             costmap_mutex.lock();
             ROS_DEBUG("COSTMAP STUFF, lock aquired");
+            print_mutex_info("explore()", "lock");
 
             exploration->transformToOwnCoordinates_frontiers();
             exploration->transformToOwnCoordinates_visited_frontiers();
@@ -523,7 +525,8 @@ class Explorer
             exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
-            //ROS_ERROR("PUBLISHING FRONTIERS");
+            print_mutex_info("explore()", "unlock");
+            ROS_DEBUG("COSTMAP STUFF, lock released");
             
             //tf::Stamped<tf::Pose> robotPose;
             
@@ -1873,9 +1876,11 @@ class Explorer
     {
         while (ros::ok())
         {
+            //ROS_DEBUG("frontiers(): acquiring lock");
+            print_mutex_info("frontiers()", "acquiring");
             costmap_mutex.lock();
-            //ROS_ERROR("frontiers(): lock acquired");
-            //ROS_INFO("frontiers(): lock acquired");
+            //ROS_DEBUG("frontiers(): lock acquired");
+            print_mutex_info("frontiers()", "lock");
 
             /* Clean frontiers */
             exploration->clearSeenFrontiers(costmap2d_global);
@@ -1892,8 +1897,8 @@ class Explorer
             //exploration->visualize_Clusters();
 
             costmap_mutex.unlock();
-            //ROS_ERROR("frontiers(): lock released");
-            //ROS_INFO("frontiers(): lock released");
+            //ROS_DEBUG("frontiers(): lock released");
+            print_mutex_info("frontiers()", "unlock");
 
             ros::Rate(5).sleep();
         }
@@ -1919,9 +1924,11 @@ class Explorer
             // double angle_robot = robotPose.getRotation().getAngle();
             // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
 
+            //ROS_INFO("map_info(): acquiring");
+            print_mutex_info("map_info()", "acquiring");
             costmap_mutex.lock();
-            //ROS_ERROR("map_info(): lock acquired");
             //ROS_INFO("map_info(): lock acquired");
+            print_mutex_info("map_info()", "lock");
 
             ros::Duration time = ros::Time::now() - time_start;
 
@@ -1955,8 +1962,8 @@ class Explorer
             fs_csv.close();
 
             costmap_mutex.unlock();
-            //ROS_ERROR("map_info(): lock released");
             //ROS_INFO("map_info(): lock released");
+            print_mutex_info("map_info()", "unlock");
 
             // call map_merger to log data
             map_merger::LogMaps log;
@@ -2336,9 +2343,11 @@ class Explorer
         int counter = 0;
         bool exploration_flag;
 
+        //ROS_INFO("iterate_global_costmap(): acquiring");
+        print_mutex_info("iterate_global_costmap()", "acquiring");
         costmap_mutex.lock();
-        //ROS_ERROR("iterate_global_costmap(): lock acquired");
         //ROS_INFO("iterate_global_costmap(): lock acquired");
+        print_mutex_info("iterate_global_costmap()", "lock");
 
         exploration->transformToOwnCoordinates_frontiers();
         exploration->transformToOwnCoordinates_visited_frontiers();
@@ -2351,8 +2360,8 @@ class Explorer
         exploration->clearSeenFrontiers(costmap2d_global);
 
         costmap_mutex.unlock();
-        //ROS_ERROR("iterate_global_costmap(): lock released");
         //ROS_INFO("iterate_global_costmap(): lock released");
+        print_mutex_info("iterate_global_costmap()", "unlock");
 
         // exploration->visualize_Frontiers();
 
@@ -3235,46 +3244,50 @@ class Explorer
                 prints_count = 1;  
             }
             
-//            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
-//                countdown_2 -= ros::Time::now() - prev_time;
-//                
-//                if(countdown_2 < ros::Duration(0)) {
-//                
-//                    /*
-//                    if(!already_perfomed_recovery_procedure) {
-//                        ROS_ERROR("Trying to recover from stuck...");
-//                        stuck_x = pose_x;
-//                        stuck_y = pose_y;
-//                        geometry_msgs::Twist msg;
-//                        msg.linear.y = -1;
-//                        ros::NodeHandle nh;
-//                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-//                        pub.publish(msg);
-//                        already_perfomed_recovery_procedure = true;
-//                        countdown = ros::Duration(starting_value_moving);
-//                        countdown_2 = ros::Duration(starting_value_countdown_2);
-//                    }
-//                    else {
-//                    */
-//                        ROS_FATAL("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-//                        ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
+                countdown_2 -= ros::Time::now() - prev_time;
+                
+                if(countdown_2 < ros::Duration(0)) {
+                
+                    /*
+                    if(!already_perfomed_recovery_procedure) {
+                        ROS_ERROR("Trying to recover from stuck...");
+                        stuck_x = pose_x;
+                        stuck_y = pose_y;
+                        geometry_msgs::Twist msg;
+                        msg.linear.y = -1;
+                        ros::NodeHandle nh;
+                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+                        pub.publish(msg);
+                        already_perfomed_recovery_procedure = true;
+                        countdown = ros::Duration(starting_value_moving);
+                        countdown_2 = ros::Duration(starting_value_countdown_2);
+                    }
+                    else {
+                    */
+                        ROS_FATAL("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                        ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                        major_errors_file = original_log_path + std::string("major_errors.log");
+                        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        major_errors_fstream << "deadlock / slow execution ???" << std::endl;
+                        major_errors_fstream.close();
 
-//                        //abort();
-//                        log_stucked();
-//                    //}
-//                }
-//            }
-//            else
-//            {
-//                prev_robot_x_2 = pose_x;
-//                prev_robot_y_2 = pose_y;
-//                countdown_2 = ros::Duration(starting_value_countdown_2);
-//            }
-//            
-//            //ROS_ERROR("%f, %f", pose_x, pose_y);
+                        //abort();
+                        log_stucked();
+                    //}
+                }
+            }
+            else
+            {
+                prev_robot_x_2 = pose_x;
+                prev_robot_y_2 = pose_y;
+                countdown_2 = ros::Duration(starting_value_countdown_2);
+            }
+            
+            //ROS_ERROR("%f, %f", pose_x, pose_y);
 
-//            if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
-//                already_perfomed_recovery_procedure = false;
+            if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
+                already_perfomed_recovery_procedure = false;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
@@ -3283,6 +3296,13 @@ class Explorer
         
         ROS_INFO("safety checks have been stopped");
     
+    }
+    
+    void print_mutex_info(std::string function_name, std::string action) {
+        lock_file = log_path + std::string("lock.log");
+        lock_fstream.open(lock_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        lock_fstream << function_name << ": " << action << std::endl;
+        lock_fstream.close();    
     }
 
     /********************
@@ -3330,9 +3350,9 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log, major_errors_file;
+    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log, major_errors_file, lock_file;
     std::string log_path, original_log_path;
-    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log, major_errors_fstream;
+    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log, major_errors_fstream, lock_fstream;
 
     int number_of_recharges = 0;
 
@@ -3490,13 +3510,15 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
-            costmap_mutex.lock();
-            //ROS_ERROR("main(): lock acquired");
-            //ROS_INFO("main(): lock acquired");
+            //print_mutex_info("main()", "acquiring");
+            ROS_DEBUG("acquiring");
+            costmap_mutex.lock();  
+            //print_mutex_info("main()", "lock");
+            ROS_DEBUG("lock");
             ros::spinOnce();
             costmap_mutex.unlock();
-            //ROS_ERROR("main(): lock released");
-            //ROS_INFO("main(): lock released");
+            //print_mutex_info("main()", "unlock");
+            ROS_DEBUG("unlock");
         }
         ros::Duration(0.1).sleep();
     }
