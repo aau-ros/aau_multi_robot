@@ -447,6 +447,8 @@ class Explorer
         pose_sub = nh.subscribe("amcl_pose", 10, &Explorer::poseCallback, this);
         
         sub_finish = nh.subscribe("explorer/finish", 10, &Explorer::finish_callback, this);
+        
+        exploration->set_auction_timeout(auction_timeout);
 
         ROS_INFO("STARTING EXPLORATION");
 
@@ -1128,17 +1130,18 @@ class Explorer
                             //ROS_ERROR("STARTING NEGOTIATION");
                             
                             //ROS_ERROR("start frontier negotiation!");
-                            exploration->my_negotiate();
-                     
-                            for(int i = 0; i < auction_timeout/0.1; i++) {
-                                ros::Duration(0.1).sleep();
-                                ros::spinOnce();
-                            }
+//                            exploration->my_negotiate();
+//                     
+//                            for(int i = 0; i < auction_timeout/0.1; i++) {
+//                                ros::Duration(0.1).sleep();
+//                                ros::spinOnce();
+//                            }
                             
                             //ROS_ERROR("End of negotiation");
                             ros::spinOnce();
                             
-                            if(exploration->winner_of_auction) {
+//                            if(exploration->winner_of_auction)
+                            {
                                 explorations++;
                                 if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
                                     //ROS_ERROR("auctioning");
@@ -1147,14 +1150,14 @@ class Explorer
                                 else
                                     update_robot_state_2(moving_to_frontier);
                                     
-                                exploration->clean_frontiers_under_auction();
-                                // detele_list_of_already_auctioned_frontiers...
+                                //exploration->clean_frontiers_under_auction();
                                 
-                            } else {
-                                ROS_ERROR("re-exploring due to lost auction");
-                                update_robot_state_2(exploring); //TODO(minor) not very good, i could be already in explorer (i could be in fully_charged, ...)...
-                                continue;
-                            }
+                            } 
+//                            else {
+//                                ROS_INFO("lost auction, ");
+//                                update_robot_state_2(exploring); //TODO(minor) not very good, i could be already in explorer (i could be in fully_charged, ...)...
+//                                continue;
+//                            }
                             
                             // TODO(minor) ...
                             if (exit_countdown != EXIT_COUNTDOWN)

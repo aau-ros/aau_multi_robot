@@ -4785,6 +4785,15 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
              
 #endif
 
+                    //start auction
+                    ROS_INFO("start frontier negotiation!");
+                    my_negotiate();
+             
+                    for(int i = 0; i < auction_timeout/0.1; i++) {
+                        ros::Duration(0.1).sleep();
+                        ros::spinOnce();
+                    }
+
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     my_error_counter = 0;
                     ROS_INFO("final_goal size before return: %lu", final_goal->size());
@@ -8643,13 +8652,17 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
     return true;
 }
 
+void ExplorationPlanner::set_auction_timeout(int timeout) {
+    auction_timeout = timeout;
+}
+
 void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t frontier)
 {
-    for(int i=0; i < frontiers_under_auction.size(); i++)
-        if(frontier.id == frontiers_under_auction.at(i).id) {
-            ROS_INFO("This frontier is targetted by another robot: ignore it");
-            return;
-        }
+//    for(int i=0; i < frontiers_under_auction.size(); i++)
+//        if(frontier.id == frontiers_under_auction.at(i).id) {
+//            ROS_INFO("This frontier is targetted by another robot: ignore it");
+//            return;
+//        }
     
     int k;
     bool inserted = false;

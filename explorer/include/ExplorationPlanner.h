@@ -306,6 +306,7 @@ namespace explorationPlanner
             void new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg);
             ros::Subscriber sub_new_ds_on_graph;
             float new_target_ds(float new_target_ds_x, float new_target_ds_y);
+            void set_auction_timeout(int timeout);
 
         private:
             bool auction_running;
@@ -400,6 +401,7 @@ namespace explorationPlanner
             int retrying_searching_frontiers;
             bool received_scan;
             void add_to_sorted_fontiers_list_if_convinient(frontier_t frontier);
+            int auction_timeout;
             
     };
 }
