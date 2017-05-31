@@ -4789,13 +4789,15 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
                     //start auction
                     ROS_INFO("start frontier negotiation!");
-                    my_negotiate();
+                    
+                    //my_negotiate();
              
                     for(int i = 0; i < auction_timeout/0.1; i++) {
                         ros::Duration(0.1).sleep();
                         ros::spinOnce();
                     }
                     
+                    winner_of_auction = true;
                     if(!winner_of_auction) {
                         ROS_INFO("frontier under auction: skip");
                         continue;
