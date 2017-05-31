@@ -4676,14 +4676,14 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 release_mutex(&store_frontier_mutex, __FUNCTION__);
                 return false;
             }
-
-            bool under_auction = false;
-            for(int k=0; !under_auction && k<frontiers_under_auction.size(); k++)
-                if(frontiers[i].id == frontiers_under_auction[k].id) {
-                    under_auction = true;
-                }
-            if(under_auction)
-                continue;
+         
+//            bool under_auction = false;
+//            for(int k=0; !under_auction && k<frontiers_under_auction.size(); k++)
+//                if(frontiers[i].id == frontiers_under_auction[k].id) {
+//                    under_auction = true;
+//                }
+//            if(under_auction)
+//                continue;
 
             if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
             {
@@ -4796,12 +4796,16 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                         ros::spinOnce();
                     }
                     
-                    if(!winner_of_auction)
+                    if(!winner_of_auction) {
+                        ROS_INFO("frontier under auction: skip");
                         continue;
+                    }
 
+                    ROS_INFO("frontier selected");
+                    frontiers_under_auction.clear();
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     my_error_counter = 0;
-                    ROS_INFO("final_goal size before return: %lu", final_goal->size());
+                    //ROS_INFO("final_goal size before return: %lu", final_goal->size());
                     return true;
                     
                 } else{
@@ -8660,11 +8664,11 @@ void ExplorationPlanner::set_auction_timeout(int timeout) {
 
 void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t frontier)
 {
-//    for(int i=0; i < frontiers_under_auction.size(); i++)
-//        if(frontier.id == frontiers_under_auction.at(i).id) {
-//            ROS_INFO("This frontier is targetted by another robot: ignore it");
-//            return;
-//        }
+    for(int i=0; i < frontiers_under_auction.size(); i++)
+        if(frontier.id == frontiers_under_auction.at(i).id) {
+            ROS_INFO("This frontier is targetted by another robot: ignore it");
+            return;
+        }
     
     int k;
     bool inserted = false;

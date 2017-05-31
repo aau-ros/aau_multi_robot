@@ -1118,8 +1118,10 @@ class Explorer
                             update_robot_state_2(exploring);
                             ros::Duration(5).sleep();
                         }
-                            
                         
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << std::endl;
+                        fs_exp_se_log.close();
 
                         /* Check if the robot has found a reachable frontier */
                         if (goal_determined == true)
@@ -1138,10 +1140,10 @@ class Explorer
 //                            }
                             
                             //ROS_ERROR("End of negotiation");
-                            ros::spinOnce();
+                            //ros::spinOnce();
                             
 //                            if(exploration->winner_of_auction)
-                            {
+//                            {
                                 explorations++;
                                 if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
                                     //ROS_ERROR("auctioning");
@@ -1152,7 +1154,7 @@ class Explorer
                                     
                                 //exploration->clean_frontiers_under_auction();
                                 
-                            } 
+//                            } 
 //                            else {
 //                                ROS_INFO("lost auction, ");
 //                                update_robot_state_2(exploring); //TODO(minor) not very good, i could be already in explorer (i could be in fully_charged, ...)...
@@ -1591,10 +1593,6 @@ class Explorer
 
             ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
-            
-            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << std::endl;
-            fs_exp_se_log.close();
             
             ROS_INFO("DONE EXPLORING");
         }
@@ -3514,15 +3512,15 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
-            //print_mutex_info("main()", "acquiring");
-            ROS_DEBUG("acquiring");
+            explorer.print_mutex_info("main()", "acquiring");
+            //ROS_DEBUG("acquiring");
             costmap_mutex.lock();  
-            //print_mutex_info("main()", "lock");
-            ROS_DEBUG("lock");
+            explorer.print_mutex_info("main()", "lock");
+            //ROS_DEBUG("lock");
             ros::spinOnce();
             costmap_mutex.unlock();
-            //print_mutex_info("main()", "unlock");
-            ROS_DEBUG("unlock");
+            explorer.print_mutex_info("main()", "unlock");
+            //ROS_DEBUG("unlock");
         }
         ros::Duration(0.1).sleep();
     }
