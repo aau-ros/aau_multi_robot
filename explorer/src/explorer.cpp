@@ -59,6 +59,7 @@
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
 #define DEBUG false
+#define TIMEOUT_CHECK_1 5
 
 bool exploration_finished;
 
@@ -93,6 +94,7 @@ class Explorer
     int free_cells_count, discovered_free_cells_count;
     float percentage;
     int failures_going_home;
+    int approximate_success;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -147,6 +149,7 @@ class Explorer
         discovered_free_cells_count = 0;
         free_cells_count = 0;
         failures_going_home = 0;
+        approximate_success = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -2615,6 +2618,7 @@ class Explorer
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
         int stuck_countdown = EXIT_COUNTDOWN;
+        ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
          * given about the actual driving state of the robot. */
@@ -2674,10 +2678,11 @@ class Explorer
         ROS_DEBUG("Goal correctly set");
         ROS_DEBUG("Moving toward goal...");
 
+        ros::Time time_before = ros::Time::now();
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
-            if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
+            if ( fabs(prev_pose_x - pose_x) < 0.1 && fabs(prev_pose_y - pose_y) < 0.1 && fabs(prev_pose_angle - pose_angle) < 0.1 )  // TODO(minor) ...
             {
                 //stuck_countdown--; //TODO(minor)
                 // if(stuck_countdown <= 5){
@@ -2689,17 +2694,25 @@ class Explorer
                     ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
                 }
 
-                if (stuck_countdown <= 0)
+                if (my_stuck_countdown <= ros::Duration(0))
                 {
-                    //F
-                    //exit(0);
-                    exit(-1);
+                    if( fabs(position_x - pose_x) < 1 && fabs(position_y - pose_y) < 1 ) {
+                                    ac.cancelGoal();
+                        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                        approximate_success++;
+                        return true;
+                    } else
+                        return false;
                 }
 
                 // F
                 ros::spinOnce();
                 // ros::Duration(0.5).sleep();
                 ros::Duration(1).sleep();
+                
+                my_stuck_countdown -= ros::Time::now() - time_before;
+                time_before = ros::Time::now();
             }
             else
             {
@@ -2746,6 +2759,7 @@ class Explorer
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
 
+        approximate_success = 0;
         return true;
     }
     
@@ -3178,7 +3192,7 @@ class Explorer
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
 
-        int starting_value_moving = 5 * 60; //seconds
+        int starting_value_moving = TIMEOUT_CHECK_1 * 60; //seconds
         int starting_value_countdown_2 = 8 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
@@ -3192,6 +3206,9 @@ class Explorer
             
         ros::Time prev_time = ros::Time::now();   
         while(ros::ok() && !exploration_finished) {
+        
+            if(approximate_success >= 3)
+                log_major_error("too many approximated successes");
             
             //ROS_DEBUG("Checking...");
             //if(exploration->getRobotPose(robotPose)) {
