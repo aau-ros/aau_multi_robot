@@ -1,0 +1,7 @@
+###
+in callback_map_other
+if(new_data_maps->size() < index_robots)
+            return;
+        new_data_maps->at(index_robots) = true;
+        
+should be <=
