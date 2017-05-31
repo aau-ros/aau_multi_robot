@@ -1020,7 +1020,7 @@ class Explorer
                                 if(dist > available_distance * safety_coeff) 
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
-                                        ROS_FATAL("ERROR WITH OPPORTUNE STRATEGY");
+                                        log_major_error("ERROR WITH OPPORTUNE STRATEGY");
                                         update_robot_state_2(finished);
                                     }
                                     else {
@@ -3023,7 +3023,7 @@ class Explorer
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
         if (available_distance <= 0 && robot_state != charging)
         {
-            ROS_FATAL("Robot has run out of energy!");
+            log_major_error("Robot has run out of energy!");
             abort();
         }
         
@@ -3037,7 +3037,7 @@ class Explorer
     }
     
     void abort() {
-        ROS_FATAL("Exploration is going to be gracefully terminated for this robot...");
+        ROS_ERROR("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
         update_robot_state_2(dead);
         this->indicateSimulationEnd();
@@ -3219,7 +3219,7 @@ class Explorer
                 
                 
                 if(countdown < ros::Duration(0)) {
-                    ROS_FATAL("Robot is not moving anymore");
+                    ROS_ERROR("Robot is not moving anymore");
                     ROS_INFO("Robot is not moving anymore");
                     //abort();
                     log_stucked();
@@ -3262,7 +3262,7 @@ class Explorer
                     }
                     else {
                     */
-                        ROS_FATAL("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                        ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                         ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                         log_major_error("deadlock / slow execution ???");
 
@@ -3293,7 +3293,7 @@ class Explorer
     }
     
     void log_major_error(std::string text) {
-        ROS_ERROR(text.c_str());
+        ROS_FATAL("%s", text.c_str());
     
         major_errors_file = original_log_path + std::string("major_errors.log");
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
