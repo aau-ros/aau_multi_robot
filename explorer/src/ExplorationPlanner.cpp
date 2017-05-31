@@ -4607,6 +4607,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     //else
     //    ROS_ERROR("INVALID APPROACH!!!");
     
+    sorted_frontiers.clear();
+    
     //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
     if(APPROACH == 0)
         sorted_frontiers = frontiers;
@@ -4793,6 +4795,9 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                         ros::Duration(0.1).sleep();
                         ros::spinOnce();
                     }
+                    
+                    if(!winner_of_auction)
+                        continue;
 
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     my_error_counter = 0;
@@ -6178,8 +6183,6 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
     this->w3 = w3;
     this->w4 = w4;
 
-    sorted_frontiers.clear();
-
     for (int j = 0; j < frontiers.size() - 1; j++) {
         double x = frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
         double y = frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
@@ -6330,7 +6333,6 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
     // process only eight frontiers
     //int max_front = 8;
     int max_front = frontiers.size();
-    sorted_frontiers.clear();
     
     if(frontiers.size() > 0)
     {
@@ -7182,291 +7184,291 @@ void ExplorationPlanner::sort(int strategy)
     ROS_INFO("Done sorting");
 }
 
-void ExplorationPlanner::sort_reserve(int strategy)
-{
-    tf::Stamped < tf::Pose > robotPose;
-    if (!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        return;
-    }
-    if (frontiers.size() <= 0 && clusters.size() <= 0)
-    {
-        ROS_INFO("Sorting not possible, no frontiers available!!!");
-        return;
-    }
+//void ExplorationPlanner::sort_reserve(int strategy)
+//{
+//    tf::Stamped < tf::Pose > robotPose;
+//    if (!costmap_ros_->getRobotPose(robotPose))
+//    {
+//        ROS_ERROR("Failed to get RobotPose");
+//        return;
+//    }
+//    if (frontiers.size() <= 0 && clusters.size() <= 0)
+//    {
+//        ROS_INFO("Sorting not possible, no frontiers available!!!");
+//        return;
+//    }
 
-    double pose_x = robotPose.getOrigin().getX();
-    double pose_y = robotPose.getOrigin().getY();
-    
-    //store_frontier_mutex.lock();
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    
-    //ROS_ERROR("COPYING...");
-    sorted_frontiers.clear();
-    for(int i=0; i<frontiers.size(); i++)
-        sorted_frontiers.push_back(frontiers.at(i));
-    release_mutex(&store_frontier_mutex, __FUNCTION__);
-    //ROS_ERROR("SORTING...");
+//    double pose_x = robotPose.getOrigin().getX();
+//    double pose_y = robotPose.getOrigin().getY();
+//    
+//    //store_frontier_mutex.lock();
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    
+//    //ROS_ERROR("COPYING...");
+//    sorted_frontiers.clear();
+//    for(int i=0; i<frontiers.size(); i++)
+//        sorted_frontiers.push_back(frontiers.at(i));
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+//    //ROS_ERROR("SORTING...");
 
-    /*
-     * Following Sort algorithm normalizes all distances to the
-     * robots actual position. As result, the list is sorted
-     * from smallest to biggest deviation between goal point and
-     * robot!
-     */
-    if(strategy == 1)
-    {
-        for (int i = sorted_frontiers.size(); i >= 0; i--) {
-            for (int j = 0; j < sorted_frontiers.size() - 1; j++) {
-                double x = sorted_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
-                double y = sorted_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
-                double x_next = sorted_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
-                double y_next = sorted_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
-                double euclidean_distance = x * x + y * y;
-                double euclidean_distance_next = x_next * x_next + y_next * y_next;
+//    /*
+//     * Following Sort algorithm normalizes all distances to the
+//     * robots actual position. As result, the list is sorted
+//     * from smallest to biggest deviation between goal point and
+//     * robot!
+//     */
+//    if(strategy == 1)
+//    {
+//        for (int i = sorted_frontiers.size(); i >= 0; i--) {
+//            for (int j = 0; j < sorted_frontiers.size() - 1; j++) {
+//                double x = sorted_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
+//                double y = sorted_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
+//                double x_next = sorted_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
+//                double y_next = sorted_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
+//                double euclidean_distance = x * x + y * y;
+//                double euclidean_distance_next = x_next * x_next + y_next * y_next;
 
-                if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next)) {
-                    frontier_t temp = sorted_frontiers.at(j+1);
-                    sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
-                    sorted_frontiers.at(j) = temp;
-                }
-            }
-        }
-    }
-    else if(strategy == 2)
-    {
-        for (int i = sorted_frontiers.size(); i >= 0; i--)
-        {
-            for (int j = 0; j < sorted_frontiers.size() - 1; j++) {
-                double x = sorted_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
-                double y = sorted_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
-                double x_next = sorted_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
-                double y_next = sorted_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
-                double euclidean_distance = x * x + y * y;
-                double euclidean_distance_next = x_next * x_next + y_next * y_next;
+//                if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next)) {
+//                    frontier_t temp = sorted_frontiers.at(j+1);
+//                    sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
+//                    sorted_frontiers.at(j) = temp;
+//                }
+//            }
+//        }
+//    }
+//    else if(strategy == 2)
+//    {
+//        for (int i = sorted_frontiers.size(); i >= 0; i--)
+//        {
+//            for (int j = 0; j < sorted_frontiers.size() - 1; j++) {
+//                double x = sorted_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
+//                double y = sorted_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
+//                double x_next = sorted_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
+//                double y_next = sorted_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
+//                double euclidean_distance = x * x + y * y;
+//                double euclidean_distance_next = x_next * x_next + y_next * y_next;
 
-                if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next)) {
-                    frontier_t temp = sorted_frontiers.at(j+1);
-                    sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
-                    sorted_frontiers.at(j) = temp;
-                }
-            }
-        }
-    }
-    else if(strategy == 3)
-    {
-        trajectory_plan_10_frontiers();
+//                if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next)) {
+//                    frontier_t temp = sorted_frontiers.at(j+1);
+//                    sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
+//                    sorted_frontiers.at(j) = temp;
+//                }
+//            }
+//        }
+//    }
+//    else if(strategy == 3)
+//    {
+//        trajectory_plan_10_frontiers();
 
-        for (int i = sorted_frontiers.size(); i >= sorted_frontiers.size()-10; i--)
-        {
-            if(sorted_frontiers.size()-i >= sorted_frontiers.size())
-            {
-                break;
-            }
-            else
-            {
-                for (int j = 0; j < 10-1; j++)
-                {
-                    if(j >= sorted_frontiers.size())
-                    {
-                        break;
-                    }else
-                    {
+//        for (int i = sorted_frontiers.size(); i >= sorted_frontiers.size()-10; i--)
+//        {
+//            if(sorted_frontiers.size()-i >= sorted_frontiers.size())
+//            {
+//                break;
+//            }
+//            else
+//            {
+//                for (int j = 0; j < 10-1; j++)
+//                {
+//                    if(j >= sorted_frontiers.size())
+//                    {
+//                        break;
+//                    }else
+//                    {
 
-                        int dist = sorted_frontiers.at(j).distance_to_robot;
-                        int dist_next = sorted_frontiers.at(j+1).distance_to_robot;
+//                        int dist = sorted_frontiers.at(j).distance_to_robot;
+//                        int dist_next = sorted_frontiers.at(j+1).distance_to_robot;
 
-                        if (dist > dist_next) {
-                                frontier_t temp = sorted_frontiers.at(j+1);
-                                sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
-                                sorted_frontiers.at(j) = temp;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if(strategy == 4)
-    {
-        for(int cluster_number = 0; cluster_number < clusters.size(); cluster_number++)
-        {
-            if (clusters.at(cluster_number).cluster_element.size() > 0)
-            {
-                ROS_DEBUG("Cluster %d  size: %lu",cluster_number, clusters.at(cluster_number).cluster_element.size());
-                for (int i = clusters.at(cluster_number).cluster_element.size(); i > 0; i--)
-                {
-                    ROS_DEBUG("Cluster element size: %d", i);
-                        for (int j = 0; j < clusters.at(cluster_number).cluster_element.size()-1; j++)
-                        {
-                            ROS_DEBUG("Cluster element number: %d", j);
-                            double x = clusters.at(cluster_number).cluster_element.at(j).x_coordinate - pose_x;
-                            double y = clusters.at(cluster_number).cluster_element.at(j).y_coordinate - pose_y;
-                            double x_next = clusters.at(cluster_number).cluster_element.at(j+1).x_coordinate - pose_x;
-                            double y_next = clusters.at(cluster_number).cluster_element.at(j+1).y_coordinate - pose_y;
-                            double euclidean_distance = x * x + y * y;
-                            double euclidean_distance_next = x_next * x_next + y_next * y_next;
+//                        if (dist > dist_next) {
+//                                frontier_t temp = sorted_frontiers.at(j+1);
+//                                sorted_frontiers.at(j + 1) = sorted_frontiers.at(j);
+//                                sorted_frontiers.at(j) = temp;
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    else if(strategy == 4)
+//    {
+//        for(int cluster_number = 0; cluster_number < clusters.size(); cluster_number++)
+//        {
+//            if (clusters.at(cluster_number).cluster_element.size() > 0)
+//            {
+//                ROS_DEBUG("Cluster %d  size: %lu",cluster_number, clusters.at(cluster_number).cluster_element.size());
+//                for (int i = clusters.at(cluster_number).cluster_element.size(); i > 0; i--)
+//                {
+//                    ROS_DEBUG("Cluster element size: %d", i);
+//                        for (int j = 0; j < clusters.at(cluster_number).cluster_element.size()-1; j++)
+//                        {
+//                            ROS_DEBUG("Cluster element number: %d", j);
+//                            double x = clusters.at(cluster_number).cluster_element.at(j).x_coordinate - pose_x;
+//                            double y = clusters.at(cluster_number).cluster_element.at(j).y_coordinate - pose_y;
+//                            double x_next = clusters.at(cluster_number).cluster_element.at(j+1).x_coordinate - pose_x;
+//                            double y_next = clusters.at(cluster_number).cluster_element.at(j+1).y_coordinate - pose_y;
+//                            double euclidean_distance = x * x + y * y;
+//                            double euclidean_distance_next = x_next * x_next + y_next * y_next;
 
-                            if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next))
-                            {
-                                frontier_t temp = clusters.at(cluster_number).cluster_element.at(j+1);
-                                clusters.at(cluster_number).cluster_element.at(j+1) = clusters.at(cluster_number).cluster_element.at(j);
-                                clusters.at(cluster_number).cluster_element.at(j) = temp;
-                            }
-                        }
-                    }
-            }else
-            {
-                ROS_INFO("Sorting not possible, no elements available!!!");
-            }
-        }
-    }
-    else if(strategy == 5)
-    {
-        ROS_DEBUG("Iterating over all cluster elements");
+//                            if (sqrt(euclidean_distance) > sqrt(euclidean_distance_next))
+//                            {
+//                                frontier_t temp = clusters.at(cluster_number).cluster_element.at(j+1);
+//                                clusters.at(cluster_number).cluster_element.at(j+1) = clusters.at(cluster_number).cluster_element.at(j);
+//                                clusters.at(cluster_number).cluster_element.at(j) = temp;
+//                            }
+//                        }
+//                    }
+//            }else
+//            {
+//                ROS_INFO("Sorting not possible, no elements available!!!");
+//            }
+//        }
+//    }
+//    else if(strategy == 5)
+//    {
+//        ROS_DEBUG("Iterating over all cluster elements");
 
-        for(int i = 0; i < clusters.size(); i++)
-        {
-            for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
-            {
-                clusters.at(i).cluster_element.at(j).dist_to_robot = 0;
-            }
-        }
+//        for(int i = 0; i < clusters.size(); i++)
+//        {
+//            for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+//            {
+//                clusters.at(i).cluster_element.at(j).dist_to_robot = 0;
+//            }
+//        }
 
-        for(int i = 0; i < clusters.size(); i++)
-        {
-            if(clusters.at(i).cluster_element.size() > 0)
-            {
-                for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
-                {
-                    /* ********** EUCLIDEAN DISTANCE ********** */
-                    double x = clusters.at(i).cluster_element.at(j).x_coordinate - pose_x;
-                    double y = clusters.at(i).cluster_element.at(j).y_coordinate - pose_y;
-                    double euclidean_distance = x * x + y * y;
-                    int distance = euclidean_distance;
+//        for(int i = 0; i < clusters.size(); i++)
+//        {
+//            if(clusters.at(i).cluster_element.size() > 0)
+//            {
+//                for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+//                {
+//                    /* ********** EUCLIDEAN DISTANCE ********** */
+//                    double x = clusters.at(i).cluster_element.at(j).x_coordinate - pose_x;
+//                    double y = clusters.at(i).cluster_element.at(j).y_coordinate - pose_y;
+//                    double euclidean_distance = x * x + y * y;
+//                    int distance = euclidean_distance;
 
-                    clusters.at(i).cluster_element.at(j).dist_to_robot = sqrt(distance);
-                }
-            }else
-            {
-                ROS_DEBUG("Erasing Cluster: %d", clusters.at(i).id);
-                cluster_mutex.lock();
-                clusters.erase(clusters.begin() + i);
-                cluster_mutex.unlock();
-                if(i > 0)
-                {
-                    i --;
-                }
-            }
-        }
-        ROS_INFO("Starting to sort the clusters itself");
-        std::sort(clusters.begin(), clusters.end(), sortCluster);
+//                    clusters.at(i).cluster_element.at(j).dist_to_robot = sqrt(distance);
+//                }
+//            }else
+//            {
+//                ROS_DEBUG("Erasing Cluster: %d", clusters.at(i).id);
+//                cluster_mutex.lock();
+//                clusters.erase(clusters.begin() + i);
+//                cluster_mutex.unlock();
+//                if(i > 0)
+//                {
+//                    i --;
+//                }
+//            }
+//        }
+//        ROS_INFO("Starting to sort the clusters itself");
+//        std::sort(clusters.begin(), clusters.end(), sortCluster);
 
-    }
-    else if(strategy == 6)
-    {
-        ROS_DEBUG("Iterating over all cluster elements");
+//    }
+//    else if(strategy == 6)
+//    {
+//        ROS_DEBUG("Iterating over all cluster elements");
 
-        for(int i = 0; i < clusters.size(); i++)
-        {
-            if(clusters.at(i).cluster_element.size() > 0)
-            {
-                for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
-                {
-                    random_value = int(rand() % 100);
-                    clusters.at(i).cluster_element.at(j).dist_to_robot = random_value;
-                }
-            }else
-            {
-                ROS_DEBUG("Erasing Cluster: %d", clusters.at(i).id);
-                clusters.erase(clusters.begin() + i);
-                if(i > 0)
-                {
-                    i --;
-                }
-            }
-        }
-        ROS_DEBUG("Starting to sort the clusters itself");
-        std::sort(clusters.begin(), clusters.end(), sortCluster);
-    }
-    else if(strategy == 7)
-    {
-        double x,y,x_next,y_next,angle_robot,angle_frontier,angle_next_frontier,angle,angle_next;
-        int costmap_width,costmap_height;
-        close_frontiers.clear();
-        far_frontiers.clear();
+//        for(int i = 0; i < clusters.size(); i++)
+//        {
+//            if(clusters.at(i).cluster_element.size() > 0)
+//            {
+//                for(int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+//                {
+//                    random_value = int(rand() % 100);
+//                    clusters.at(i).cluster_element.at(j).dist_to_robot = random_value;
+//                }
+//            }else
+//            {
+//                ROS_DEBUG("Erasing Cluster: %d", clusters.at(i).id);
+//                clusters.erase(clusters.begin() + i);
+//                if(i > 0)
+//                {
+//                    i --;
+//                }
+//            }
+//        }
+//        ROS_DEBUG("Starting to sort the clusters itself");
+//        std::sort(clusters.begin(), clusters.end(), sortCluster);
+//    }
+//    else if(strategy == 7)
+//    {
+//        double x,y,x_next,y_next,angle_robot,angle_frontier,angle_next_frontier,angle,angle_next;
+//        int costmap_width,costmap_height;
+//        close_frontiers.clear();
+//        far_frontiers.clear();
 
-        // get size of local costmap
-        nh.param<int>("local_costmap/width",costmap_width,-1);
-        nh.param<int>("local_costmap/height",costmap_height,-1);
+//        // get size of local costmap
+//        nh.param<int>("local_costmap/width",costmap_width,-1);
+//        nh.param<int>("local_costmap/height",costmap_height,-1);
 
-        // differentiate between frontiers inside (close frontiers) and outside (far frontiers) of local costmap
-        for (int i = 0; i < sorted_frontiers.size(); i++)
-        {
-            x = sorted_frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
-            y = sorted_frontiers.at(i).y_coordinate - robotPose.getOrigin().getY();
-            if (fabs(x) <= CLOSE_FRONTIER_RANGE && fabs(y) <= CLOSE_FRONTIER_RANGE){
-                close_frontiers.push_back(sorted_frontiers.at(i));
-            }
-            else{
-                far_frontiers.push_back(sorted_frontiers.at(i));
-                ROS_INFO("distance: (%.2f, %.2f) (far)", fabs(x), fabs(y));
-            }
-        }
+//        // differentiate between frontiers inside (close frontiers) and outside (far frontiers) of local costmap
+//        for (int i = 0; i < sorted_frontiers.size(); i++)
+//        {
+//            x = sorted_frontiers.at(i).x_coordinate - robotPose.getOrigin().getX();
+//            y = sorted_frontiers.at(i).y_coordinate - robotPose.getOrigin().getY();
+//            if (fabs(x) <= CLOSE_FRONTIER_RANGE && fabs(y) <= CLOSE_FRONTIER_RANGE){
+//                close_frontiers.push_back(sorted_frontiers.at(i));
+//            }
+//            else{
+//                far_frontiers.push_back(sorted_frontiers.at(i));
+//                ROS_INFO("distance: (%.2f, %.2f) (far)", fabs(x), fabs(y));
+//            }
+//        }
 
-        // sort close frontiers clock wise
-        if (close_frontiers.size() > 0)
-        {
-            //std::sort(close_frontiers.begin(), close_frontiers.end(), *this);
-            for (int i = 0; i< close_frontiers.size(); i++)
-            {
-                for (int j = 0; j < close_frontiers.size() - 1; j++)
-                {
-                    angle_robot = robotPose.getRotation().getAngle();
+//        // sort close frontiers clock wise
+//        if (close_frontiers.size() > 0)
+//        {
+//            //std::sort(close_frontiers.begin(), close_frontiers.end(), *this);
+//            for (int i = 0; i< close_frontiers.size(); i++)
+//            {
+//                for (int j = 0; j < close_frontiers.size() - 1; j++)
+//                {
+//                    angle_robot = robotPose.getRotation().getAngle();
 
-                    angle_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j).y_coordinate);
-                    angle_next_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j+1).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j+1).y_coordinate);
+//                    angle_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j).y_coordinate);
+//                    angle_next_frontier = atan2(robotPose.getOrigin().getX()-close_frontiers.at(j+1).x_coordinate, robotPose.getOrigin().getY()-close_frontiers.at(j+1).y_coordinate);
 
-                    if (angle_frontier > angle_next_frontier)
-                    {
-                        frontier_t temp = close_frontiers.at(j+1);
-                        close_frontiers.at(j+1) = close_frontiers.at(j);
-                        close_frontiers.at(j) = temp;
-                    }
-                }
-            }
-        }
+//                    if (angle_frontier > angle_next_frontier)
+//                    {
+//                        frontier_t temp = close_frontiers.at(j+1);
+//                        close_frontiers.at(j+1) = close_frontiers.at(j);
+//                        close_frontiers.at(j) = temp;
+//                    }
+//                }
+//            }
+//        }
 
-        // sort far frontiers by distance
-        if (far_frontiers.size() > 0)
-        {
-            for (int i = 0; i < far_frontiers.size(); i++)
-            {
-                for (int j = 0; j < far_frontiers.size() - 1; j++)
-                {
-                    x = far_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
-                    y = far_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
-                    x_next = far_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
-                    y_next = far_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
+//        // sort far frontiers by distance
+//        if (far_frontiers.size() > 0)
+//        {
+//            for (int i = 0; i < far_frontiers.size(); i++)
+//            {
+//                for (int j = 0; j < far_frontiers.size() - 1; j++)
+//                {
+//                    x = far_frontiers.at(j).x_coordinate - robotPose.getOrigin().getX();
+//                    y = far_frontiers.at(j).y_coordinate - robotPose.getOrigin().getY();
+//                    x_next = far_frontiers.at(j+1).x_coordinate - robotPose.getOrigin().getX();
+//                    y_next = far_frontiers.at(j+1).y_coordinate - robotPose.getOrigin().getY();
 
-                    if (x*x + y*y > x_next*x_next + y_next*y_next) {
-                        frontier_t temp = far_frontiers.at(j+1);
-                        far_frontiers.at(j + 1) = far_frontiers.at(j);
-                        far_frontiers.at(j) = temp;
-                    }
-                }
-            }
-        }
+//                    if (x*x + y*y > x_next*x_next + y_next*y_next) {
+//                        frontier_t temp = far_frontiers.at(j+1);
+//                        far_frontiers.at(j + 1) = far_frontiers.at(j);
+//                        far_frontiers.at(j) = temp;
+//                    }
+//                }
+//            }
+//        }
 
-        // put together close and far frontiers
-        sorted_frontiers.clear();
-        sorted_frontiers.reserve(close_frontiers.size() + far_frontiers.size());
-        sorted_frontiers.insert(frontiers.end(), close_frontiers.begin(), close_frontiers.end());
-        sorted_frontiers.insert(frontiers.end(), far_frontiers.begin(), far_frontiers.end());
-    }
+//        // put together close and far frontiers
+//        sorted_frontiers.clear();
+//        sorted_frontiers.reserve(close_frontiers.size() + far_frontiers.size());
+//        sorted_frontiers.insert(frontiers.end(), close_frontiers.begin(), close_frontiers.end());
+//        sorted_frontiers.insert(frontiers.end(), far_frontiers.begin(), far_frontiers.end());
+//    }
 
-    ROS_INFO("Done sorting");
-}
+//    ROS_INFO("Done sorting");
+//}
 
 void ExplorationPlanner::simulate() {
 
