@@ -63,6 +63,7 @@
 bool exploration_finished;
 
 boost::mutex costmap_mutex;
+boost::mutex log_mutex;
 
 void sleepok(int t, ros::NodeHandle &nh)
 {
@@ -3299,10 +3300,12 @@ class Explorer
     }
     
     void print_mutex_info(std::string function_name, std::string action) {
+        log_mutex.lock();
         lock_file = log_path + std::string("lock.log");
         lock_fstream.open(lock_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         lock_fstream << function_name << ": " << action << std::endl;
-        lock_fstream.close();    
+        lock_fstream.close();
+        log_mutex.unlock();
     }
 
     /********************
