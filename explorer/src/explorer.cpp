@@ -998,7 +998,6 @@ class Explorer
                             else
                             {
                                 moving_along_path = false;
-                                // update_robot_state_2(exploring);
                                 update_robot_state_2(leaving_ds);
                             }
                         else
@@ -1038,7 +1037,6 @@ class Explorer
                                 moving_along_path = false;
                                 std_msgs::Empty msg;
                                 pub_next_ds.publish(msg);
-                                // update_robot_state_2(exploring);
                             } 
                     
                         continue;
@@ -1153,7 +1151,7 @@ class Explorer
                                 // detele_list_of_already_auctioned_frontiers...
                                 
                             } else {
-                                //ROS_ERROR("re-exploring");
+                                ROS_ERROR("re-exploring due to lost auction");
                                 update_robot_state_2(exploring); //TODO(minor) not very good, i could be already in explorer (i could be in fully_charged, ...)...
                                 continue;
                             }
@@ -1571,8 +1569,8 @@ class Explorer
                 {
                     if (robot_state == moving_to_frontier)
                     {
-                        update_robot_state_2(exploring);
                         ROS_ERROR("Robot could not reach goal: mark goal as unreachable and explore again");
+                        update_robot_state_2(exploring);
                     }
                     else
                         update_robot_state_2(going_charging);  // TODO(minor) if
@@ -3182,7 +3180,7 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = 5 * 60; //seconds
-        int starting_value_countdown_2 = 20 * 60; //seconds
+        int starting_value_countdown_2 = 8 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         

@@ -8645,6 +8645,12 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
 
 void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t frontier)
 {
+    for(int i=0; i < frontiers_under_auction.size(); i++)
+        if(frontier.id == frontiers_under_auction.at(i).id) {
+            ROS_INFO("This frontier is targetted by another robot: ignore it");
+            return;
+        }
+    
     int k;
     bool inserted = false;
     for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
