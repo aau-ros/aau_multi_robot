@@ -889,7 +889,7 @@ void docking::update_llh() {
 
 void docking::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
 {
-    ROS_DEBUG("Update l1");
+    //ROS_DEBUG("Update l1");
     
     /* Count vacant docking stations */
     int num_ds_vacant = 0;
@@ -940,7 +940,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
 
 void docking::update_l2()
 {
-    ROS_DEBUG("Update l2");
+    //ROS_DEBUG("Update l2");
     
     double time_run = battery.remaining_time_run;
     //ROS_DEBUG("Remaining running time: %.3fs", time_run);
@@ -974,7 +974,7 @@ void docking::update_l2()
 
 void docking::update_l3()
 {
-    ROS_DEBUG("Update l3");
+    //ROS_DEBUG("Update l3");
     
     /* Count number of jobs: count frontiers and reachable frontiers */
     int num_jobs = 0;
@@ -1031,7 +1031,7 @@ void docking::update_l3()
 
 void docking::update_l4() //TODO(minor) comments
 {
-    ROS_DEBUG("Update l4");
+    //ROS_DEBUG("Update l4");
     
     if (!optimal_ds_is_set() || ds.size() == 0 || jobs.size() == 0)
     {

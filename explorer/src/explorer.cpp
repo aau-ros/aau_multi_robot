@@ -1489,7 +1489,7 @@ class Explorer
                     if(failures_going_home != 0)
                         ROS_INFO("Robot can finally prepare itself to recharge");
                     else
-                        ROS_INFO("tying againt to reach DS");
+                        ROS_INFO("tying to reach DS");
 
                 counter++;  // TODO(minor) what is this counter?
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
@@ -3130,6 +3130,7 @@ class Explorer
         pose_x = pose->pose.pose.position.x;
         pose_y = pose->pose.pose.position.y;
         
+        ROS_DEBUG("x: %.1f; y: %.1f; angle: %.1f", pose_x, pose_y, pose_angle);
         //if(robot_id == 1)
         //    ROS_ERROR("%.2f: %.1f, %.1f", pose_angle, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
     }

@@ -1901,7 +1901,7 @@ int ExplorationPlanner::calculateAuctionBID(int cluster_number, std::string stra
 
 void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoints::ConstPtr& msg)
 {
-    ROS_DEBUG("Position Callback !!!!!");
+    //ROS_DEBUG("Position Callback !!!!!");
     position_mutex.lock();
 
     other_robots_positions.positions.clear();
@@ -1909,7 +1909,7 @@ void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoi
     {
         other_robots_positions.positions.push_back(msg.get()->positions.at(i));
     }
-    ROS_INFO("positions size: %lu", msg.get()->positions.size());
+    //ROS_INFO("positions size: %lu", msg.get()->positions.size());
     position_mutex.unlock();
 }
 
