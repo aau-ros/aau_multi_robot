@@ -4275,7 +4275,7 @@ bool ExplorationPlanner::my_negotiate()
 {
     winner_of_auction = true;
     
-    #ifndef QUICK_SELECTION  
+#ifndef QUICK_SELECTION
      
     frontiers_under_auction.push_back(*my_selected_frontier);
 
@@ -4293,7 +4293,7 @@ bool ExplorationPlanner::my_negotiate()
 
     my_sendToMulticast("mc_", negotiation_list, "send_frontier_for_coordinated_exploration");
 
-    #endif
+#endif
 
     first_negotiation_run = false;
 }
@@ -4610,6 +4610,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     sorted_frontiers.clear();
     
     //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
+    ROS_DEBUG("frontiers size: %lu", frontiers.size());
     if(APPROACH == 0)
         sorted_frontiers = frontiers;
     else if(APPROACH == 1)
@@ -4655,6 +4656,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         return false;
     }
 
+    ROS_INFO("look for a FRONTIER as goal");
     // look for a FRONTIER as goal
     int errors = 0;
     if (mode == 1)
@@ -4748,8 +4750,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     
                     robot_str_name->push_back(frontiers.at(i).detected_by_robot_str);
                     
-                    my_selected_frontier = &frontiers.at(i);
-                    
 #ifndef QUICK_SELECTION
             
                     // robot position
@@ -4789,7 +4789,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
                     //start auction
                     ROS_INFO("start frontier negotiation!");
-                    
+                    my_selected_frontier = &frontiers.at(i);
                     //my_negotiate();
              
                     for(int i = 0; i < auction_timeout/0.1; i++) {

@@ -451,6 +451,8 @@ class Explorer
         exploration->set_auction_timeout(auction_timeout);
 
         ROS_INFO("STARTING EXPLORATION");
+        
+        ros::Time start_time = ros::Time::now();
 
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
@@ -1106,11 +1108,7 @@ class Explorer
                         
                         ros::Duration d = ros::Time::now() - time_2;
                         if(d > ros::Duration(5 * 60)) {
-                            ROS_ERROR("very slow...");
-                            major_errors_file = original_log_path + std::string("major_errors.log");
-                            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                            major_errors_fstream << "very slow!!!" << std::endl;
-                            major_errors_fstream.close();
+                            log_major_error("very slow...");
                         }
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
@@ -1192,9 +1190,15 @@ class Explorer
                                 // ds graph to reach one of this frontiers
                                 if(!already_navigated_DS_graph || exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
                                 {
-                                 ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
+                                    ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
                                     update_robot_state_2(auctioning_2);
                                     already_navigated_DS_graph = true;
+                                    
+                                    if(ros::Time::now() - start_time < ros::Duration(5*60)) {
+                                        log_major_error("trying to navigate graph!!!");     
+                                    }
+                                        
+                                    
                                 }
                                 else
                                 {
@@ -1640,10 +1644,7 @@ class Explorer
         fs_csv_state.close();
         
         if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || previous_state == going_charging) ) {
-            major_errors_file = original_log_path + std::string("major_errors.log");
-            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            major_errors_fstream << "stucked after auction!!!" << std::endl;
-            major_errors_fstream.close();
+            log_major_error("stucked after auction!!!");
         }
             
         
@@ -2323,11 +2324,7 @@ class Explorer
         status_file.c_str());
         
         if(percentage < 50 && robot_state != stuck) {
-            major_errors_file = original_log_path + std::string("major_errors.log");
-            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            major_errors_fstream << "low percentage!!!" << std::endl;
-            major_errors_fstream.close();
-        
+            log_major_error("low percentage!!!");
         }
             
         
@@ -3267,10 +3264,7 @@ class Explorer
                     */
                         ROS_FATAL("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                         ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                        major_errors_file = original_log_path + std::string("major_errors.log");
-                        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        major_errors_fstream << "deadlock / slow execution ???" << std::endl;
-                        major_errors_fstream.close();
+                        log_major_error("deadlock / slow execution ???");
 
                         //abort();
                         log_stucked();
@@ -3296,6 +3290,39 @@ class Explorer
         
         ROS_INFO("safety checks have been stopped");
     
+    }
+    
+    void log_major_error(std::string text) {
+        ROS_ERROR(text.c_str());
+    
+        major_errors_file = original_log_path + std::string("major_errors.log");
+        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << text << std::endl;
+        major_errors_fstream.close();
+        
+        std::stringstream robot_number;
+        robot_number << robot_id;
+
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_error";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_suffix(".error");
+
+        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + robo_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate error",
+        status_file.c_str());
+        
     }
     
     void print_mutex_info(std::string function_name, std::string action) {
