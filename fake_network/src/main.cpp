@@ -142,9 +142,9 @@ int main(int argc, char** argv)
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
-        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 0));
+        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 1000000));
         sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
-        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 100, robot_absolute_position_callback));
+        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;
         robot.x = 0;    //TODO not very good...
