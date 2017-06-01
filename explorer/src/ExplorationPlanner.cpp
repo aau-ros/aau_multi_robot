@@ -1175,7 +1175,6 @@ double ExplorationPlanner::trajectory_plan(double start_x, double start_y, doubl
         //for(int i=0; i < global_plan.size(); i++)
             //ROS_ERROR("(%f, %f)", global_plan[i].pose.position.x, global_plan[i].pose.position.y);
         
-        
         distance = 0;
         std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
         geometry_msgs::PoseStamped prev_point = (*it);

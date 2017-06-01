@@ -1513,6 +1513,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         if (get_llh() > msg.get()->bid)
         {
             /* The robot is interested in participating to the auction */
+            ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
             participating_to_auction++;
 
             /* Start timer to force the robot to consider the auction concluded after
@@ -1530,7 +1531,6 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             timer.start();
             timers.push_back(timer);
 
-            ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = group_name;
             srv.request.topic = "adhoc_communication/send_em_auction/reply";
