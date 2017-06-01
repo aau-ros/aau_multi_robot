@@ -145,6 +145,7 @@ class Explorer
         max_av_distance = 0;
         available_distance = -1;
         already_navigated_DS_graph = false;
+        need_to_recharge = false;
         explorations = 0;
         discovered_free_cells_count = 0;
         free_cells_count = 0;
@@ -1416,15 +1417,19 @@ class Explorer
                             ROS_INFO("NOW it is ok...");
                         }
                 
-                while (robot_state == auctioning || robot_state == auctioning_2 )  // TODO(minor) better management of the while loop
+                int auctioning_counter = 0;
+                while ( (robot_state == auctioning || robot_state == auctioning_2) || auctioning_counter < 1000)  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
                     ros::Duration(0.1).sleep();
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
-
+                    auctioning_counter++;
                     update_robot_state();
                 }
+                
+                if(auctioning_counter >= 1000)
+                    log_major_error("auctioning was forced to stop!");
                 
                 ROS_INFO("Auction completed");
             }
@@ -1629,11 +1634,13 @@ class Explorer
 
         if (robot_state == auctioning || robot_state == auctioning_2) {
             need_to_recharge = true;
-            //ROS_ERROR("auctioning!");   
+            ROS_INFO("setting need_to_recharge to true");   
         }
         // else if(robot_state == exploring || robot_state == fully_charged)
-        else if (robot_state == leaving_ds || robot_state == fully_charged)
+        else if (robot_state == leaving_ds || robot_state == fully_charged) {
+            ROS_INFO("setting need_to_recharge to false");   
             need_to_recharge = false;
+        }
 
         if(robot_state == moving_to_frontier)
             already_navigated_DS_graph = false;
@@ -1820,12 +1827,17 @@ class Explorer
                 ROS_INFO("i want to charge a little, first...");
             }
 
-            /* Otherwise, really prepare the robot to go in queue */
-            else
+            /* If the robot was participating to an auction, prepare the robot to go in queue */
+            else if (robot_state == auctioning)
             {
                 ROS_DEBUG("prearing for going_in_queue");
                 update_robot_state_2(going_in_queue);
             }
+            
+            /* Otherwise, something strange happened */
+            else 
+                log_major_error("robot would like to go in queue even if it should not!");
+                ROS_INFO("ignoring going_queue_next");
         }
 
         /* */
@@ -2943,21 +2955,23 @@ class Explorer
         else if (robot_state_next != fully_charged_next) { //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the next state...
             if (need_to_recharge)
                 robot_state_next = going_queue_next;
-            else
-                robot_state_next = exploring_next;
+            else {
+                ROS_INFO("ignoring the fact that the robot lost another robot's auction");
+                //robot_state_next = exploring_next;
+            }                
                 
         } else
             ROS_INFO("ignoring");
     }
 
     // TODO(minor) use this instead than all the other auction callbacks
-    void lost_callback()
-    {
-        if (need_to_recharge)
-            robot_state_next = going_queue_next;
-        else
-            robot_state_next = exploring_next;
-    }
+//    void lost_callback()
+//    {
+//        if (need_to_recharge)
+//            robot_state_next = going_queue_next;
+//        else
+//            robot_state_next = exploring_next;
+//    }
 
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
@@ -3315,6 +3329,7 @@ class Explorer
     
     void log_major_error(std::string text) {
         ROS_FATAL("%s", text.c_str());
+        ROS_INFO("%s", text.c_str());
         
         major_errors_file = original_log_path + std::string("major_errors.log");
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);

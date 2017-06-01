@@ -1620,7 +1620,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     /* Delete stored bids to be able to start another auction in the future */
     auction_bids.clear();  // TODO(minor) inefficient!!!!
 
-    /* Check if the robot that started the auction is the winner */
+    /* Check if the robot that started the auction is the winner of */
     if (winner == robot_id)
     {
         /* The robot won its own auction */
