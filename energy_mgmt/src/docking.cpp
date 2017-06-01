@@ -1293,6 +1293,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         finalize();
     }
+    else if (msg.get()->state == moving_away_from_ds)
+    {
+        ;
+    }
     else
     {
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");

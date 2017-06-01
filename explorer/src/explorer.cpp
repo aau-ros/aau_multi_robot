@@ -395,6 +395,7 @@ class Explorer
         enum_string.push_back("moving_to_frontier");
         enum_string.push_back("leaving_ds");
         enum_string.push_back("dead");
+        enum_string.push_back("moving_away_from_ds");
     }
 
     void explore()  // TODO(minor) comments
@@ -1408,17 +1409,31 @@ class Explorer
             // TODO(minor) hmm... here??
             if (robot_state == auctioning || robot_state == auctioning_2 )
             {
-                
-                if (exploration->distance_from_robot(target_ds_x, target_ds_y) <
-                        min_distance_queue_ds)  // TODO could the DS change meanwhile???
-                        {
-                            ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther..."); 
-                            move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
-                            ROS_INFO("NOW it is ok...");
-                        }
+                double distance = -1;
+                int i = 0;
+                while(distance < 0 && i < 10) {
+                    exploration->distance_from_robot(target_ds_x, target_ds_y);
+                    i++;
+                    ros::Duration(2).sleep();
+                }
+                if(distance < 0)
+                    ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
+                else
+                    if (distance <
+                            min_distance_queue_ds)  // TODO could the DS change meanwhile???
+                            {
+                                ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");
+                                ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
+                                update_robot_state_2(moving_away_from_ds);
+                                fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                                fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
+                                fs_csv_state.close();
+                                move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
+                                ROS_INFO("NOW it is ok...");
+                            }
                 
                 int auctioning_counter = 0;
-                while ( (robot_state == auctioning || robot_state == auctioning_2) || auctioning_counter < 1000)  // TODO(minor) better management of the while loop
+                while ( (robot_state == auctioning || robot_state == auctioning_2) || auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
@@ -1428,8 +1443,11 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if(auctioning_counter >= 1000)
+                if(auctioning_counter >= 1000) {
                     log_major_error("auctioning was forced to stop!");
+                    update_robot_state_2(going_in_queue);
+                    continue;   
+                }
                 
                 ROS_INFO("Auction completed");
             }
@@ -2817,33 +2835,43 @@ class Explorer
         }
         ROS_DEBUG("Goal correctly set");
         ROS_DEBUG("Moving toward goal...");
-
+        
+        ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
+        ros::Time time_before = ros::Time::now();
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
-            if (prev_pose_x == pose_x && prev_pose_y == pose_y && prev_pose_angle == pose_angle)  // TODO(minor) ...
+            if ( fabs(prev_pose_x - pose_x) < 0.1 && fabs(prev_pose_y - pose_y) < 0.1 && fabs(prev_pose_angle - pose_angle) < 0.1 )  // TODO(minor) ...
             {
-                //stuck_countdown--;
+                //stuck_countdown--; //TODO(minor)
                 // if(stuck_countdown <= 5){
 
                 // TODO(minor) if STUCK_COUNTDOWN is too low, even when the robot is
                 // computing the frontier, it is believed to be stucked...
-                if (stuck_countdown <= 10)
+//                if (stuck_countdown <= 10)
+//                {
+//                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+//                }
+
+                if (my_stuck_countdown <= ros::Duration(0))
                 {
-                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+//                    if( fabs(home_point_x - pose_x) < 1 && fabs(home_point_y - pose_y) < 1 ) {
+//                        ROS_ERROR("robot seems unable to received ACK from actionlib even if the goal have been reached");
+//                        ROS_INFO("robot seems unable to received ACK from actionlib even if the goal have been reached");
+//                        ac.cancelGoal();
+                        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+//                        approximate_success++;
+                        return true;
+//                    } else
+//                        return false;
                 }
 
-                if (stuck_countdown <= 0)
-                {
-                    //F
-                    //exit(0);
-                    exit(-1);
-                }
-
-                // F
-                ros::spinOnce();
-                // ros::Duration(0.5).sleep();
                 ros::Duration(1).sleep();
+                
+                my_stuck_countdown -= ros::Time::now() - time_before;
+                time_before = ros::Time::now();
+
             }
             else
             {
@@ -3458,7 +3486,8 @@ class Explorer
         moving_to_frontier,                        // the robot has selected the next frontier to be
                                                    // reached, and it is moving toward it
         leaving_ds,                                // the robot was recharging, but another robot stopped
-        dead
+        dead,
+        moving_away_from_ds
     };
     state_t robot_state, previous_state;
 
