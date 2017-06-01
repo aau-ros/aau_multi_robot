@@ -59,7 +59,7 @@
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
 #define DEBUG false
-#define TIMEOUT_CHECK_1 5
+#define TIMEOUT_CHECK_1 10
 
 bool exploration_finished;
 
@@ -1563,7 +1563,7 @@ class Explorer
                     ROS_ERROR("Robot cannot reach DS for recharging!");
                     ROS_INFO("Robot cannot reach DS for recharging!");
                     failures_going_home++; //TODO change name from *_home to *_ds
-                    if(failures_going_home >= 5) {
+                    if(failures_going_home >= 20) {
                         ROS_INFO("tried too many times to reach DS... terminating exploration...");
                         log_stucked();
                     }
@@ -2327,7 +2327,7 @@ class Explorer
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
         
-        if(percentage < 50 && robot_state != stuck) {
+        if(percentage < 80 && robot_state != stuck) {
             log_major_error("low percentage!!!");
         }
             
@@ -2709,9 +2709,6 @@ class Explorer
                         return false;
                 }
 
-                // F
-                ros::spinOnce();
-                // ros::Duration(0.5).sleep();
                 ros::Duration(1).sleep();
                 
                 my_stuck_countdown -= ros::Time::now() - time_before;
@@ -3196,7 +3193,7 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = TIMEOUT_CHECK_1 * 60; //seconds
-        int starting_value_countdown_2 = 8 * 60; //seconds
+        int starting_value_countdown_2 = 1.5 * TIMEOUT_CHECK_1 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         
