@@ -3286,7 +3286,7 @@ class Explorer
                     */
                         ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                         ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                        log_major_error("deadlock / slow execution ???");
+                        log_major_error("deadlock / slow execution / waiting for auction result???");
 
                         //abort();
                         log_stucked();
@@ -3317,13 +3317,13 @@ class Explorer
     void log_major_error(std::string text) {
         ROS_FATAL("%s", text.c_str());
     
-        major_errors_file = original_log_path + std::string("major_errors.log");
-        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << text << std::endl;
-        major_errors_fstream.close();
-        
         std::stringstream robot_number;
         robot_number << robot_id;
+        
+        major_errors_file = original_log_path + std::string("major_errors.log");
+        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << robot_number << ": " << text << std::endl;
+        major_errors_fstream.close();
 
         std::string prefix = "/robot_";
         

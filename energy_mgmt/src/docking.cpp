@@ -830,7 +830,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             fs_csv.close();
 
             /* Update parameter l4 */
-            update_l4();
+            //update_l4();
             
             /* Notify explorer about the optimal DS change */
             adhoc_communication::EmDockingStation msg_optimal;
@@ -864,12 +864,7 @@ double docking::get_llh()
     
     /* Recompute parameters if necessary */ //TODO(minor) maybe there is a better way?
     while (recompute_llh)
-    {
-        update_l1();
-        update_l2();
-        update_l3();
-        update_l4();
-    }
+        update_llh();
 
     /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) really
     // necessary???
@@ -1185,7 +1180,7 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_distance = msg.get()->remaining_distance;
 
     /* Update parameter l2 of charging likelihood function */
-    update_l2();
+    //update_l2();
     
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
@@ -1372,7 +1367,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
 
     /* Update parameter l1 of charging likelihood function */
-    update_l1();
+    //update_l1();
 }
 
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
@@ -1403,8 +1398,8 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
         no_jobs_received_yet = false;
     
     /* Update parameters l3 and l4 of charging likelihood function */
-    update_l3();
-    update_l4();
+    //update_l3();
+    //update_l4();
 }
 
 
@@ -1463,7 +1458,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     }
 
     /* Update parameter l1 of charging likelihood function */
-    update_l1();
+    //update_l1();
 }
 
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -2075,7 +2070,7 @@ void docking::set_target_ds_vacant(bool vacant)
 
     ROS_INFO("Updated own information about ds%d state", target_ds->id);
 
-    update_l1();
+    //update_l1();
 }
 
 void docking::compute_MST()  // TODO(minor) check all functions related to MST
@@ -2532,7 +2527,7 @@ void docking::join_all_multicast_groups() { //TODO(minor) maybe it's enough to j
     ros::ServiceClient sc_join = nh.serviceClient<adhoc_communication::ChangeMCMembership>("adhoc_communication/join_mc_group"); //TODO(minor) move above...
     adhoc_communication::ChangeMCMembership msg;
     msg.request.action=true; //true means that I want to join the group, false that I want to leave it
-    ros::service::waitForService("adhoc_communication/join_mc_group");
+    //ros::service::waitForService("adhoc_communication/join_mc_group");
     for(int i=0; i < num_robots; i++) {
         std::string group_name = "mc_robot_" + SSTR(i);
         msg.request.group_name=group_name;
