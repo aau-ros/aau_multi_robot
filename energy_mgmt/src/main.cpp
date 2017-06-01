@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         // get updates from subscriptions
         ros::spinOnce();
         
-        doc.test();
+        //doc.test();
         
         //bat.spin();
         //bat.compute();
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         // sleep for 1/rate seconds
         loop_rate.sleep();
         
-        //ROS_ERROR("End of main loop");
+        ROS_INFO("End of main loop");
         
         /*
                                 geometry_msgs::Twist cmd_vel;

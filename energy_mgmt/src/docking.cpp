@@ -880,11 +880,11 @@ double docking::get_llh()
 }
 
 void docking::update_llh() {
-
-        update_l1();
-        update_l2();
-        update_l3();
-        update_l4();
+    ROS_INFO("update_llh");
+    update_l1();
+    update_l2();
+    update_l3();
+    update_l4();
 }
 
 void docking::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
@@ -1175,7 +1175,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 
 void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
 {
-    ROS_DEBUG("Received battery state");
+    //ROS_DEBUG("Received battery state");
 
     /* Store new battery state */
     battery.charging = msg.get()->charging;
@@ -1680,7 +1680,7 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
                                      // because the following if is true, then win
                                      // another robot auction and stop the time, then
                                      // lost another and not be reset in queue... //TODO(minor) not very clean...
-        ROS_ERROR("Robot is already participating to an auction: let's wait "
+        ROS_INFO("Robot is already participating to an auction: let's wait "
                   "instead of starting another one...");
         timer_restart_auction.stop(); //reduntant?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
@@ -1861,13 +1861,15 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
             sc_send_docking_station.call(srv_msg);
         }
         else
-            ROS_DEBUG("\n\t\e[1;34m target ds, but currently not used by the robot \e[0m");
+            ROS_DEBUG("target ds, but currently not used by the robot");
     else
-        ROS_DEBUG("\n\t\e[1;34m robot is not targetting that ds\e[0m");
+        ROS_DEBUG("robot is not targetting that ds");
 }
 
 void docking::update_robot_state()  // TODO(minor) simplify
 {
+    ROS_INFO("update_robot_state");
+    
     /*
      * Check if:
      * - there are no more pending auctions: this is to avoid to communicate
@@ -1990,8 +1992,10 @@ void docking::update_robot_state()  // TODO(minor) simplify
             ROS_DEBUG("No state update required");
         else if (participating_to_auction > 0)
             ROS_DEBUG("There are still pending auctions, cannot update robot state");
-        else
+        else {
             ROS_FATAL("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
+            ROS_DEBUG("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
+        }
     }
 }
 
@@ -2490,6 +2494,8 @@ void docking::compute_closest_ds()
 //DONE+
 void docking::discover_docking_stations() //TODO(minor) comments
 {
+    ROS_INFO("discover_docking_stations");
+    
     /* Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS */
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
@@ -2539,6 +2545,8 @@ void docking::join_all_multicast_groups() { //TODO(minor) maybe it's enough to j
 
 void docking::send_robot()
 {    
+    ROS_INFO("send_robot");
+    
     if (robot_id == 0 && DEBUG)
     {
         // ROS_ERROR("%f", distance(robot.x, robot.y, -0.5, -1));
@@ -2618,6 +2626,8 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
 
 void docking::check_reachable_ds()
 {
+    ROS_INFO("check_reachable_ds");
+    
     bool new_ds_discovered = false;
     for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); )
     {
@@ -2801,6 +2811,8 @@ void docking::spin()
 //DONE+
 void docking::update_robot_position()
 {   
+    ROS_INFO("update_robot_position");
+    
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
     //ros::service::waitForService("explorer/robot_pose");
     fake_network::RobotPosition srv_msg;

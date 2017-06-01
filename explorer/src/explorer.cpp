@@ -1646,9 +1646,10 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
-        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || previous_state == going_charging) ) {
+        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2) )
             log_major_error("stucked after auction!!!");
-        }
+        if(robot_state == stuck &&  previous_state == going_charging)
+            log_major_error("stuck when going_charging!!!");
             
         
         //TODO move this in update_robot_state, where the state is set to finished
@@ -2613,7 +2614,7 @@ class Explorer
 
     bool move_robot(int seq, double position_x, double position_y)
     {
-        ROS_INFO("Preparing to move toward goal...");
+        ROS_INFO("Preparing to move toward goal (%.1f, %.1f)...", position_x, position_y);
 
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
@@ -2689,15 +2690,17 @@ class Explorer
 
                 // TODO(minor) if STUCK_COUNTDOWN is too low, even when the robot is
                 // computing the frontier, it is believed to be stucked...
-                if (stuck_countdown <= 10)
-                {
-                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
-                }
+//                if (stuck_countdown <= 10)
+//                {
+//                    ROS_ERROR("Robot is not moving anymore, shutdown in: %d", stuck_countdown);
+//                }
 
                 if (my_stuck_countdown <= ros::Duration(0))
                 {
                     if( fabs(position_x - pose_x) < 1 && fabs(position_y - pose_y) < 1 ) {
-                                    ac.cancelGoal();
+                        ROS_ERROR("robot seems unable to received ACK from actionlib even if the goal have been reached");
+                        ROS_INFO("robot seems unable to received ACK from actionlib even if the goal have been reached");
+                        ac.cancelGoal();
                         exploration->next_auction_position_x = robotPose.getOrigin().getX();
                         exploration->next_auction_position_y = robotPose.getOrigin().getY();
                         approximate_success++;
@@ -2717,7 +2720,7 @@ class Explorer
             else
             {
                 //ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y, pose_angle);
-                stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
+//                stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
                 prev_pose_x = pose_x;
                 prev_pose_y = pose_y;
                 prev_pose_angle = pose_angle;
@@ -3217,9 +3220,10 @@ class Explorer
             //}
             
             //IMPORTANT: be careful that a robot could change state while it is stucked, since it may continuosly change between 'moving_to_fonrtier' to 'exploring' to compute and try rearching a new goal!!!
-            //if((int) prev_robot_state == (int) robot_state && pose_x == prev_robot_x && pose_y == prev_robot_y) {
-            //if( ((int) prev_robot_state == (int) robot_state) && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) {
-            if(robot_is_moving() && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) { 
+            //if((int) prev_robot_state == (int) robot_state && pose_x == prev_robot_x && pose_y == prev_robot_y) 
+            //if( ((int) prev_robot_state == (int) robot_state) && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) 
+            if(robot_is_moving() && fabs(pose_x - prev_robot_x) < 0.1 && fabs(pose_y - prev_robot_y) < 0.1 ) 
+            { 
                 //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
                 //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
                 if(countdown < ros::Duration(60))
@@ -3259,7 +3263,7 @@ class Explorer
                 prints_count = 1;  
             }
             
-            if( (robot_state != in_queue && robot_state != charging) && ((int) pose_x == (int) prev_robot_x_2) && ((int) pose_y == (int) prev_robot_y_2) ) {
+            if( (robot_state != in_queue && robot_state != charging) && fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
                 countdown_2 -= ros::Time::now() - prev_time;
                 
                 if(countdown_2 < ros::Duration(0)) {
