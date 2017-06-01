@@ -1179,11 +1179,12 @@ class Explorer
                         {
                             if(exploration->recomputeGoal()) { //TODO(IMPORTANT)
                                 ROS_ERROR("Goal not found, trying to recompute goal...");
+                                ROS_INFO("Goal not found, trying to recompute goal...");
                                 ros::Duration(3).sleep();
                                 continue;
                             }
                                 
-                            if (robot_state == fully_charged)
+                            else if (robot_state == fully_charged)
                             {
                                 /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
                                  * that it will never be able to reach a frontier: exploration is over */
@@ -3133,6 +3134,7 @@ class Explorer
         return false;
     }
 
+    //NB: the robot position is in the world "shared/global" frame (differently from the getPose() of Costmap2dROS)!!!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
     {
         /* Get rotation of robot relative to starting position */
@@ -3313,15 +3315,14 @@ class Explorer
     
     void log_major_error(std::string text) {
         ROS_FATAL("%s", text.c_str());
-    
-        std::stringstream robot_number;
-        robot_number << robot_id;
         
         major_errors_file = original_log_path + std::string("major_errors.log");
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << robot_number << ": " << text << std::endl;
+        major_errors_fstream << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
 
+        std::stringstream robot_number;
+        robot_number << robot_id;
         std::string prefix = "/robot_";
         
         std::string status_directory = "/simulation_status_error";

@@ -4229,7 +4229,7 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::recomputeGoal() {
     ROS_ERROR("my_error_counter: %d", my_error_counter);
-    return (retrying_searching_frontiers > 0 && retrying_searching_frontiers < 5 && my_error_counter > 0 && my_error_counter < 2) ? true : false;
+    return ( (retrying_searching_frontiers > 0 && retrying_searching_frontiers <= 5) || (my_error_counter > 0 && my_error_counter <= 3) ) ? true : false;
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
@@ -4670,6 +4670,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 //if(errors == i && strategy == 2){
                 if(errors >= 10 && strategy == 2){
                     ROS_ERROR("Fallback to euclidean distance.");
+                    ROS_INFO("Fallback to euclidean distance.");
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     return this->my_determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1, energy_above_th, w1, w2, w3, w4);
                 }
@@ -4704,6 +4705,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     total_distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
                     if(total_distance < 0){
                         ROS_ERROR("Failed to compute distance!");
+                        ROS_INFO("Failed to compute distance!");
                         if(errors == 0)
                             my_error_counter++;
                         errors++;
@@ -4713,6 +4715,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     distance = trajectory_plan(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, optimal_ds_x, optimal_ds_y);
                     if(distance < 0){
                         ROS_ERROR("Failed to compute distance!");
+                        ROS_INFO("Failed to compute distance!");
                         if(errors == 0)
                             my_error_counter++;
                         errors++;
