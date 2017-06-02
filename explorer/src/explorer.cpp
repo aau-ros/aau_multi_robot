@@ -1433,7 +1433,7 @@ class Explorer
                             }
                 
                 int auctioning_counter = 0;
-                while ( (robot_state == auctioning || robot_state == auctioning_2) || auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
+                while ( (robot_state == auctioning || robot_state == auctioning_2) && auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
@@ -1855,6 +1855,7 @@ class Explorer
             /* Otherwise, something strange happened */
             else 
                 log_major_error("robot would like to go in queue even if it should not!");
+                ROS_DEBUG("robot state in fact is: %s", get_text_for_enum(robot_state).c_str());
                 ROS_INFO("ignoring going_queue_next");
         }
 
