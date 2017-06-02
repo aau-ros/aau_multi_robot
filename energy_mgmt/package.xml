@@ -47,6 +47,7 @@
   <build_depend>explorer</build_depend>
   <build_depend>map_merger</build_depend>
   <build_depend>roslib</build_depend>
+  <build_depend>boost</build_depend>
 
   <run_depend>rospy</run_depend>
   <run_depend>roscpp</run_depend>
@@ -56,6 +57,7 @@
   <run_depend>explorer</run_depend>
   <run_depend>map_merger</run_depend>
   <run_depend>roslib</run_depend>
+  <run_depend>boost</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

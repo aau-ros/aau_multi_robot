@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(energy_mgmt)
 
-SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic")
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -lboost_system")
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 ## Find catkin macros and libraries
@@ -20,7 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -111,6 +111,7 @@ catkin_package(
  INCLUDE_DIRS include
  LIBRARIES battery docking
  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger roslib
+ DEPENDS Boost
  #DEPENDS system_lib
 )
 
@@ -124,6 +125,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -146,16 +148,14 @@ add_executable(energy_mgmt src/main.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-#add_dependencies(energy_mgmt adhoc_communication adhoc_communication_gencpp)
 add_dependencies(energy_mgmt map_merger map_merger_gencpp)
-#add_dependencies(energy_mgmt explorer explorer_gencpp)
-#add_dependencies(energy_mgmt energy_mgmt energy_mgmt_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(energy_mgmt
   battery
   docking
   battery_simulate
+  ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
@@ -199,10 +199,10 @@ target_link_libraries(energy_mgmt
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_docking_coordination.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+catkin_add_gtest(utest test/utest.cpp)
+#if(TARGET ${PROJECT_NAME}-test)
+#  target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+#endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
