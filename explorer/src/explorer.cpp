@@ -2359,7 +2359,7 @@ class Explorer
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
         
-        if(percentage < 80 && robot_state != stuck) {
+        if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage!!!");
         }
             
