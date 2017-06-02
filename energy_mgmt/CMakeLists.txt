@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   adhoc_communication
   explorer
   map_merger
+  roslib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,8 +110,8 @@ generate_messages(
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES battery docking
- CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger
-#  DEPENDS system_lib
+ CATKIN_DEPENDS roscpp rospy std_msgs message_runtime adhoc_communication explorer map_merger roslib
+ #DEPENDS system_lib
 )
 
 ###########

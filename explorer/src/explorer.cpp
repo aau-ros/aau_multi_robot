@@ -206,7 +206,7 @@ class Explorer
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
         nh.param<float>("auction_timeout", auction_timeout, 3);
-        nh.param<float>("checking_vacancy_timeout", checking_vacancy_timeout, 3);
+        nh.param<float>("checking_vacancy_timeout", checking_vacancy_timeout, 15);
 
         ROS_INFO("Costmap width: %d", costmap_width);
         ROS_INFO("Frontier selection is set to: %d", frontier_selection);
@@ -442,6 +442,8 @@ class Explorer
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
         
+        ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
+        
         
 
 
@@ -464,6 +466,10 @@ class Explorer
         {
             /* Update robot state */
             update_robot_state();
+            
+            std_msgs::String msg;
+            msg.data = original_log_path;
+            pub_path.publish(msg); //TODO put in better place
 
             ROS_INFO("EXPLORING");  // TODO(minor) here???
             
@@ -1491,12 +1497,12 @@ class Explorer
                     // TODO(minor) use opportune? no because if I ahve this DS in the path, it's because I need to recharge here
 
                     /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
-                    ROS_INFO("\n\t\e[1;34moccupied ds...\e[0m");
+                    ROS_INFO("occupied ds...");
                     update_robot_state_2(in_queue);
                 }
                 else
                 {
-                    //ROS_ERROR("\n\t\e[1;34m FREE!!!\e[0m");
+                    ROS_INFO("FREE!!!");
                     update_robot_state_2(going_charging);
                 }
             }
@@ -1850,6 +1856,11 @@ class Explorer
             {
                 ROS_DEBUG("prearing for going_in_queue");
                 update_robot_state_2(going_in_queue);
+            }
+            
+            else if (robot_state == checking_vacancy || robot_state == checking_vacancy)
+            {
+                ROS_INFO("the robot is going to check for vacancy / already checking for vacancy, so it will discover that the DS is occupied even thanks to the check...");
             }
             
             /* Otherwise, something strange happened */

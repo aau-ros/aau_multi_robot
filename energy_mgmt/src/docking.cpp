@@ -285,9 +285,14 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
     sub_wait = nh.subscribe("explorer/im_ready", 10, &docking::wait_for_explorer_callback, this);
     
+    sub_path = nh.subscribe("error_path", 10, &docking::path_callback, this);
+    
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
     //mygraph.print();
+    
+    original_log_path = log_path;
+    major_errors_file = original_log_path + std::string("major_errors.log");
     
 }
 
@@ -1303,7 +1308,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         return;
     }
 
-    robot_state = static_cast<state_t>(msg.get()->state);
+    robot->complex_state = static_cast<state_t>(msg.get()->state);
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -1334,8 +1339,9 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
             new_robot = false;
 
-            if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
-                msg.get()->state == moving_to_frontier)
+            robots[i].complex_state == msg.get()->complex_state;
+            if (msg.get()->complex_state == exploring || msg.get()->complex_state == fully_charged ||
+                msg.get()->complex_state == moving_to_frontier)
                 robots[i].state = active;
             else
                 robots[i].state = idle;
@@ -1353,6 +1359,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         /* Store robot information */    
         robot_t new_robot;
         new_robot.id = msg.get()->id;
+        new_robot.complex_state == msg.get()->complex_state;
         if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
             msg.get()->state == moving_to_frontier)
             new_robot.state = active;
@@ -1830,7 +1837,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
                                                                                                   // very well the
                                                                                                   // choices
 {
-    // ROS_INFO("Received request for vacancy check for "); //TODO(minor) complete
+    ROS_INFO("Received request for vacancy check for "); //TODO(minor) complete
 
     /* If the request for vacancy check is not about the target DS of the robot,
      * for sure the robot is not occupying it
@@ -1845,14 +1852,15 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         {
             /* Print some debut text */
             if (robot_state == charging || robot_state == going_charging)
-                ROS_INFO("\n\t\e[1;34mI'm using / going to use that DS!!!!\e[0m");
+                ROS_INFO("I'm using / going to use that DS!!!!");
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
-                ROS_INFO("\n\t\e[1;34mI'm approachign that DS too!!!!\e[0m");
+                ROS_INFO("I'm approachign that DS too!!!!");
             else if (robot_state == fully_charged || robot_state == leaving_ds)
-                ROS_INFO("\n\t\e[1;34mI'm leaving the DS, jsut wait a sec...\e[0m");
+                ROS_INFO("I'm leaving the DS, jsut wait a sec...");
 
             /* Reply to the robot that asked for the check, telling it that the DS is
              * occupied */
+            ROS_INFO("notify other robot that that the DS is occupied!");
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
             srv_msg.request.dst_robot = group_name;
@@ -2560,7 +2568,7 @@ void docking::send_robot()
     robot_msg.request.robot.x = robot->x;
     robot_msg.request.robot.y = robot->y;
     robot_msg.request.robot.state = robot->state;
-    robot_msg.request.robot.state = active;
+    robot_msg.request.robot.complex_state = robot->complex_state;
     if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = best_ds->id;
     else
@@ -3028,4 +3036,48 @@ bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Requ
     //compute_path(index_closest_ds_to_robot, index_closest_ds_to_robot);
     
     return true;
+}
+
+void docking::runtime_checks() {
+    for(int i=0; i<robots.size()-1; i++)
+        for(int j=i+1; j<robots.size(); j++)
+            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].complex_state == charging && robots[j].complex_state)
+                log_major_error("two robots recharging at the same DS!!!");
+}
+
+void docking::path_callback(const std_msgs::String msg) {
+    ROS_DEBUG("received path");
+    ros_package_path = msg.data;
+}
+
+void docking::log_major_error(std::string text) {
+        ROS_FATAL("%s", text.c_str());
+        ROS_INFO("%s", text.c_str());
+        
+        major_errors_file = original_log_path + std::string("major_errors_docking.log");
+        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << robot_id << ": " << text << std::endl;
+        major_errors_fstream.close();
+
+        std::stringstream robot_number;
+        robot_number << robot_id;
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_error";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_suffix(".error");
+
+//        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + robo_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate error",
+        status_file.c_str());
 }

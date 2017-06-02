@@ -30,6 +30,12 @@
 #include <stdlib.h>
 #include <dsgraph.h>
 #include <std_msgs/Int32.h>
+#include <boost/filesystem.hpp>
+#include <iostream>
+#include <ros/console.h>
+#include "ros/package.h"
+#include <std_msgs/String.h>
+
 
 #define PI 3.14159265
 
@@ -257,6 +263,7 @@ class docking
     {
         int id;
         simple_state_t state;
+        state_t complex_state;
         double x, y;
         int selected_ds;
     };
@@ -552,7 +559,7 @@ class docking
     void wait_for_explorer_callback(const std_msgs::Empty &msg);
     
     ros::Publisher pub_wait, pub_new_optimal_ds;
-    ros::Subscriber sub_wait;
+    ros::Subscriber sub_wait, sub_path;
     
     std::string group_name;
     
@@ -576,6 +583,20 @@ class docking
 	
 	bool distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res);
 	ros::ServiceServer ss_distance_robot_frontier_on_graph;
+	
+	std::string major_errors_file;
+    std::string original_log_path;
+    std::fstream major_errors_fstream;
+    
+    
+    void runtime_checks();
+    void log_major_error(std::string text);
+    void path_callback(const std_msgs::String msg);
+    
+    std::string ros_package_path;
+  
+  
+    
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
