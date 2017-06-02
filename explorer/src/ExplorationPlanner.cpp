@@ -5256,7 +5256,7 @@ void ExplorationPlanner::sort_cost_with_approach(bool energy_above_th, int w1, i
                     continue;
                 else {
                     double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
-                    ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y, dist);
+                    //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y, dist);
                     if(dist < 0) {
                         ROS_ERROR("Unable to compute distance at the moment: retrying later...");
                         recompute_ds_graph = true;
@@ -6663,7 +6663,7 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
 //}
 
 void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg) {
-    ROS_ERROR("RECEVIED!");
+    //ROS_ERROR("RECEVIED!");
     
     if(num_ds <= 0) {       
         num_ds = msg.total_number_of_ds;
@@ -6682,14 +6682,14 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
     ds.x = msg.x;
     ds.y = msg.y;
     ds.id = msg.id;
-    ROS_ERROR("%d, %f, %f", ds.id, ds.x, ds.y);
+    //ROS_ERROR("%d, %f, %f", ds.id, ds.x, ds.y);
     
     double dist = trajectory_plan_meters(0, 0, ds.x, ds.y);
-    ROS_ERROR("distance between (%d, %d) and (%.1f, %.1f): %f", 0, 0, ds.x, ds.y, dist);
+    //ROS_ERROR("distance between (%d, %d) and (%.1f, %.1f): %f", 0, 0, ds.x, ds.y, dist);
     
     for(int i=0; i < ds_list.size(); i++) {
         double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds.x, ds.y);
-        ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds.x, ds.y, dist);
+        //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds.x, ds.y, dist);
         if(dist < 0) {
             ROS_ERROR("Unable to compute distance at the moment: retrying later...");
             recompute_ds_graph = true;
