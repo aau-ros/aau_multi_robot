@@ -211,9 +211,12 @@ namespace explorationPlanner
             void trajectory_plan_10_frontiers();
             void trajectory_plan_store(double x, double y);
             int reserve_trajectory_plan(double x, double y);
-            double trajectory_plan(double x, double y);
+            int trajectory_plan(double x, double y);
+            double trajectory_plan_meters(double x, double y);
             int reserve_trajectory_plan(double start_x, double start_y, double target_x, double target_y);
-            double trajectory_plan(double start_x, double start_y, double target_x, double target_y);
+            int trajectory_plan(double start_x, double start_y, double target_x, double target_y);
+            double trajectory_plan_print(double start_x, double start_y, double target_x, double target_y);
+            double trajectory_plan_meters(double start_x, double start_y, double target_x, double target_y);
             void Callbacks();
             int checkClustersID(adhoc_communication::ExpCluster cluster_to_check);
             bool determine_goal(int strategy, std::vector<double> *final_goal, int count, int actual_cluster_id, std::vector<std::string> *robot_str_name);

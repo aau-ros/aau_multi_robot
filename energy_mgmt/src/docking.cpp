@@ -217,7 +217,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	
 	pub_robot_absolute_position = nh.advertise<adhoc_communication::EmRobot>("fake_network/robot_absolute_position", 10);
 	
-	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 10);
+	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
 	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
 
     /* Timers */
