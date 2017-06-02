@@ -1852,12 +1852,13 @@ class Explorer
             }
 
             /* If the robot was participating to an auction, prepare the robot to go in queue */
-            else if (robot_state == auctioning)
+            else if (robot_state == auctioning || robot_state == auctioning_2)
             {
                 ROS_DEBUG("prearing for going_in_queue");
                 update_robot_state_2(going_in_queue);
             }
             
+            /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
             else if (robot_state == checking_vacancy || robot_state == checking_vacancy)
             {
                 ROS_INFO("the robot is going to check for vacancy / already checking for vacancy, so it will discover that the DS is occupied even thanks to the check...");
