@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(adhoc_communication)
 
+# Flags to add symbols in core dumps and to link the boost_system library
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
+add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
