@@ -667,10 +667,6 @@ int main(int argc, char **argv)
 
     initParams(n_priv);
     initFrameTypes();
-    
-    int *p = 0;    
-    int a = *p;
-
 
     /*INIT HOSTNAME*/
 
@@ -732,9 +728,10 @@ int main(int argc, char **argv)
     
     ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000000, publish_topic);
     
-
-
-    //signal(SIGSEGV, handler); // install handler
+    signal(SIGSEGV, handler); // install handler
+    
+    //int *p = 0;    
+    //int a = *p;
 
 /*
     if (simulation_mode)
