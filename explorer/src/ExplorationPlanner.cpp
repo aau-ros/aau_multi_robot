@@ -3074,7 +3074,9 @@ void ExplorationPlanner::findFrontiers()
      
      //F
             acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-            
+    
+    ROS_INFO("%lu", allFrontiers.size());
+    
     for (unsigned int i = 0; i < allFrontiers.size(); ++i)
     {
         geometry_msgs::PoseStamped finalFrontier;
@@ -3096,8 +3098,6 @@ void ExplorationPlanner::findFrontiers()
         {
             result = true;
             
-            
-            
             for (unsigned int j = 0; j < frontiers.size(); j++)
             {
                 if (fabs(wx - frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
@@ -3109,8 +3109,7 @@ void ExplorationPlanner::findFrontiers()
             if (result == true)
             {
                 storeFrontier_without_locking(wx,wy,robot_name,robot_str,-1);
-            }
-            
+            }  
             
         }
         else if(select_frontier == 2)
@@ -6442,7 +6441,7 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
         //if((int)frontiers.size() - 1 - i >= 1)
         //    return;
             
-        for(int j = 0; j < frontiers.size()-1 && j < max_front; ++j)
+        for(int j = 0; j < frontiers.size() && j < max_front; j++)
         {
 
             //ROS_ERROR("sort2: %d", j);
@@ -6517,6 +6516,7 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
         
         robot_last_x = robot_x;
         robot_last_y = robot_y;
+        
     }
     else
     {
@@ -8774,9 +8774,10 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
                 sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
             inserted = true;
             }
+            
     if(!inserted && k < limit_search*3 - 2) //TODO do we need the -2?
         sorted_frontiers.push_back(frontier);
         
     if(sorted_frontiers.size() > limit_search*3)
-            ROS_ERROR("somethign went wrong...");
+        ROS_ERROR("somethign went wrong...");
 }
