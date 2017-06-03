@@ -1775,7 +1775,7 @@ class Explorer
             */
             //{
                 ROS_ERROR("Strange case: ideally, it should not happen...");
-                ROS_INFO("Strange case: ideally, it should not happen...");
+                ROS_INFO("Strange case: ideally, it should not happen..."); //TODO maybe it's because the robot lost another robot's auction, and the callback here in explored is bugged...
                 update_robot_state_2(leaving_ds);
             //}
         }
