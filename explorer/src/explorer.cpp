@@ -1028,10 +1028,17 @@ class Explorer
                                     ros::Duration(1).sleep();   
                                 }
                                 
-                                if(dist > available_distance * safety_coeff) 
+                                if(dist < 0) {
+                                    ROS_ERROR("unable to compute distance");
+                                    ROS_INFO("unable to compute distance");
+                                    
+                                }
+                                    
+                                
+                                else if(dist > available_distance * safety_coeff) 
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
-                                        log_major_error("ERROR WITH OPPORTUNE STRATEGY");
+                                        log_major_error("ERROR WITH DS GRAPH");
                                         update_robot_state_2(finished);
                                     }
                                     else {
@@ -1593,12 +1600,14 @@ class Explorer
                     ROS_ERROR("Robot cannot reach DS for recharging!");
                     ROS_INFO("Robot cannot reach DS for recharging!");
                     failures_going_home++; //TODO change name from *_home to *_ds
-                    if(failures_going_home >= 20) {
-                        ROS_INFO("tried too many times to reach DS... terminating exploration...");
+                    if(failures_going_home > 5) {
+                        log_major_error("tried too many times to reach DS... terminating exploration...");
                         log_stucked();
                     }
-                    else 
+                    else {
+                        ROS_ERROR("retrying to reach DS...");
                         ROS_INFO("retrying to reach DS...");
+                    }
                     
                     
                     //exit_countdown--;

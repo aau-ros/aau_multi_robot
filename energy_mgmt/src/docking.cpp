@@ -294,6 +294,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     original_log_path = log_path;
     major_errors_file = original_log_path + std::string("major_errors.log");
     
+    graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
+    
 }
 
 void docking::test() {
@@ -694,7 +696,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 }
             }
             else
-                ROS_ERROR("Already moving along path...");
+                ROS_INFO("Already moving along path...");
         }
 
         /* "Current" policy */
@@ -1270,6 +1272,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 		            start_new_auction();
 		        }
 			}
+	    } else if(graph_navigation_allowed) {
+	        compute_and_publish_path_on_ds_graph();
         } else {
             ROS_ERROR("DS graph cannot be navigated with this strategy...");
             ROS_INFO("DS graph cannot be navigated with this strategy...");
@@ -2429,6 +2433,8 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
     // print the constructed MST
     // printMST(parent, V, graph);
     //int ds_mst_2[V][V];
+    
+    //reset MST
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
             ds_mst[i][j] = 0;
@@ -3080,4 +3086,90 @@ void docking::log_major_error(std::string text) {
         outfile.close();
         ROS_INFO("Creating file %s to indicate error",
         status_file.c_str());
+}
+
+void docking::compute_and_publish_path_on_ds_graph() {
+
+    double min_dist = numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    for (int i = 0; i < ds.size(); i++)
+    {
+        for (int j = 0; j < jobs.size(); j++)
+        {
+            double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
+            if (dist < 0)
+                continue;
+
+            if (dist < conservative_maximum_distance_with_return())
+            {
+                double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                if (dist2 < 0)
+                    continue;
+
+                if (dist2 < min_dist)
+                {
+                    min_dist = dist2;
+                    min_ds = &ds.at(i);
+                }
+                
+                break;
+            }
+        }
+    }
+    if (min_ds == NULL)
+        return;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+
+    // compute closest DS
+    min_dist = numeric_limits<int>::max();
+    ds_t *closest_ds;
+    for (int i = 0; i < ds.size(); i++)
+    {
+        double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+        if (dist < 0)
+            continue;
+
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            closest_ds = &ds.at(i);
+        }
+    }
+
+
+    path.clear();
+    index_of_ds_in_path = 0;
+    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+
+    if (ds_found_with_mst)
+    {
+
+        adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                       // maybe I can
+                                                       // pass directly
+                                                       // msg_path to
+                                                       // find_path...
+        for (int i = 0; i < path.size(); i++)
+            for (int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    msg_path.positions[i].x = ds[j].x;
+                    msg_path.positions[i].y = ds[j].y;
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        
+        for (int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+                target_ds = &ds[j];
+                break;
+            }
+    }
+    else {
+        ROS_ERROR("no path found");
+        ROS_INFO("no path found");
+        
+    }
 }

@@ -42,6 +42,7 @@
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
 #define OPP_ONLY_TWO_DS false
+#define GRAPH_NAVIGATION_ALLOWED false
 
 using namespace std;
 
@@ -594,6 +595,9 @@ class docking
     void path_callback(const std_msgs::String msg);
     
     std::string ros_package_path;
+    
+    void compute_and_publish_path_on_ds_graph();
+    bool graph_navigation_allowed;
   
   
     

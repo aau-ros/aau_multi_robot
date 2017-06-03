@@ -667,6 +667,9 @@ int main(int argc, char **argv)
 
     initParams(n_priv);
     initFrameTypes();
+    
+    int *p = 0;    
+    int a = *p;
 
 
     /*INIT HOSTNAME*/
@@ -727,7 +730,7 @@ int main(int argc, char **argv)
     ros::ServiceServer ss_publish_message = b_pub.advertiseService(robot_prefix + node_prefix + "/publish_message", publishMessageFromFakeNetwork);
     //ROS_ERROR("%s", ss_publish_message.getService().c_str());
     
-    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 10000, publish_topic);
+    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000000, publish_topic);
     
 
 
