@@ -4308,8 +4308,9 @@ bool ExplorationPlanner::existFrontiers() {
 }
 
 bool ExplorationPlanner::recomputeGoal() {
-    ROS_ERROR("my_error_counter: %d", my_error_counter);
-    return ( (retrying_searching_frontiers > 0 && retrying_searching_frontiers <= 5) || (my_error_counter > 0 && my_error_counter <= 3) ) ? true : false;
+    ROS_INFO("my_error_counter: %d", my_error_counter);
+    ROS_INFO("retrying_searching_frontiers: %d", retrying_searching_frontiers);
+    return ( (retrying_searching_frontiers > 0 && retrying_searching_frontiers <= 3) || (my_error_counter > 0 && my_error_counter <= 3) ) ? true : false;
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
@@ -4711,6 +4712,13 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     if (!costmap_ros_->getRobotPose(robotPose)) 
     {
             ROS_ERROR("Failed to get RobotPose"); //TODO handle "exception"
+    }
+    
+    if(sorted_frontiers.size() == 0) {
+        my_error_counter = 0;
+        //force to conciser also frontiers under auction (if there are)
+        for(int i=0; i < frontiers_under_auction.size(); i++)
+            sorted_frontiers.push_back(frontiers_under_auction.at(i));
     }
     
     //store_frontier_mutex.lock();
