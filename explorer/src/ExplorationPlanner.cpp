@@ -2635,11 +2635,25 @@ bool ExplorationPlanner::check_efficiency_of_goal(double x, double y)
 
 bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, frontier_t * frontier)
 {
-    double distance;
-    double total_distance;
+    double distance, distance_eu;
+    double total_distance, total_distance_eu;
     double x = frontier->x_coordinate;
     double y = frontier->y_coordinate;
-
+    
+    if (!costmap_ros_->getRobotPose(robotPose))
+    {
+            ROS_ERROR("Failed to get RobotPose");
+            return false;
+    }
+    robot_x = robotPose.getOrigin().getX();
+    robot_y = robotPose.getOrigin().getY();
+    
+    //check euclidean distances
+    total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
+    total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    if(total_distance_eu > available_distance)
+        return false;
+    
     // distance to robot
     total_distance = trajectory_plan_meters(x, y);
     if(total_distance < 0){
