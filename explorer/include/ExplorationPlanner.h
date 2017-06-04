@@ -35,8 +35,8 @@ namespace explorationPlanner
                 std::string detected_by_robot_str;
                 double robot_home_x;
                 double robot_home_y;
-                double x_coordinate;
-                double y_coordinate;
+                double x_coordinate; //world coordinate
+                double y_coordinate; //world coordinate
                 int distance_to_robot;
                 int dist_to_robot;
                 float cost;
@@ -407,6 +407,11 @@ namespace explorationPlanner
             bool received_scan;
             void add_to_sorted_fontiers_list_if_convinient(frontier_t frontier);
             int auction_timeout;
+            //std::vector<frontier_t> my_unreachable_frontiers;
+            bool my_check_efficiency_of_goal(double available_distance, double x, double y);
+            bool selected_frontier;
+            void my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name);
+            int errors;
             
     };
 }
