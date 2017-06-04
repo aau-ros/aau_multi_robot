@@ -4666,6 +4666,13 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 
 bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 {
+    
+    ros::Time start_time;
+    sort_time = 0;
+    selection_time = 0;
+    number_of_frontiers = 0;
+    frontier_selected = false;
+
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
         ROS_ERROR("No frontier/cluster available");
@@ -4688,6 +4695,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     //    ROS_ERROR("INVALID APPROACH!!!");
     
     sorted_frontiers.clear();
+    
+    start_time = ros::Time::now();
     
     //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
     ROS_DEBUG("frontiers size: %lu", frontiers.size());
@@ -4720,6 +4729,9 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         for(int i=0; i < frontiers_under_auction.size(); i++)
             sorted_frontiers.push_back(frontiers_under_auction.at(i));
     }
+    
+    sort_time = (ros::Time::now() - start_time).toSec();
+    start_time = ros::Time::now();
     
     //store_frontier_mutex.lock();
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -4760,10 +4772,14 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     ROS_ERROR("Fallback to euclidean distance.");
                     ROS_INFO("Fallback to euclidean distance.");
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
-                    return this->my_determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1, energy_above_th, w1, w2, w3, w4);
+                    selection_time = (ros::Time::now() - start_time).toSec();
+                    frontier_selected=my_determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1, energy_above_th, w1, w2, w3, w4);
+                    return frontier_selected;
                 }
                 ROS_ERROR("None of the %d checked frontiers is reachable! This shouldn't happen...", limit_search);
                 release_mutex(&store_frontier_mutex, __FUNCTION__);
+                frontier_selected=false;
+                selection_time = (ros::Time::now() - start_time).toSec();
                 return false;
             }
          
@@ -4824,6 +4840,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 else{
                     ROS_ERROR("Wrong strategy, cannot compute distance to goal!");
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
+                    frontier_selected=false;
+                    selection_time = (ros::Time::now() - start_time).toSec();
                     return false;
                 }
 
@@ -4898,6 +4916,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     my_error_counter = 0;
                     //ROS_INFO("final_goal size before return: %lu", final_goal->size());
+                    frontier_selected=true;
+                    selection_time = (ros::Time::now() - start_time).toSec();
                     return true;
                     
                 } else{
@@ -4906,6 +4926,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     , dist_home);
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     my_error_counter++;
+                    frontier_selected=false;
+                    selection_time = (ros::Time::now() - start_time).toSec();
                     return false;
                 }
             }
@@ -4983,6 +5005,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     else{
                         ROS_ERROR("Wrong strategy, cannot compute distance to goal!");
                         release_mutex(&store_frontier_mutex, __FUNCTION__);
+                        frontier_selected=false;
+                        selection_time = (ros::Time::now() - start_time).toSec();
                         return false;
                     }
 
@@ -5001,6 +5025,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                         final_goal->push_back(clusters.at(i).id);
                         robot_str_name->push_back(clusters.at(i).cluster_element.at(j).detected_by_robot_str);
                         release_mutex(&store_frontier_mutex, __FUNCTION__);
+                        frontier_selected=true;
+                        selection_time = (ros::Time::now() - start_time).toSec();
                         return true;
                     }
                 }
@@ -5020,13 +5046,17 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
             {
                 ROS_ERROR("No frontier in energetic range %.2f, going home for recharging", available_distance);
                 release_mutex(&store_frontier_mutex, __FUNCTION__);
+                frontier_selected=false;
+                selection_time = (ros::Time::now() - start_time).toSec();
                 return false;
             }
         }
     }
     
     //F //probably useless here...
-    release_mutex(&store_frontier_mutex, __FUNCTION__); 
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
+    frontier_selected=false;
+    selection_time = (ros::Time::now() - start_time).toSec();
     return false;
 
 }

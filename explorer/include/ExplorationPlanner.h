@@ -290,7 +290,6 @@ namespace explorationPlanner
             void my_replyToNegotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
             void my_negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
             bool my_sendToMulticast(std::string multi_cast_group, adhoc_communication::ExpFrontier frontier_list, std::string topic);
-            
             std::string robot_name_str;
             double w1,w2,w3,w4;
             std::vector<frontier_t> frontiers_under_auction;
@@ -310,6 +309,9 @@ namespace explorationPlanner
             ros::Subscriber sub_new_ds_on_graph;
             float new_target_ds(float new_target_ds_x, float new_target_ds_y);
             void set_auction_timeout(int timeout);
+            float sort_time, selection_time;
+            unsigned int number_of_frontiers;
+            bool frontier_selected;
 
         private:
             bool auction_running;

@@ -283,10 +283,15 @@ class Explorer
         log_file = log_path + std::string("exploration.log");
         exploration_start_end_log = log_path + std::string("exploration_start_end.log");
         major_errors_file = original_log_path + std::string("major_errors.log");
+        computation_time_log =  log_path + std::string("computation_times.log");
          
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv_state << "#time,robot_state" << std::endl;
         fs_csv_state.close();
+        
+        fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        fs_computation_time << "#success,number_of_frontiers,sort_time,selection_time" << std::endl;
+        fs_computation_time.close();
 
 
         ROS_INFO("*********************************************");
@@ -1126,6 +1131,10 @@ class Explorer
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
                         fs_exp_se_log.close();
+                        
+                        fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
+                        fs_computation_time.close();
                         
                         ros::Duration d = ros::Time::now() - time_2;
                         if(d > ros::Duration(5 * 60)) {
@@ -3475,9 +3484,9 @@ class Explorer
     const unsigned char *occupancy_grid_global;
     const unsigned char *occupancy_grid_local;
 
-    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log, major_errors_file, lock_file;
+    std::string csv_file, csv_state_file, log_file, exploration_start_end_log, revocery_log, major_errors_file, lock_file, computation_time_log;
     std::string log_path, original_log_path;
-    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log, major_errors_fstream, lock_fstream;
+    std::fstream fs_csv, fs_csv_state, fs, fs_exp_se_log, major_errors_fstream, lock_fstream, fs_computation_time;
 
     int number_of_recharges = 0;
 
