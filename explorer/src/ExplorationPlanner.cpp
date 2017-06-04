@@ -6218,19 +6218,19 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
 
             // calculate d_g
             //int d_g = trajectory_plan(frontier_x, frontier_y);
-            int d_g = euclidean_distance(robot_x, robot_y, frontier_x, frontier_y);
+            double d_g = frontier.my_distance_to_robot;
 
             // calculate d_gb
             //int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
-            int d_gb;
+            double d_gb;
             //if(target_ds_set)
             //    d_gb = euclidean_distance(frontier_x, frontier_y, target_ds_x, target_ds_y);
             //else
             //    d_gb = euclidean_distance(frontier_x, frontier_y, robot_home_x, robot_home_y);
-            d_gb = euclidean_distance(frontier_x, frontier_y, optimal_ds_x, optimal_ds_y);
+            d_gb = frontier.my_distance_to_optimal_ds;
 
             // calculate d_gbe
-            int d_gbe;
+            double d_gbe;
             if(energy_above_th)
             {
                 d_gbe = -d_gb;
