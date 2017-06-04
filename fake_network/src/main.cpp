@@ -17,9 +17,11 @@ std::vector<ros::Publisher> pub_publish_message_list;
 std::vector<ros::ServiceClient> sc_robot_position_list;
 std::vector<ros::Subscriber> sub_robot_position_list;
 std::vector<ros::ServiceServer> ss_robot_position_list;
+std::vector<ros::Subscriber> sub_finished_exploration_list;
 struct robot_t {
     float x;
     float y;
+    bool finished;
 };
 std::vector<robot_t> robot_list;
 std::vector<bool> reachability_list;
@@ -85,6 +87,9 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
             continue;
         }
         
+        if(robot_list[i].finished)
+            continue;
+        
         //if(req.topic == "map_other")
         //    ROS_ERROR("publishing map from robot %s to robot robot_%d", req.source_robot.c_str(), i);
     
@@ -126,6 +131,11 @@ void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
     //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
 }
 
+void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
+    ROS_INFO("robot_%d has finished exploring", msg.id);
+    robot_list[msg.id].finished = true;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -145,10 +155,12 @@ int main(int argc, char** argv)
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 1000000));
         sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
         sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
+        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;
         robot.x = 0;    //TODO not very good...
         robot.y = 0;
+        robot.finished = false;
         robot_list.push_back(robot);
         reachability_list.push_back(false);
     }

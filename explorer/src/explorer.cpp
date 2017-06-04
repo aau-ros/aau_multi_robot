@@ -78,7 +78,7 @@ class Explorer
     // TODO(minor) move in better place
     bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
-    ros::Publisher pub_robot, pub_wait, pub_finished_exploration;
+    ros::Publisher pub_robot, pub_wait, pub_finished_exploration, pub_finished_exploration_id;
     ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
@@ -185,6 +185,7 @@ class Explorer
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
         
         pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
+        pub_finished_exploration_id = nh2.advertise<adhoc_communication::EmRobot>("finished_exploration_id", 10);
 
         ros::NodeHandle n;
         //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -2383,7 +2384,10 @@ class Explorer
         if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage!!!");
         }
-            
+        
+        adhoc_communication::EmRobot msg;
+        msg.id = robot_id;
+        pub_finished_exploration_id.publish(msg);
         
     }
 
