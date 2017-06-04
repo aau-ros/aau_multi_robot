@@ -639,8 +639,8 @@ void publish_topic(const fake_network::NetworkMessage network_msg) {
 }
 
 void finished_exploration_callback(const std_msgs::Empty msg) {
-    //ROS_INFO("finalize");
-    //finished_exploration = true;
+    ROS_INFO("finalize");
+    finished_exploration = true;
 }
 
 int main(int argc, char **argv)
@@ -731,7 +731,7 @@ int main(int argc, char **argv)
     ros::ServiceServer ss_publish_message = b_pub.advertiseService(robot_prefix + node_prefix + "/publish_message", publishMessageFromFakeNetwork);
     //ROS_ERROR("%s", ss_publish_message.getService().c_str());
     
-    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000000, publish_topic);
+    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000, publish_topic);
     
     signal(SIGSEGV, handler); // install handler
     
