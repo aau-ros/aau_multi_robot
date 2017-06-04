@@ -397,6 +397,7 @@ class Explorer
         enum_string.push_back("leaving_ds");
         enum_string.push_back("dead");
         enum_string.push_back("moving_away_from_ds");
+
     }
 
     void explore()  // TODO(minor) comments
@@ -2388,6 +2389,11 @@ class Explorer
         adhoc_communication::EmRobot msg;
         msg.id = robot_id;
         pub_finished_exploration_id.publish(msg);
+        
+        std_msgs::Empty msg2;
+        pub_finished_exploration.publish(msg2);
+        
+        exploration_finished = true;
         
     }
 
