@@ -55,7 +55,7 @@
 
 #include "header.h"
 
-
+bool finished_exploration;
 
 void shutDown()
 {
@@ -638,6 +638,10 @@ void publish_topic(const fake_network::NetworkMessage network_msg) {
     }    
 }
 
+void finished_exploration_callback(const std_msgs::Empty msg) {
+    finished_exploration = true;
+}
+
 int main(int argc, char **argv)
 {
     /* Description:
@@ -782,10 +786,20 @@ int main(int argc, char **argv)
     */
 
     // testPacket();
+    
+    ros::NodeHandle nh;
+    ros::Subscriber sub_wait = nh.subscribe("finished_exploration", 10, finished_exploration_callback);
+    
+    finished_exploration = false;
 
-    while (ros::ok())
+    while (ros::ok() && !finished_exploration)
     {
         ros::spinOnce();
+    }
+    
+    while (ros::ok())
+    {
+        ros::Duration(10).sleep();
     }
 
 

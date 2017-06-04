@@ -184,7 +184,7 @@ class Explorer
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
         
-        pub_finished_exploration = nh.advertise<std_msgs::Empty>("finished_exploration", 10);
+        pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
 
         ros::NodeHandle n;
         //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
