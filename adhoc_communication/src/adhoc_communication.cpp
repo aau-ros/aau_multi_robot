@@ -639,7 +639,8 @@ void publish_topic(const fake_network::NetworkMessage network_msg) {
 }
 
 void finished_exploration_callback(const std_msgs::Empty msg) {
-    finished_exploration = true;
+    //ROS_INFO("finalize");
+    //finished_exploration = true;
 }
 
 int main(int argc, char **argv)
