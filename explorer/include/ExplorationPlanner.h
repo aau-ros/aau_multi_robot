@@ -39,6 +39,8 @@ namespace explorationPlanner
                 double y_coordinate; //world coordinate
                 int distance_to_robot;
                 int dist_to_robot;
+                double my_distance_to_robot;
+                double my_distance_to_optimal_ds;
                 float cost;
                 int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
             } frontier, unreachable_frontier;
@@ -408,7 +410,7 @@ namespace explorationPlanner
             void add_to_sorted_fontiers_list_if_convinient(frontier_t frontier);
             int auction_timeout;
             //std::vector<frontier_t> my_unreachable_frontiers;
-            bool my_check_efficiency_of_goal(double available_distance, double x, double y);
+            bool my_check_efficiency_of_goal(double available_distance, frontier_t * frontier);
             bool selected_frontier;
             void my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name);
             int errors;

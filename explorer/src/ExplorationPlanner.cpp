@@ -2633,12 +2633,14 @@ bool ExplorationPlanner::check_efficiency_of_goal(double x, double y)
     }
 }
 
-bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, double x, double y)
+bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, frontier_t * frontier)
 {
     double distance;
     double total_distance;
+    double x = frontier->x_coordinate;
+    double y = frontier->y_coordinate;
 
-    // distance to next frontier
+    // distance to robot
     total_distance = trajectory_plan_meters(x, y);
     if(total_distance < 0){
         ROS_ERROR("Failed to compute distance!");
@@ -2648,6 +2650,8 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         errors++;
         return false;
     }
+    frontier->my_distance_to_robot = total_distance;
+    
     // distance from frontier to optimal ds
     distance = trajectory_plan_meters(x, y, optimal_ds_x, optimal_ds_y);
     if(distance < 0){
@@ -2658,6 +2662,8 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         errors++;
         return false;
     }
+    frontier->my_distance_to_optimal_ds = distance;
+    
     total_distance += distance;
 
     ROS_INFO("Distance to frontier and then home: %.2f",total_distance);
@@ -6184,7 +6190,7 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
         for(int j = 0; j < frontiers.size(); j++)
         {
         
-            if(!my_check_efficiency_of_goal(available_distance, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate))
+            if(!my_check_efficiency_of_goal(available_distance, &frontiers.at(j)))
                 continue;
                 
             bool under_auction = false;
