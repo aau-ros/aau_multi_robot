@@ -1047,7 +1047,7 @@ class Explorer
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
                                         log_major_error("ERROR WITH DS GRAPH");
-                                        update_robot_state_2(finished);
+                                        finalize_exploration();
                                     }
                                     else {
                                         ROS_ERROR("Cannot reach next DS on the path: reauction for current one");
