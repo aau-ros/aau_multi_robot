@@ -466,6 +466,7 @@ class Explorer
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
         {
+        
             /* Update robot state */
             update_robot_state();
             

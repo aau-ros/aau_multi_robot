@@ -38,6 +38,7 @@
 #include "visualization_msgs/MarkerArray.h"
 
 #include <std_msgs/Int32.h>
+#include <std_msgs/Empty.h>
 
 
 enum MapMergerLog{
@@ -172,6 +173,9 @@ private:
     bool turning;
     ros::Publisher pub_discovered_free_cells_count;
     bool simpleTransformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res);
+    bool finished_exploration;
+    void finished_exploration_callback(const std_msgs::Empty msg);
+    ros::Subscriber sub_finished_exploration;
 };
 
 #endif // MAPMERGER_H

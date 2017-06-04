@@ -7,8 +7,6 @@
 #include "adhoc_communication/MmPoint.h"
 #include <ros/console.h>
 
-
-
 //#define DEA_OPT_MAP_CHANGED
 //#define DEA_OPT_PARTIAL_MERGE
 //#define DEBUG
@@ -23,6 +21,7 @@ MapMerger::MapMerger()
     pos_pub_other = new std::vector<ros::Publisher>();
     pos_array_other = new std::vector<visualization_msgs::MarkerArray>();
     pos_seq_other = new std::vector<int>();
+    finished_exploration = false;
 
     global_map = NULL;
     local_map = NULL;
@@ -171,8 +170,8 @@ void MapMerger::waitForRobotInformation()
             (robot_prefix+"/adhoc_communication/get_neighbors");
     adhoc_communication::GetNeighbors getNeighbors;
     ros::Duration(0.1).sleep();
-    ros::AsyncSpinner spinner(10);
-    spinner.start();
+    //ros::AsyncSpinner spinner(10);
+    //spinner.start();
     ros::Duration(3).sleep();
     if(getNeighborsClient.call(getNeighbors))
     {
@@ -1300,13 +1299,28 @@ void MapMerger::start()
         ros::spinOnce();
         ROS_INFO("Local_Map size = 0");
     }
+    
+    ros::NodeHandle nh;
+    sub_finished_exploration = nh.subscribe("finished_exploration", 10, &MapMerger::finished_exploration_callback, this);
+    
     ros::Duration(0.1).sleep();
     ros::AsyncSpinner spinner(10);
     spinner.start();
     ros::Duration(1).sleep();
     ask_other_timer = nodeHandle->createTimer(ros::Duration(5),&MapMerger::callback_ask_other_robots,this);
+    
+    while(!finished_exploration)
+        ros::Duration(10).sleep();
+        
+    ROS_INFO("Stopping map_merger");
+    spinner.stop();
 
     ros::waitForShutdown();
+}
+
+void MapMerger::finished_exploration_callback(const std_msgs::Empty msg) {
+    ROS_INFO("received finished_exploration message");
+    finished_exploration = true;
 }
 
 void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int min_y, int max_x, int max_y)
