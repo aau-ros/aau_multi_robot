@@ -472,8 +472,8 @@ class Explorer
         while (!exploration_finished)
         {
         
-            finalize_exploration();
-            continue;
+//            finalize_exploration();
+//            continue;
         
             /* Update robot state */
             update_robot_state();
