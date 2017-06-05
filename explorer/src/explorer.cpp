@@ -537,14 +537,14 @@ class Explorer
             //ROS_ERROR("planner initialized");
             
             ros::Time time = ros::Time::now();
-            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-            fs_exp_se_log.close();
+            //fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            //fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+            //fs_exp_se_log.close();
             
             exploration->findFrontiers();
             
             fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << ros::Time::now() - time << ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
+            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
             fs_exp_se_log.close();
 
             exploration->clearVisitedFrontiers();
@@ -1082,27 +1082,27 @@ class Explorer
                          * efficiency */
                         ROS_INFO("SORTING FRONTIERS...");
                         
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
+//                        fs_exp_se_log.close();
                         
                         exploration->sort(2);
                         //exploration->sort(3);
                         //exploration->clusterFrontiers();
                         //exploration->sort(4);
                         
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
+//                        fs_exp_se_log.close();
                         
                         //exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
                         
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
+//                        fs_exp_se_log.close();
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
@@ -1131,9 +1131,9 @@ class Explorer
                         pub_cmd_vel.publish(cmd_vel);
                         */
                         
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
+//                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
@@ -1150,9 +1150,9 @@ class Explorer
                             ros::Duration(5).sleep();
                         }
                         
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << std::endl;
+//                        fs_exp_se_log.close();
 
                         /* Check if the robot has found a reachable frontier */
                         if (goal_determined == true)
@@ -1424,9 +1424,9 @@ class Explorer
                                   "(%.2f,%.2f) as unreachable",
                                   final_goal.at(0), final_goal.at(1));
                         navigate_to_goal = false;  // navigate(final_goal);
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
-                        fs_exp_se_log.close();
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
+//                        fs_exp_se_log.close();
                     }
                 }
                 else

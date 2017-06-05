@@ -3144,7 +3144,7 @@ void ExplorationPlanner::findFrontiers()
         costmap_ros_->getCostmap()->indexToCells(allFrontiers.at(i), mx, my);
         costmap_ros_->getCostmap()->mapToWorld(mx, my, wx, wy);
 
-        // ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
+        //ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
 
         /*
          * Check neighboring frontiers and only remember them if they are further
@@ -4734,6 +4734,8 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 {
     
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    
     ros::Time start_time;
     selection_time = 0;
     number_of_frontiers = 0;
@@ -4789,13 +4791,25 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
             }
 
             ROS_INFO("frontier selected");
+            
+            final_goal->push_back(my_selected_frontier->x_coordinate);
+            final_goal->push_back(my_selected_frontier->y_coordinate);
+            ROS_ERROR("selected goal: %.2f, %.2f", my_selected_frontier->x_coordinate, my_selected_frontier->y_coordinate);
+            final_goal->push_back(my_selected_frontier->detected_by_robot);
+            final_goal->push_back(my_selected_frontier->id);
+            
+            robot_str_name->push_back(robot_name_str); 
+            
             frontiers_under_auction.clear();
             my_error_counter = 0;
             errors = 0;
+            
+            release_mutex(&store_frontier_mutex, __FUNCTION__);
             return true;
         }
 
     frontier_selected = false;
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
     return false;
 
 }
@@ -6166,14 +6180,13 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
     robot_last_x = robot_x;
     robot_last_y = robot_y;
     
-    release_mutex(&store_frontier_mutex, __FUNCTION__);
     ROS_INFO("finished my_sort_cost_2");
   
 }
 
 void ExplorationPlanner::my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name)
 {
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    
     
     tf::Stamped < tf::Pose > robotPose;
     if(!costmap_ros_->getRobotPose(robotPose))
@@ -6298,14 +6311,16 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
         
         final_goal->push_back(my_selected_frontier->x_coordinate);
         final_goal->push_back(my_selected_frontier->y_coordinate);
+        ROS_ERROR("%.2f, %.2f", my_selected_frontier->x_coordinate, my_selected_frontier->y_coordinate);
         final_goal->push_back(my_selected_frontier->detected_by_robot);
         final_goal->push_back(my_selected_frontier->id);
         
-        robot_str_name->push_back(my_selected_frontier->detected_by_robot_str); 
+        robot_str_name->push_back(robot_name_str);  //TODO ???
     
     }
+    
     release_mutex(&store_frontier_mutex, __FUNCTION__);
-    ROS_INFO("finished my_sort_cost_4");
+    ROS_INFO("finished my_select_4");
   
 }
 
