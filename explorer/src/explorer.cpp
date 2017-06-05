@@ -1098,7 +1098,7 @@ class Explorer
                         //exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
-                        ROS_ERROR("DETERMINE GOAL...");
+                        ROS_INFO("DETERMINE GOAL...");
                         
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
@@ -1116,7 +1116,7 @@ class Explorer
                             //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
                             goal_determined = exploration->my2_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                         
-                        ROS_ERROR("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
+                        ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
                         /*
                         geometry_msgs::Twist cmd_vel;
