@@ -1138,25 +1138,12 @@ class Explorer
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
-                        /*
-                        geometry_msgs::Twist cmd_vel;
-                        cmd_vel.linear.x = 0.0;
-                        cmd_vel.linear.y = 0.0;
-                        cmd_vel.linear.z = 0.0;
-                        cmd_vel.angular.x = 0.0;
-                        cmd_vel.angular.y = 0.0;
-                        cmd_vel.angular.z = 0.5;
-                        ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-                        ROS_ERROR("%s",  pub_cmd_vel.getTopic().c_str());
-                        pub_cmd_vel.publish(cmd_vel);
-                        */
-                        
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
 //                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << "my_determine_goal" << std::endl;
+                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << "my2_determine_goal" << std::endl;
                         fs_computation_time.close();
                         
                         ros::Duration d = ros::Time::now() - time_2;
