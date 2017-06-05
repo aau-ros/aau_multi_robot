@@ -472,6 +472,9 @@ class Explorer
         while (!exploration_finished)
         {
         
+            finalize_exploration();
+            continue;
+        
             /* Update robot state */
             update_robot_state();
             
@@ -2282,6 +2285,11 @@ class Explorer
 
     void finalize_exploration()
     {
+        // Indicte end of simulation for this robot
+        // When the multi_robot_simulation/multiple_exploration_runs.sh script is
+        // run, this kills all processes and starts a new run
+        this->indicateSimulationEnd();
+    
         // finished exploration
         update_robot_state_2(finished);
 
@@ -2306,12 +2314,7 @@ class Explorer
             }
         }
 
-        // Indicte end of simulation for this robot
-        // When the multi_robot_simulation/multiple_exploration_runs.sh script is
-        // run, this kills all processes and starts a new run
-        this->indicateSimulationEnd();
-
-        ROS_INFO("Shutting down...");
+        //ROS_INFO("Shutting down...");
         //ros::shutdown();
     }
 
@@ -2369,7 +2372,6 @@ class Explorer
     void indicateSimulationEnd()
     {
         /// FIXME: remove this stuff once ported to multicast
-
         
         std::stringstream robot_number;
         robot_number << robot_id;
@@ -2389,10 +2391,14 @@ class Explorer
         if(!boost::filesystem::exists(boost_status_path))
             if(!boost::filesystem::create_directories(boost_status_path))
                 ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        
+        ROS_INFO("Creating file %s to indicate end of exploration.", status_file.c_str());
         std::ofstream outfile(status_file.c_str());
         outfile.close();
-        ROS_INFO("Creating file %s to indicate end of exploration.",
-        status_file.c_str());
+        if(!boost::filesystem::exists(status_file)) {
+            log_major_error("cannot create status file!!!");
+            exit(-1);   
+        }
         
         if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage!!!");
@@ -3140,13 +3146,15 @@ class Explorer
     void abort() {
         ROS_ERROR("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
+        log_major_error("robot is dead!!!");
         update_robot_state_2(dead);
         this->indicateSimulationEnd();
     }
     
     void log_stucked() {
+    
+        this->indicateSimulationEnd();
         update_robot_state_2(stuck);
-        
         
         std::stringstream robot_number;
         robot_number << robot_id;
@@ -3171,7 +3179,6 @@ class Explorer
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
         
-        this->indicateSimulationEnd();
     }
 
     bool robot_pose_callback(fake_network::RobotPosition::Request &req, fake_network::RobotPosition::Response &res)

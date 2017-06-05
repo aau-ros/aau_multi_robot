@@ -26,6 +26,7 @@ struct robot_t {
 std::vector<robot_t> robot_list;
 std::vector<bool> reachability_list;
 int num_robots;
+ros::Timer timer;
 
 double euclidean_distance(double x1, double y1, double x2, double y2) {
     return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) ) * RESOLUTION; //TODO bad...
@@ -131,9 +132,19 @@ void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
     //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
 }
 
+
+
 void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
     ROS_INFO("robot_%d has finished exploring", msg.id);
     robot_list[msg.id].finished = true;
+    
+    bool all_finished = true;
+    for(int i=0; i<robot_list.size(); i++)
+        if(!robot_list[i].finished)
+            all_finished = false;
+            
+    if(all_finished)
+        
 }
 
 
