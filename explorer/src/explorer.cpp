@@ -290,7 +290,7 @@ class Explorer
         fs_csv_state.close();
         
         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_computation_time << "#success,number_of_frontiers,sort_time,selection_time" << std::endl;
+        fs_computation_time << "#success,number_of_frontiers,sort_time,selection_time,selection_strategy" << std::endl;
         fs_computation_time.close();
 
 
@@ -1136,7 +1136,7 @@ class Explorer
 //                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
+                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << "my_determine_goal" << std::endl;
                         fs_computation_time.close();
                         
                         ros::Duration d = ros::Time::now() - time_2;
@@ -1213,6 +1213,9 @@ class Explorer
                                 ros::Duration(3).sleep();
                                 continue;
                             }
+                            
+                            else if(!exploration->existFrontiers())
+                                finalize_exploration();    
                                 
                             else if (robot_state == fully_charged)
                             {
