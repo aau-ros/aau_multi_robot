@@ -9111,3 +9111,10 @@ void ExplorationPlanner::my_sort_cost_4(bool energy_above_th, int w1, int w2, in
     ROS_INFO("finished my_sort_cost_4");
   
 }
+
+bool ExplorationPlanner::home_is_reachable(double available_distance) {
+    double dist = distance_from_robot(robot_home_x, robot_home_y);
+    if(dist < 0)
+        return false;
+    return available_distance > dist; //TODO safety coefficient
+}

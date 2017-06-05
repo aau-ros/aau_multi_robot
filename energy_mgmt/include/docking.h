@@ -249,7 +249,8 @@ class docking
                              // reached, and it is moving toward it
         leaving_ds,          // the robot was recharging, but another robot stopped
         dead,
-        moving_away_from_ds
+        moving_away_from_ds,
+        auctioning_3
     };
 
     state_t robot_state;
@@ -597,6 +598,7 @@ class docking
     std::string ros_package_path;
     
     void compute_and_publish_path_on_ds_graph();
+    void compute_and_publish_path_on_ds_graph_to_home();
     bool graph_navigation_allowed;
   
   

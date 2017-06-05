@@ -95,6 +95,7 @@ class Explorer
     float percentage;
     int failures_going_home;
     int approximate_success;
+    bool going_home, checked_percentage;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -151,6 +152,7 @@ class Explorer
         free_cells_count = 0;
         failures_going_home = 0;
         approximate_success = 0;
+        going_home = false, checked_percentage = false;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -402,6 +404,7 @@ class Explorer
         enum_string.push_back("leaving_ds");
         enum_string.push_back("dead");
         enum_string.push_back("moving_away_from_ds");
+        enum_string.push_back("auctioning_3");
 
     }
 
@@ -471,9 +474,6 @@ class Explorer
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
         {
-        
-//            finalize_exploration();
-//            continue;
         
             /* Update robot state */
             update_robot_state();
@@ -1070,6 +1070,26 @@ class Explorer
                                 moving_along_path = false;
                                 std_msgs::Empty msg;
                                 pub_next_ds.publish(msg);
+                                
+                                if(going_home) {
+                                    visualize_goal_point(home_point_x, home_point_y);
+
+                                    bool completed_navigation = false;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (completed_navigation == false)
+                                        {
+                                            counter++;
+                                            completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    
+                                    finalize_exploration();
+                                }
                             } 
                     
                         continue;
@@ -1214,8 +1234,30 @@ class Explorer
                                 continue;
                             }
                             
-                            else if(!exploration->existFrontiers())
-                                finalize_exploration();    
+                            else if(!exploration->existFrontiers()) {
+                                if(exploration->home_is_reachable(available_distance)) {
+                                    bool completed_navigation = false;
+                                    for (int i = 0; i < 5; i++)
+                                    {
+                                        if (completed_navigation == false)
+                                        {
+                                            counter++;
+                                            completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    finalize_exploration();
+                                }
+                                else {
+                                    finalize_exploration();
+//                                    going_home = true;
+//                                    update_robot_state_2(auctioning_3);
+                                    continue;
+                                }
+                            }
                                 
                             else if (robot_state == fully_charged)
                             {
@@ -1246,8 +1288,27 @@ class Explorer
                                     // exit_countdown--;
                                     // ROS_ERROR("Shutdown in: %d", exit_countdown);
                                     // if (exit_countdown <= 0)
-                                    finalize_exploration();
-                                    // continue;                                    
+                                    if(!exploration->home_is_reachable(available_distance)) {
+                                        bool completed_navigation = false;
+                                        for (int i = 0; i < 5; i++)
+                                        {
+                                            if (completed_navigation == false)
+                                            {
+                                                counter++;
+                                                completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                                            }
+                                            else
+                                            {
+                                                break;
+                                            }
+                                        }
+                                        finalize_exploration();
+                                    } else {
+                                        finalize_exploration();
+//                                        going_home = true;
+//                                        update_robot_state_2(auctioning_3);   
+                                        continue;                                    
+                                    }
                                 }                                
                             }
 
@@ -1263,7 +1324,27 @@ class Explorer
                                          }
                                      else {
                                         ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
-                                        finalize_exploration();
+                                        if(!exploration->home_is_reachable(available_distance)) {
+                                            bool completed_navigation = false;
+                                            for (int i = 0; i < 5; i++)
+                                            {
+                                                if (completed_navigation == false)
+                                                {
+                                                    counter++;
+                                                    completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                                                }
+                                                else
+                                                {
+                                                    break;
+                                                }
+                                            }
+                                            finalize_exploration();
+                                        } else {
+                                            finalize_exploration();
+//                                            going_home = true;
+//                                            update_robot_state_2(auctioning_3);   
+                                            continue;                                    
+                                        }
                                      }
 //                                    } else {
 //                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
@@ -1440,33 +1521,33 @@ class Explorer
             }
 
             // TODO(minor) hmm... here??
-            if (robot_state == auctioning || robot_state == auctioning_2 )
+            if (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 )
             {
-                double distance = -1;
-                int i = 0;
-                while(distance < 0 && i < 10) {
-                    exploration->distance_from_robot(target_ds_x, target_ds_y);
-                    i++;
-                    ros::Duration(2).sleep();
-                }
-                if(distance < 0)
-                    ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
-                else
-                    if (distance <
-                            min_distance_queue_ds)  // TODO could the DS change meanwhile???
-                            {
-                                ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");
-                                ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
-                                update_robot_state_2(moving_away_from_ds);
-                                fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                                fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
-                                fs_csv_state.close();
-                                move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
-                                ROS_INFO("NOW it is ok...");
-                            }
+//                double distance = -1;
+//                int i = 0;
+//                while(distance < 0 && i < 10) {
+//                    exploration->distance_from_robot(target_ds_x, target_ds_y);
+//                    i++;
+//                    ros::Duration(2).sleep();
+//                }
+//                if(distance < 0)
+//                    ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
+//                else
+//                    if (distance <
+//                            min_distance_queue_ds)  // TODO could the DS change meanwhile???
+//                            {
+//                                ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");
+//                                ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
+//                                update_robot_state_2(moving_away_from_ds);
+//                                fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                                fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
+//                                fs_csv_state.close();
+//                                move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
+//                                ROS_INFO("NOW it is ok...");
+//                            }
                 
                 int auctioning_counter = 0;
-                while ( (robot_state == auctioning || robot_state == auctioning_2) && auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
+                while ( (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 ) && auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
@@ -1685,7 +1766,7 @@ class Explorer
         robot_state = static_cast<state_t>(new_state);
         pub_robot.publish(msg);
 
-        if (robot_state == auctioning || robot_state == auctioning_2) {
+        if (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3) {
             need_to_recharge = true;
             ROS_INFO("setting need_to_recharge to true");   
         }
@@ -1707,7 +1788,7 @@ class Explorer
         fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
         fs_csv_state.close();
         
-        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2) )
+        if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || robot_state == auctioning_3) )
             log_major_error("stucked after auction!!!");
         if(robot_state == stuck &&  previous_state == going_charging)
             log_major_error("stuck when going_charging!!!");
@@ -1729,15 +1810,17 @@ class Explorer
         // TODO(minor) do we need the spin?
         ros::spinOnce();
      
-        if(percentage >= 100 && robot_state_next != finished_next && robot_state != finished) {
+        if(percentage >= 100 && !checked_percentage && robot_state_next != finished_next && robot_state != finished) {
             if(percentage > 100)
-                ROS_ERROR("Strange value...");
-            ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
-            robot_state_next = finished_next;
+                log_major_error("Strange value...");
+            //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
+            //robot_state_next = finished_next;
+            checked_percentage = true;
         }
         
         if(robot_state_next == finished_next) {
             ROS_INFO("Have to finish...");
+            //robot_state == auctioning_3;
             finalize_exploration();
         }
         
@@ -1881,7 +1964,7 @@ class Explorer
             }
 
             /* If the robot was participating to an auction, prepare the robot to go in queue */
-            else if (robot_state == auctioning || robot_state == auctioning_2)
+            else if (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3)
             {
                 ROS_DEBUG("prearing for going_in_queue");
                 update_robot_state_2(going_in_queue);
@@ -2298,24 +2381,6 @@ class Explorer
 
         // finish log files
         exploration_has_finished();
-
-        // TODO(minor) hmm...
-
-        visualize_goal_point(home_point_x, home_point_y);
-
-        bool completed_navigation = false;
-        for (int i = 0; i < 5; i++)
-        {
-            if (completed_navigation == false)
-            {
-                counter++;
-                completed_navigation = move_robot(counter, home_point_x, home_point_y);
-            }
-            else
-            {
-                break;
-            }
-        }
 
         //ROS_INFO("Shutting down...");
         //ros::shutdown();
@@ -3101,7 +3166,7 @@ class Explorer
 
     void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
     {
-        ROS_INFO("MOVING!!!!!!!!!!!!");
+        ROS_INFO("Moving along path");
         moving_along_path = true;
         ds_path_counter = 0;
         
@@ -3541,7 +3606,8 @@ class Explorer
                                                    // reached, and it is moving toward it
         leaving_ds,                                // the robot was recharging, but another robot stopped
         dead,
-        moving_away_from_ds
+        moving_away_from_ds,
+        auctioning_3
     };
     state_t robot_state, previous_state;
 

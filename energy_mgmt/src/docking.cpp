@@ -1274,6 +1274,44 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 			}
 	    } else if(graph_navigation_allowed) {
 	        compute_and_publish_path_on_ds_graph();
+            if(finished_bool) {
+                ROS_ERROR("No more frontiers..."); //TODO(minor) probably this checks are reduntant with the ones of explorer
+                std_msgs::Empty msg;
+                pub_finish.publish(msg);
+            } else {
+                ROS_INFO("Robot needs to recharge");
+                need_to_charge = true;
+                if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
+                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                {
+                    ros::Duration(10).sleep();
+                    start_new_auction();
+                }
+            }
+        } else {
+            ROS_ERROR("DS graph cannot be navigated with this strategy...");
+            ROS_INFO("DS graph cannot be navigated with this strategy...");
+            std_msgs::Empty msg;
+            pub_finish.publish(msg);
+        }   
+    }
+    else if (msg.get()->state == auctioning_3) {
+        if(graph_navigation_allowed) {
+	        compute_and_publish_path_on_ds_graph_to_home();
+            if(finished_bool) {
+                ROS_ERROR("No more frontiers..."); //TODO(minor) probably this checks are reduntant with the ones of explorer
+                std_msgs::Empty msg;
+                pub_finish.publish(msg);
+            } else {
+                ROS_INFO("Robot needs to recharge");
+                need_to_charge = true;
+                if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
+                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                {
+                    ros::Duration(10).sleep();
+                    start_new_auction();
+                }
+            }
         } else {
             ROS_ERROR("DS graph cannot be navigated with this strategy...");
             ROS_INFO("DS graph cannot be navigated with this strategy...");
@@ -3092,49 +3130,153 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
-    for (int i = 0; i < ds.size(); i++)
-    {
-        for (int j = 0; j < jobs.size(); j++)
+    int retry = 0;
+    while (min_ds == NULL && retry < 5) {
+        for (int i = 0; i < ds.size(); i++)
         {
-            double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
-            if (dist < 0)
-                continue;
-
-            if (dist < conservative_maximum_distance_with_return())
+            for (int j = 0; j < jobs.size(); j++)
             {
-                double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
-                if (dist2 < 0)
+                double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
+                if (dist < 0)
                     continue;
 
-                if (dist2 < min_dist)
+                if (dist < conservative_maximum_distance_with_return())
                 {
-                    min_dist = dist2;
-                    min_ds = &ds.at(i);
+                    double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                    if (dist2 < 0)
+                        continue;
+
+                    if (dist2 < min_dist)
+                    {
+                        min_dist = dist2;
+                        min_ds = &ds.at(i);
+                    }
+                    
+                    break;
                 }
-                
-                break;
             }
         }
+        retry++;
     }
-    if (min_ds == NULL)
-        return;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    
+    if (min_ds == NULL) {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    }
 
     // compute closest DS
     min_dist = numeric_limits<int>::max();
-    ds_t *closest_ds;
-    for (int i = 0; i < ds.size(); i++)
-    {
-        double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
-        if (dist < 0)
-            continue;
-
-        if (dist < min_dist)
+    ds_t *closest_ds = NULL;
+    retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (int i = 0; i < ds.size(); i++)
         {
-            min_dist = dist;
-            closest_ds = &ds.at(i);
+            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+            if (dist < 0)
+                continue;
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds.at(i);
+            }
         }
+        retry++;
+    }
+    if(closest_ds == NULL)  {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
     }
 
+    path.clear();
+    index_of_ds_in_path = 0;
+    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+
+    if (ds_found_with_mst)
+    {
+
+        adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                       // maybe I can
+                                                       // pass directly
+                                                       // msg_path to
+                                                       // find_path...
+        for (int i = 0; i < path.size(); i++)
+            for (int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    msg_path.positions[i].x = ds[j].x;
+                    msg_path.positions[i].y = ds[j].y;
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        
+        for (int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+                target_ds = &ds[j];
+                break;
+            }
+    }
+    else {
+        ROS_ERROR("no path found");
+        ROS_INFO("no path found");
+        
+    }
+}
+
+void docking::compute_and_publish_path_on_ds_graph_to_home() {
+double min_dist = numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    int retry = 0;
+    while (min_ds == NULL && retry < 5) {
+        for (int i = 0; i < ds.size(); i++)
+        {
+                double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0);
+                if (dist < 0)
+                    continue;
+
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                    min_ds = &ds.at(i);
+                }
+                    
+        }
+        retry++;
+    }
+    
+    if (min_ds == NULL) {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    }
+
+    // compute closest DS
+    min_dist = numeric_limits<int>::max();
+    ds_t *closest_ds = NULL;
+    retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (int i = 0; i < ds.size(); i++)
+        {
+            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+            if (dist < 0)
+                continue;
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds.at(i);
+            }
+        }
+        retry++;
+    }
+    if(closest_ds == NULL)  {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+    }
 
     path.clear();
     index_of_ds_in_path = 0;
