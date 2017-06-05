@@ -47,7 +47,7 @@
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
 
-int limit_search = 15;
+int limit_search = 10000;
 
 // A utility function to find the vertex with minimum distance value, from
 // the set of vertices not yet included in shortest path tree
@@ -3164,15 +3164,15 @@ void ExplorationPlanner::findFrontiers()
             }
             
             //F
-            if(!result)
-                for (unsigned int j = 0; j < visited_frontiers.size(); j++)
-                {
-                    if (fabs(wx - visited_frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - visited_frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
-                    {
-                        result = false;
-                        break;
-                    }
-                }
+//            if(!result)
+//                for (unsigned int j = 0; j < visited_frontiers.size(); j++)
+//                {
+//                    if (fabs(wx - visited_frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - visited_frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
+//                    {
+//                        result = false;
+//                        break;
+//                    }
+//                }
             if(!result)
                 for (unsigned int j = 0; j < unreachable_frontiers.size(); j++)
                 {
@@ -4765,7 +4765,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         sorted_frontiers = frontiers;
     }
     
-    selection_time = (ros::Time::now() - start_time).toSec(); 
+    selection_time = (ros::Time::now() - start_time).toSec();
+    number_of_frontiers = frontiers.size();
 
     if(frontier_selected)
         for(int i=0; i < sorted_frontiers.size(); i++)
@@ -6192,8 +6193,6 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
     this->w2 = w2;
     this->w3 = w3;
     this->w4 = w4;
-    
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__); 
     
     if(frontiers.size() > 0)
     {
@@ -8502,6 +8501,7 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
             new_frontier.id = frontier_id_count++;
         }
         new_frontier.detected_by_robot_str = detected_by_robot_str;
+        new_frontier.detected_by_robot = detected_by_robot;
         new_frontier.x_coordinate = x;
         new_frontier.y_coordinate = y;
         
@@ -8521,6 +8521,7 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
         }
 
         new_frontier.detected_by_robot = detected_by_robot;
+        new_frontier.detected_by_robot_str = detected_by_robot_str;
         new_frontier.x_coordinate = x;
         new_frontier.y_coordinate = y;
         
@@ -8597,6 +8598,7 @@ bool ExplorationPlanner::my2_determine_goal_staying_alive(int mode, int strategy
     sorted_frontiers.clear();
     
     start_time = ros::Time::now();
+    number_of_frontiers = frontiers.size();
     
     //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
     ROS_DEBUG("frontiers size: %lu", frontiers.size());
@@ -8673,7 +8675,7 @@ bool ExplorationPlanner::my2_determine_goal_staying_alive(int mode, int strategy
                     ROS_INFO("Fallback to euclidean distance.");
                     release_mutex(&store_frontier_mutex, __FUNCTION__);
                     selection_time = (ros::Time::now() - start_time).toSec();
-                    frontier_selected=my_determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1, energy_above_th, w1, w2, w3, w4);
+                    frontier_selected=my2_determine_goal_staying_alive(1, 1, available_distance, final_goal, count, robot_str_name, -1, energy_above_th, w1, w2, w3, w4);
                     return frontier_selected;
                 }
                 ROS_ERROR("None of the %d checked frontiers is reachable! This shouldn't happen...", limit_search);
