@@ -132,7 +132,9 @@ void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
     //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
 }
 
-
+void end_simulation(const ros::TimerEvent &event) {
+    ros::shutdown();
+}
 
 void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
     ROS_INFO("robot_%d has finished exploring", msg.id);
@@ -143,8 +145,10 @@ void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
         if(!robot_list[i].finished)
             all_finished = false;
             
-    if(all_finished)
-        
+    if(all_finished) {
+        ros::NodeHandle nh;
+        timer = nh.createTimer(ros::Duration(180), end_simulation, true, true);
+    }
 }
 
 
