@@ -417,6 +417,9 @@ namespace explorationPlanner
             void my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name);
             int errors;
             double robot_x, robot_y;
+            double frontier_cost(frontier_t frontier);
+            double frontier_cost_4(frontier_t frontier);
+            double available_distance;
             
             
     };

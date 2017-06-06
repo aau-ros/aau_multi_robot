@@ -804,6 +804,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                         d_f = dist;
                 }
 
+                /* resulting cost (as a sum of all the previously computed parameters) */
                 double cost = n_r + d_s + theta_s + d_f;
                 if (cost < min_cost)
                 {

@@ -2667,7 +2667,10 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     frontier->my_distance_to_robot = total_distance;
     
     // distance from frontier to optimal ds
-    distance = trajectory_plan_meters(x, y, optimal_ds_x, optimal_ds_y);
+    if(target_ds_set)
+        distance = trajectory_plan_meters(x, y, optimal_ds_x, optimal_ds_y);
+    else
+        distance = trajectory_plan_meters(x, y, robot_home_x, robot_home_y);
     if(distance < 0){
         ROS_ERROR("Failed to compute distance!");
         ROS_INFO("Failed to compute distance!");
@@ -4533,38 +4536,51 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
         return;   
     }
     
-    // robot position
-    robot_x = robotPose.getOrigin().getX();
-    robot_y = robotPose.getOrigin().getY();
+//    // robot position
+//    robot_x = robotPose.getOrigin().getX();
+//    robot_y = robotPose.getOrigin().getY();
 
-    // frontier position
-    double frontier_x = msg.get()->frontier_element[0].x_coordinate;
-    double frontier_y = msg.get()->frontier_element[0].y_coordinate;
+//    // frontier position
+//    double frontier_x = msg.get()->frontier_element[0].x_coordinate;
+//    double frontier_y = msg.get()->frontier_element[0].y_coordinate;
 
-    // calculate d_g
-    int d_g = trajectory_plan_meters(frontier_x, frontier_y);
+//    // calculate d_g
+//    int d_g = trajectory_plan_meters(frontier_x, frontier_y);
 
-    // calculate d_gb
-    int d_gb = trajectory_plan_meters(frontier_x, frontier_y, robot_home_x, robot_home_y);
+//    // calculate d_gb
+//    int d_gb = trajectory_plan_meters(frontier_x, frontier_y, robot_home_x, robot_home_y);
 
-    // calculate d_gbe
-    int d_gbe;
-    if(energy_above_th)
-    {
-        d_gbe = -d_gb;
-    }
-    else
-    {
-        d_gbe = d_gb;
-    }
+//    // calculate d_gbe
+//    int d_gbe;
+//    if(energy_above_th)
+//    {
+//        d_gbe = -d_gb;
+//    }
+//    else
+//    {
+//        d_gbe = d_gb;
+//    }
 
-    // calculate theta
-    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+//    // calculate theta
+//    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+//    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+//    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
 
-    // calculate cost function
-    double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+//    // calculate cost function
+//    double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    int index;
+    for(int i=0; i<frontiers.size(); i++) //TODO inefficient (and the robot could be unable to send the frontier in time...)
+        if(frontiers.at(i).id == msg.get()->frontier_element[0].id) {
+            index = i;
+            break;
+        }
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
+    
+    if(!my_check_efficiency_of_goal(this->available_distance, &frontiers.at(index)))
+        return;
+    double cost = frontier_cost(frontiers.at(index));
    
     //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
     
@@ -4742,6 +4758,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     frontier_selected = false;
     start_time = ros::Time::now();
     winner_of_auction = true;
+    this->available_distance = available_distance;
 
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
@@ -6058,7 +6075,7 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
     double robot_x = robotPose.getOrigin().getX();
     double robot_y = robotPose.getOrigin().getY();
     
-    my_energy_above_th = energy_above_th;
+    this->my_energy_above_th = energy_above_th;
     this->w1 = w1;
     this->w2 = w2;
     this->w3 = w3;
@@ -6225,76 +6242,14 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
                     under_auction = true;
             if(under_auction)
                 continue;
-
-            /*
-             * cost function
-             * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
-             *
-             * parameters
-             * w1, ..., w4 .. weights
-             * d_g         .. euclidean distance from the robot's current position to the frontier
-             * d_gb        .. euclidean distance from the frontier to the charging station
-             * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
-             * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
-             */
-
-            // frontier position
-            double frontier_x = frontiers.at(j).x_coordinate;
-            double frontier_y = frontiers.at(j).y_coordinate;
-
-            // calculate d_g
-            //int d_g = trajectory_plan(frontier_x, frontier_y);
-            double d_g = frontier.my_distance_to_robot;
-
-            // calculate d_gb
-            //int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
-            double d_gb;
-            //if(target_ds_set)
-            //    d_gb = euclidean_distance(frontier_x, frontier_y, target_ds_x, target_ds_y);
-            //else
-            //    d_gb = euclidean_distance(frontier_x, frontier_y, robot_home_x, robot_home_y);
-            d_gb = frontier.my_distance_to_optimal_ds;
-
-            // calculate d_gbe
-            double d_gbe;
-            if(energy_above_th)
-            {
-                d_gbe = -d_gb;
-            }
-            else
-            {
-                d_gbe = d_gb;
-            }
-
-            // calculate theta
-            double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-            double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-            double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
-
-            // calculate cost function
-            double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
-
-            // sort frontiers according to cost function
-            //F ascending order
-            //if(cost > cost_next)
-            //{
-            //    frontier_t temp = frontiers.at(j+1);
-            //    frontiers.at(j+1) = frontiers.at(j);
-            //    frontiers.at(j) = temp;
-            //}
             
-            //bool to_be_inserted
-            //if(sorted_frontiers.size() == 0)
-            //    sorted_frontier.push_back(frontiers.at(j));
-            //else
-            //    for(int k=0; k < sorted_frontiers.size(); k++)
-            //        if(   
-            
-            frontiers.at(j).cost = cost;
+            frontiers.at(j).cost = frontier_cost(frontiers.at(j));
             add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));
             
-            if(cost < min_cost)
+            if(frontiers.at(j).cost < min_cost) {
                 frontier_selected = true;
+                min_cost = frontiers.at(j).cost;
+            }
                   
         }
         
@@ -8588,6 +8543,7 @@ bool ExplorationPlanner::my2_determine_goal_staying_alive(int mode, int strategy
     selection_time = 0;
     number_of_frontiers = 0;
     frontier_selected = false;
+    this->available_distance = available_distance;
 
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
@@ -9117,4 +9073,74 @@ bool ExplorationPlanner::home_is_reachable(double available_distance) {
     if(dist < 0)
         return false;
     return available_distance > dist; //TODO safety coefficient
+}
+
+double ExplorationPlanner::frontier_cost(frontier_t frontier) {
+    return frontier_cost_4(frontier); //TODO
+}
+
+double ExplorationPlanner::frontier_cost_4(frontier_t frontier) {
+    /*
+     * cost function
+     * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
+     *
+     * parameters
+     * w1, ..., w4 .. weights
+     * d_g         .. euclidean distance from the robot's current position to the frontier
+     * d_gb        .. euclidean distance from the frontier to the charging station
+     * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
+     * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
+     */
+
+    // frontier position
+    double frontier_x = frontier.x_coordinate;
+    double frontier_y = frontier.y_coordinate;
+
+    // calculate d_g
+    //int d_g = trajectory_plan(frontier_x, frontier_y);
+    double d_g = frontier.my_distance_to_robot;
+
+    // calculate d_gb
+    //int d_gb = trajectory_plan(frontier_x, frontier_y, robot_home_x, robot_home_y);
+    double d_gb;
+    //if(target_ds_set)
+    //    d_gb = euclidean_distance(frontier_x, frontier_y, target_ds_x, target_ds_y);
+    //else
+    //    d_gb = euclidean_distance(frontier_x, frontier_y, robot_home_x, robot_home_y);
+    d_gb = frontier.my_distance_to_optimal_ds;
+
+    // calculate d_gbe
+    double d_gbe;
+    if(my_energy_above_th)
+    {
+        d_gbe = -d_gb;
+    }
+    else
+    {
+        d_gbe = d_gb;
+    }
+
+    // calculate theta
+    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+
+    // calculate cost function
+    return w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
+
+    // sort frontiers according to cost function
+    //F ascending order
+    //if(cost > cost_next)
+    //{
+    //    frontier_t temp = frontiers.at(j+1);
+    //    frontiers.at(j+1) = frontiers.at(j);
+    //    frontiers.at(j) = temp;
+    //}
+
+    //bool to_be_inserted
+    //if(sorted_frontiers.size() == 0)
+    //    sorted_frontier.push_back(frontiers.at(j));
+    //else
+    //    for(int k=0; k < sorted_frontiers.size(); k++)
+    //        if(   
 }
