@@ -1067,11 +1067,13 @@ class Explorer
                                 }
                             }
                             else {
+                                ROS_ERROR("Finished path traversal");
                                 moving_along_path = false;
                                 std_msgs::Empty msg;
                                 pub_next_ds.publish(msg);
                                 
                                 if(going_home) {
+                                    ROS_ERROR("Going home...");
                                     visualize_goal_point(home_point_x, home_point_y);
 
                                     bool completed_navigation = false;
@@ -1798,8 +1800,10 @@ class Explorer
         ros::spinOnce();
      
         if(percentage >= 100 && !checked_percentage && robot_state_next != finished_next && robot_state != finished) {
-            if(percentage > 100)
-                log_major_error("Strange value...");
+            if(percentage > 100.1) {
+                log_major_error("Exploration percentage is higher that 100.0");
+                ROS_ERROR("percentage: %.1f", percentage);
+            }
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             //robot_state_next = finished_next;
             checked_percentage = true;
