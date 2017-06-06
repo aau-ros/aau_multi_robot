@@ -1145,7 +1145,7 @@ class Explorer
 //                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << ",my_determine_goal_my_select_4" << std::endl;
+                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
                         fs_computation_time.close();
                         
                         ros::Duration d = ros::Time::now() - time_2;

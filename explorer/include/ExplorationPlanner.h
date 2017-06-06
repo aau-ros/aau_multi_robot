@@ -229,7 +229,7 @@ namespace explorationPlanner
             //void smart_sort_cost(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_2(bool energy_above_th, int w1, int w2, int w3, int w4);
             void my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4);
-            void my_sort_cost_4(bool energy_above_th, int w1, int w2, int w3, int w4);
+            void my_sort_cost_0(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_1(bool energy_above_th, int w1, int w2, int w3, int w4);
             void sort_cost_reserve(bool energy_above_th, int w1, int w2, int w3, int w4);
             void simulate();
@@ -418,11 +418,16 @@ namespace explorationPlanner
             int errors;
             double robot_x, robot_y;
             double frontier_cost(frontier_t frontier);
-            double frontier_cost_4(frontier_t frontier);
+            double frontier_cost_0(frontier_t frontier);
+            double frontier_cost_1(frontier_t frontier);
             double available_distance;
+            std::vector<frontier_t> last_robot_auctioned_frontier_list;
+            void robot_next_goal_callback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
+            ros::Subscriber sub_next_goal;
             
             
     };
 }
 
 #endif
+
