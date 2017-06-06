@@ -1136,7 +1136,7 @@ class Explorer
 //                                &final_goal, count, &robot_str, -1);
 //                        else
                             //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                            goal_determined = exploration->my2_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
@@ -1145,7 +1145,7 @@ class Explorer
 //                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << "my2_determine_goal" << std::endl;
+                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << ",my_determine_goal_my_select_4" << std::endl;
                         fs_computation_time.close();
                         
                         ros::Duration d = ros::Time::now() - time_2;
