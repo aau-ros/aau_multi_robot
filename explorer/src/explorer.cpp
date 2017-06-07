@@ -3178,10 +3178,10 @@ class Explorer
     void bat_callback(const energy_mgmt::battery_state::ConstPtr &msg)
     {
         ROS_DEBUG("Received battery state");
-        battery_charge = (int)msg->soc;
+        battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        //ROS_ERROR("SOC: %d%%; available distance: %f", battery_charge * 100, available_distance);
+        //ROS_ERROR("SOC: %d%%; available distance: %f", battery_charge, available_distance);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...

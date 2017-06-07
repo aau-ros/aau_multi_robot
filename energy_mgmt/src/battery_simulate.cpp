@@ -97,8 +97,9 @@ void battery_simulate::compute()
     double time_diff_sec = time_diff.toSec();
     
     /* If there is no time difference to last computation, there is nothing to do */
-    if (time_diff_sec <= 0)
+    if (time_diff_sec <= 0) {
         return;
+    }
 
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
@@ -106,7 +107,7 @@ void battery_simulate::compute()
         ROS_DEBUG("Recharging...");
         remaining_energy += power_charging * time_diff_sec;
         state.soc = remaining_energy / total_energy;
-        state.remaining_time_charge = -1;
+        state.remaining_time_charge = -1; //TODO
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
@@ -143,6 +144,7 @@ void battery_simulate::compute()
         else
             remaining_energy -= (power_moving * max_speed_linear + power_standing) * time_diff_sec;
 
+        //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */
         state.soc = remaining_energy / total_energy;
         state.remaining_time_run = state.soc * total_energy;
@@ -176,6 +178,7 @@ void battery_simulate::output()
 void battery_simulate::publish()
 {
     pub_battery.publish(state);
+    //ROS_ERROR("%.1f", state.soc);
 }
 
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
@@ -203,7 +206,6 @@ void battery_simulate::cb_speed(const explorer::Speed &msg)  // unused for the m
 void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr &msg)
 {
     // ROS_INFO("Received SOC!!!");
-    // state.soc = ("%F", msg->data);
 }
 
 // TODO(minor) do we need this?
@@ -216,7 +218,8 @@ void battery_simulate::run() {
     while(ros::ok()) {
         ros::Duration(5).sleep(); //TODO(minor) rates???
         ros::spinOnce();
-                // compute new battery state
+        
+        // compute new battery state
         compute();
 
         // output battery state to console

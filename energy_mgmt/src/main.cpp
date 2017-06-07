@@ -61,10 +61,6 @@ int main(int argc, char** argv)
         
         //doc.test();
         
-        //bat.spin();
-        //bat.compute();
-        //bat.publish();
-        
         ros::spinOnce();
         
         //doc.join_all_multicast_groups();

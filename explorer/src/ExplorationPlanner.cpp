@@ -2634,20 +2634,26 @@ bool ExplorationPlanner::check_efficiency_of_goal(double x, double y)
     }
 }
 
+bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_distance, frontier_t * frontier)
+{
+    double total_distance_eu;
+    double x = frontier->x_coordinate;
+    double y = frontier->y_coordinate;
+    
+    //check euclidean distances
+    total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    //ROS_INFO("Euclidean distance to frontier and then home: %.2f",total_distance);
+    return total_distance_eu > available_distance;
+
+}
+
+
 bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, frontier_t * frontier)
 {
     double distance, distance_eu;
     double total_distance, total_distance_eu;
     double x = frontier->x_coordinate;
     double y = frontier->y_coordinate;
-    
-    if (!costmap_ros_->getRobotPose(robotPose))
-    {
-            ROS_ERROR("Failed to get RobotPose");
-            return false;
-    }
-    robot_x = robotPose.getOrigin().getX();
-    robot_y = robotPose.getOrigin().getY();
     
     //check euclidean distances
     total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
@@ -4493,13 +4499,6 @@ bool ExplorationPlanner::my_sendToMulticast(std::string multi_cast_group, adhoc_
 void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
     ROS_DEBUG("Received frontier (%.2f, %.2f)", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate);
-    
-    // send a reply only if the frontier is between the 8 frontiers with lowest cost, since only the first eight are ordered...
-    // process only eight frontiers (in a second or little more of time of auction, i have not time to due more...)
-    int max_front = 8;
-
-    bool energy_above_th = true;
-    ros::Duration(3).sleep();
 
     double robot_x, robot_y;
     
@@ -4509,8 +4508,6 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     robot_number << msg.get()->frontier_element[0].detected_by_robot;
     std::string robo_name, prefix = "robot_";
     robo_name = prefix.append(robot_number.str());
-
-    //store_frontier_mutex.lock();
 
     //std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
     std::string service_topic = "map_merger/transformPoint";
@@ -4536,39 +4533,6 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
         //ROS_ERROR("FAILED!");
         return;   
     }
-    
-//    // robot position
-//    robot_x = robotPose.getOrigin().getX();
-//    robot_y = robotPose.getOrigin().getY();
-
-//    // frontier position
-//    double frontier_x = msg.get()->frontier_element[0].x_coordinate;
-//    double frontier_y = msg.get()->frontier_element[0].y_coordinate;
-
-//    // calculate d_g
-//    int d_g = trajectory_plan_meters(frontier_x, frontier_y);
-
-//    // calculate d_gb
-//    int d_gb = trajectory_plan_meters(frontier_x, frontier_y, robot_home_x, robot_home_y);
-
-//    // calculate d_gbe
-//    int d_gbe;
-//    if(energy_above_th)
-//    {
-//        d_gbe = -d_gb;
-//    }
-//    else
-//    {
-//        d_gbe = d_gb;
-//    }
-
-//    // calculate theta
-//    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-//    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-//    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
-
-//    // calculate cost function
-//    double cost = w1 * d_g + w2 * d_gb + w3 * d_gbe + w4 * theta;
 
     //acquire_mutex(&store_frontier_mutex, __FUNCTION__); //TODO maybe we need a mutex, but it causes deadlocks...
     int index = -1;
@@ -4601,11 +4565,46 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
 void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
     ROS_INFO("Received next goal (frontier) of robot %d: (%.2f, %.2f)", (int) msg.get()->frontier_element[0].detected_by_robot, msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+      
+    //ROS_INFO("Transform frontier coordinates");
+        
+    std::stringstream robot_number;
+    robot_number << msg.get()->frontier_element[0].detected_by_robot;
+    std::string robo_name, prefix = "robot_";
+    robo_name = prefix.append(robot_number.str());
+
+    //store_frontier_mutex.lock();
+
+    //std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
+    std::string service_topic = "map_merger/transformPoint";
+
+//              ROS_INFO("Robo name: %s   Service to subscribe to: %s", robo_name.c_str(), service_topic.c_str());
+    
+    client = nh_transform.serviceClient<map_merger::TransformPoint>(service_topic);
+    ros::service::waitForService(service_topic, ros::Duration(3).sleep());
+    if(!ros::service::exists(service_topic, true))
+        return;
+
+    service_message.request.point.x = msg.get()->frontier_element[0].x_coordinate;
+    service_message.request.point.y = msg.get()->frontier_element[0].y_coordinate;
+    service_message.request.point.src_robot = robo_name;   
+    //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
+    
+    //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+
+    //ROS_ERROR("calling client");
+    if(client.call(service_message))
+        ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
+    else {
+        //ROS_ERROR("FAILED!");
+        return;
+    }   
+    
     bool found = false;
     for(int i=0; i<last_robot_auctioned_frontier_list.size() && !found; i++)
         if(last_robot_auctioned_frontier_list.at(i).detected_by_robot == msg.get()->frontier_element[0].detected_by_robot) {
-           last_robot_auctioned_frontier_list.at(i).x_coordinate = msg.get()->frontier_element[0].x_coordinate;
-           last_robot_auctioned_frontier_list.at(i).y_coordinate = msg.get()->frontier_element[0].y_coordinate;
+           last_robot_auctioned_frontier_list.at(i).x_coordinate = service_message.response.point.x;
+           last_robot_auctioned_frontier_list.at(i).y_coordinate = service_message.response.point.y;
            found = true;
         }
     if(!found) {
@@ -4688,7 +4687,21 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
         ROS_ERROR("No frontier/cluster available");
-    } 
+    }
+    
+    int tries = 0;
+    while (!costmap_ros_->getRobotPose(robotPose))
+    {
+            ROS_ERROR("Failed to get RobotPose");
+            if(tries < 5) {
+                tries++;
+                ros::Duration(2).sleep();
+            }
+            else
+                return false;
+    }
+    robot_x = robotPose.getOrigin().getX();
+    robot_y = robotPose.getOrigin().getY();
     
     sorted_frontiers.clear();
     
@@ -8997,6 +9010,8 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
     {     
         for(int j = 0; j < frontiers.size(); j++)
         {
+            if(!my_quick_check_efficiency_of_goal(this->available_distance, &frontiers.at(j)))
+                continue;
             // calculate cost function
             frontiers.at(j).cost = frontier_cost_0(frontiers.at(j));
             add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));        
@@ -9125,6 +9140,7 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
         if(distance < d_r || d_r == 0) 
             d_r = distance;
     }
+    d_r = -d_r;
 
     // calculate theta
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
