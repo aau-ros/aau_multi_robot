@@ -2641,9 +2641,12 @@ bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_dist
     double y = frontier->y_coordinate;
     
     //check euclidean distances
-    total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    if(target_ds_set)
+        total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    else
+        total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, 0, 0);
     //ROS_INFO("Euclidean distance to frontier and then home: %.2f",total_distance);
-    return total_distance_eu > available_distance;
+    return total_distance_eu < available_distance;
 
 }
 
@@ -2657,7 +2660,10 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     
     //check euclidean distances
     total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
-    total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    if(target_ds_set)
+        total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    else
+        total_distance_eu += euclidean_distance(x, y, 0, 0);
     if(total_distance_eu > available_distance)
         return false;
     
@@ -8987,18 +8993,6 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
 {
 
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        return;
-    }
-    
-    // robot position
-    double robot_x = robotPose.getOrigin().getX();
-    double robot_y = robotPose.getOrigin().getY();
     
     my_energy_above_th = energy_above_th;
     this->w1 = w1;
