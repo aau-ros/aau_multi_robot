@@ -2064,8 +2064,8 @@ class Explorer
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#time,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_explored_cells,global_map_explored_cells_2,global_map_progress_percentage,local_map_explored_cells,total_number_of_cells,battery_state,"
+        fs_csv << "#time,global_map_progress_percentage,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
+                  "global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
         fs_csv.close();
@@ -2104,8 +2104,8 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << map_progress.time << "," << exploration_travel_path_global << "," << available_distance << ","
-                   << map_progress.global_freespace << "," << discovered_free_cells_count << "," << percentage << "," 
+            fs_csv << map_progress.time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << ","
+                   << map_progress.global_freespace << "," << discovered_free_cells_count << "," 
                    << map_progress.local_freespace << "," << free_cells_count << "," 
                    << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
             fs_csv.close();
