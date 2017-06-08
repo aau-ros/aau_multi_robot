@@ -798,6 +798,9 @@ int main(int argc, char **argv)
         ros::spinOnce();
     }
     
+    ros::Duration(10).sleep();
+    ros::shutdown();
+    
     while (ros::ok())
     {
         ros::Duration(10).sleep();

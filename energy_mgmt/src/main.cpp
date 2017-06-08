@@ -102,6 +102,12 @@ int main(int argc, char** argv)
                         */
     }
     
+    ROS_INFO("shutting down...");
+    
+    thr_battery.interrupt();
+    
+    ros::shutdown();
+    
     while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
         ros::Duration(10).sleep();
     

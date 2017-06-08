@@ -600,6 +600,8 @@ class docking
     void compute_and_publish_path_on_ds_graph();
     void compute_and_publish_path_on_ds_graph_to_home();
     bool graph_navigation_allowed;
+    void finalize_exploration_callback(const std_msgs::Empty msg);
+    ros::Subscriber sub_finalize_exploration;
   
   
     

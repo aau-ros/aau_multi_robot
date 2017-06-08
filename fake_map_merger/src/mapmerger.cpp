@@ -1314,6 +1314,9 @@ void MapMerger::start()
         
     ROS_INFO("Stopping map_merger");
     spinner.stop();
+    
+    ros::Duration(10).sleep();
+    ros::shutdown();
 
     ros::waitForShutdown();
 }

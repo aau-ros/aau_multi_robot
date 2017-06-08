@@ -474,7 +474,6 @@ class Explorer
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
         {
-        
             /* Update robot state */
             update_robot_state();
             
@@ -2373,8 +2372,8 @@ class Explorer
         // finish log files
         exploration_has_finished();
 
-        //ROS_INFO("Shutting down...");
-        //ros::shutdown();
+        ROS_INFO("Shutting down...");
+        shutdown();
     }
 
     void exploration_has_finished()
@@ -2462,6 +2461,8 @@ class Explorer
         if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage!!!");
         }
+        
+        ros::Duration(10).sleep();
         
         adhoc_communication::EmRobot msg;
         msg.id = robot_id;
@@ -3197,6 +3198,11 @@ class Explorer
             max_av_distance = available_distance;
     }
     
+    void shutdown() {
+        ros::Duration(10).sleep();
+        ros::shutdown();
+    }
+    
     void finish_callback(const std_msgs::Empty &msg) {
         ROS_INFO("finish_callback");
         robot_state_next = finished_next;
@@ -3208,6 +3214,9 @@ class Explorer
         log_major_error("robot is dead!!!");
         update_robot_state_2(dead);
         this->indicateSimulationEnd();
+        
+        shutdown();
+        
     }
     
     void log_stucked() {
@@ -3237,6 +3246,8 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
+        
+        shutdown();
         
     }
 

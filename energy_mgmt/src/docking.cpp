@@ -287,6 +287,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     sub_path = nh.subscribe("error_path", 10, &docking::path_callback, this);
     
+    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
+    
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
     //mygraph.print();
@@ -296,6 +298,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
+}
+
+void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
+    finished_bool = true;
 }
 
 void docking::test() {
@@ -2681,7 +2687,8 @@ void docking::check_reachable_ds()
     ROS_INFO("check_reachable_ds");
     
     bool new_ds_discovered = false;
-    for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); )
+    int i=0;
+    for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end() && i < discovered_ds.size(); /*empty*/ )
     {
         /* If the DS is inside a fiducial laser range, it can be considered
          * discovered */
@@ -2691,7 +2698,7 @@ void docking::check_reachable_ds()
         srv_msg.request.y = (*it).y;
         
         //ros::service::waitForService("explorer/reachable_target");
-        for(int i = 0; i < 10 && !sc_reachable_target; i++) {
+        for(int j = 0; j < 10 && !sc_reachable_target; j++) {
             ROS_FATAL("NO MORE CONNECTION!");
             ros::Duration(1).sleep();
             sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
@@ -2732,19 +2739,21 @@ void docking::check_reachable_ds()
             if(id1 != it->id)
                 ROS_ERROR("error");
             int id2 = it->id;
-            discovered_ds.erase(it);
+            //discovered_ds.erase(it);
+            ROS_INFO("erase at position %d; size is %lu", i, discovered_ds.size());
+            discovered_ds.erase(discovered_ds.begin() + i);
             
             it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
-            
+            i=0;
 
-            
             if(id1 != id2)
                 ROS_ERROR("ERROR");
             
         }
         else {
             ROS_INFO("UNREACHABLE!!!");
-            it++;   
+            it++;
+            i++;
         }
     }
 
