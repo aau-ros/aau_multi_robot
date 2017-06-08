@@ -3364,7 +3364,7 @@ class Explorer
         
         float prev_robot_x = 0, prev_robot_y = 0, prev_robot_x_2 = 0, prev_robot_y_2 = 0, stuck_x = 0, stuck_y = 0;
         
-        int prints_count = 1;
+        int prints_count = 0;
         
         //tf::Stamped<tf::Pose> robotPose;
         state_t prev_robot_state = fully_charged;
@@ -3392,7 +3392,7 @@ class Explorer
                 {
                     ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                     ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                    prints_count++;   
+                    //prints_count++;   
                 }
                 //}
                 //else {
@@ -3422,7 +3422,7 @@ class Explorer
                 prev_robot_x = pose_x;
                 prev_robot_y = pose_y;
                 prev_robot_state = robot_state;
-                prints_count = 1;  
+                //prints_count = 1;  
             }
             
             if( (robot_state != in_queue && robot_state != charging) && fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
@@ -3453,6 +3453,13 @@ class Explorer
                         //abort();
                         log_stucked();
                     //}
+                } 
+                else if(countdown_2 < ros::Duration(5*50) && prints_count == 1) {
+                    prints_count++;
+                    ROS_ERROR("Robot is not moving from 10 minutes!");
+                } else if(countdown_2 < ros::Duration(10*60) && prints_count == 0) {
+                    ROS_ERROR("Robot is not moving from 5 minutes!");
+                    prints_count++;   
                 }
             }
             else
@@ -3460,6 +3467,7 @@ class Explorer
                 prev_robot_x_2 = pose_x;
                 prev_robot_y_2 = pose_y;
                 countdown_2 = ros::Duration(starting_value_countdown_2);
+                prints_count = 0;
             }
             
             //ROS_ERROR("%f, %f", pose_x, pose_y);

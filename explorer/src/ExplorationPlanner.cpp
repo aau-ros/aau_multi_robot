@@ -4506,65 +4506,65 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
 {
     ROS_DEBUG("Received frontier (%.2f, %.2f)", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate);
 
-    double robot_x, robot_y;
-    
-    //ROS_INFO("Transform frontier coordinates");
-        
-    std::stringstream robot_number;
-    robot_number << msg.get()->frontier_element[0].detected_by_robot;
-    std::string robo_name, prefix = "robot_";
-    robo_name = prefix.append(robot_number.str());
+//    double robot_x, robot_y;
+//    
+//    //ROS_INFO("Transform frontier coordinates");
+//        
+//    std::stringstream robot_number;
+//    robot_number << msg.get()->frontier_element[0].detected_by_robot;
+//    std::string robo_name, prefix = "robot_";
+//    robo_name = prefix.append(robot_number.str());
 
-    //std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
-    std::string service_topic = "map_merger/transformPoint";
+//    //std::string service_topic = robo_name2.append("/map_merger/transformPoint"); // FIXME for real scenario!!! robot_might not be used here
+//    std::string service_topic = "map_merger/transformPoint";
 
-//              ROS_INFO("Robo name: %s   Service to subscribe to: %s", robo_name.c_str(), service_topic.c_str());
-    
-    client = nh_transform.serviceClient<map_merger::TransformPoint>(service_topic);
-    ros::service::waitForService(service_topic, ros::Duration(3).sleep());
-    if(!ros::service::exists(service_topic, true))
-        return;
+////              ROS_INFO("Robo name: %s   Service to subscribe to: %s", robo_name.c_str(), service_topic.c_str());
+//    
+//    client = nh_transform.serviceClient<map_merger::TransformPoint>(service_topic);
+//    ros::service::waitForService(service_topic, ros::Duration(3).sleep());
+//    if(!ros::service::exists(service_topic, true))
+//        return;
 
-    service_message.request.point.x = msg.get()->frontier_element[0].x_coordinate;
-    service_message.request.point.y = msg.get()->frontier_element[0].y_coordinate;
-    service_message.request.point.src_robot = robo_name;   
-    //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
-    
-    //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+//    service_message.request.point.x = msg.get()->frontier_element[0].x_coordinate;
+//    service_message.request.point.y = msg.get()->frontier_element[0].y_coordinate;
+//    service_message.request.point.src_robot = robo_name;   
+//    //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
+//    
+//    //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
 
-    //ROS_ERROR("calling client");
-    if(client.call(service_message))
-        ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
-    else {
-        //ROS_ERROR("FAILED!");
-        return;   
-    }
+//    //ROS_ERROR("calling client");
+//    if(client.call(service_message))
+//        ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
+//    else {
+//        //ROS_ERROR("FAILED!");
+//        return;   
+//    }
 
-    //acquire_mutex(&store_frontier_mutex, __FUNCTION__); //TODO maybe we need a mutex, but it causes deadlocks...
-    int index = -1;
-    for(int i=0; i<frontiers.size(); i++) //TODO inefficient (and the robot could be unable to send the frontier in time...)
-        if( fabs(frontiers.at(i).x_coordinate - service_message.response.point.x) < 1.0 && fabs(frontiers.at(i).y_coordinate - service_message.response.point.y) < 1.0 ) { //TODO correct?
-            index = i;
-            break;
-        }
-    if(index < 0 || !my_check_efficiency_of_goal(this->available_distance, &frontiers.at(index)))
-        return;
-    double cost = frontier_cost(frontiers.at(index));
-    //release_mutex(&store_frontier_mutex, __FUNCTION__);
-   
-    //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
-    
-    adhoc_communication::ExpFrontier negotiation_list;
-    adhoc_communication::ExpFrontierElement negotiation_element;
-    //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
-    //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
-    //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
-    //negotiation_element.id = my_selected_frontier->id;
-    negotiation_element.bid = cost;
-    
-    negotiation_list.frontier_element.push_back(negotiation_element);
-    
-    my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
+//    //acquire_mutex(&store_frontier_mutex, __FUNCTION__); //TODO maybe we need a mutex, but it causes deadlocks...
+//    int index = -1;
+//    for(int i=0; i<frontiers.size(); i++) //TODO inefficient (and the robot could be unable to send the frontier in time...)
+//        if( fabs(frontiers.at(i).x_coordinate - service_message.response.point.x) < 1.0 && fabs(frontiers.at(i).y_coordinate - service_message.response.point.y) < 1.0 ) { //TODO correct?
+//            index = i;
+//            break;
+//        }
+//    if(index < 0 || !my_check_efficiency_of_goal(this->available_distance, &frontiers.at(index)))
+//        return;
+//    double cost = frontier_cost(frontiers.at(index));
+//    //release_mutex(&store_frontier_mutex, __FUNCTION__);
+//   
+//    //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
+//    
+//    adhoc_communication::ExpFrontier negotiation_list;
+//    adhoc_communication::ExpFrontierElement negotiation_element;
+//    //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
+//    //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
+//    //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
+//    //negotiation_element.id = my_selected_frontier->id;
+//    negotiation_element.bid = cost;
+//    
+//    negotiation_list.frontier_element.push_back(negotiation_element);
+//    
+//    my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
     
 }
 
@@ -4779,7 +4779,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 
             negotiation_list.frontier_element.push_back(negotiation_element);
 
-            my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
+            //my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
             
             frontier_selected = true;            
             break;
