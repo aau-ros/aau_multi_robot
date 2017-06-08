@@ -2075,10 +2075,8 @@ class Explorer
             // double angle_robot = robotPose.getRotation().getAngle();
             // ROS_ERROR("angle of robot: %.2f\n", angle_robot);
 
-            //ROS_INFO("map_info(): acquiring");
             print_mutex_info("map_info()", "acquiring");
             costmap_mutex.lock();
-            //ROS_INFO("map_info(): lock acquired");
             print_mutex_info("map_info()", "lock");
 
             ros::Duration time = ros::Time::now() - time_start;
@@ -2113,18 +2111,19 @@ class Explorer
             fs_csv.close();
 
             costmap_mutex.unlock();
-            //ROS_INFO("map_info(): lock released");
             print_mutex_info("map_info()", "unlock");
 
-            // call map_merger to log data
-            map_merger::LogMaps log;
-            log.request.log = 12;  /// request local and global map progress
-            //ROS_ERROR("Calling map_merger service logOutput");
-            if (!mm_log_client.call(log))
-                ROS_ERROR("Could not call map_merger service to store log.");
-            ROS_DEBUG("Finished service call.");
+//            // call map_merger to log data
+//            map_merger::LogMaps log;
+//            log.request.log = 12;  /// request local and global map progress
+//            ROS_INFO("Calling map_merger service logOutput");
+//            if (!mm_log_client.call(log))
+//                ROS_ERROR("Could not call map_merger service to store log.");
+//            ROS_DEBUG("Finished service call.");
 
+            ROS_DEBUG("Saving progress...");
             save_progress();
+            ROS_DEBUG("Progress have been saved");
 
             // publish average speed
             explorer::Speed speed_msg;
