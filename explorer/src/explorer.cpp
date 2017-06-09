@@ -3220,8 +3220,40 @@ class Explorer
     
     void log_stucked() {
     
-        this->indicateSimulationEnd();
         update_robot_state_2(stuck);
+        this->indicateSimulationEnd();
+        
+        std::stringstream robot_number;
+        robot_number << robot_id;
+
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_stuck";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_suffix(".stuck");
+
+        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + robo_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate end of exploration.",
+        status_file.c_str());
+        
+        shutdown();
+        
+    }
+    
+    void log_stopped() {
+    
+        update_robot_state_2(stopped);
+        this->indicateSimulationEnd();
         
         std::stringstream robot_number;
         robot_number << robot_id;
@@ -3450,7 +3482,7 @@ class Explorer
                         log_major_error("deadlock / slow execution / waiting for auction result???");
 
                         //abort();
-                        log_stucked();
+                        log_stopped();
                     //}
                 } 
                 else if(countdown_2 < ros::Duration(5*50) && prints_count == 1) {
@@ -3616,7 +3648,8 @@ class Explorer
         leaving_ds,                                // the robot was recharging, but another robot stopped
         dead,
         moving_away_from_ds,
-        auctioning_3
+        auctioning_3,
+        stopped
     };
     state_t robot_state, previous_state;
 
