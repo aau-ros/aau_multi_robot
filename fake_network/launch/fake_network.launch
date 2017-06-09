@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="num_robots"/>
-    <arg name="wireless_range"/>
-    <arg name="output" default="log"/>
+    <arg name="num_robots" />
+    <arg name="wireless_range" />
+    <arg name="output" default="log" />
+    <arg name="use_sim_time" default="true" />
     <!--<arg name="log_path"/>-->
      
     <node pkg="fake_network" type="fake_network" name="fake_network" output="$(arg output)" required="true">
         <param name="num_robots" value="$(arg num_robots)" />
         <rosparam file="$(find fake_network)/param/param.yaml" command="load"/>
+        <param name="use_sim_time" value="$(arg use_sim_time)" />
     </node>
 
 </launch>

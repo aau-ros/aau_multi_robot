@@ -26,6 +26,7 @@
         <param name="local_costmap/scan/marking" value="true" />
         <param name="local_costmap/scan/clearing" value="true" />
         <param name="local_costmap/scan/observation_persistence" value="0.1" />
+        <param name="use_sim_time"  value="$(arg use_sim_time)"/>
 
         <!-- simulation parameters -->
         <param name="log_path" value="$(arg log_path)" />

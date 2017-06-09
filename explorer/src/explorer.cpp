@@ -474,6 +474,9 @@ class Explorer
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
         {
+        
+        visualize_home_point();
+        
             /* Update robot state */
             update_robot_state();
             
@@ -3343,6 +3346,8 @@ class Explorer
         ROS_DEBUG("x: %.1f; y: %.1f; angle: %.1f", pose_x, pose_y, pose_angle);
         //if(robot_id == 1)
         //    ROS_ERROR("%.2f: %.1f, %.1f", pose_angle, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
+        if(robot_id == 0)
+            ; //ROS_ERROR("x: %.1f; y: %.1f", pose_x, pose_y);
     }
 
     void feedbackCallback(const move_base_msgs::MoveBaseActionFeedback::ConstPtr &msg)

@@ -7,6 +7,7 @@
     <arg name="use_sim_time" default="false" />
     <arg name="output" default="log" />
 	<arg name="position_local_robot_topic" default="odom" />
+	<param name="use_sim_time"  value="$(arg use_sim_time)"/>
 
 	<node pkg="map_merger" type="map_merger" name="map_merger" output="$(arg output)">
    		<param name="log_path" value="$(arg log_path)" />
@@ -27,5 +28,6 @@
     	<param name="meta_topic_over_network" value="$(arg robot_prefix)/map_meta" />
     	<param name="local_map_metadata_topic" value="$(arg robot_prefix)/map_metadata" />
     	<param name="debug" value="false" /> <!-- DEBUG -->
+    	<param name="use_sim_time"  value="$(arg use_sim_time)"/>
 	</node>  
 </launch>

@@ -17,8 +17,9 @@
     <arg name="tx_power" default="" />
     <arg name="enable_cooperative_relaying" default="true" />
     <arg name="num_link_retrans" default="2" />
-    <arg name="num_e2e_retrans" default="10" /> 
-<arg name="nack_threshold" default="10" />    
+    <arg name="num_e2e_retrans" default="10" />
+    <arg name="nack_threshold" default="10" />    
+    <param name="use_sim_time"  value="$(arg use_sim_time)"/>
 
 
 <node unless="$(arg emulate)" launch-prefix="$(arg launch_prefix)" pkg="adhoc_communication" type="adhoc_communication" name="adhoc_communication" output="$(arg output)" >
