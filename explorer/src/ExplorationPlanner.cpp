@@ -2683,7 +2683,6 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         if(errors == 0)
             my_error_counter++;
         errors++;
-        return false;
     }
     frontier->my_distance_to_robot = total_distance;
     
@@ -2702,7 +2701,6 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         if(errors == 0)
             my_error_counter++;
         errors++;
-        return false;
     }
     frontier->my_distance_to_optimal_ds = distance;
     
