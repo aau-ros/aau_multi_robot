@@ -425,6 +425,7 @@ namespace explorationPlanner
             void robot_next_goal_callback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
             ros::Subscriber sub_next_goal;
             bool my_quick_check_efficiency_of_goal(double available_distance, frontier_t * frontier);
+            boost::mutex costmap_mutex;
             
             
     };

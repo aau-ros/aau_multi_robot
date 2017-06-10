@@ -2136,7 +2136,7 @@ class Explorer
             speed_msg.avg_speed = exploration_travel_path_global / map_progress.time;
             publisher_speed.publish(speed_msg);
 
-            ros::Duration(10.0).sleep();
+            ros::Duration(5.0).sleep();
         }
     }
 
@@ -3491,8 +3491,11 @@ class Explorer
                     */
                         ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                         ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                        log_major_error("deadlock / slow execution / waiting for auction result???");
-
+                        if(percentage > 90)
+                            log_major_error("deadlock / slow execution / waiting for auction result? BUT at high percentage fortunately!");
+                        else
+                            log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
+                            
                         //abort();
                         log_stopped();
                     //}
@@ -3779,12 +3782,12 @@ int main(int argc, char **argv)
         if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
             explorer.print_mutex_info("main()", "acquiring");
             //ROS_DEBUG("acquiring");
-            costmap_mutex.lock();  
-            explorer.print_mutex_info("main()", "lock");
+            //costmap_mutex.lock();  
+            //explorer.print_mutex_info("main()", "lock");
             //ROS_DEBUG("lock");
             ros::spinOnce();
-            costmap_mutex.unlock();
-            explorer.print_mutex_info("main()", "unlock");
+            //costmap_mutex.unlock();
+            //explorer.print_mutex_info("main()", "unlock");
             //ROS_DEBUG("unlock");
         }
         ros::Duration(0.1).sleep();

@@ -1202,7 +1202,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     }
     else
     {
-        //ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        ROS_WARN("makePlan() failed: returning -1...");
         return -1;
     }
 }
@@ -3156,9 +3156,12 @@ void ExplorationPlanner::findFrontiers()
         unsigned int mx, my, mx2, my2, mx3, my3;
         bool result;
 
-
+        acquire_mutex(&costmap_mutex, __FUNCTION__);
+        
         costmap_ros_->getCostmap()->indexToCells(allFrontiers.at(i), mx, my);
         costmap_ros_->getCostmap()->mapToWorld(mx, my, wx, wy);
+        
+        release_mutex(&costmap_mutex, __FUNCTION__);
 
         //ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
 
@@ -3212,8 +3215,11 @@ void ExplorationPlanner::findFrontiers()
 
             for (unsigned int j = 0; j < allFrontiers.size(); ++j)
             {
+            
+                acquire_mutex(&costmap_mutex, __FUNCTION__);
                 costmap_ros_->getCostmap()->indexToCells(allFrontiers[j], mx2, my2);
                 costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
+                release_mutex(&costmap_mutex, __FUNCTION__);
 
                 if (fabs(wx - wx2) <= MINIMAL_FRONTIER_RANGE && fabs(wy - wy2) <= MINIMAL_FRONTIER_RANGE && fabs(wx - wx2) != 0 && fabs(wy - wy2) != 0)
                 {
@@ -3224,16 +3230,20 @@ void ExplorationPlanner::findFrontiers()
 
             for (unsigned int n = 0; n < neighbour_index.size(); ++n)
             {
+                acquire_mutex(&costmap_mutex, __FUNCTION__);
                 costmap_ros_->getCostmap()->indexToCells(neighbour_index[n], mx2, my2);
                 costmap_ros_->getCostmap()->mapToWorld(mx2, my2, wx2, wy2);
+                release_mutex(&costmap_mutex, __FUNCTION__);
 
                 while(true)
                 {
                     bool end_point_found = true;
                     for (unsigned int k = 0; k < allFrontiers.size(); ++k)
                     {
+                        acquire_mutex(&costmap_mutex, __FUNCTION__);
                         costmap_ros_->getCostmap()->indexToCells(allFrontiers[k], mx3, my3);
                         costmap_ros_->getCostmap()->mapToWorld(mx3, my3, wx3, wy3);
+                        release_mutex(&costmap_mutex, __FUNCTION__);
 
                         if (fabs(wx2 - wx3) <= MINIMAL_FRONTIER_RANGE && fabs(wy2 - wy3) <= MINIMAL_FRONTIER_RANGE && wx2 != wx3 && wy2 != wy3 && wx != wx3 && wy != wy3)
                         {
@@ -4696,6 +4706,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     }
     
     int tries = 0;
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
     while (!costmap_ros_->getRobotPose(robotPose))
     {
             ROS_ERROR("Failed to get RobotPose");
@@ -4706,6 +4717,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
             else
                 return false;
     }
+    release_mutex(&costmap_mutex, __FUNCTION__);
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();
     
@@ -6112,19 +6124,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
 
 void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-
-    //ROS_INFO("waiting for lock");
-    //store_frontier_mutex.lock();
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    //ROS_INFO("lock acquired");
-    
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        return;
-    }
     
     // robot position
     double robot_x = robotPose.getOrigin().getX();
@@ -6159,13 +6159,6 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
 
 void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        return;
-    }
     
     if(ds_list.size() == 0) {
         ROS_INFO("No DS is currently known: falling back to closest st");
@@ -6259,16 +6252,6 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
 
 void ExplorationPlanner::my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name)
 {
-    
-    
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        my_error_counter++;
-        return;
-    }
     
     // robot position
     double robot_x = robotPose.getOrigin().getX();
@@ -6566,14 +6549,6 @@ void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w
 #ifndef QUICK_SELECTION
 
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    
-    tf::Stamped < tf::Pose > robotPose;
-    if(!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        release_mutex(&store_frontier_mutex, __FUNCTION__);
-        return;
-    }
     
     my_energy_above_th = energy_above_th;
     this-> w1 = w1;
