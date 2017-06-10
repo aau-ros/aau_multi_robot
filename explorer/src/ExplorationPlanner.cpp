@@ -1103,8 +1103,9 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-    
+    release_mutex(&costmap_mutex, __FUNCTION__);    
     
     if(successful == true)
     {
@@ -1177,7 +1178,10 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    release_mutex(&costmap_mutex, __FUNCTION__);
+    
     //ROS_ERROR("%d", successful);
     //ros::Duration(2).sleep();
     
@@ -1247,7 +1251,10 @@ double ExplorationPlanner::trajectory_plan_print(double start_x, double start_y,
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    release_mutex(&costmap_mutex, __FUNCTION__);
+    
     //ROS_ERROR("%d", successful);
     //ros::Duration(2).sleep();
     
@@ -3157,10 +3164,8 @@ void ExplorationPlanner::findFrontiers()
         bool result;
 
         acquire_mutex(&costmap_mutex, __FUNCTION__);
-        
         costmap_ros_->getCostmap()->indexToCells(allFrontiers.at(i), mx, my);
         costmap_ros_->getCostmap()->mapToWorld(mx, my, wx, wy);
-        
         release_mutex(&costmap_mutex, __FUNCTION__);
 
         //ROS_INFO("index: %d   map_x: %d   map_y: %d   world_x: %f   world_y: %f", allFrontiers.at(i), mx, my, wx, wy);
@@ -4378,7 +4383,9 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    release_mutex(&costmap_mutex, __FUNCTION__);
     
     if(successful == true) {
         double final_x, final_y;
@@ -4718,6 +4725,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 return false;
     }
     release_mutex(&costmap_mutex, __FUNCTION__);
+    
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();
     

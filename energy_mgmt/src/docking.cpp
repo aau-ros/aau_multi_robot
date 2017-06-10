@@ -1055,7 +1055,7 @@ void docking::update_l4() //TODO(minor) comments
     {       
         if (ds[i].id == best_ds->id)
         {
-            dist_ds = distance_from_robot(ds[i].x, ds[i].y);
+            dist_ds = distance_from_robot(ds[i].x, ds[i].y, true);
             //ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
             if (dist_ds < 0)
             {

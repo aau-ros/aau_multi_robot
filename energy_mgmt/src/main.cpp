@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     //doc.start_join_timer();
     
     
-    //boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
 
 // Frequency of loop
@@ -57,11 +57,11 @@ int main(int argc, char** argv)
     //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
     while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
-        ros::spinOnce();
+        //ros::spinOnce();
         
         //doc.test();
         
-        ros::spinOnce();
+        //ros::spinOnce();
         
         //doc.join_all_multicast_groups();
         
@@ -85,7 +85,8 @@ int main(int argc, char** argv)
         
 
         // sleep for 1/rate seconds
-        loop_rate.sleep();
+        //loop_rate.sleep();
+        ros::Duration(10).sleep();
         
         ROS_INFO("End of main loop");
         

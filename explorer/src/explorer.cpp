@@ -405,6 +405,7 @@ class Explorer
         enum_string.push_back("dead");
         enum_string.push_back("moving_away_from_ds");
         enum_string.push_back("auctioning_3");
+        enum_string.push_back("stopped");
 
     }
 
@@ -3263,7 +3264,6 @@ class Explorer
     void log_stopped() {
     
         update_robot_state_2(stopped);
-        this->indicateSimulationEnd();
         
         std::stringstream robot_number;
         robot_number << robot_id;
@@ -3287,6 +3287,9 @@ class Explorer
         outfile.close();
         ROS_INFO("Creating file %s to indicate end of exploration.",
         status_file.c_str());
+        
+        this->indicateSimulationEnd();
+        ros::Duration(10).sleep();
         
         shutdown();
         
@@ -3674,7 +3677,10 @@ class Explorer
 
     std::string get_text_for_enum(int enumVal)
     {
-        return enum_string[enumVal];
+        if(enumVal >= enum_string.size())
+            log_major_error("segmenv in get_text_for_enum");
+        else
+            return enum_string[enumVal];
     }
 
     bool vacant_ds;
