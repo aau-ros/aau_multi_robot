@@ -475,7 +475,10 @@ class Explorer
         while (!exploration_finished)
         {
         
-        visualize_home_point();
+//            if(robot_id == 0) {
+//                finalize_exploration();
+//                continue;
+//            }
         
             /* Update robot state */
             update_robot_state();
@@ -2363,13 +2366,16 @@ class Explorer
 
     void finalize_exploration()
     {
+    
+        // finished exploration
+        update_robot_state_2(finished);
+    
         // Indicte end of simulation for this robot
         // When the multi_robot_simulation/multiple_exploration_runs.sh script is
         // run, this kills all processes and starts a new run
         this->indicateSimulationEnd();
     
-        // finished exploration
-        update_robot_state_2(finished);
+        
 
         // finish log files
         exploration_has_finished();
@@ -2457,8 +2463,9 @@ class Explorer
         outfile.close();
         if(!boost::filesystem::exists(status_file)) {
             log_major_error("cannot create status file!!!");
-            exit(-1);   
-        }
+            //exit(-1);   
+        } else
+            ROS_INFO("Status file created successfully");
         
         if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage!!!");
