@@ -1103,9 +1103,9 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
-    acquire_mutex(&costmap_mutex, __FUNCTION__);
+    //acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-    release_mutex(&costmap_mutex, __FUNCTION__);    
+    //release_mutex(&costmap_mutex, __FUNCTION__);    
     
     if(successful == true)
     {
@@ -1178,9 +1178,9 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
-    acquire_mutex(&costmap_mutex, __FUNCTION__);
+    //acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-    release_mutex(&costmap_mutex, __FUNCTION__);
+    //release_mutex(&costmap_mutex, __FUNCTION__);
     
     //ROS_ERROR("%d", successful);
     //ros::Duration(2).sleep();
@@ -1251,9 +1251,9 @@ double ExplorationPlanner::trajectory_plan_print(double start_x, double start_y,
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
-    acquire_mutex(&costmap_mutex, __FUNCTION__);
+    //acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-    release_mutex(&costmap_mutex, __FUNCTION__);
+    //release_mutex(&costmap_mutex, __FUNCTION__);
     
     //ROS_ERROR("%d", successful);
     //ros::Duration(2).sleep();
@@ -4385,9 +4385,9 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
 
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
-    acquire_mutex(&costmap_mutex, __FUNCTION__);
+    //acquire_mutex(&costmap_mutex, __FUNCTION__);
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
-    release_mutex(&costmap_mutex, __FUNCTION__);
+    //release_mutex(&costmap_mutex, __FUNCTION__);
     
     if(successful == true) {
         double final_x, final_y;

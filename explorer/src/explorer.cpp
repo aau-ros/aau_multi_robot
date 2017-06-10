@@ -547,15 +547,15 @@ class Explorer
             //ROS_ERROR("planner initialized");
             
             ros::Time time = ros::Time::now();
-            //fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            //fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-            //fs_exp_se_log.close();
+            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+            fs_exp_se_log.close();
             
             exploration->findFrontiers();
             
-            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
-            fs_exp_se_log.close();
+//            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
+//            fs_exp_se_log.close();
 
             exploration->clearVisitedFrontiers();
             exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
@@ -1118,7 +1118,7 @@ class Explorer
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
 //                        fs_exp_se_log.close();
                         
-                        exploration->sort(2);
+                        //exploration->sort(2);
                         //exploration->sort(3);
                         //exploration->clusterFrontiers();
                         //exploration->sort(4);
@@ -1132,9 +1132,9 @@ class Explorer
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
                         
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
-//                        fs_exp_se_log.close();
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
+                        fs_exp_se_log.close();
                         
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
@@ -1158,9 +1158,9 @@ class Explorer
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
-//                        fs_exp_se_log.close();
+                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
+                        fs_exp_se_log.close();
                         
                         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
