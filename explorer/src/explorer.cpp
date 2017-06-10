@@ -288,7 +288,7 @@ class Explorer
         csv_state_file = log_path + std::string("robot_state.log");
         log_file = log_path + std::string("exploration.log");
         exploration_start_end_log = log_path + std::string("exploration_start_end.log");
-        major_errors_file = original_log_path + std::string("major_errors.log");
+        major_errors_file = original_log_path + std::string("_errors.log");
         computation_time_log =  log_path + std::string("computation_times.log");
          
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -1169,6 +1169,7 @@ class Explorer
                         ros::Duration d = ros::Time::now() - time_2;
                         if(d > ros::Duration(5 * 60)) {
                             log_major_error("very slow...");
+                            log_minor_error("very slow...");
                         }
                         
                         if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
@@ -3561,7 +3562,6 @@ class Explorer
         
         major_errors++;
         
-        major_errors_file = original_log_path + std::string("major_errors.log");
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         major_errors_fstream << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
@@ -3576,6 +3576,43 @@ class Explorer
         std::string robo_name = prefix.append(robot_number.str());
         std::string file_name = robo_name.append(error_counter.str());
         std::string file_suffix(".major_error");
+
+        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + file_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate error",
+        status_file.c_str());
+        
+    }
+    
+    void log_minor_error(std::string text) {
+        ROS_FATAL("%s", text.c_str());
+        ROS_INFO("%s", text.c_str());
+        
+        minor_errors++;
+        
+        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << robot_id << ": " << text << std::endl;
+        major_errors_fstream.close();
+
+        std::stringstream robot_number;
+        std::stringstream error_counter;
+        robot_number << robot_id;
+        error_counter << minor_errors;
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_minor_error";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_name = robo_name.append(error_counter.str());
+        std::string file_suffix(".minor_error");
 
         std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
         std::string status_path = ros_package_path + status_directory;
