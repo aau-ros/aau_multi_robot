@@ -2695,7 +2695,10 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     if(distance < 0){
         ROS_ERROR("Failed to compute distance!");
         ROS_INFO("Failed to compute distance!");
-        distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
+        if(target_ds_set)
+            distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
+        else
+            distance = fallback_distance_computation(x, y, optimal_ds_x, optimal_ds_y);
         if(errors == 0)
             my_error_counter++;
         errors++;
@@ -4761,8 +4764,10 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         {
         
             if(APPROACH == 0)
-                if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i)))
+                if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i))) {
+                    ROS_INFO("frontier currentl unreachable: skipping");
                     continue;
+                }
 
             //start auction
             my_selected_frontier = &sorted_frontiers.at(i);
