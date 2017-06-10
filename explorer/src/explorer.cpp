@@ -1142,7 +1142,15 @@ class Explorer
 //                                &final_goal, count, &robot_str, -1);
 //                        else
                             //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
+                            print_mutex_info("explore()", "acquiring");
+            costmap_mutex.lock();
+            print_mutex_info("explore()", "lock");
+
+
+
                             goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                                        costmap_mutex.unlock();
+            print_mutex_info("explore()", "unlock");
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
@@ -3368,11 +3376,11 @@ class Explorer
 
     bool target_reached(void)
     {
-        ros::NodeHandle nh_sub_move_base;
-        sub_move_base = nh_sub_move_base.subscribe("feedback", 1000, &Explorer::feedbackCallback, this);
+//        ros::NodeHandle nh_sub_move_base;
+//        sub_move_base = nh_sub_move_base.subscribe("feedback", 1000, &Explorer::feedbackCallback, this);
 
-        while (feedback_value != feedback_succeed_value)
-            ;
+//        while (feedback_value != feedback_succeed_value)
+//            ;
 
         return true;
     }

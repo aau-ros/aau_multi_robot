@@ -4698,7 +4698,7 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 //TODO(IMPORTANT) safety coefficients
 bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-    
+    errors = 0;
     ros::Time start_time;
     selection_time = 0;
     number_of_frontiers = 0;
@@ -4788,7 +4788,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
             
             frontiers_under_auction.clear();
             my_error_counter = 0;
-            errors = 0;
             
             adhoc_communication::ExpFrontier negotiation_list;
             adhoc_communication::ExpFrontierElement negotiation_element;
