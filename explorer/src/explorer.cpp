@@ -1789,11 +1789,11 @@ class Explorer
             
         
         //TODO move this in update_robot_state, where the state is set to finished
-        if(robot_state == finished || robot_state == dead || robot_state == stuck) {
-            std_msgs::Empty msg;
-            pub_finished_exploration.publish(msg);
-            exploration_finished = true;
-        }            
+//        if(robot_state == finished || robot_state == dead || robot_state == stuck) {
+//            std_msgs::Empty msg;
+//            pub_finished_exploration.publish(msg);
+//            exploration_finished = true;
+//        }            
         
     }
 
