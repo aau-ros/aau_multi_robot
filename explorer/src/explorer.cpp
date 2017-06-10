@@ -1720,7 +1720,7 @@ class Explorer
                     failures_going_home++; //TODO change name from *_home to *_ds
                     if(failures_going_home > 5) {
                         log_major_error("tried too many times to reach DS... terminating exploration...");
-                        log_stucked();
+                        log_stopped();
                     }
                     else {
                         ROS_ERROR("retrying to reach DS...");
