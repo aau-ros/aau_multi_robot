@@ -2679,6 +2679,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     if(total_distance < 0){
         ROS_ERROR("Failed to compute distance!");
         ROS_INFO("Failed to compute distance!");
+        total_distance = fallback_distance_computation(x, y);
         if(errors == 0)
             my_error_counter++;
         errors++;
@@ -2694,6 +2695,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     if(distance < 0){
         ROS_ERROR("Failed to compute distance!");
         ROS_INFO("Failed to compute distance!");
+        distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
         if(errors == 0)
             my_error_counter++;
         errors++;
@@ -8470,7 +8472,7 @@ unsigned char ExplorationPlanner::getCost(costmap_2d::Costmap2DROS *costmap, uns
     return costmap->getCostmap()->getCost(cell_x, cell_y);
 }
 
-float ExplorationPlanner::euclidean_distance(float x1, float y1, float x2, float y2) {
+double ExplorationPlanner::euclidean_distance(float x1, float y1, float x2, float y2) {
     return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) );
 }
 
@@ -9126,4 +9128,12 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;
  
+}
+
+double ExplorationPlanner::fallback_distance_computation(double end_x, double end_y) {
+    return euclidean_distance(robot_x, robot_y, end_x, end_y);
+}
+
+double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
+    return euclidean_distance(start_x, start_y, end_x, end_y);
 }

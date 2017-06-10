@@ -96,6 +96,7 @@ class Explorer
     int failures_going_home;
     int approximate_success;
     bool going_home, checked_percentage;
+    int major_errors, minor_errors;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -153,6 +154,9 @@ class Explorer
         failures_going_home = 0;
         approximate_success = 0;
         going_home = false, checked_percentage = false;
+        major_errors = 0;
+        minor_errors = 0;
+        last_printed_pose_x = 0, last_printed_pose_y = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -3355,8 +3359,8 @@ class Explorer
         /* Get rotation of robot relative to starting position */
         tf::Quaternion orientation = tf::Quaternion(pose->pose.pose.orientation.x, pose->pose.pose.orientation.y,
                                                     pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
-        pose_angle = orientation.getAngle();
-
+        pose_angle = orientation.getAngle();    
+        
         /* Get robot position */
         pose_x = pose->pose.pose.position.x;
         pose_y = pose->pose.pose.position.y;
@@ -3366,6 +3370,16 @@ class Explorer
         //    ROS_ERROR("%.2f: %.1f, %.1f", pose_angle, pose->pose.pose.orientation.z, pose->pose.pose.orientation.w);
         if(robot_id == 0)
             ; //ROS_ERROR("x: %.1f; y: %.1f", pose_x, pose_y);
+        
+        print_new_position();
+    }
+    
+    void print_new_position() {
+        if( fabs(last_printed_pose_x - pose_x) >= 0.1 && fabs(last_printed_pose_y - pose_y) >= 0.1) {
+            ROS_DEBUG("x: %.1f; y: %.1f", pose_x, pose_y);
+            last_printed_pose_x = pose_x;
+            last_printed_pose_y = pose_y;
+        }
     }
 
     void feedbackCallback(const move_base_msgs::MoveBaseActionFeedback::ConstPtr &msg)
@@ -3545,22 +3559,27 @@ class Explorer
         ROS_FATAL("%s", text.c_str());
         ROS_INFO("%s", text.c_str());
         
+        major_errors++;
+        
         major_errors_file = original_log_path + std::string("major_errors.log");
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         major_errors_fstream << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
 
         std::stringstream robot_number;
+        std::stringstream error_counter;
         robot_number << robot_id;
+        error_counter << major_errors;
         std::string prefix = "/robot_";
         
         std::string status_directory = "/simulation_status_error";
         std::string robo_name = prefix.append(robot_number.str());
-        std::string file_suffix(".error");
+        std::string file_name = robo_name.append(error_counter.str());
+        std::string file_suffix(".major_error");
 
         std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
         std::string status_path = ros_package_path + status_directory;
-        std::string status_file = status_path + robo_name + file_suffix;
+        std::string status_file = status_path + file_name + file_suffix;
 
         // TODO(minor): check whether directory exists
         boost::filesystem::path boost_status_path(status_path.c_str());
@@ -3732,7 +3751,7 @@ class Explorer
 
     explorationPlanner::ExplorationPlanner *exploration;
 
-    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle;
+    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y;
 
     double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
     int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;

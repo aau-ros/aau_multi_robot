@@ -400,7 +400,7 @@ namespace explorationPlanner
             std::vector<ds_t> ds_list;
             std::vector<std::vector<float> > ds_graph;
             bool recompute_ds_graph;
-            float euclidean_distance(float x1, float y1, float x2, float y2);
+            double euclidean_distance(float x1, float y1, float x2, float y2);
             float target_ds_x, target_ds_y;
             bool target_ds_set;
             
@@ -426,6 +426,8 @@ namespace explorationPlanner
             ros::Subscriber sub_next_goal;
             bool my_quick_check_efficiency_of_goal(double available_distance, frontier_t * frontier);
             boost::mutex costmap_mutex;
+            double fallback_distance_computation(double end_x, double end_y);
+            double fallback_distance_computation(double start_x, double start_y, double end_x, double end_y);
             
             
     };
