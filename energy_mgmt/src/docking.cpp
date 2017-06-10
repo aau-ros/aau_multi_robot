@@ -158,11 +158,13 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* General services */
     //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
-    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");
+    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");
     //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
-    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
-    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
+    //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
     ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
     //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
@@ -321,31 +323,34 @@ void docking::wait_for_explorer() {
     ros::Duration(5).sleep();
     
     ros::service::waitForService("explorer/distance");
-    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
-    while(!sc_distance) {
+    //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
+    for(int i = 0; i < 10 && !sc_distance; i++) {
         ROS_ERROR("No connection to service 'explorer/distance': retrying...");
         ros::Duration(3).sleep();
-        sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+        //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     }
     ROS_INFO("Established persistent connection to service 'explorer/distance'");
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/reachable_target");
-    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
     for(int i = 0; i < 10 && !sc_reachable_target; i++) {
         ROS_ERROR("No connection to service 'explorer/reachable_target': retrying...");
         ros::Duration(3).sleep();
-        sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+        //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     }
     ROS_INFO("Established persistent connection to service 'explorer/reachable_target'");
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/robot_pose");
-    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");      
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_ERROR("No connection to service 'explorer/robot_pose': retrying...");
         ros::Duration(3).sleep();
-        sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     }
     ROS_INFO("Established persistent connection to service 'explorer/robot_pose'");    
     //ros::Duration(0.1).sleep();
@@ -1168,7 +1173,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     for(int i = 0; i < 10 && !sc_distance; i++) {
         ROS_FATAL("NO MORE CONNECTION!");
         ros::Duration(1).sleep();
-        sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+        //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     }
     for (int i = 0; i < 10; i++)
         if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0) {
@@ -2701,7 +2706,7 @@ void docking::check_reachable_ds()
         for(int j = 0; j < 10 && !sc_reachable_target; j++) {
             ROS_FATAL("NO MORE CONNECTION!");
             ros::Duration(1).sleep();
-            sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+            //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
         }
         if (sc_reachable_target.call(srv_msg))
             reachable = srv_msg.response.reachable;
@@ -2880,7 +2885,7 @@ void docking::update_robot_position()
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_FATAL("NO MORE CONNECTION!");
         ros::Duration(1).sleep();
-        sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
     }
     if (sc_robot_pose.call(srv_msg))
     {
