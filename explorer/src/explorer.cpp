@@ -97,7 +97,7 @@ class Explorer
     int approximate_success;
     bool going_home, checked_percentage;
     int major_errors, minor_errors;
-    bool retry;
+    bool skip_findFrontiers;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -158,7 +158,7 @@ class Explorer
         major_errors = 0;
         minor_errors = 0;
         last_printed_pose_x = 0, last_printed_pose_y = 0;
-        retry = false;
+        skip_findFrontiers = false;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -553,9 +553,8 @@ class Explorer
             exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
             //ROS_ERROR("planner initialized");
          
-            if(retry) {
+            if(skip_findFrontiers) {
                 ROS_INFO("skipping findFrontiers");
-                retry = false;
             } else {
                 fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                 fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
@@ -1217,8 +1216,12 @@ class Explorer
                                     //ROS_ERROR("auctioning");
                                     update_robot_state_2(auctioning);    
                                 }
-                                else
+                                else {
                                     update_robot_state_2(moving_to_frontier);
+                                    //store where the robot is moving from
+                                    starting_x = pose_x;
+                                    starting_y = pose_y;
+                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
                                 
@@ -1740,7 +1743,10 @@ class Explorer
                     {
                         ROS_ERROR("Robot could not reach goal: mark goal as unreachable and explore again");
                         ROS_INFO("Robot could not reach goal: mark goal as unreachable and explore again");
-                        retry = true;
+                        if( fabs(starting_x - pose_x) < 1 && fabs(starting_y - pose_y) < 1 )
+                            skip_findFrontiers = true;
+                        else
+                            skip_findFrontiers = false;
                         update_robot_state_2(exploring);
                     }
                     else
@@ -3800,7 +3806,7 @@ class Explorer
 
     explorationPlanner::ExplorationPlanner *exploration;
 
-    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y;
+    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
 
     double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
     int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
