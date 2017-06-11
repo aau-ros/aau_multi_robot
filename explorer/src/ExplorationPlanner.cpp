@@ -1334,7 +1334,6 @@ bool ExplorationPlanner::storeFrontier(double x, double y, int detected_by_robot
 
         //store_frontier_mutex.lock();
         acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-        
         frontiers.push_back(new_frontier);
         release_mutex(&store_frontier_mutex, __FUNCTION__);
     }else
@@ -1357,7 +1356,6 @@ bool ExplorationPlanner::storeFrontier(double x, double y, int detected_by_robot
 
         //store_frontier_mutex.lock();
         acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-        
         frontiers.push_back(new_frontier);
         release_mutex(&store_frontier_mutex, __FUNCTION__);
     }
@@ -1378,7 +1376,6 @@ bool ExplorationPlanner::removeStoredFrontier(int id, std::string detected_by_ro
                 
                 //store_frontier_mutex.lock();
                 acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-                
                 frontiers.erase(frontiers.begin()+i);
 //                if(i > 0)
 //                {
@@ -1394,7 +1391,6 @@ bool ExplorationPlanner::removeStoredFrontier(int id, std::string detected_by_ro
             
                 //store_frontier_mutex.lock();
                 acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-                
                 frontiers.erase(frontiers.begin()+i);
                 if(i > 0)
                 {
@@ -4760,7 +4756,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         frontier_selected = false;
         for(int i=0; i < sorted_frontiers.size(); i++)
         {
-        
             if(APPROACH == 0)
                 if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i))) {
                     ROS_INFO("frontier currentl unreachable: skipping");

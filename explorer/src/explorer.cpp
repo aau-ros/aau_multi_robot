@@ -3870,7 +3870,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
-            explorer.print_mutex_info("main()", "acquiring");
+            //explorer.print_mutex_info("main()", "acquiring");
             //ROS_DEBUG("acquiring");
             //costmap_mutex.lock();  
             //explorer.print_mutex_info("main()", "lock");
