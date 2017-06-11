@@ -9129,9 +9129,11 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
 }
 
 double ExplorationPlanner::fallback_distance_computation(double end_x, double end_y) {
-    return euclidean_distance(robot_x, robot_y, end_x, end_y);
+    //return euclidean_distance(robot_x, robot_y, end_x, end_y);
+    return false;
 }
 
 double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
-    return euclidean_distance(start_x, start_y, end_x, end_y);
+    //return euclidean_distance(start_x, start_y, end_x, end_y);
+    return false;
 }
