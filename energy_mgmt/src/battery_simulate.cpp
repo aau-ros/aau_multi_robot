@@ -16,6 +16,9 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear);         // m/s
     nh.getParam("energy_mgmt/mass", mass);         // kg
+    power_basic_computations = 8.0; // W
+    power_advanced_computation = 3.0;
+    advanced_computations_bool = true;
     
     //ROS_ERROR("%f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max);
 
@@ -32,7 +35,9 @@ battery_simulate::battery_simulate()
     total_energy = charge_max * 3600; // J (i.e, joule)       
     remaining_energy = total_energy;
     speed_linear = max_speed_linear;
-    maximum_running_time = total_energy / (max_speed_linear * mass); // s
+    //maximum_running_time = total_energy / (max_speed_linear * mass); // s
+    maximum_running_time = total_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations); // s
+    
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
     if(INFINITE_ENERGY) {
@@ -60,12 +65,9 @@ battery_simulate::battery_simulate()
     // subscribe to topics
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
+    sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);    
+    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this); // TODO(minor) do we need this?
 
-    // TODO(minor) do we need this?
-    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this);
-
-    sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);
-    
     //ROS_ERROR("remaining distance: %f", state.remaining_distance);
     pub_full_battery_info.publish(state);
     
@@ -79,7 +81,12 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         ROS_DEBUG("Start recharging");
         state.charging = true;
     }
-    else
+    else {
+        if(msg.get()->state == fully_charged || msg.get()->state == leaving_ds || msg.get()->state == exploring)
+            advanced_computations_bool = true;
+        else
+            advanced_computations_bool = false;
+    
         /* The robot is not charging; if the battery was previously under charging, it means that the robot aborted the
            recharging process */
         if (state.charging == true)
@@ -87,6 +94,9 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
             ROS_DEBUG("Recharging aborted");
             state.charging = false;
         }
+        
+           
+    }
 }
 
 void battery_simulate::compute()
@@ -140,9 +150,9 @@ void battery_simulate::compute()
          * overestimate the consumed energy by assuming that the robot moved at the maximum speed for the whole period.
          */
         if (speed_linear > 0)
-            remaining_energy -= power_standing * time_diff_sec;
+            remaining_energy -= (power_standing + power_basic_computations + power_advanced_computation * advanced_computations_bool) * time_diff_sec;
         else
-            remaining_energy -= (power_moving * max_speed_linear + power_standing) * time_diff_sec;
+            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * advanced_computations_bool) * time_diff_sec ;
 
         //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */

@@ -1,0 +1,2 @@
+#!/bin/bash
+roslaunch multi_robot_simulation mapping.launch robot:=robot_1 robot_prefix:=/robot_1 robot_local_map_frame:=robot_1/map output:=log log_path:=/home/fabrizio/ros_indigo_internal/src/multi_robot_exploration/multi_robot_analyzer/logs/17-06-11/17-08-45/1 use_sim_time:=true xmax:=150 xmin:=-150 ymax:=150 ymin:=-150 2>/dev/null
