@@ -3654,7 +3654,7 @@ class Explorer
         log_mutex.lock();
         lock_file = log_path + std::string("lock.log");
         lock_fstream.open(lock_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        lock_fstream << function_name << ": " << action << std::endl;
+        lock_fstream << ros::Time::now() - time_start << ": " << function_name << ": " << action << std::endl;
         lock_fstream.close();
         log_mutex.unlock();
     }
