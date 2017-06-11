@@ -566,9 +566,11 @@ class Explorer
     //            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
     //            fs_exp_se_log.close();
 
-            exploration->clearVisitedFrontiers();
+            if(skip_findFrontiers)
+                exploration->clearVisitedFrontiers();
             exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
-            exploration->clearSeenFrontiers(costmap2d_global);
+            if(skip_findFrontiers)
+                exploration->clearSeenFrontiers(costmap2d_global);
 
             costmap_mutex.unlock();
             print_mutex_info("explore()", "unlock");
@@ -1212,16 +1214,16 @@ class Explorer
 //                            if(exploration->winner_of_auction)
 //                            {
                                 explorations++;
-                                if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
-                                    //ROS_ERROR("auctioning");
-                                    update_robot_state_2(auctioning);    
-                                }
-                                else {
+//                                if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
+//                                    //ROS_ERROR("auctioning");
+//                                    update_robot_state_2(auctioning);    
+//                                }
+//                                else {
                                     update_robot_state_2(moving_to_frontier);
                                     //store where the robot is moving from
                                     starting_x = pose_x;
                                     starting_y = pose_y;
-                                }
+//                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
                                 
@@ -1743,10 +1745,10 @@ class Explorer
                     {
                         ROS_ERROR("Robot could not reach goal: mark goal as unreachable and explore again");
                         ROS_INFO("Robot could not reach goal: mark goal as unreachable and explore again");
-                        if( fabs(starting_x - pose_x) < 1 && fabs(starting_y - pose_y) < 1 )
-                            skip_findFrontiers = true;
-                        else
-                            skip_findFrontiers = false;
+//                        if( fabs(starting_x - pose_x) < 1 && fabs(starting_y - pose_y) < 1 )
+//                            skip_findFrontiers = true;
+//                        else
+//                            skip_findFrontiers = false;
                         update_robot_state_2(exploring);
                     }
                     else
@@ -3445,7 +3447,7 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = TIMEOUT_CHECK_1 * 60; //seconds
-        int starting_value_countdown_2 = 1.5 * TIMEOUT_CHECK_1 * 60; //seconds
+        int starting_value_countdown_2 = 3 * TIMEOUT_CHECK_1 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         
