@@ -4715,13 +4715,13 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     acquire_mutex(&costmap_mutex, __FUNCTION__);
     while (!costmap_ros_->getRobotPose(robotPose))
     {
-            ROS_ERROR("Failed to get RobotPose");
-            if(tries < 5) {
-                tries++;
-                ros::Duration(2).sleep();
-            }
-            else
-                return false;
+        ROS_ERROR("Failed to get RobotPose");
+        if(tries < 5) {
+            tries++;
+            ros::Duration(2).sleep();
+        }
+        else
+            return false;
     }
     release_mutex(&costmap_mutex, __FUNCTION__);
     
@@ -9130,10 +9130,10 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
 
 double ExplorationPlanner::fallback_distance_computation(double end_x, double end_y) {
     //return euclidean_distance(robot_x, robot_y, end_x, end_y);
-    return false;
+    return 10000000000;
 }
 
 double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
     //return euclidean_distance(start_x, start_y, end_x, end_y);
-    return false;
+    return 10000000000;
 }
