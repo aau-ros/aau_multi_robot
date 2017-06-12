@@ -603,14 +603,6 @@ class Explorer
              */
             ros::Duration(2).sleep();
             
-            /*
-            while(available_distance <= 0) {
-                ROS_ERROR("Waiting battery state...");
-                ros::spinOnce();
-                ros::Duration(3).sleep();
-            }
-            */
-            
             explorer_ready = true;
             
             store_current_position();
@@ -619,7 +611,9 @@ class Explorer
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
                 if(available_distance <= 0) {
-                    //ROS_ERROR("waiting battery info");
+                    ROS_DEBUG("waiting battery info");
+                    ros::Duration(3).sleep();
+                    ros::spinOnce();
                     continue;
                    }  
                     

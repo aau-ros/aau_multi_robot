@@ -1511,7 +1511,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
         s.vacant = msg.get()->vacant;
         discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
-        ROS_INFO("\e[1;34mNew docking station received: ds%d (%f, %f) \e[0m", s.id, s.x, s.y);
+        ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
 
         /* Remove DS from the vector of undiscovered DSs */
         for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
@@ -2563,7 +2563,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
         double dist = distance_from_robot((*it).x, (*it).y, true);
-        if (dist > 0 && dist < fiducial_signal_range)
+        if (dist < 0)
+            ROS_WARN("Failed distance computation!");
+        else if (dist < fiducial_signal_range)
         {
             /* Store new DS in the vector of known DSs, and remove it from the vector
              * of undiscovered DSs */
@@ -2586,7 +2588,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
              * decrease the iterator by one to compensate the future increment of 
              * the for loop, since, after the deletion of the element, all the elements in the vector whose position was after the one of the removed element are shifted by one position, and so we are already pointing to the next element, even without the future increment of the for loop */
             it--;
-        }
+        } else
+            ; //ROS_DEBUG("ds%d has not been discovered yet", (*it).id);
+        
     }
 }
 
@@ -2756,7 +2760,7 @@ void docking::check_reachable_ds()
             
         }
         else {
-            ROS_INFO("UNREACHABLE!!!");
+            //ROS_DEBUG("ds%d is not reachable at the moment: ", (*it).id);
             it++;
             i++;
         }
