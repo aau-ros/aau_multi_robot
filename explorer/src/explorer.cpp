@@ -273,7 +273,7 @@ class Explorer
             // be caureful: robot_name is used by some ExplorerPlanner functions, so do not touch it...
             robot_name = robot_prefix;  // TODO(minor) handle better
 
-            ROS_INFO("Move_base_frame: %s", move_base_frame.c_str());
+            ROS_INFO("move_base_frame: %s", move_base_frame.c_str());
             robot_id = atoi(move_base_frame.substr(7, 1).c_str());
 
             ROS_INFO("Robot name: %s    robot_id: %d", robot_name.c_str(), robot_id);
@@ -1649,11 +1649,9 @@ class Explorer
 
             }
 
+            /* Robot could not reach goal */
             else
-            {
-                /* Robot could not reach goal */
-                ROS_INFO("Robot could not reach goal");
-
+            {                       
                 if (robot_state == going_charging)
                 {
                     ROS_ERROR("Robot cannot reach DS for recharging!");
@@ -2022,6 +2020,7 @@ class Explorer
             /* Publish frontier points for rviz */
             exploration->visualize_Frontiers();
             //exploration->visualize_Clusters();
+            //visualize
 
             costmap_mutex.unlock();
             //ROS_DEBUG("frontiers(): lock released");
@@ -2730,6 +2729,60 @@ class Explorer
         ros::NodeHandle nh("homePoint");
         pub_home_Point = nh.advertise<geometry_msgs::PointStamped>("homePoint", 100, true);
         pub_home_Point.publish<geometry_msgs::PointStamped>(homePoint);
+        
+        /*
+        visualization_msgs::Marker marker;
+
+        marker.header.frame_id = move_base_frame;
+        marker.header.stamp = ros::Time::now();
+        marker.header.seq = frontier_seq_number++;
+        marker.ns = "my_namespace";
+        marker.id = frontier_seq_number;
+        marker.type = visualization_msgs::Marker::SPHERE;
+        marker.action = visualization_msgs::Marker::ADD;
+        marker.lifetime = ros::Duration(10); //TODO //F
+        marker.pose.position.x = frontiers.at(i).x_coordinate;
+        marker.pose.position.y = frontiers.at(i).y_coordinate;
+        marker.pose.position.z = 0;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+        marker.scale.x = 0.2;
+        marker.scale.y = 0.2;
+        marker.scale.z = 0.2;
+
+        marker.color.a = 1.0;
+
+        if(frontiers.at(i).detected_by_robot == robot_name)
+        {
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+        }
+        else if(frontiers.at(i).detected_by_robot == 1)
+        {
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+        }
+        else if(frontiers.at(i).detected_by_robot == 2)
+        {
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
+        }
+        else
+        {
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
+        }
+
+        markerArray.markers.push_back(marker);
+        */
+        
+        
     }
 
     bool move_robot(int seq, double position_x, double position_y)
@@ -3310,7 +3363,6 @@ class Explorer
         return false;
     }
 
-    //NB: the robot position is in the world "shared/global" frame (differently from the getPose() of Costmap2dROS)!!!
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
     {
         /* Get rotation of robot relative to starting position */

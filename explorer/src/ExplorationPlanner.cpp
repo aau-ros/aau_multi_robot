@@ -4765,7 +4765,11 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     release_mutex(&costmap_mutex, __FUNCTION__);
     
     robot_x = robotPose.getOrigin().getX();
-    robot_y = robotPose.getOrigin().getY();
+    robot_y = robotPose.getOrigin().getY();   
+//    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
+//    double c1, c2;
+//    costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
+//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot!
     
     sorted_frontiers.clear();
     
@@ -7765,13 +7769,19 @@ void ExplorationPlanner::visualize_Frontiers()
                 marker.color.g = 0.0;
                 marker.color.b = 0.0;
             }
-            if(frontiers.at(i).detected_by_robot == 1)
+            else if(frontiers.at(i).detected_by_robot == 1)
             {
                 marker.color.r = 0.0;
                 marker.color.g = 1.0;
                 marker.color.b = 0.0;
             }
-            if(frontiers.at(i).detected_by_robot == 2)
+            else if(frontiers.at(i).detected_by_robot == 2)
+            {
+                marker.color.r = 0.0;
+                marker.color.g = 0.0;
+                marker.color.b = 1.0;
+            }
+            else
             {
                 marker.color.r = 0.0;
                 marker.color.g = 0.0;

@@ -35,6 +35,7 @@
 #include <ros/console.h>
 #include "ros/package.h"
 #include <std_msgs/String.h>
+#include <visualization_msgs/Marker.h>
 
 
 #define PI 3.14159265
@@ -273,15 +274,17 @@ class docking
     robot_t *robot;
 
     /**
-     * A vector of all docking stations with coordinates and vacancy.
+     * The type for a docking station (DS for short).
+     * See http://www.ros.org/reps/rep-0105.html#base-link for more information about frames.
      */
     struct ds_t
     {
         int id;
-        double x;
-        double y;
+        double x, y; // coordinates of the DS in the /odom frame
+        double map_x, map_y; // coordinates of the DS in the /map frame
         bool vacant;
     };
+    
     vector<ds_t> ds;
     vector<ds_t> undiscovered_ds;
     vector<ds_t> discovered_ds;
@@ -602,7 +605,7 @@ class docking
     bool graph_navigation_allowed;
     void finalize_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finalize_exploration;
-  
+    ros::Publisher pub_ds_position;
   
     
 };

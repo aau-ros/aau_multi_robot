@@ -15,6 +15,7 @@
     <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
         <param name="num_robots" value="$(arg num_robots)" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
+        <param name="move_base_frame" value="$(arg robot_prefix)/map" />
 
         <param name="x" value ="$(arg x)" />
         <param name="y" value ="$(arg y)" />

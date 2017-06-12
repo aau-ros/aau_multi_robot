@@ -300,6 +300,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
+    pub_ds_position = nh.advertise <visualization_msgs::Marker> ("robot_position", 1000, true);
+    
 }
 
 void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
@@ -398,7 +400,7 @@ void docking::preload_docking_stations()
         /* Store new DS */
         ds_t new_ds;
         new_ds.id = index;
-        abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
+        //abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
         new_ds.vacant = true;  // TODO(minor) param...
         undiscovered_ds.push_back(new_ds);
 
@@ -1478,7 +1480,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         {
             // coordinates don't match //TODO(minor) do it...
             double x, y;
-            abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
+            //abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
             if (ds[i].x != x || ds[i].y != y)
                 ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
                           "%.2f) != (%.2f, %.2f)",
@@ -1508,7 +1510,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         //TODO(minor) use a function...
         ds_t s;
         s.id = msg.get()->id;
-        abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
+        //abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
         s.vacant = msg.get()->vacant;
         discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
         ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
@@ -2125,7 +2127,7 @@ void docking::set_target_ds_vacant(bool vacant)
     srv_msg.request.dst_robot = group_name;
     srv_msg.request.docking_station.id = target_ds->id;
     double x, y;
-    rel_to_abs(target_ds->x, target_ds->y, &x, &y);
+    //rel_to_abs(target_ds->x, target_ds->y, &x, &y);
     srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
@@ -2579,7 +2581,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
             send_ds_srv_msg.request.topic = "docking_stations";
             send_ds_srv_msg.request.docking_station.id = (*it).id;
             double x, y;
-            rel_to_abs((*it).x, (*it).y, &x, &y);
+            //rel_to_abs((*it).x, (*it).y, &x, &y);
             send_ds_srv_msg.request.docking_station.x = x;
             send_ds_srv_msg.request.docking_station.y = y;
             send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
@@ -2754,6 +2756,37 @@ void docking::check_reachable_ds()
             
             it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
             i=0;
+            
+            
+            // Visualize in RViz
+            visualization_msgs::Marker marker;
+
+            marker.header.frame_id = robot_prefix + "/map";
+            marker.header.stamp = ros::Time::now();
+            marker.header.seq = it->id;
+            marker.ns = "ds_position";
+            marker.id = it->id;
+            marker.type = visualization_msgs::Marker::SPHERE;
+            marker.action = visualization_msgs::Marker::ADD;
+            //marker.lifetime = ros::Duration(10); //TODO //F
+            marker.scale.x = 0.5;
+            marker.scale.y = 0.5;
+            marker.scale.z = 0.5;
+            marker.pose.position.x = it->map_x;
+            marker.pose.position.y = it->map_y;
+            marker.pose.position.z = 0;
+            marker.pose.orientation.x = 0.0;
+            marker.pose.orientation.y = 0.0;
+            marker.pose.orientation.z = 0.0;
+            marker.pose.orientation.w = 1.0;
+            marker.color.a = 1.0;
+            marker.color.r = 0.0;
+            marker.color.g = 0.0;
+            marker.color.b = 1.0;
+            pub_ds_position.publish< visualization_msgs::Marker >(marker);
+      
+            //ROS_ERROR("x: %.1f, y: %.1f", pose->pose.pose.position.x, pose->pose.pose.position.y);
+            
 
             if(id1 != id2)
                 ROS_ERROR("ERROR");
@@ -2922,7 +2955,7 @@ void docking::update_robot_position()
     msg.id = robot_id;
     double x, y;
     //ROS_ERROR("(%f, %f)", robot->x, robot->y);
-    rel_to_abs(robot->x, robot->y, &x, &y);
+    //rel_to_abs(robot->x, robot->y, &x, &y);
     //ROS_ERROR("(%f, %f)", x, y);
     msg.x = x;
     msg.y = y;
@@ -2937,7 +2970,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.id = it->id;
         srv_msg.request.dst_robot = group_name;
         double x, y;
-        rel_to_abs(it->x, it->y, &x, &y);
+        //rel_to_abs(it->x, it->y, &x, &y);
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
@@ -2949,7 +2982,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.id = it->id;
         srv_msg.request.dst_robot = group_name;
         double x, y;
-        rel_to_abs(it->x, it->y, &x, &y);
+        //rel_to_abs(it->x, it->y, &x, &y);
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
