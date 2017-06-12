@@ -1250,7 +1250,7 @@ class Explorer
                                 continue;
                             }
                             
-                            else if(!exploration->existFrontiers()) {
+                            else if(!exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation()) {
                                 if(exploration->home_is_reachable(available_distance)) {
                                     bool completed_navigation = false;
                                     for (int i = 0; i < 5; i++)

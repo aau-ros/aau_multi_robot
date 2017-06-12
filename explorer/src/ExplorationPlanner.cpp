@@ -2666,7 +2666,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     if(target_ds_set)
         total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
     else
-        total_distance_eu += euclidean_distance(x, y, 0, 0);
+        total_distance_eu += euclidean_distance(x, y, robot_home_x, robot_home_y);
     if(total_distance_eu > available_distance)
         return false;
     
@@ -4415,6 +4415,44 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
 
 bool ExplorationPlanner::existFrontiers() {
     return frontiers.size() > 0 ? true : false;
+}
+
+bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation() {
+    bool found_reachable_frontier = false;
+    bool exit = false;
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    for(int i=0; i < frontiers.size() && !exit; i++)
+        for(int j=0; j < ds_list.size() && !exit; j++) {
+            double total_distance;
+            double x_f = frontiers[i].x_coordinate;
+            double y_f = frontiers[i].y_coordinate;
+//            double x_ds = ds_list[j].x;
+//            double y_ds = ds_list[j].y;
+            double x_ds = optimal_ds_x;
+            double y_ds = optimal_ds_y;
+            
+            //check euclidean distances
+            total_distance = euclidean_distance(x_f, y_f, x_ds, y_ds) * 2;
+            if(total_distance > available_distance)
+                exit = true;
+            
+            // distance to robot
+            total_distance = trajectory_plan_meters(x_f, y_f, x_ds, y_ds) * 2;
+            if(total_distance < 0){
+                ROS_ERROR("Failed to compute distance!");
+                ROS_INFO("Failed to compute distance!");
+                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
+                if(errors == 0)
+                    my_error_counter++;
+                errors++;
+            }
+            if(available_distance > total_distance) {
+                found_reachable_frontier = true;
+                exit = true;   
+            }
+        }
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
+    return found_reachable_frontier;
 }
 
 bool ExplorationPlanner::recomputeGoal() {
