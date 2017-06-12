@@ -1252,28 +1252,7 @@ class Explorer
                             
                             ros::spinOnce(); //to udpate available_distance
                             if( !exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation(available_distance) ) {
-                                if(exploration->home_is_reachable(available_distance)) {
-                                    bool completed_navigation = false;
-                                    for (int i = 0; i < 5; i++)
-                                    {
-                                        if (completed_navigation == false)
-                                        {
-                                            counter++;
-                                            completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                                        }
-                                        else
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    finalize_exploration();
-                                }
-                                else {
-                                    finalize_exploration();
-//                                    going_home = true;
-//                                    update_robot_state_2(auctioning_3);
-                                    continue;
-                                }
+                                move_home_if_possible();
                             }
                                 
                             else if (robot_state == fully_charged)
@@ -1306,27 +1285,7 @@ class Explorer
                                     // ROS_ERROR("Shutdown in: %d", exit_countdown);
                                     // if (exit_countdown <= 0)
                                     ros::spinOnce();
-                                    if(!exploration->home_is_reachable(available_distance)) {
-                                        bool completed_navigation = false;
-                                        for (int i = 0; i < 5; i++)
-                                        {
-                                            if (completed_navigation == false)
-                                            {
-                                                counter++;
-                                                completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                                            }
-                                            else
-                                            {
-                                                break;
-                                            }
-                                        }
-                                        finalize_exploration();
-                                    } else {
-                                        finalize_exploration();
-//                                        going_home = true;
-//                                        update_robot_state_2(auctioning_3);   
-                                        continue;                                    
-                                    }
+                                    move_home_if_possible();
                                 }                                
                             }
 
@@ -1343,27 +1302,7 @@ class Explorer
                                      else {
                                         ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
                                         ros::spinOnce();
-                                        if(!exploration->home_is_reachable(available_distance)) {
-                                            bool completed_navigation = false;
-                                            for (int i = 0; i < 5; i++)
-                                            {
-                                                if (completed_navigation == false)
-                                                {
-                                                    counter++;
-                                                    completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                                                }
-                                                else
-                                                {
-                                                    break;
-                                                }
-                                            }
-                                            finalize_exploration();
-                                        } else {
-                                            finalize_exploration();
-//                                            going_home = true;
-//                                            update_robot_state_2(auctioning_3);   
-                                            continue;                                    
-                                        }
+                                        move_home_if_possible();
                                      }
 //                                    } else {
 //                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
@@ -3645,6 +3584,31 @@ class Explorer
         ROS_INFO("Creating file %s to indicate error",
         status_file.c_str());
         
+    }
+    
+    void move_home_if_possible() {
+        if(exploration->home_is_reachable(available_distance)) {
+            bool completed_navigation = false;
+            for (int i = 0; i < 5; i++)
+            {
+                if (completed_navigation == false)
+                {
+                    counter++;
+                    completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            finalize_exploration();
+        }
+        else {
+            log_major_error("robot has finished the exploration but cannot reach home!");
+            finalize_exploration();
+//            going_home = true;
+//            update_robot_state_2(auctioning_3);
+        }
     }
     
     void print_mutex_info(std::string function_name, std::string action) {
