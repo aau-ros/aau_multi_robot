@@ -1250,7 +1250,8 @@ class Explorer
                                 continue;
                             }
                             
-                            else if(!exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation()) {
+                            ros::spinOnce(); //to udpate available_distance
+                            if( !exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation(available_distance) ) {
                                 if(exploration->home_is_reachable(available_distance)) {
                                     bool completed_navigation = false;
                                     for (int i = 0; i < 5; i++)
@@ -1304,6 +1305,7 @@ class Explorer
                                     // exit_countdown--;
                                     // ROS_ERROR("Shutdown in: %d", exit_countdown);
                                     // if (exit_countdown <= 0)
+                                    ros::spinOnce();
                                     if(!exploration->home_is_reachable(available_distance)) {
                                         bool completed_navigation = false;
                                         for (int i = 0; i < 5; i++)
@@ -1340,6 +1342,7 @@ class Explorer
                                          }
                                      else {
                                         ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
+                                        ros::spinOnce();
                                         if(!exploration->home_is_reachable(available_distance)) {
                                             bool completed_navigation = false;
                                             for (int i = 0; i < 5; i++)

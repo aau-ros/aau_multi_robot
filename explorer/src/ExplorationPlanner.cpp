@@ -4417,7 +4417,8 @@ bool ExplorationPlanner::existFrontiers() {
     return frontiers.size() > 0 ? true : false;
 }
 
-bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation() {
+bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double available_distance) {
+    this->available_distance = available_distance;
     bool found_reachable_frontier = false;
     bool exit = false;
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
