@@ -136,7 +136,6 @@ class Explorer
            ros::console::notifyLoggerLevelsChanged();
         }
     
-        // available_distance = 100; //F
         // F
         test = true;
         vacant_ds = true;
@@ -208,7 +207,7 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
-        nh.param<float>("safety_coeff", safety_coeff, 0.9);
+        nh.param<float>("safety_coeff", safety_coeff, 0.8);
         nh.param<float>("queue_distance", queue_distance, 7.0);
         nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
         //ROS_ERROR("%f", queue_distance);
@@ -1062,7 +1061,7 @@ class Explorer
                                     
                                 
 //                                else if(dist > available_distance * safety_coeff) 
-                                if(dist > available_distance * safety_coeff) 
+                                if(dist > conservative_available_distance(available_distance) ) 
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
                                         log_major_error("ERROR WITH DS GRAPH");
@@ -1158,7 +1157,7 @@ class Explorer
 
 //                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                             
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance * safety_coeff, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                             
                                         costmap_mutex.unlock();
             print_mutex_info("explore()", "unlock");
@@ -2042,7 +2041,7 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,global_map_progress_percentage,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
+                  "conservative_available_distance,global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
         fs_csv.close();
@@ -2081,7 +2080,7 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << map_progress.time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << ","
+            fs_csv << map_progress.time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << "," << conservative_available_distance(available_distance) << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << "," 
                    << map_progress.local_freespace << "," << free_cells_count << "," 
                    << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
@@ -2785,6 +2784,10 @@ class Explorer
         */
         
         
+    }
+    
+    double conservative_available_distance(double available_distance) {
+        return available_distance * safety_coeff - max_av_distance * 0.01;
     }
 
     bool move_robot(int seq, double position_x, double position_y)
