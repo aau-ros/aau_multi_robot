@@ -138,7 +138,7 @@ void battery_simulate::compute()
             state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
             state.remaining_time_run = state.soc * total_energy;
             //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; 
-            state.remaining_distance = state.remaining_time_run * max_speed_linear; //TODO(minor) correct? if yes, do the same also below...
+            state.remaining_distance = state.remaining_time_run * speed_avg; //TODO(minor) correct? if yes, do the same also below...
         }
     }
     else

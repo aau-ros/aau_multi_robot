@@ -1061,7 +1061,8 @@ class Explorer
                                 }
                                     
                                 
-                                else if(dist > available_distance * safety_coeff) 
+//                                else if(dist > available_distance * safety_coeff) 
+                                if(dist > available_distance * safety_coeff) 
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
                                         log_major_error("ERROR WITH DS GRAPH");
@@ -1155,9 +1156,10 @@ class Explorer
             costmap_mutex.lock();
             print_mutex_info("explore()", "lock");
 
-
-
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+//                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance * safety_coeff, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            
                                         costmap_mutex.unlock();
             print_mutex_info("explore()", "unlock");
                         
@@ -1251,7 +1253,7 @@ class Explorer
                             }
                             
                             ros::spinOnce(); //to udpate available_distance
-                            if( !exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation(available_distance) ) {
+                            if( !exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation(max_av_distance * safety_coeff) ) {
                                 move_home_if_possible();
                             }
                                 
@@ -2088,13 +2090,13 @@ class Explorer
             costmap_mutex.unlock();
             print_mutex_info("map_info()", "unlock");
 
-//            // call map_merger to log data
-//            map_merger::LogMaps log;
-//            log.request.log = 12;  /// request local and global map progress
-//            ROS_INFO("Calling map_merger service logOutput");
-//            if (!mm_log_client.call(log))
-//                ROS_ERROR("Could not call map_merger service to store log.");
-//            ROS_DEBUG("Finished service call.");
+            // call map_merger to log data
+            map_merger::LogMaps log;
+            log.request.log = 12;  /// request local and global map progress
+            ROS_INFO("Calling map_merger service logOutput");
+            if (!mm_log_client.call(log))
+                ROS_ERROR("Could not call map_merger service to store log.");
+            ROS_DEBUG("Finished service call.");
 
             ROS_DEBUG("Saving progress...");
             save_progress();

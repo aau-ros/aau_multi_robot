@@ -2673,8 +2673,8 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     // distance to robot
     total_distance = trajectory_plan_meters(x, y);
     if(total_distance < 0){
-        ROS_ERROR("Failed to compute distance!");
-        ROS_INFO("Failed to compute distance!");
+        ROS_ERROR("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
+        ROS_INFO("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
         total_distance = fallback_distance_computation(x, y);
         if(errors == 0)
             my_error_counter++;
