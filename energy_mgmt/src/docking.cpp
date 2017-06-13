@@ -112,7 +112,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     ros::Duration(10).sleep();
     robot->id = robot_id;
     robot->state = active;
-    abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
+    
+    //abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
+    robot->x = origin_absolute_x, robot->y = origin_absolute_y;
+    
     robots.push_back(*robot);
     
     best_ds = NULL;
@@ -400,7 +403,10 @@ void docking::preload_docking_stations()
         /* Store new DS */
         ds_t new_ds;
         new_ds.id = index;
+        
         //abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
+        new_ds.x = x, new_ds.y = y;
+        
         new_ds.vacant = true;  // TODO(minor) param...
         undiscovered_ds.push_back(new_ds);
 
@@ -1480,7 +1486,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         {
             // coordinates don't match //TODO(minor) do it...
             double x, y;
+            
             //abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
+            x = msg.get()->x, y = msg.get()->y;
+            
             if (ds[i].x != x || ds[i].y != y)
                 ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
                           "%.2f) != (%.2f, %.2f)",
@@ -1510,7 +1519,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         //TODO(minor) use a function...
         ds_t s;
         s.id = msg.get()->id;
+        
         //abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
+        s.x = msg.get()->x, s.y = msg.get()->y;
+        
         s.vacant = msg.get()->vacant;
         discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
         ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
@@ -2127,7 +2139,10 @@ void docking::set_target_ds_vacant(bool vacant)
     srv_msg.request.dst_robot = group_name;
     srv_msg.request.docking_station.id = target_ds->id;
     double x, y;
+    
     //rel_to_abs(target_ds->x, target_ds->y, &x, &y);
+    x = target_ds->x, y = target_ds->y;
+    
     srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
@@ -2581,7 +2596,10 @@ void docking::discover_docking_stations() //TODO(minor) comments
             send_ds_srv_msg.request.topic = "docking_stations";
             send_ds_srv_msg.request.docking_station.id = (*it).id;
             double x, y;
+            
             //rel_to_abs((*it).x, (*it).y, &x, &y);
+            x = it->x, y = it->y;
+            
             send_ds_srv_msg.request.docking_station.x = x;
             send_ds_srv_msg.request.docking_station.y = y;
             send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
@@ -2954,11 +2972,16 @@ void docking::update_robot_position()
     adhoc_communication::EmRobot msg;
     msg.id = robot_id;
     double x, y;
-    //ROS_ERROR("(%f, %f)", robot->x, robot->y);
+    
     //rel_to_abs(robot->x, robot->y, &x, &y);
-    //ROS_ERROR("(%f, %f)", x, y);
+    x = robot->x, y = robot->y;
+    
     msg.x = x;
-    msg.y = y;
+    msg.y = y;    
+
+    //ROS_ERROR("(%f, %f)", robot->x, robot->y);
+    //ROS_ERROR("(%f, %f)", x, y);
+    
     pub_robot_absolute_position.publish(msg);
 }
 
@@ -2970,7 +2993,10 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.id = it->id;
         srv_msg.request.dst_robot = group_name;
         double x, y;
+        
         //rel_to_abs(it->x, it->y, &x, &y);
+        x = it->x, y = it->y;
+        
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
@@ -2982,7 +3008,10 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.id = it->id;
         srv_msg.request.dst_robot = group_name;
         double x, y;
+        
         //rel_to_abs(it->x, it->y, &x, &y);
+        x = it->x, y = it->y;
+        
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!

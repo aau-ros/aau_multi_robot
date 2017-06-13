@@ -4766,9 +4766,12 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();   
+    
 //    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
 //    double c1, c2;
 //    costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
+//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot!
+//    costmap_ros_->getCostmap()->mapToWorld(2000, 2000, c1, c2);
 //    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot!
     
     sorted_frontiers.clear();
