@@ -460,6 +460,11 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         if(old_optimal_ds_id > 10000) //can happen sometimes... why??
             ROS_ERROR("WHAT?????????????????????????");
 
+        if (moving_along_path) {
+            ROS_INFO("Robot is moving along DS path...");
+            return;
+        }
+
         // TODO(minor) functions
         /* "Closest" policy */
         if (ds_selection_policy == 0)  // TODO(minor) switch-case
@@ -1293,6 +1298,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 		        }
 			}
 	    } else if(graph_navigation_allowed) {
+	        moving_along_path = true;
 	        compute_and_publish_path_on_ds_graph();
             if(finished_bool) {
                 ROS_ERROR("No more frontiers..."); //TODO(minor) probably this checks are reduntant with the ones of explorer

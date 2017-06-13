@@ -14,8 +14,8 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
     nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
-    nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear);         // m/s
-    nh.getParam("energy_mgmt/mass", mass);         // kg
+    nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
+    nh.getParam("energy_mgmt/mass", mass); // kg
     power_basic_computations = 8.0; // W
     power_advanced_computation = 3.0;
     advanced_computations_bool = true;
@@ -137,8 +137,7 @@ void battery_simulate::compute()
         {
             state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
             state.remaining_time_run = state.soc * total_energy;
-            //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear; 
-            state.remaining_distance = state.remaining_time_run * speed_avg; //TODO(minor) correct? if yes, do the same also below...
+            state.remaining_distance = state.remaining_time_run * speed_avg;
         }
     }
     else
@@ -149,17 +148,21 @@ void battery_simulate::compute()
          * interval of time: moreover, since we do not know the exact speed profile during this interval of time, we
          * overestimate the consumed energy by assuming that the robot moved at the maximum speed for the whole period.
          */
-        if (speed_linear > 0)
-            remaining_energy -= (power_standing + power_basic_computations + power_advanced_computation * advanced_computations_bool) * time_diff_sec;
+        int mult; //TODO check better
+        if(advanced_computations_bool)
+            mult = 1;
         else
-            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * advanced_computations_bool) * time_diff_sec ;
+            mult = 0;
+        if (speed_linear > 0 || speed_angular > 0)
+            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec;
+        else
+            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec;
 
         //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */
         state.soc = remaining_energy / total_energy;
         state.remaining_time_run = state.soc * total_energy;
-        //state.remaining_distance = state.remaining_time_run * max_speed_linear - total_energy * 0.15 * max_speed_linear;
-        state.remaining_distance = state.remaining_time_run * max_speed_linear;
+        state.remaining_distance = state.remaining_time_run * speed_avg;
 
     }
     

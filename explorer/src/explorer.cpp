@@ -2787,7 +2787,7 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * safety_coeff - max_av_distance * 0.01;
+        return available_distance * safety_coeff - max_av_distance * 0.1;
     }
 
     bool move_robot(int seq, double position_x, double position_y)

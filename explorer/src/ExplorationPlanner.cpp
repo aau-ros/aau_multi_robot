@@ -4767,12 +4767,20 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();   
     
-//    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
+    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
 //    double c1, c2;
-//    costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
-//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot!
+//    costmap_ros_->getCostmap()->mapToWorld(0, 0, c1, c2);
+//    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
+//    costmap_ros_->getCostmap()->mapToWorld(1000, 1000, c1, c2);
+//    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
+//    //costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
+//    //ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
 //    costmap_ros_->getCostmap()->mapToWorld(2000, 2000, c1, c2);
-//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot!
+//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
+
+//    double d = trajectory_plan_meters(0, 36);
+//    ROS_ERROR("%.1f", d); //it seems to make more or less sense (it's a little bit lower then what should be), a
+
     
     sorted_frontiers.clear();
     
