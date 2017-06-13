@@ -207,7 +207,7 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
-        nh.param<float>("safety_coeff", safety_coeff, 0.8);
+        nh.param<float>("safety_coeff", safety_coeff, 0.9);
         nh.param<float>("queue_distance", queue_distance, 7.0);
         nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
         //ROS_ERROR("%f", queue_distance);
@@ -2787,7 +2787,7 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * safety_coeff - max_av_distance * 0.1;
+        return available_distance * 0.9 - max_av_distance * 0.15;
     }
 
     bool move_robot(int seq, double position_x, double position_y)
