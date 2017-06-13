@@ -4748,6 +4748,12 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
         ROS_ERROR("No frontier/cluster available");
+        return false;
+    }
+    
+    if (available_distance <=0 ) {
+        ROS_INFO("available_distance is negative");
+        return false;
     }
     
     int tries = 0;
@@ -4767,7 +4773,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();   
     
-    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
+//    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
 //    double c1, c2;
 //    costmap_ros_->getCostmap()->mapToWorld(0, 0, c1, c2);
 //    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!

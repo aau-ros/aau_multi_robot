@@ -93,7 +93,7 @@ class Explorer
     int explorations;
     int free_cells_count, discovered_free_cells_count;
     float percentage;
-    int failures_going_home;
+    int failures_going_to_DS;
     int approximate_success;
     bool going_home, checked_percentage;
     int major_errors, minor_errors;
@@ -151,7 +151,7 @@ class Explorer
         explorations = 0;
         discovered_free_cells_count = 0;
         free_cells_count = 0;
-        failures_going_home = 0;
+        failures_going_to_DS = 0;
         approximate_success = 0;
         going_home = false, checked_percentage = false;
         major_errors = 0;
@@ -1151,16 +1151,20 @@ class Explorer
 //                                &final_goal, count, &robot_str, -1);
 //                        else
                             //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
-                            print_mutex_info("explore()", "acquiring");
-            costmap_mutex.lock();
-            print_mutex_info("explore()", "lock");
+ 
 
+                        ros::spinOnce(); // to update available_distance
+//                        if(conservative_available_distance(available_distance) <= 0)
+//                            goal_determined = false;
+//                        else {
 //                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
-                            
+                            print_mutex_info("explore()", "acquiring");
+                            costmap_mutex.lock();
+                            print_mutex_info("explore()", "lock");
                             goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
-                            
-                                        costmap_mutex.unlock();
-            print_mutex_info("explore()", "unlock");
+                            costmap_mutex.unlock();
+                            print_mutex_info("explore()", "unlock");
+//                        }
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
@@ -1245,90 +1249,103 @@ class Explorer
                         else
                         {
                             if(exploration->recomputeGoal()) { //TODO(IMPORTANT)
-                                ROS_ERROR("Goal not found, trying to recompute goal...");
-                                ROS_INFO("Goal not found, trying to recompute goal...");
-                                ros::Duration(3).sleep();
+//                                ROS_ERROR("Goal not found, trying to recompute goal...");
+//                                ROS_INFO("Goal not found, trying to recompute goal...");
+                                ROS_ERROR("Goal not found due to some computation failure, going charging...");
+                                ROS_INFO("Goal not found due to some computation failure, going charging...");
+                                
+                                //ros::Duration(3).sleep();
+                                //continue;
+                                
+                                update_robot_state_2(auctioning);
                                 continue;
+                                
                             }
                             
                             ros::spinOnce(); //to udpate available_distance
                             if( !exploration->existFrontiers() || !exploration->existReachableFrontiersWithDsGraphNavigation(max_av_distance * safety_coeff) ) {
                                 move_home_if_possible();
                             }
+                            
+                            else {
+                                //update_robot_state_2(auctioning_2);
+                                log_minor_error("graph navigation still not implemented!");
+                                finalize_exploration();
+                            }
                                 
-                            else if (robot_state == fully_charged)
-                            {
-                                /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
-                                 * that it will never be able to reach a frontier: exploration is over */
-                                // TODO(minor) we shoudl better check if there are still unvisited
-                                // frontier and the robot is not able to reach any of them even if
-                                // fully charged, because clearly this is a problem... which could be solved by navigating the
-                                // ds graph to reach one of this frontiers
-                                //if(!already_navigated_DS_graph || exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
-                                if(exploration->existFrontiers())
-                                {
-                                    ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
-                                    update_robot_state_2(auctioning_2);
-                                    already_navigated_DS_graph = true;
-                                    
-                                    if(ros::Time::now() - start_time < ros::Duration(5*60)) {
-                                        log_major_error("trying to navigate graph!!!");     
-                                    }
-                                        
-                                    
-                                }
-                                else
-                                {
-                                    ROS_INFO("No more frontiers to be visited: exploration is completed");
-                                    /* Start countdown to finalize exploration */
-                                    // TODO(minor)
-                                    // exit_countdown--;
-                                    // ROS_ERROR("Shutdown in: %d", exit_countdown);
-                                    // if (exit_countdown <= 0)
-                                    ros::spinOnce();
-                                    move_home_if_possible();
-                                }                                
-                            }
-
-                            else if(robot_state == leaving_ds) {
-                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
-                                    // check the existence of reachable frontiers with full battery life
-                                    //if(!already_navigated_DS_graph || exploration->existFrontiers()) {
-                                    if(exploration->existFrontiers()) {
-                                        //if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
-                                            ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
-                                            update_robot_state_2(auctioning_2);
-                                            already_navigated_DS_graph = true;
-                                         }
-                                     else {
-                                        ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
-                                        ros::spinOnce();
-                                        move_home_if_possible();
-                                     }
-//                                    } else {
-//                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
-//                                        finalize_exploration();
+//                            else if (robot_state == fully_charged)
+//                            {
+//                                /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
+//                                 * that it will never be able to reach a frontier: exploration is over */
+//                                // TODO(minor) we shoudl better check if there are still unvisited
+//                                // frontier and the robot is not able to reach any of them even if
+//                                // fully charged, because clearly this is a problem... which could be solved by navigating the
+//                                // ds graph to reach one of this frontiers
+//                                //if(!already_navigated_DS_graph || exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
+//                                if(exploration->existFrontiers())
+//                                {
+//                                    ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
+//                                    update_robot_state_2(auctioning_2);
+//                                    already_navigated_DS_graph = true;
+//                                    
+//                                    if(ros::Time::now() - start_time < ros::Duration(5*60)) {
+//                                        log_major_error("trying to navigate graph!!!");     
 //                                    }
-                                }
-                            }
-                            else
-                            {
-                                /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
-                                // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
-                                // TODO(minor) call udpate_robot_state() instead!!!
-                                // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
-                                // docking node knows that all the auctions have been concluded, but it has not notified the
-                                // explorer node about it yet, which means that update_robot_state hase nothing to update at the
-                                // moment... it could be solved using a service or using robot_state node
-                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
-                                {
-                                    //ROS_ERROR("Robot cannot reach any frontier: starting auction to "
-                                    //          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
-                                                                                      // if the robot does not really start a
-                                                                                      // new auction...
-                                    update_robot_state_2(auctioning);
-                                }
-                            }
+//                                        
+//                                    
+//                                }
+//                                else
+//                                {
+//                                    ROS_INFO("No more frontiers to be visited: exploration is completed");
+//                                    /* Start countdown to finalize exploration */
+//                                    // TODO(minor)
+//                                    // exit_countdown--;
+//                                    // ROS_ERROR("Shutdown in: %d", exit_countdown);
+//                                    // if (exit_countdown <= 0)
+//                                    ros::spinOnce();
+//                                    move_home_if_possible();
+//                                }                                
+//                            }
+
+//                            else if(robot_state == leaving_ds) {
+//                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
+//                                    // check the existence of reachable frontiers with full battery life
+//                                    //if(!already_navigated_DS_graph || exploration->existFrontiers()) {
+//                                    if(exploration->existFrontiers()) {
+//                                        //if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
+//                                            ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+//                                            update_robot_state_2(auctioning_2);
+//                                            already_navigated_DS_graph = true;
+//                                         }
+//                                     else {
+//                                        ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
+//                                        ros::spinOnce();
+//                                        move_home_if_possible();
+//                                     }
+////                                    } else {
+////                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
+////                                        finalize_exploration();
+////                                    }
+//                                }
+//                            }
+//                            else
+//                            {
+//                                /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
+//                                // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
+//                                // TODO(minor) call udpate_robot_state() instead!!!
+//                                // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
+//                                // docking node knows that all the auctions have been concluded, but it has not notified the
+//                                // explorer node about it yet, which means that update_robot_state hase nothing to update at the
+//                                // moment... it could be solved using a service or using robot_state node
+//                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+//                                {
+//                                    //ROS_ERROR("Robot cannot reach any frontier: starting auction to "
+//                                    //          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
+//                                                                                      // if the robot does not really start a
+//                                                                                      // new auction...
+//                                    update_robot_state_2(auctioning);
+//                                }
+//                            }
                         }
                     }
                 }
@@ -1586,12 +1603,12 @@ class Explorer
                 else if (robot_state == going_in_queue)
                     ROS_INFO("Travelling to DS to go in queue");
                 else
-                    if(failures_going_home != 0)
+                    if(failures_going_to_DS != 0)
                         ROS_INFO("Robot can finally prepare itself to recharge");
                     else
                         ROS_INFO("tying to reach DS");
 
-                counter++;  // TODO(minor) what is this counter?
+                counter++;  // TODO(minor) what is this counter?                
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
             }
 
@@ -1601,7 +1618,7 @@ class Explorer
             {
                 /* Result of navigation successful */
                 ROS_INFO("navigation to goal succeeded");
-                failures_going_home = 0;
+                failures_going_to_DS = 0;
                 
                 /* If the robot was going in a queue, if it has reached the goal it means that it reached the queue */
                 if (robot_state == going_in_queue)
@@ -1655,10 +1672,10 @@ class Explorer
             {                       
                 if (robot_state == going_charging)
                 {
-                    ROS_ERROR("Robot cannot reach DS for recharging!");
-                    ROS_INFO("Robot cannot reach DS for recharging!");
-                    failures_going_home++; //TODO change name from *_home to *_ds
-                    if(failures_going_home > 5) {
+                    ROS_ERROR("Robot cannot reach DS at (%.1f, %.1f) for recharging!", target_ds_x, target_ds_y);
+                    ROS_INFO("Robot cannot reach DS at (%.1f, %.1f) for recharging!", target_ds_x, target_ds_y);
+                    failures_going_to_DS++;
+                    if(failures_going_to_DS > 5) {
                         log_major_error("tried too many times to reach DS... terminating exploration...");
                         log_stopped();
                     }
@@ -2787,7 +2804,7 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * 0.9 - max_av_distance * 0.1;
+        return available_distance * 0.9 - max_av_distance * 0.15;
     }
 
     bool move_robot(int seq, double position_x, double position_y)
@@ -3644,6 +3661,7 @@ class Explorer
     }
     
     void move_home_if_possible() {
+        ros::spinOnce();
         if(exploration->home_is_reachable(available_distance)) {
             bool completed_navigation = false;
             for (int i = 0; i < 5; i++)
