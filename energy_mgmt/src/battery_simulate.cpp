@@ -30,13 +30,13 @@ battery_simulate::battery_simulate()
     perc_moving = 0.5; //TODO(minor) useless?
     perc_standing = 0.5; //TODO(minor) useless?
     output_shown = false; //TODO(minor) useless?
+    speed_avg = speed_avg_init;
     
     charge = charge_max;
     total_energy = charge_max * 3600; // J (i.e, joule)       
     remaining_energy = total_energy;
     speed_linear = max_speed_linear;
-    //maximum_running_time = total_energy / (max_speed_linear * mass); // s
-    maximum_running_time = total_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations); // s
+    maximum_running_time = total_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation); // s //TODO power_advanced_computation is missing a final 's'
     
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
@@ -54,7 +54,7 @@ battery_simulate::battery_simulate()
     state.soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
     state.remaining_time_charge = 0; //TODO(minor) -1? (but everywhere if yes...)
     state.remaining_time_run = maximum_running_time; //s //TODO(minor) "maximum" is misleading: use "estimated"...
-    state.remaining_distance = maximum_running_time * max_speed_linear; //m //TODO(minor) explain why we use max_speed_linear and not min_speed, etc.
+    state.remaining_distance = maximum_running_time * speed_avg_init; //m //TODO(minor) explain why we use max_speed_linear and not min_speed, etc.
 
     // advertise topics
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
@@ -154,15 +154,19 @@ void battery_simulate::compute()
         else
             mult = 0;
         if (speed_linear > 0 || speed_angular > 0)
-            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec;
+            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
         else
-            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec;
+            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
 
         //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */
         state.soc = remaining_energy / total_energy;
-        state.remaining_time_run = state.soc * total_energy;
-        state.remaining_distance = state.remaining_time_run * speed_avg;
+        
+        //state.remaining_time_run = state.soc * total_energy; // NO!!!
+        //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
+        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);
+        
+        state.remaining_distance = state.remaining_time_run * speed_avg; 
 
     }
     

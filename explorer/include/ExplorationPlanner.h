@@ -3,7 +3,7 @@
 
 #include <ExplorationPlanner.h>
 #include <navfn/navfn_ros.h>
-#include <global_planner/planner_core.h>
+#include "global_planner/planner_core.h"
 #include "ros/ros.h"
 #include "hungarian.h"
 #include <ros/console.h>
@@ -163,8 +163,8 @@ namespace explorationPlanner
             map_merger::TransformPoint service_message;
 
             //F
-            navfn::NavfnROS nav;
-            //global_planner::GlobalPlanner nav;
+            //navfn::NavfnROS nav;
+            global_planner::GlobalPlanner nav;
 
             ros::ServiceClient ssendFrontier, ssendFrontier_2, ssendAuction;
 

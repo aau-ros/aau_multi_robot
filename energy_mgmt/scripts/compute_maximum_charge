@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-distance_between_ds = 80 # m
-safety_coefficient = 2.5 # (adimensional)
-pessimistic_speed = 0.3 # m/s
+distance_between_ds = 50                # m
+safety_coefficient = 2.0                # (adimensional)
+pessimistic_speed = 0.3                 # m/s
 hour_to_seconds_conversion_coeff = 3600 # s
-max_speed = 1 # m/s
+max_speed = 1                           # m/s
 
 print (distance_between_ds * safety_coefficient / pessimistic_speed) * (13.7 + 18*max_speed + 15) / hour_to_seconds_conversion_coeff

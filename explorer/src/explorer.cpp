@@ -3236,7 +3236,7 @@ class Explorer
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        //ROS_ERROR("SOC: %d%%; available distance: %f", battery_charge, available_distance);
+        ROS_ERROR("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance));
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...

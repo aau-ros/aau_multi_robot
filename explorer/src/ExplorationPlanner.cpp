@@ -2937,7 +2937,8 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
 
             mx = 0;
             my = 0;
-
+            
+            //ROS_ERROR("%.2f", costmap_ros_->getCostmap()->getResolution());
            // ROS_INFO("frontier x: %f   y: %f", frontiers.at(i).x_coordinate,frontiers.at(i).y_coordinate);
             if(!global_costmap->getCostmap()->worldToMap(frontiers.at(i).x_coordinate,frontiers.at(i).y_coordinate,mx,my))
             {
