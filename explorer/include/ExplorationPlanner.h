@@ -429,6 +429,7 @@ namespace explorationPlanner
             boost::mutex costmap_mutex;
             double fallback_distance_computation(double end_x, double end_y);
             double fallback_distance_computation(double start_x, double start_y, double end_x, double end_y);
+            bool optimal_ds_set;
             
             
     };

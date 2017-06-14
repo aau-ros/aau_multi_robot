@@ -129,16 +129,12 @@ void battery_simulate::compute()
             state.remaining_time_charge = 0;
             remaining_energy = total_energy;
             state.remaining_time_run = maximum_running_time;
-            state.remaining_distance = maximum_running_time * max_speed_linear;
+            state.remaining_distance = maximum_running_time * speed_avg;
             std_msgs::Empty msg; //TODO(minor) use remaining_time_charge instead of the publisher
             pub_charging_completed.publish(msg);
         }
         else
-        {
             state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
-            state.remaining_time_run = state.soc * total_energy;
-            state.remaining_distance = state.remaining_time_run * speed_avg;
-        }
     }
     else
     {
@@ -164,11 +160,12 @@ void battery_simulate::compute()
         
         //state.remaining_time_run = state.soc * total_energy; // NO!!!
         //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
-        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);
-        
-        state.remaining_distance = state.remaining_time_run * speed_avg; 
+
 
     }
+    
+    state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+    state.remaining_distance = state.remaining_time_run * speed_avg; 
     
     //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     

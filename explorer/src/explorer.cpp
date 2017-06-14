@@ -98,6 +98,7 @@ class Explorer
     bool going_home, checked_percentage;
     int major_errors, minor_errors;
     bool skip_findFrontiers;
+    int retry_recharging_current_ds;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -158,6 +159,7 @@ class Explorer
         minor_errors = 0;
         last_printed_pose_x = 0, last_printed_pose_y = 0;
         skip_findFrontiers = false;
+        retry_recharging_current_ds = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -455,6 +457,7 @@ class Explorer
             nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
             
         ros::Publisher pub_next_ds = nh.advertise<std_msgs::Empty>("next_ds", 1);
+        //ROS_ERROR("%s", pub_next_ds.getTopic().c_str());
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
         
@@ -1026,7 +1029,8 @@ class Explorer
                 {
 
                     
-                    if(moving_along_path) { //if not used, this var is always false...
+                    if(moving_along_path) {
+                        ROS_ERROR("moving along DS path");
                         if(OPP_ONLY_TWO_DS)
                             if (ds_path_counter < 2)
                             {
@@ -1043,25 +1047,40 @@ class Explorer
                         else
                             if(ds_path_counter < ds_path_size - 1)
                             {
+                                ros::spinOnce();
+                                ROS_ERROR("Trying to reach next DS");
+                                ROS_ERROR("%d, %d", ds_path_counter, ds_path_size);
                                 //double next_ds_x = path[ds_path_counter+1][0];
                                 //double next_ds_y = path[ds_path_counter+1][0];
                                 double next_ds_x = complex_path[ds_path_counter+1].x;
                                 double next_ds_y = complex_path[ds_path_counter+1].y;
                                 double dist = -1;
-                                for(int i=0; i<5 || dist >= 0; i++) {
-                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
-                                    ros::Duration(1).sleep();   
-                                }
+                                ROS_ERROR("Compute distance");
+//                                for(int i=0; i<5 || dist >= 0; i++) {
+//                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
+//                                    ros::Duration(1).sleep();   
+//                                }
+                                dist = 10;
+                                ROS_ERROR("Distance computed");
                                 
                                 if(dist < 0) {
-                                    ROS_ERROR("unable to compute distance");
-                                    ROS_INFO("unable to compute distance");
-                                    
+                                    log_major_error("unable to compute distance to reach next DS!!!");
+                                    if(retry_recharging_current_ds < 3) {
+                                        ROS_INFO("unable to compute distance");
+                                        ROS_ERROR("reauction for current one");
+                                        ROS_INFO("reauction for current one");
+                                        update_robot_state_2(auctioning);
+                                        retry_recharging_current_ds++;
+                                    }
+                                    else
+                                        log_major_error("finished because cannot reach next ds in path");
+                                        update_robot_state_2(stopped);
+                                        finalize_exploration();
                                 }
                                     
                                 
 //                                else if(dist > available_distance * safety_coeff) 
-                                if(dist > conservative_available_distance(available_distance) ) 
+                                else if(dist > conservative_available_distance(available_distance) )  {
                                     //robot cannot reach next next DS, it must recharge at current one
                                     if(robot_state == fully_charged) {
                                         log_major_error("ERROR WITH DS GRAPH");
@@ -1071,8 +1090,9 @@ class Explorer
                                         ROS_ERROR("Cannot reach next DS on the path: reauction for current one");
                                         update_robot_state_2(auctioning);
                                     }
-                                else {
+                               } else {
                                     ROS_ERROR("Going to next DS in path");
+                                    retry_recharging_current_ds = 0;
                                     ds_path_counter++;
                                     target_ds_x = complex_path[ds_path_counter].x; 
                                     target_ds_y = complex_path[ds_path_counter].y; 
@@ -1117,7 +1137,7 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_INFO("SORTING FRONTIERS...");
+                        ROS_ERROR("SORTING FRONTIERS...");
                         
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
@@ -1213,16 +1233,17 @@ class Explorer
 //                            if(exploration->winner_of_auction)
 //                            {
                                 explorations++;
-//                                if( (explorations == 5 || ( explorations % 10 == 0 && explorations != 0 ) ) && robot_id == 0) {
-//                                    //ROS_ERROR("auctioning");
-//                                    update_robot_state_2(auctioning);    
-//                                }
-//                                else {
+                                if(explorations == 3 && robot_id == 0) {
+                                    ROS_ERROR("auctioning");
+                                    update_robot_state_2(auctioning_2);    
+                                }
+                                else {
+                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
                                     //store where the robot is moving from
                                     starting_x = pose_x;
                                     starting_y = pose_y;
-//                                }
+                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
                                 
@@ -1268,9 +1289,7 @@ class Explorer
                             }
                             
                             else {
-                                //update_robot_state_2(auctioning_2);
-                                log_minor_error("graph navigation still not implemented!");
-                                finalize_exploration();
+                                update_robot_state_2(auctioning_2);
                             }
                                 
 //                            else if (robot_state == fully_charged)
@@ -3173,7 +3192,7 @@ class Explorer
 
     void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_INFO("Recharging completed");
+        ROS_ERROR("Recharging completed");
         if (robot_state != moving_to_frontier)
             robot_state_next = fully_charged_next;
     }
@@ -3236,7 +3255,7 @@ class Explorer
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        ROS_ERROR("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance));
+        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance));
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...

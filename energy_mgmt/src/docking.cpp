@@ -213,6 +213,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
     sub_next_ds = nh.subscribe("next_ds", 10, &docking::next_ds_callback, this);
+    //ROS_ERROR("%s", sub_next_ds.getTopic().c_str());
     
     pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
     
@@ -633,8 +634,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                     for (int j = 0; j < ds.size(); j++)
                                         if (ds[j].id == path[i])
                                         {
-                                            msg_path.positions[i].x = ds[j].x;
-                                            msg_path.positions[i].y = ds[j].y;
+                                            adhoc_communication::MmPoint point;
+                                            point.x = ds[j].x, point.y = ds[j].y;
+                                            msg_path.positions.push_back(point);
                                         }
 
                                 pub_moving_along_path.publish(msg_path);
@@ -1508,7 +1510,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             if (ds[i].vacant != msg.get()->vacant)
             {
                 ds[i].vacant = msg.get()->vacant;
-                ROS_INFO("ds%d is now %s", msg.get()->id,
+                ROS_ERROR("ds%d is now %s", msg.get()->id,
                           (msg.get()->vacant ? "vacant" : "occupied"));
             }
             else
@@ -2698,9 +2700,9 @@ void docking::debug_timer_callback_2(const ros::TimerEvent &event)
 //DONE+
 void docking::next_ds_callback(const std_msgs::Empty &msg)
 {
-    ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
     if (index_of_ds_in_path < path.size() - 1)
     {
+        ROS_ERROR("Select next DS on the path in the DS graph to reach the final DS with EOs");
         index_of_ds_in_path++;
         for (int i = 0; i < ds.size(); i++)
             if (path[index_of_ds_in_path] == ds[i].id)
@@ -2748,7 +2750,7 @@ void docking::check_reachable_ds()
 
         if (reachable)
         {
-            ROS_INFO("ds%d is now reachable", (*it).id);
+            ROS_ERROR("ds%d is now reachable", (*it).id);
             
             adhoc_communication::EmDockingStation new_ds_msg;
             new_ds_msg.id = it->id;
@@ -2823,7 +2825,6 @@ void docking::check_reachable_ds()
         }
     }
 
-    return;
     if (new_ds_discovered || recompute_graph)
     {
         // construct ds graph //TODO(minor) construct graph only when a new DS is found
@@ -3215,6 +3216,14 @@ void docking::log_major_error(std::string text) {
 
 void docking::compute_and_publish_path_on_ds_graph() {
 
+    ROS_ERROR("computing path on DS graph");
+
+//    jobs.clear();
+//    adhoc_communication::ExpFrontierElement job;
+//    job.x_coordinate = 20;
+//    job.y_coordinate = 20;
+//    jobs.push_back(job);
+
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
@@ -3278,7 +3287,16 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     path.clear();
     index_of_ds_in_path = 0;
-    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+//    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+    bool ds_found_with_mst = find_path_2(0, 2, path);
+
+    for (int i = 0; i < ds_mst.size(); i++)
+        for (int j = 0; j < ds_mst.size(); j++)
+            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
+    for (int i = 0; i < ds_mst.size(); i++)
+        for (int j = 0; j < ds_mst.size(); j++)
+            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+
 
     if (ds_found_with_mst)
     {
@@ -3292,8 +3310,10 @@ void docking::compute_and_publish_path_on_ds_graph() {
             for (int j = 0; j < ds.size(); j++)
                 if (ds[j].id == path[i])
                 {
-                    msg_path.positions[i].x = ds[j].x;
-                    msg_path.positions[i].y = ds[j].y;
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
+                    ROS_ERROR("%d: ds%d (%.1f, %.1f)", i, ds[j].id, ds[j].x, ds[j].y);
                 }
 
         pub_moving_along_path.publish(msg_path);
@@ -3368,7 +3388,7 @@ double min_dist = numeric_limits<int>::max();
     path.clear();
     index_of_ds_in_path = 0;
     bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
-
+    
     if (ds_found_with_mst)
     {
 
@@ -3381,8 +3401,9 @@ double min_dist = numeric_limits<int>::max();
             for (int j = 0; j < ds.size(); j++)
                 if (ds[j].id == path[i])
                 {
-                    msg_path.positions[i].x = ds[j].x;
-                    msg_path.positions[i].y = ds[j].y;
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
                 }
 
         pub_moving_along_path.publish(msg_path);

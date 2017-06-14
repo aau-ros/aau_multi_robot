@@ -43,6 +43,8 @@
 
 #define APPROACH 0
 //#define QUICK_SELECTION
+#define ALL_LOG_LEVEL false
+#define MUTEX_LOG false
 
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
@@ -165,6 +167,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     retrying_searching_frontiers = 0;
     received_scan = false;
     errors = 0;
+    optimal_ds_set = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -2644,7 +2647,7 @@ bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_dist
     double y = frontier->y_coordinate;
     
     //check euclidean distances
-    if(target_ds_set)
+    if(optimal_ds_set)
         total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
     else
         total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, 0, 0);
@@ -2663,7 +2666,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     
     //check euclidean distances
     total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
-    if(target_ds_set)
+    if(optimal_ds_set)
         total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
     else
         total_distance_eu += euclidean_distance(x, y, robot_home_x, robot_home_y);
@@ -2683,14 +2686,19 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     frontier->my_distance_to_robot = total_distance;
     
     // distance from frontier to optimal ds
-    if(target_ds_set)
-        distance = trajectory_plan_meters(x, y, optimal_ds_x, optimal_ds_y);
-    else
-        distance = trajectory_plan_meters(x, y, robot_home_x, robot_home_y);
+    double target_x, target_y;
+    if(optimal_ds_set) {
+        target_x = optimal_ds_x;
+        target_y = optimal_ds_y;
+    } else {
+        target_x = robot_home_x;
+        target_y = robot_home_y;
+    }
+    distance = trajectory_plan_meters(x, y, target_x, target_y);
     if(distance < 0){
-        ROS_ERROR("Failed to compute distance!");
-        ROS_INFO("Failed to compute distance!");
-        if(target_ds_set)
+        ROS_ERROR("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
+        ROS_INFO("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
+        if(optimal_ds_set)
             distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
         else
             distance = fallback_distance_computation(x, y, optimal_ds_x, optimal_ds_y);
@@ -4428,10 +4436,16 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
             double total_distance;
             double x_f = frontiers[i].x_coordinate;
             double y_f = frontiers[i].y_coordinate;
+            double x_ds;
+            double y_ds;
 //            double x_ds = ds_list[j].x;
 //            double y_ds = ds_list[j].y;
-            double x_ds = optimal_ds_x;
-            double y_ds = optimal_ds_y;
+            if(optimal_ds_set) {
+                x_ds = optimal_ds_x;
+                y_ds = optimal_ds_y;
+            }
+            else
+                return false;
             
             //check euclidean distances
             total_distance = euclidean_distance(x_f, y_f, x_ds, y_ds) * 2;
@@ -4441,8 +4455,8 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
             // distance to robot
             total_distance = trajectory_plan_meters(x_f, y_f, x_ds, y_ds) * 2;
             if(total_distance < 0){
-                ROS_ERROR("Failed to compute distance!");
-                ROS_INFO("Failed to compute distance!");
+                ROS_ERROR("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
+                ROS_INFO("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
                 total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
                 if(errors == 0)
                     my_error_counter++;
@@ -4486,6 +4500,7 @@ void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDo
     optimal_ds_id = msg.get()->id;
     optimal_ds_x = msg.get()->x;
     optimal_ds_y = msg.get()->y;
+    optimal_ds_set = true;
     //ROS_ERROR("!!!!!!");
 }
 
@@ -4774,7 +4789,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();   
     
-//    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
+    ROS_ERROR("%.1f, %.1f", robot_x, robot_y);
 //    double c1, c2;
 //    costmap_ros_->getCostmap()->mapToWorld(0, 0, c1, c2);
 //    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
@@ -8549,9 +8564,9 @@ float ExplorationPlanner::new_target_ds(float new_target_ds_x, float new_target_
 
 /* Try to acquire (lock) the mutex passed as argument */
 void ExplorationPlanner::acquire_mutex(boost::mutex *mutex, std::string function_name) {
-    ROS_DEBUG_NAMED("locks", "Function '%s' is trying to acquire mutex...", function_name.c_str());
+    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || MUTEX_LOG, "locks", "Function '%s' is trying to acquire mutex...", function_name.c_str());
     mutex->lock();
-    ROS_DEBUG_NAMED("locks", "%s acquired by function '%s'", "Mutex", function_name.c_str());
+    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || MUTEX_LOG, "locks", "%s acquired by function '%s'", "Mutex", function_name.c_str());
 }
 
 /* Release (unlock) the mutex passed as argument */
@@ -9106,7 +9121,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
 
     // calculate d_gbe
     double d_gb;
-    if(target_ds_set)
+    if(optimal_ds_set)
         d_gb = euclidean_distance(frontier_x, frontier_y, optimal_ds_x, optimal_ds_y);
     else
         d_gb = euclidean_distance(frontier_x, frontier_y, robot_home_x, robot_home_y);

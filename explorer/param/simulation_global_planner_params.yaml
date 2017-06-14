@@ -1,3 +1,4 @@
 navigation_path:
    allow_unknown: false
    default_tolerance: 5
+   #use_grid_path: true
