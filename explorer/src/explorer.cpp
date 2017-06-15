@@ -1837,6 +1837,8 @@ class Explorer
         // TODO(minor) the robot after having discovered that the DS is free should check
         // its state to see if instead it shouldn't put itself in in_queue state
         // maybe...
+        
+        // happens if the robot is changing and meanwhile it looses an auction started by another robot
         else if (robot_state_next == going_queue_next && robot_state == charging)
         {
             /*
@@ -1873,7 +1875,6 @@ class Explorer
             else
             */
             //{
-                log_minor_error("Strange case: ideally, it should not happen..."); //TODO maybe it's because the robot lost another robot's auction, and the callback here in explored is bugged...
 //                if(robot_id != 0)
                     update_robot_state_2(leaving_ds);
             //}
