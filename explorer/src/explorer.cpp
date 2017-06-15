@@ -1143,7 +1143,7 @@ class Explorer
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
-                        ROS_ERROR("SORTING FRONTIERS...");
+                        ROS_INFO("SORTING FRONTIERS...");
                         
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
