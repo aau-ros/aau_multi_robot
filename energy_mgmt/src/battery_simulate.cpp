@@ -114,27 +114,33 @@ void battery_simulate::compute()
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
-        ROS_DEBUG("Recharging...");
         remaining_energy += power_charging * time_diff_sec;
         state.soc = remaining_energy / total_energy;
-        state.remaining_time_charge = -1; //TODO
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
         if (state.soc >= 1)
         {
             ROS_INFO("Recharging completed");
+            
+            // Set battery state to its maximum values
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
             state.remaining_time_charge = 0;
             remaining_energy = total_energy;
             state.remaining_time_run = maximum_running_time;
             state.remaining_distance = maximum_running_time * speed_avg;
+            
+            // Inform nodes that charging has been completed
             std_msgs::Empty msg; //TODO(minor) use remaining_time_charge instead of the publisher
             pub_charging_completed.publish(msg);
         }
-        else
-            state.remaining_time_charge = (total_energy - remaining_energy) / power_charging;
+        else {
+            ROS_DEBUG("Recharging...");
+            state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
+            state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+            state.remaining_distance = state.remaining_time_run * speed_avg; 
+            }
     }
     else
     {
@@ -161,12 +167,12 @@ void battery_simulate::compute()
         //state.remaining_time_run = state.soc * total_energy; // NO!!!
         //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
 
+        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
+        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+        state.remaining_distance = state.remaining_time_run * speed_avg; 
 
     }
-    
-    state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
-    state.remaining_distance = state.remaining_time_run * speed_avg; 
-    
+
     //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */

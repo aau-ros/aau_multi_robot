@@ -6,6 +6,8 @@
 
 using namespace std;
 
+int counter;
+
 //DONE (DONE without any + means that the function is correct, but it's missing comments, debug outputs, ...)
 docking::docking()  // TODO(minor) create functions; comments here and in .h file; check if the topics uses the correct messages...
 {
@@ -24,12 +26,13 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
     nh_tilde.param<std::string>("log_path", log_path, "");
     nh_tilde.param<int>("ds_selection_policy", ds_selection_policy, -1);
-    nh_tilde.param<int>("auction_duration", auction_timeout, 5); //TODO(minor) int?
+    nh_tilde.param<int>("auction_duration", auction_timeout, 3); //TODO(minor) int?
     nh_tilde.param<int>("extra_auction_time", extra_time, 3);
     nh_tilde.param<int>("reauctioning_timeout", reauctioning_timeout, 10); //s
-    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 10.0); //m
+    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 30.0); //m
     nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true);         // not used at the moment...
     nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
+    counter = 0;
 
     // TODO(minor) other checks
     if (num_robots < 1)
@@ -459,7 +462,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
          * accept this. */
 
         if(old_optimal_ds_id > 10000) //can happen sometimes... why??
-            ROS_ERROR("WHAT?????????????????????????");
+            log_major_error("WHAT?????????????????????????");
 
         if (moving_along_path) {
             ROS_INFO("Robot is moving along DS path...");
@@ -853,7 +856,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             else
                 ROS_INFO("Change optimal DS: (none) -> ds%d", best_ds->id);
             if(best_ds->id > 10000) //can happen sometimes... buffer overflow somewhere?
-                ROS_ERROR("OH NO!!!!!!!!!!!!");
+                log_major_error("OH NO!!!!!!!!!!!!");
                 
             old_optimal_ds_id = best_ds->id;
 
@@ -941,12 +944,14 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
     /* Sanity checks */
     if (num_ds_vacant < 0)
     {
+        log_major_error("Invalid number of vacant docking stations!");
         ROS_ERROR("Invalid number of vacant docking stations: %d!", num_ds_vacant);
         l1 = 0;
         return;
     }
     if (num_robots_active < 0)
     {
+        log_major_error("Invalid number of active robots!");
         ROS_ERROR("Invalid number of active robots: %d!", num_robots_active);
         l1 = 1;
         return;
@@ -980,19 +985,21 @@ void docking::update_l2()
     /* Sanity checks */
     if (time_charge < 0)
     {
+        log_major_error("Invalid charging time!");
         ROS_ERROR("Invalid charging time: %.2f!", time_charge);
         l2 = 0;
         return;
     }
     if (time_run < 0)
     {
+        log_major_error("Invalid run time");
         ROS_ERROR("Invalid run time: %.2f!", time_run);
         l2 = 1;
         return;
     }
     if (time_run == 0 && time_charge == 0)
     {
-        ROS_ERROR("Invalid run and charging times. Both are zero!");
+        log_major_error("Invalid run and charging times. Both are zero!");
         l2 = 1;
         return;
     }
@@ -1033,6 +1040,7 @@ void docking::update_l3()
     /* Sanity checks */
     if (num_jobs < 0)
     {
+        log_major_error("Invalid number of jobs!");
         ROS_ERROR("Invalid number of jobs: %d", num_jobs);
         l3 = 1;
         return;
@@ -1378,6 +1386,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         return;
     }
 
+    robot_state = static_cast<state_t>(msg.get()->state);
     robot->complex_state = static_cast<state_t>(msg.get()->state);
 }
 
@@ -1486,6 +1495,15 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
+    ROS_INFO("received ds%d", msg.get()->id);
+    
+    // Safety check on the received DS
+    if(msg.get()->id < 0) {
+        log_major_error("Invalid DS id");
+        ROS_ERROR("%d", msg.get()->id);
+        return;
+    }
+
     /* Check if DS is in list already */
     bool new_ds = true;
     for (int i = 0; i < ds.size(); ++i)
@@ -1510,7 +1528,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             if (ds[i].vacant != msg.get()->vacant)
             {
                 ds[i].vacant = msg.get()->vacant;
-                ROS_ERROR("ds%d is now %s", msg.get()->id,
+                ROS_INFO("ds%d is now %s", msg.get()->id,
                           (msg.get()->vacant ? "vacant" : "occupied"));
             }
             else
@@ -1694,7 +1712,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for (; it != auction_bids.end(); it++)
     {
-        ROS_INFO("robot_%d placed %f", (*it).robot_id, (*it).bid);
+        ROS_DEBUG("robot_%d placed %f", (*it).robot_id, (*it).bid);
         if ((*it).bid > winner_bid)
         {
             winner = (*it).robot_id;
@@ -1784,6 +1802,11 @@ void docking::start_new_auction()
     /* Keep track of robot bid */
     auction_bid_t bid;
     bid.robot_id = robot_id;
+//    if(counter == 0) {
+//        bid.bid = 100;
+//        counter++;
+//    }
+//    else
     bid.bid = get_llh();
     auction_bids.push_back(bid);
 
@@ -1833,7 +1856,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 {
     if (!optimal_ds_is_set())
     {
-        ROS_ERROR("The robot does not know about any existing DS!");  // TODO(minor) it
+        log_major_error("The robot does not know about any existing DS!");  // TODO(minor) it
                                                                       // means that
                                                                       // it missed
                                                                       // some
@@ -1913,7 +1936,13 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
                                                                                                   // very well the
                                                                                                   // choices
 {
-    ROS_INFO("Received request for vacancy check for "); //TODO(minor) complete
+    // Safety check on the received DS
+    if(msg.get()->id < 0) {
+        ROS_ERROR("Invalid DS id: %d", msg.get()->id);
+        return;
+    }
+
+    ROS_INFO("Received request for vacancy check for %d", msg.get()->id); //TODO(minor) complete
 
     /* If the request for vacancy check is not about the target DS of the robot,
      * for sure the robot is not occupying it
@@ -2194,9 +2223,9 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
     
 */    
     
-    for (int i = 0; i < V; i++)
-        for (int j = 0; j < V; j++)
-            ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
+//    for (int i = 0; i < V; i++)
+//        for (int j = 0; j < V; j++)
+//            ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
 
 
     // Always include first 1st vertex in MST.
@@ -2230,7 +2259,7 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
         }
 
         if(u < 0) {
-            ROS_ERROR("DS graph has unconnected components! Not implemented for the moment...");
+            log_major_error("DS graph has unconnected components! Not implemented for the moment...");
             return;
             
             /*
@@ -2282,7 +2311,7 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
             continue;
         }
         if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size() || parent[i] < 0) {
-            ROS_FATAL("SIZE!!!");
+            log_major_error("SIZE!!!");
             ROS_ERROR("%d", i);   
             ROS_ERROR("%d", parent[i]);
         }
@@ -2528,7 +2557,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
             continue;
         }
         if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size()) {
-            ROS_FATAL("SIZE!!!");
+            log_major_error("SIZE!!!");
             ROS_ERROR("%d", i);   
             ROS_ERROR("%d", parent[i]);
         }
@@ -2702,7 +2731,7 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
 {
     if (index_of_ds_in_path < path.size() - 1)
     {
-        ROS_ERROR("Select next DS on the path in the DS graph to reach the final DS with EOs");
+        ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
         index_of_ds_in_path++;
         for (int i = 0; i < ds.size(); i++)
             if (path[index_of_ds_in_path] == ds[i].id)
@@ -2750,7 +2779,7 @@ void docking::check_reachable_ds()
 
         if (reachable)
         {
-            ROS_ERROR("ds%d is now reachable", (*it).id);
+            ROS_INFO("ds%d is now reachable", (*it).id);
             
             adhoc_communication::EmDockingStation new_ds_msg;
             new_ds_msg.id = it->id;
@@ -2774,7 +2803,7 @@ void docking::check_reachable_ds()
             ds.push_back(new_ds); //otherwise with ds.push_back(*it) valgrind complains...
             int id1 = ds[ds.size()-1].id;
             if(id1 != it->id)
-                ROS_ERROR("error");
+                log_major_error("error");
             int id2 = it->id;
             //discovered_ds.erase(it);
             ROS_INFO("erase at position %d; size is %lu", i, discovered_ds.size());
@@ -2815,7 +2844,7 @@ void docking::check_reachable_ds()
             
 
             if(id1 != id2)
-                ROS_ERROR("ERROR");
+                log_major_error("ERROR");
             
         }
         else {
@@ -2929,10 +2958,12 @@ int docking::next_auction_id()
 void docking::spin()
 {
     ROS_INFO("Start thread to receive callbacks"); //TODO(minor) remove spin in other points of the code
+    double rate = 10.0; // Hz
+    ros::Rate loop_rate(rate);
     while (ros::ok)
     {
-        ros::Duration(0.1);
-        ros::spinOnce();
+        ros::spinOnce();   
+        loop_rate.sleep();  // sleep for 1/rate seconds
     }
 }
 
@@ -3173,7 +3204,7 @@ bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Requ
 void docking::runtime_checks() {
     for(int i=0; i<robots.size()-1; i++)
         for(int j=i+1; j<robots.size(); j++)
-            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].complex_state == charging && robots[j].complex_state)
+            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].complex_state == charging && robots[j].complex_state == charging)
                 log_major_error("two robots recharging at the same DS!!!");
 }
 
@@ -3216,7 +3247,7 @@ void docking::log_major_error(std::string text) {
 
 void docking::compute_and_publish_path_on_ds_graph() {
 
-    ROS_ERROR("computing path on DS graph");
+    ROS_INFO("computing path on DS graph");
 
 //    jobs.clear();
 //    adhoc_communication::ExpFrontierElement job;
@@ -3287,15 +3318,15 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     path.clear();
     index_of_ds_in_path = 0;
-//    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
-    bool ds_found_with_mst = find_path_2(0, 2, path);
+    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+//    bool ds_found_with_mst = find_path_2(0, 2, path);
 
-    for (int i = 0; i < ds_mst.size(); i++)
-        for (int j = 0; j < ds_mst.size(); j++)
-            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
-    for (int i = 0; i < ds_mst.size(); i++)
-        for (int j = 0; j < ds_mst.size(); j++)
-            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
 
 
     if (ds_found_with_mst)
@@ -3313,7 +3344,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
                     adhoc_communication::MmPoint point;
                     point.x = ds[j].x, point.y = ds[j].y;
                     msg_path.positions.push_back(point);
-                    ROS_ERROR("%d: ds%d (%.1f, %.1f)", i, ds[j].id, ds[j].x, ds[j].y);
+                    ROS_INFO("%d: ds%d (%.1f, %.1f)", i, ds[j].id, ds[j].x, ds[j].y);
                 }
 
         pub_moving_along_path.publish(msg_path);

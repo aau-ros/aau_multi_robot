@@ -99,6 +99,8 @@ class Explorer
     int major_errors, minor_errors;
     bool skip_findFrontiers;
     int retry_recharging_current_ds;
+    int increase;
+    ros::Timer checking_vacancy_timer;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -160,13 +162,14 @@ class Explorer
         last_printed_pose_x = 0, last_printed_pose_y = 0;
         skip_findFrontiers = false;
         retry_recharging_current_ds = 0;
+        increase = 0;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
         robot_state_next = current_state;
 
         /* Robot state publishers */
-        pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);  // to publish vacancy check requests
+        //pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);  // to publish vacancy check requests
         
         ros::NodeHandle nh2;
         sub_free_cells_count = nh2.subscribe("free_cells_count", 10, &Explorer::free_cells_count_callback, this);
@@ -413,6 +416,8 @@ class Explorer
         enum_string.push_back("moving_away_from_ds");
         enum_string.push_back("auctioning_3");
         enum_string.push_back("stopped");
+        
+        checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
 
     }
 
@@ -1233,17 +1238,17 @@ class Explorer
 //                            if(exploration->winner_of_auction)
 //                            {
                                 explorations++;
-                                if(explorations == 3 && robot_id == 0) {
-                                    ROS_ERROR("auctioning");
-                                    update_robot_state_2(auctioning_2);    
-                                }
-                                else {
-                                    ROS_ERROR("%d", explorations);
+//                                if( ((explorations == 3 || explorations == 4)&& robot_id == 0) || (explorations == 4 && robot_id == 1) ) {
+//                                    ROS_ERROR("auctioning");
+//                                    update_robot_state_2(auctioning);    
+//                                }
+//                                else {
+//                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
                                     //store where the robot is moving from
                                     starting_x = pose_x;
                                     starting_y = pose_y;
-                                }
+//                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
                                 
@@ -1584,30 +1589,19 @@ class Explorer
             {
                 /* Robot reached frontier */
                 //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
-
-                occupied_ds = false;
+                
+                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
+                checking_vacancy_timer.start();
 
                 // TODO(minor) use a bterr way!!!
-                int i = (int)checking_vacancy_timeout;
-                while (i > 0)
+                while (robot_state == checking_vacancy)
                 {
                     ros::Duration(1).sleep();
                     ros::spinOnce();
-                    i--;
+                    update_robot_state();
                 }
-                if (occupied_ds)
-                {
-                    // TODO(minor) use opportune? no because if I ahve this DS in the path, it's because I need to recharge here
-
-                    /* The DS is already (or is going to be) occupied by another robot: put robot in queue */
-                    ROS_INFO("occupied ds...");
-                    update_robot_state_2(in_queue);
-                }
-                else
-                {
-                    ROS_INFO("FREE!!!");
-                    update_robot_state_2(going_charging);
-                }
+                
+                checking_vacancy_timer.stop();
             }
 
             // navigate robot home for recharging
@@ -1757,7 +1751,7 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-        ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_ERROR("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
@@ -1878,9 +1872,9 @@ class Explorer
             else
             */
             //{
-                ROS_ERROR("Strange case: ideally, it should not happen...");
-                ROS_INFO("Strange case: ideally, it should not happen..."); //TODO maybe it's because the robot lost another robot's auction, and the callback here in explored is bugged...
-                update_robot_state_2(leaving_ds);
+                log_minor_error("Strange case: ideally, it should not happen..."); //TODO maybe it's because the robot lost another robot's auction, and the callback here in explored is bugged...
+//                if(robot_id != 0)
+                    update_robot_state_2(leaving_ds);
             //}
         }
 
@@ -1933,6 +1927,8 @@ class Explorer
                 ROS_INFO("preparing for going_checking_vacancy");
                 update_robot_state_2(going_checking_vacancy);
             }
+            else if(robot_state == checking_vacancy)
+                update_robot_state_2(going_charging);
             else
                 ROS_INFO("already charging (or approaching charging, etc.)");
         }
@@ -1974,7 +1970,8 @@ class Explorer
             /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
             else if (robot_state == checking_vacancy || robot_state == checking_vacancy)
             {
-                ROS_INFO("the robot is going to check for vacancy / already checking for vacancy, so it will discover that the DS is occupied even thanks to the check...");
+                ROS_INFO("discovered that the DS is occupied!");
+                update_robot_state_2(going_in_queue);
             }
             
             /* Otherwise, something strange happened */
@@ -2016,8 +2013,9 @@ class Explorer
                 else
                 */
                 //{
-                    ROS_DEBUG("prearing for leaving_ds");
-                    update_robot_state_2(leaving_ds);
+                    ROS_ERROR("prearing for leaving_ds");
+//                    if(robot_id != 0)
+                        update_robot_state_2(leaving_ds);
                 //}
             } else {
                 /* This happens when a robot lost another robot auction, but it doesn't need to recharge */
@@ -3148,6 +3146,18 @@ class Explorer
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("lost_own_auction_callback");
+//        if(robot_id == 0) {
+//            robot_state_next = going_charging_next;
+//            return;
+//        } 
+//        else if(robot_id == 1) {
+//            increase++;
+//            ROS_ERROR("%d", increase);
+//            if(increase > 3) {
+//                robot_state_next = going_charging_next;
+//                return;
+//            }
+//        }
         robot_state_next = going_queue_next;
     }
 
@@ -3160,6 +3170,18 @@ class Explorer
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("lost_other_robot_callback");
+//        if(robot_id == 0) {
+//            robot_state_next = going_charging_next;
+//            return;
+//        } 
+//        else if(robot_id == 1) {
+//            increase++;
+//            ROS_ERROR("%d", increase);
+//            if(increase > 3) {
+//                robot_state_next = going_charging_next;
+//                return;
+//            }
+//        }
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
@@ -3187,12 +3209,20 @@ class Explorer
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
         ROS_INFO("Target DS is occupied");
-        occupied_ds = true;
+        //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
+        if(robot_state == checking_vacancy) //TODO this check should be already in update_robot_state() probably...
+            robot_state_next = going_queue_next;
+    }
+    
+    void vacancy_callback(const ros::TimerEvent &event) {
+        ROS_INFO("FINISHED");
+        if(robot_state_next != going_queue_next && robot_state == checking_vacancy)
+            robot_state_next = going_charging_next;
     }
 
     void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
     {
-        ROS_ERROR("Recharging completed");
+        ROS_INFO("Recharging completed");
         if (robot_state != moving_to_frontier)
             robot_state_next = fully_charged_next;
     }
@@ -3765,7 +3795,7 @@ class Explorer
 
     int number_of_recharges = 0;
 
-    bool test, occupied_ds;
+    bool test;
     ros::Publisher pub_robot_pos, pub_check_vacancy;
     ros::Subscriber sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
 
