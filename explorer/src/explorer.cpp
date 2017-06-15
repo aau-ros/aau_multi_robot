@@ -447,6 +447,7 @@ class Explorer
 
         /* Start taking the time during exploration */
         time_start = ros::Time::now();
+        wall_time_start = ros::WallTime::now();
 
         ros::NodeHandle nh;
 
@@ -1751,7 +1752,7 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-        ROS_ERROR("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
@@ -2089,12 +2090,13 @@ class Explorer
             costmap_mutex.lock();
             print_mutex_info("map_info()", "lock");
 
-            ros::Duration time = ros::Time::now() - time_start;
+            double time = ros::Time::now().toSec() - time_start.toSec();
+            double wall_time = ros::WallTime::now().toSec() - wall_time_start.toSec();
 
             map_progress.global_freespace = global_costmap_size();
             //map_progress.global_freespace = discovered_free_cells_count;
             map_progress.local_freespace = local_costmap_size();
-            map_progress.time = time.toSec();
+            map_progress.time = time;
             map_progress_during_exploration.push_back(map_progress);
             if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
                 percentage = -1;
@@ -2114,7 +2116,7 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << map_progress.time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << "," << conservative_available_distance(available_distance) << ","
+            fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << "," << conservative_available_distance(available_distance) << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << "," 
                    << map_progress.local_freespace << "," << free_cells_count << "," 
                    << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
@@ -3880,6 +3882,7 @@ class Explorer
 
     ros::NodeHandle nh;
     ros::Time time_start;
+    ros::WallTime wall_time_start;
 
     // Create a move_base_msgs to define a goal to steer the robot to
     move_base_msgs::MoveBaseActionGoal action_goal_msg;
