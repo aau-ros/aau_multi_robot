@@ -4477,24 +4477,23 @@ bool ExplorationPlanner::recomputeGoal() {
     return ( (retrying_searching_frontiers > 0 && retrying_searching_frontiers <= 3) || (my_error_counter > 0 && my_error_counter <= 5) ) ? true : false;
 }
 
-//bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
-//    // distance to next frontier
-//    for (int i = 0; i < frontiers.size(); i++)
-//        for(int j=0; j < ds_list.size(); j++) {
-//                double total_distance;
-//                total_distance = trajectory_plan_meters(ds_list.at(j).x, ds_list.at(j).y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) * 2; //TODO safety coefficient is missing
-//                if(total_distance < 0){
-//                    ROS_ERROR("Failed to compute distance!");
-//                    continue;
-//                }
-//                // convert from cells to meters
-//                //total_distance *= costmap_ros_->getCostmap()->getResolution();
-//                if(max_available_distance > total_distance)                  
-//                    return true;
-//        }
-//   return false;
-//                
-//}
+bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance) {
+    // distance to next frontier
+    for (int i = 0; i < frontiers.size(); i++) {
+        double total_distance;
+        total_distance = trajectory_plan_meters(optimal_ds_x,  optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) * 2; //TODO safety coefficient is missing
+        if(total_distance < 0){
+            ROS_ERROR("Failed to compute distance!");
+            continue;
+        }
+        // convert from cells to meters
+        //total_distance *= costmap_ros_->getCostmap()->getResolution();
+        if(max_available_distance > total_distance)                  
+            return true;
+    }
+   return false;
+                
+}
 
 void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
     optimal_ds_id = msg.get()->id;

@@ -133,7 +133,7 @@ include_directories(include ${catkin_INCLUDE_DIRS}   ) # /usr/local/Aria/include
 add_library(exploration_planner src/ExplorationPlanner.cpp)
 add_library(hungarian src/hungarian.cpp)
 add_library(munkres src/src/munkres.cpp)
-add_library(goal_selector src/goal_selector.cpp)
+#add_library(goal_selector src/goal_selector.cpp)
 #add_library(rosaria src/rosaria.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
