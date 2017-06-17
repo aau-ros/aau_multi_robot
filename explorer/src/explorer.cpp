@@ -104,7 +104,8 @@ class Explorer
     ros::Timer checking_vacancy_timer;
     bool ds_graph_navigation_allowed;
     double conservative_maximum_available_distance;
-
+    bool moving_to_ds;
+    
     /*******************
      * CLASS FUNCTIONS *
      *******************/
@@ -168,6 +169,7 @@ class Explorer
         increase = 0;
         ds_graph_navigation_allowed = DS_GRAPG_NAVIGATION_ALLOWED;
         conservative_maximum_available_distance = -1;
+        moving_to_ds = false;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -504,7 +506,7 @@ class Explorer
             update_robot_state();
             
             std_msgs::String msg;
-            msg.data = original_log_path;
+            msg.data = ros::package::getPath("multi_robot_analyzer");
             pub_path.publish(msg); //TODO put in better place
 
             ROS_INFO("EXPLORING");  // TODO(minor) here???
@@ -1122,24 +1124,7 @@ class Explorer
                                 pub_next_ds.publish(msg);
                                 
                                 if(going_home) {
-                                    ROS_ERROR("Going home...");
-                                    visualize_goal_point(home_point_x, home_point_y);
-
-                                    bool completed_navigation = false;
-                                    for (int i = 0; i < 5; i++)
-                                    {
-                                        if (completed_navigation == false)
-                                        {
-                                            counter++;
-                                            completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                                        }
-                                        else
-                                        {
-                                            break;
-                                        }
-                                    }
-                                    
-                                    finalize_exploration();
+                                    move_home_if_possible();
                                 }
                             } 
                     
@@ -1575,7 +1560,7 @@ class Explorer
                 {
                     
                     ROS_INFO("Auctioning...");
-                    ros::Duration(0.1).sleep();
+                    ros::Duration(1).sleep();
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
                     auctioning_counter++;
                     update_robot_state();
@@ -1645,8 +1630,10 @@ class Explorer
                     else
                         ROS_INFO("tying to reach DS");
 
-                counter++;  // TODO(minor) what is this counter?                
+                counter++;  // TODO(minor) what is this counter?
+                moving_to_ds = true;          
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
+                moving_to_ds = false;
             }
 
             /* NAVIGATION COMPLETED */ //F
@@ -2985,11 +2972,22 @@ class Explorer
         {
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED)
             {
-                ROS_INFO("ABORTED");
-
+                
+                
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
-                return false;
+                
+                if( (position_x - pose_x) * (position_x - pose_x) + (position_y - pose_y) * (position_y - pose_y) < 3*3 ) {
+                      ROS_ERROR("Robot seems unable to closely reach the goal, but it is close enough to consider the goal reached... ");
+                      if(moving_to_ds || going_home) 
+                        log_minor_error("Robot didn't properly reach home/DS");
+                        return true;
+                }
+                else  {
+                    ROS_INFO("ABORTED: goal not reached (robot is farther than 3 meters from goal)");
+                    return false;
+                }                
+
             }
         }
 
@@ -3751,7 +3749,9 @@ class Explorer
                 if (completed_navigation == false)
                 {
                     counter++;
+                    going_home = true;
                     completed_navigation = move_robot(counter, home_point_x, home_point_y);
+                    going_home = false;
                 }
                 else
                 {

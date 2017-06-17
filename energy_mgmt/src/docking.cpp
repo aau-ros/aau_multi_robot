@@ -983,21 +983,21 @@ void docking::update_l2()
     /* Sanity checks */
     if (time_charge < 0)
     {
-        log_major_error("Invalid charging time!");
+        //log_major_error("Invalid charging time!");
         ROS_ERROR("Invalid charging time: %.2f!", time_charge);
         l2 = 0;
         return;
     }
     if (time_run < 0)
     {
-        log_major_error("Invalid run time");
+        //log_major_error("Invalid run time");
         ROS_ERROR("Invalid run time: %.2f!", time_run);
         l2 = 1;
         return;
     }
     if (time_run == 0 && time_charge == 0)
     {
-        log_major_error("Invalid run and charging times. Both are zero!");
+        ROS_ERROR("Invalid run and charging times. Both are zero!");
         l2 = 1;
         return;
     }

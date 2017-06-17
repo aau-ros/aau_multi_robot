@@ -606,6 +606,7 @@ class docking
     void finalize_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finalize_exploration;
     ros::Publisher pub_ds_position;
+    int major_errors;
   
     
 };
