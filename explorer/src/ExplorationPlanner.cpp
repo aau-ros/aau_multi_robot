@@ -1020,8 +1020,11 @@ void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
         //exploration_travel_path_global_meters += distance * costmap_ros_->getCostmap()->getResolution();
         exploration_travel_path_global_meters += distance;
     }
-    else
-        ROS_ERROR("Failed to compute distance!");
+    else {
+        ROS_ERROR("Failed to compute and store distance!");
+        //ROS_ERROR("Failed to compute and store distance! Using euclidean distance as approximation..."); //TODO it could fail due to a failure of getRobotPose
+        //exploration_travel_path_global_meters += euclidean_distance(target_x, target_y);
+    }
 }
 
 /**
@@ -1163,16 +1166,8 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     goalPointSimulated.header.seq = goal_point_simulated_message++;	// increase the sequence number
     goalPointSimulated.header.stamp = ros::Time::now();
     goalPointSimulated.header.frame_id = move_base_frame;
-    if(backoff_flag == true)
-    {
-        goalPointSimulated.pose.position.x = backoffGoal.at(0);
-        goalPointSimulated.pose.position.y = backoffGoal.at(1);
-    }
-    else
-    {
-        goalPointSimulated.pose.position.x = target_x;
-        goalPointSimulated.pose.position.y = target_y;
-    }
+    goalPointSimulated.pose.position.x = target_x;
+    goalPointSimulated.pose.position.y = target_y;
     goalPointSimulated.pose.position.z = 0;
     goalPointSimulated.pose.orientation.x = 0;
     goalPointSimulated.pose.orientation.y = 0;
@@ -1205,11 +1200,18 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
         }
         
         //ROS_ERROR("%f", distance);
+        
+//        for(int i=0; i < ds_list.size(); i++) {
+//            if( fabs(target_x - ds_list[i].x) <= 0.3 && fabs(target_y - ds_list[i].y) <= 0.3)
+//                ROS_ERROR("ok %.1f, %.1f", target_x, target_y);
+//        }
+        
         return distance;
     }
     else
     {
-        ROS_WARN("makePlan() failed: returning -1...");
+        // It should never happen that trajectory_plan_meters is called on a goal that is not reachable...
+        ROS_ERROR("makePlan() failed for goal (%.1f, %.1f): returning -1...", goalPointSimulated.pose.position.x, goalPointSimulated.pose.position.y);
         return -1;
     }
 }
@@ -2661,8 +2663,14 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
 {
     double distance, distance_eu;
     double total_distance, total_distance_eu;
-    double x = frontier->x_coordinate;
-    double y = frontier->y_coordinate;
+    double x, y;
+//    if(frontier->smart_goal_set) {
+//        x = frontier->smart_x_coordinate;
+//        y = frontier->smart_y_coordinate;
+//    } else {
+        x = frontier->x_coordinate;
+        y = frontier->y_coordinate;
+//    }
     
     //check euclidean distances
     total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
@@ -4419,6 +4427,7 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
         return true;
     }
     else
+        // The target is (at least at the moment) unreachable, in the sense that there is not a path to it. Notice that it's not possible to understand if there was a failure in the computation of the path caused by the global planner or if a path does not really exists.
         return false;
 }
 
@@ -4434,8 +4443,14 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
     for(int i=0; i < frontiers.size() && !exit; i++)
         for(int j=0; j < ds_list.size() && !exit; j++) {
             double total_distance;
-            double x_f = frontiers[i].x_coordinate;
-            double y_f = frontiers[i].y_coordinate;
+            double x_f, y_f;
+//            if(frontiers[i].smart_goal_set) {
+//                x_f = frontiers[i].smart_x_coordinate;
+//                y_f = frontiers[i].smart_y_coordinate;
+//            } else {
+                x_f = frontiers[i].x_coordinate;
+                y_f = frontiers[i].y_coordinate;
+//            }
             double x_ds;
             double y_ds;
 //            double x_ds = ds_list[j].x;
@@ -4788,17 +4803,17 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     robot_x = robotPose.getOrigin().getX();
     robot_y = robotPose.getOrigin().getY();   
     
-    ROS_INFO("%.1f, %.1f", robot_x, robot_y);
+//    ROS_ERROR("%.2f, %.2f", robot_x, robot_y);
 //    double c1, c2;
 //    costmap_ros_->getCostmap()->mapToWorld(0, 0, c1, c2);
-//    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
-//    costmap_ros_->getCostmap()->mapToWorld(1000, 1000, c1, c2);
-//    ROS_ERROR("%.1f, %.1f", c1, c2); // "0.0, 0.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
+//    ROS_ERROR("%.2f, %.2f", c1, c2);
+//    costmap_ros_->getCostmap()->mapToWorld(500, 500, c1, c2);
+//    ROS_ERROR("%.2f, %.2f", c1, c2); // "0.0, 0.0" on a 1000x1000 cells and 100x100 meters map for every robot and robot starting in (0,0)!
 //    //costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
-//    //ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
-//    costmap_ros_->getCostmap()->mapToWorld(2000, 2000, c1, c2);
-//    ROS_ERROR("%.1f, %.1f", c1, c2); // "5.0, 5.0" on a 2000x2000 cells map for every robot and robot starting in (0,0)!
-
+//    //ROS_ERROR("%.1f, %.1f", c1, c2);
+//    costmap_ros_->getCostmap()->mapToWorld(1000, 1000, c1, c2);
+//    ROS_ERROR("%.2f, %.2f", c1, c2); // "5.0, 5.0" on a 1000x1000 cells and 100x100 meters map for every robot and robot starting in (0,0)!
+//    ros::Duration(10).sleep();
 //    double d = trajectory_plan_meters(0, 36);
 //    ROS_ERROR("%.1f", d); //it seems to make more or less sense (it's a little bit lower then what should be), a
 
@@ -7822,6 +7837,40 @@ void ExplorationPlanner::visualize_Frontiers()
 
             markerArray.markers.push_back(marker);
         }
+        
+        for(int j=0; j < ds_list.size(); j++) {
+            visualization_msgs::Marker marker;
+
+            marker.header.frame_id = move_base_frame;
+            marker.header.stamp = ros::Time::now();
+            marker.header.seq = frontier_seq_number++;
+            marker.ns = "my_namespace";
+            marker.id = frontier_seq_number;
+            marker.type = visualization_msgs::Marker::SPHERE;
+            marker.action = visualization_msgs::Marker::ADD;
+            marker.lifetime = ros::Duration(2); //TODO //F
+            marker.pose.position.x = ds_list.at(j).x;
+            marker.pose.position.y = ds_list.at(j).y;
+            marker.pose.position.z = 0;
+            marker.pose.orientation.x = 0.0;
+            marker.pose.orientation.y = 0.0;
+            marker.pose.orientation.z = 0.0;
+            marker.pose.orientation.w = 1.0;
+            marker.scale.x = 1;
+            marker.scale.y = 1;
+            marker.scale.z = 0.1;
+
+            marker.color.a = 1.0;
+
+            marker.color.r = 0.5;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+
+            markerArray.markers.push_back(marker);
+        }
+        
+        
+        
 
         pub_frontiers_points.publish <visualization_msgs::MarkerArray>(markerArray);
 }
@@ -8592,6 +8641,7 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
         new_frontier.detected_by_robot = detected_by_robot;
         new_frontier.x_coordinate = x;
         new_frontier.y_coordinate = y;
+//        smartGoalBackoff(x, y, costmap_global_ros_, &new_frontier.smart_x_coordinate, &new_frontier.smart_y_coordinate);
         
         //F
         new_frontier.cluster_id = -1;

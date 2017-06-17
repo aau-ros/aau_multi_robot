@@ -2,7 +2,7 @@
 #define PLANNER_H___
 
 #include <ExplorationPlanner.h>
-#include <navfn/navfn_ros.h>
+//#include <navfn/navfn_ros.h>
 #include "global_planner/planner_core.h"
 #include "ros/ros.h"
 #include "hungarian.h"
@@ -37,6 +37,9 @@ namespace explorationPlanner
                 double robot_home_y;
                 double x_coordinate; //world coordinate
                 double y_coordinate; //world coordinate
+                double smart_x_coordinate; //world coordinate
+                double smart_y_coordinate; //world coordinate
+                bool smart_goal_set;
                 int distance_to_robot;
                 int dist_to_robot;
                 double my_distance_to_robot;
