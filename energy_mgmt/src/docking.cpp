@@ -116,8 +116,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     robot->id = robot_id;
     robot->state = active;
     
-    //abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
-    robot->x = origin_absolute_x, robot->y = origin_absolute_y;
+    abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
     
     robots.push_back(*robot);
     
@@ -307,7 +306,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
-    pub_ds_position = nh.advertise <visualization_msgs::Marker> ("robot_position", 1000, true);
+    pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
     
 }
 
@@ -407,10 +406,8 @@ void docking::preload_docking_stations()
         /* Store new DS */
         ds_t new_ds;
         new_ds.id = index;
-        
-        //abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
-        new_ds.x = x, new_ds.y = y;
-        
+        new_ds.world_x = x, new_ds.world_y = y;
+        abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
         new_ds.vacant = true;  // TODO(minor) param...
         undiscovered_ds.push_back(new_ds);
 
@@ -859,11 +856,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 log_major_error("OH NO!!!!!!!!!!!!");
                 
             old_optimal_ds_id = best_ds->id;
+            robot->selected_ds = best_ds->id;
 
             /* Keep track of the new optimal DS in log file */
             ros::Duration time = ros::Time::now() - time_start;
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << time.toSec() << "," << best_ds->id << std::endl;
+            fs_csv << time.toSec() << "," << best_ds->id << "," << target_ds->id << "," << std::endl;
             fs_csv.close();
 
             /* Update parameter l4 */
@@ -1387,7 +1385,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
 
     robot_state = static_cast<state_t>(msg.get()->state);
-    robot->complex_state = static_cast<state_t>(msg.get()->state);
+    robot->complex_state = robot_state;
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -1513,8 +1511,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             // coordinates don't match //TODO(minor) do it...
             double x, y;
             
-            //abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
-            x = msg.get()->x, y = msg.get()->y;
+            abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
             
             if (ds[i].x != x || ds[i].y != y)
                 ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
@@ -1546,8 +1543,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         ds_t s;
         s.id = msg.get()->id;
         
-        //abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
-        s.x = msg.get()->x, s.y = msg.get()->y;
+        abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
         
         s.vacant = msg.get()->vacant;
         discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
@@ -2150,7 +2146,7 @@ void docking::create_log_files()
 
     /* Create and initialize files */
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << "#time,optimal_ds" << std::endl;
+    fs_csv << "#time,optimal_ds,target_ds" << std::endl;
     fs_csv.close();
 
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -2177,8 +2173,7 @@ void docking::set_target_ds_vacant(bool vacant)
     srv_msg.request.docking_station.id = target_ds->id;
     double x, y;
     
-    //rel_to_abs(target_ds->x, target_ds->y, &x, &y);
-    x = target_ds->x, y = target_ds->y;
+    rel_to_abs(target_ds->x, target_ds->y, &x, &y);
     
     srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
                                             // received, robots perform checks on the coordinates
@@ -2634,8 +2629,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
             send_ds_srv_msg.request.docking_station.id = (*it).id;
             double x, y;
             
-            //rel_to_abs((*it).x, (*it).y, &x, &y);
-            x = it->x, y = it->y;
+            rel_to_abs((*it).x, (*it).y, &x, &y);
             
             send_ds_srv_msg.request.docking_station.x = x;
             send_ds_srv_msg.request.docking_station.y = y;
@@ -2813,32 +2807,35 @@ void docking::check_reachable_ds()
             i=0;
             
             
-            // Visualize in RViz
-            visualization_msgs::Marker marker;
+//            // Visualize in RViz
+//            visualization_msgs::Marker marker;
 
-            marker.header.frame_id = robot_prefix + "/map";
-            marker.header.stamp = ros::Time::now();
-            marker.header.seq = it->id;
-            marker.ns = "ds_position";
-            marker.id = it->id;
-            marker.type = visualization_msgs::Marker::SPHERE;
-            marker.action = visualization_msgs::Marker::ADD;
-            //marker.lifetime = ros::Duration(10); //TODO //F
-            marker.scale.x = 0.5;
-            marker.scale.y = 0.5;
-            marker.scale.z = 0.5;
-            marker.pose.position.x = it->map_x;
-            marker.pose.position.y = it->map_y;
-            marker.pose.position.z = 0;
-            marker.pose.orientation.x = 0.0;
-            marker.pose.orientation.y = 0.0;
-            marker.pose.orientation.z = 0.0;
-            marker.pose.orientation.w = 1.0;
-            marker.color.a = 1.0;
-            marker.color.r = 0.0;
-            marker.color.g = 0.0;
-            marker.color.b = 1.0;
-            pub_ds_position.publish< visualization_msgs::Marker >(marker);
+//            marker.header.frame_id = robot_prefix + "/map";
+//            marker.header.stamp = ros::Time::now();
+//            marker.header.seq = it->id;
+//            marker.ns = "ds_position";
+//            marker.id = it->id;
+//            marker.type = visualization_msgs::Marker::SPHERE;
+//            marker.action = visualization_msgs::Marker::ADD;
+//            //marker.lifetime = ros::Duration(10); //TODO //F
+//            marker.scale.x = 0.5;
+//            marker.scale.y = 0.5;
+//            marker.scale.z = 0.5;
+//            marker.pose.position.x = it->x;
+//            marker.pose.position.y = it->y;
+//            marker.pose.position.z = 0;
+//            marker.pose.orientation.x = 0.0;
+//            marker.pose.orientation.y = 0.0;
+//            marker.pose.orientation.z = 0.0;
+//            marker.pose.orientation.w = 1.0;
+//            marker.color.a = 1.0;
+//            marker.color.r = 0.0;
+//            marker.color.g = 0.0;
+//            marker.color.b = 1.0;
+//            pub_ds_position.publish< visualization_msgs::Marker >(marker);
+//            pub_ds_position.publish< visualization_msgs::Marker >(marker);
+//            pub_ds_position.publish< visualization_msgs::Marker >(marker);
+//            pub_ds_position.publish< visualization_msgs::Marker >(marker);
       
             //ROS_ERROR("x: %.1f, y: %.1f", pose->pose.pose.position.x, pose->pose.pose.position.y);
             
@@ -2913,6 +2910,8 @@ void docking::finalize() //TODO(minor) do better
 
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out); //TODO(minor) avoid continusouly open-close...
     fs_csv << time.toSec() << ","
+           << "-1"
+           << "," 
            << "-1"
            << "," 
            << std::endl;
@@ -3011,8 +3010,7 @@ void docking::update_robot_position()
     msg.id = robot_id;
     double x, y;
     
-    //rel_to_abs(robot->x, robot->y, &x, &y);
-    x = robot->x, y = robot->y;
+    rel_to_abs(robot->x, robot->y, &x, &y);
     
     msg.x = x;
     msg.y = y;    
@@ -3032,8 +3030,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.dst_robot = group_name;
         double x, y;
         
-        //rel_to_abs(it->x, it->y, &x, &y);
-        x = it->x, y = it->y;
+        rel_to_abs(it->x, it->y, &x, &y);
         
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
@@ -3047,8 +3044,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.dst_robot = group_name;
         double x, y;
         
-        //rel_to_abs(it->x, it->y, &x, &y);
-        x = it->x, y = it->y;
+        rel_to_abs(it->x, it->y, &x, &y);
         
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;

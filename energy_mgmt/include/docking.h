@@ -280,8 +280,8 @@ class docking
     struct ds_t
     {
         int id;
-        double x, y; // coordinates of the DS in the /odom frame
-        double map_x, map_y; // coordinates of the DS in the /map frame
+        double x, y; // coordinates of the DS in the /map frame
+        double world_x, world_y; // coordinates of the DS in the /world frame (i.e., in case of a simulation, in the reference system of the simulator)
         bool vacant;
     };
     

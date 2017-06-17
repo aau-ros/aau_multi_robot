@@ -1993,7 +1993,8 @@ class Explorer
             }
             
             /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
-            else if (robot_state == checking_vacancy || robot_state == checking_vacancy)
+            //else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
+            else if (robot_state == checking_vacancy)
             {
                 ROS_INFO("discovered that the DS is occupied!");
                 update_robot_state_2(going_in_queue);
@@ -3255,11 +3256,18 @@ class Explorer
 
     void new_target_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
     {
-        ROS_INFO("Storing new target DS position");
-        target_ds_x = msg.get()->point.x;
-        target_ds_y = msg.get()->point.y;
-        ROS_DEBUG("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
-        exploration->new_target_ds(target_ds_x, target_ds_y);
+        if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
+                robot_state != checking_vacancy) {
+            ROS_INFO("Storing new target DS position");
+            target_ds_x = msg.get()->point.x;
+            target_ds_y = msg.get()->point.y;
+            ROS_DEBUG("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
+            exploration->new_target_ds(target_ds_x, target_ds_y);
+        } else {
+            //it could happen that the node is moving to a DS for checking if it is vacant, and that meanwhile it wins an auction for another DS, but the robot should ignore this other auction (in fact, even if it won the auction, we cannot be sure that the auctioned DS is really vacant, so there is no point in changing the target DS)
+             ROS_INFO("The robot is already approaching a DS, so I cannot change it now...");
+        }
+       
 
         // TODO(minor)
         /*
@@ -3340,7 +3348,6 @@ class Explorer
     void abort() {
         ROS_ERROR("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
-        log_major_error("robot is dead!!!");
         update_robot_state_2(dead);
         this->indicateSimulationEnd();
         

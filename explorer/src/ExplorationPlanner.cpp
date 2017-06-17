@@ -1149,14 +1149,23 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
     double distance;
 
-    std::vector<double> backoffGoal;
+    std::vector<double> backoffGoal, backoffGoal2;
     bool backoff_flag = smartGoalBackoff(target_x,target_y, costmap_global_ros_, &backoffGoal);
+    bool backoff_flag2 = smartGoalBackoff(start_x,start_y, costmap_global_ros_, &backoffGoal2);
 
     startPointSimulated.header.seq = start_point_simulated_message++;	// increase the sequence number
     startPointSimulated.header.stamp = ros::Time::now();
     startPointSimulated.header.frame_id = move_base_frame;
-    startPointSimulated.pose.position.x = start_x;
-    startPointSimulated.pose.position.y = start_y;
+    if(backoff_flag2 == true)
+    {
+        startPointSimulated.pose.position.x = backoffGoal2.at(0);
+        startPointSimulated.pose.position.y = backoffGoal2.at(1);
+    }
+    else
+    {
+        startPointSimulated.pose.position.x = start_x;
+        startPointSimulated.pose.position.y = start_y;
+    }
     startPointSimulated.pose.position.z = 0;
     startPointSimulated.pose.orientation.x = 0;
     startPointSimulated.pose.orientation.y = 0;
@@ -1166,8 +1175,16 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     goalPointSimulated.header.seq = goal_point_simulated_message++;	// increase the sequence number
     goalPointSimulated.header.stamp = ros::Time::now();
     goalPointSimulated.header.frame_id = move_base_frame;
-    goalPointSimulated.pose.position.x = target_x;
-    goalPointSimulated.pose.position.y = target_y;
+    if(backoff_flag == true)
+    {
+        goalPointSimulated.pose.position.x = backoffGoal.at(0);
+        goalPointSimulated.pose.position.y = backoffGoal.at(1);
+    }
+    else
+    {
+        goalPointSimulated.pose.position.x = target_x;
+        goalPointSimulated.pose.position.y = target_y;
+    }
     goalPointSimulated.pose.position.z = 0;
     goalPointSimulated.pose.orientation.x = 0;
     goalPointSimulated.pose.orientation.y = 0;
@@ -4806,7 +4823,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 //    ROS_ERROR("%.2f, %.2f", robot_x, robot_y);
 //    double c1, c2;
 //    costmap_ros_->getCostmap()->mapToWorld(0, 0, c1, c2);
-//    ROS_ERROR("%.2f, %.2f", c1, c2);
+//    ROS_ERROR("%.2f, %.2f", c1, c2); //coordinates in the /map frame, which should be placed in the starting position of the robot 
 //    costmap_ros_->getCostmap()->mapToWorld(500, 500, c1, c2);
 //    ROS_ERROR("%.2f, %.2f", c1, c2); // "0.0, 0.0" on a 1000x1000 cells and 100x100 meters map for every robot and robot starting in (0,0)!
 //    //costmap_ros_->getCostmap()->mapToWorld(1100, 1100, c1, c2);
@@ -8605,7 +8622,8 @@ double ExplorationPlanner::euclidean_distance(float x1, float y1, float x2, floa
 }
 
 float ExplorationPlanner::new_target_ds(float new_target_ds_x, float new_target_ds_y) {
-    target_ds_x = new_target_ds_x;
+    //these variables are actually unused (since this class only needs the optimal ds)
+    target_ds_x = new_target_ds_x; 
     target_ds_y = new_target_ds_y;
     target_ds_set = true;
 }
