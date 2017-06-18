@@ -865,7 +865,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             fs_csv.close();
 
             /* Update parameter l4 */
-            //update_l4();
+            update_l4();
             
             /* Notify explorer about the optimal DS change */
             adhoc_communication::EmDockingStation msg_optimal;
@@ -910,11 +910,11 @@ double docking::get_llh()
 }
 
 void docking::update_llh() {
-    ROS_INFO("update_llh");
-    update_l1();
-    update_l2();
-    update_l3();
-    update_l4();
+//    ROS_INFO("update_llh");
+//    update_l1();
+//    update_l2();
+//    update_l3();
+//    update_l4();
 }
 
 void docking::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
@@ -1214,10 +1214,10 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
     
-    ROS_DEBUG("SOC: %d%; rem. time: %.1f; rem. distance: %.1f", (int) battery.soc * 100, battery.remaining_time_run, battery.remaining_distance);
+    ROS_DEBUG("SOC: %d%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
-    //update_l2();
+    update_l2();
     
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
@@ -1452,7 +1452,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
 
     /* Update parameter l1 of charging likelihood function */
-    //update_l1();
+    update_l1();
 }
 
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
@@ -1483,8 +1483,8 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
         no_jobs_received_yet = false;
     
     /* Update parameters l3 and l4 of charging likelihood function */
-    //update_l3();
-    //update_l4();
+    update_l3();
+    update_l4();
 }
 
 
@@ -1556,7 +1556,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     }
 
     /* Update parameter l1 of charging likelihood function */
-    //update_l1();
+    update_l1();
 }
 
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -1972,7 +1972,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
 
 void docking::update_robot_state()  // TODO(minor) simplify
 {
-    ROS_INFO("update_robot_state");
+    ROS_INFO("Updating robot state...");
     
     /*
      * Check if:
@@ -2181,7 +2181,7 @@ void docking::set_target_ds_vacant(bool vacant)
 
     ROS_INFO("Updated own information about ds%d state", target_ds->id);
 
-    //update_l1();
+    update_l1();
 }
 
 void docking::compute_MST()  // TODO(minor) check all functions related to MST

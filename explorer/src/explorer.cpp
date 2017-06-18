@@ -654,7 +654,8 @@ class Explorer
 //                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
 //                                    fs_csv_state.close();
-                                    move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
+                                    counter++;
+                                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
                                     ROS_INFO("Now it is ok...");
                                 }
                     update_robot_state_2(exploring);
@@ -3031,7 +3032,7 @@ class Explorer
         return true;
     }
     
-    bool move_robot_away()
+    bool move_robot_away(int seq)
     {
         ROS_INFO("Preparing to move toward goal...");
         int stuck_countdown = EXIT_COUNTDOWN;
@@ -3348,7 +3349,7 @@ class Explorer
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
         available_distance = msg->remaining_distance;
-        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance));
+        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
@@ -3961,7 +3962,7 @@ class Explorer
     double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
 
     double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
-    int seq, feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
+    int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
     int counter;
     bool recharging;
     bool pioneer;
