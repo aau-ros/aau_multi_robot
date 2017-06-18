@@ -1230,7 +1230,11 @@ void MapMerger::start()
     //ros::NodeHandle nodeHandle;
     ROS_INFO("Started MapMerger");
     ROS_INFO("Subscribe map topic [%s]",local_map_topic.c_str());
-
+    
+    ros::NodeHandle nh;
+    ros::Subscriber sub_robots = nh.subscribe("robots", 10, &MapMerger::robot_callback, this);
+    ros::Subscriber sub_this_robot = nh.subscribe("this_robot", 10, &MapMerger::this_robot_callback, this);
+    received_robot_info = false;
 
     ros::Subscriber  sub = nodeHandle->subscribe(local_map_topic,1000,&MapMerger::callback_map,this);
     ros::Duration(0.1).sleep();
@@ -1267,8 +1271,8 @@ void MapMerger::start()
   
     ROS_INFO("Init Subscriber");
     pub = nodeHandle->advertise<nav_msgs::OccupancyGrid>("global_map",3);
-    ros::NodeHandle mynh;
-    pub_discovered_free_cells_count = mynh.advertise<std_msgs::Int32>("discovered_free_cells_count", 10);
+
+    pub_discovered_free_cells_count = nh.advertise<std_msgs::Int32>("discovered_free_cells_count", 10);
     
     my_pos_pub = nodeHandle->advertise<visualization_msgs::MarkerArray>("position_"+robot_name,3);
     //because i hat to send them in a occupancy grid, i send them as int, so i lose the numbers
@@ -1283,12 +1287,12 @@ void MapMerger::start()
     }
     global_timer_pub = nodeHandle->createTimer(ros::Duration(seconds_publish_timer),&MapMerger::callback_global_pub,this);
     send_map = nodeHandle->createTimer(ros::Duration(seconds_send_timer),&MapMerger::callback_send_map,this);
-    //ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
-    //                                                      &MapMerger::transformPointSRV_2,
-    //                                                      this);
     ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
-                                                          &MapMerger::simpleTransformPointSRV,
+                                                          &MapMerger::transformPointSRV_2,
                                                           this);
+//    ros::ServiceServer transform_srv = nodeHandle->advertiseService("transformPoint",
+//                                                          &MapMerger::simpleTransformPointSRV,
+//                                                          this);
     ros::ServiceServer log_output_srv = nodeHandle->advertiseService("logOutput",
                                                                      &MapMerger::log_output_srv,
                                                                      this);
@@ -1300,7 +1304,6 @@ void MapMerger::start()
         ROS_INFO("Local_Map size = 0");
     }
     
-    ros::NodeHandle nh;
     sub_finished_exploration = nh.subscribe("finished_exploration", 10, &MapMerger::finished_exploration_callback, this);
     
     ros::Duration(0.1).sleep();
@@ -2075,50 +2078,67 @@ bool MapMerger::log_output_srv(map_merger::LogMaps::Request &req, map_merger::Lo
 //    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
 //    res.point.src_robot = robot_hostname;
 //    return true;
-//}
+//}this_robot_callback
 
-//bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
-//{
-//    //ROS_ERROR("transforming...");
-//    //need transform
-//    int index_transform = -1;
-//    if(req.point.src_robot == robot_name)
-//        ROS_ERROR("Transform my own point!");
-//    for(int i = 0; i < robots->size();i++)
-//    {
-//        if(robots->at(i) == req.point.src_robot)
-//        {
-//            ROS_DEBUG("Found %s with %s at %i",
-//                      robots->at(i).c_str(),
-//                      req.point.src_robot.c_str(),
-//                      i);
-//            index_transform = findTransformIndex(i);
-//            break;
-//        }
-//    }
-//    if(index_transform == -1)
-//    {
-//        ROS_DEBUG("Could not transform point, no transform matrix found for %s",
-//                 req.point.src_robot.c_str());
-//        return false;
-//    }
-//    cv::Mat trans = transforms->at(index_transform);
-//    cv::Point org_point(map_width / 2 +req.point.x / 0.05,
-//                        map_height / 2 +req.point.y / 0.05);
-//    cv::Point homogeneous;
-//    std::vector<cv::Point> inPts,outPts;
-//    inPts.push_back(org_point);
-//    outPts.push_back(homogeneous);
-//    cv::Size s;
-//    s.height = map_height; //* 0.05;
-//    s.width = map_width ;//* 0.05;
-//    cv::transform(inPts,outPts,trans);
-//    res.point.x = (outPts.at(0).x - map_width / 2) * 0.05;
-//    res.point.y = (outPts.at(0).y - map_height / 2) * 0.05;
-//    res.point.src_robot = robot_hostname;
-//    //ROS_ERROR("trasformed correctly");
-//    return true;
-//}
+void MapMerger::this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg) {
+    if(!received_robot_info) {
+        robot_home_world_x = msg.get()->home_world_x;
+        robot_home_world_y = msg.get()->home_world_y;
+    }
+    received_robot_info = true;
+}
+
+
+void MapMerger::robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg) {
+    //ROS_ERROR("%d", msg.get()->id);
+    /* Check if robot is in list already */
+    bool new_robot = true;
+    for (int i = 0; i < robot_list.size(); ++i)
+    {
+        if (robot_list[i].id == msg.get()->id)
+        {
+            /* The robot is not new, update its information */
+            new_robot = false;
+            robot_list[i].home_world_x = msg.get()->home_world_x;
+            robot_list[i].home_world_y = msg.get()->home_world_y;
+            break;
+        }
+    }
+
+    /* If it is a new robot, add it */
+    if (new_robot)
+    {
+        /* Store robot information */
+        robot_t new_robot;
+        new_robot.id = msg.get()->id;
+        new_robot.home_world_x = msg.get()->home_world_x;
+        new_robot.home_world_y = msg.get()->home_world_y;
+        robot_list.push_back(new_robot);
+    }
+
+}
+
+bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
+{
+    //ROS_ERROR("transforming...");
+    ROS_ERROR("%d, %.1f, %.1f", req.point.src_robot_id, req.point.x, req.point.y);
+    if(!received_robot_info) {
+        ROS_ERROR("No info on this robot");
+        return false;
+    }
+        
+    for(int i=0; i < robot_list.size(); i++)
+        if(robot_list[i].id == req.point.src_robot_id) {
+            res.point.x = req.point.x + robot_list[i].home_world_x - robot_home_world_x;
+            res.point.y = req.point.y + robot_list[i].home_world_y - robot_home_world_y;
+            res.point.src_robot = robot_hostname;
+            //ROS_ERROR("%.1f, %.1f", res.point.x, res.point.y);
+            //ROS_INFO("trasformed correctly");
+            return true;
+        }
+    ROS_ERROR("No info on the robot whose coordinates must be translated");
+    return false;
+}
 
 bool MapMerger::simpleTransformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {

@@ -115,7 +115,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     ros::Duration(10).sleep();
     robot->id = robot_id;
     robot->state = active;
-    
+    robot->home_world_x = origin_absolute_x;
+    robot->home_world_y = origin_absolute_y;
     abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
     
     robots.push_back(*robot);
@@ -307,6 +308,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
     pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
+    pub_this_robot = nh.advertise<adhoc_communication::EmRobot>("this_robot", 10, true);
     
 }
 
@@ -1214,7 +1216,7 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
     
-    ROS_DEBUG("SOC: %d%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
+    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
     update_l2();
@@ -2674,6 +2676,8 @@ void docking::send_robot()
     robot_msg.request.robot.id = robot_id;
     robot_msg.request.robot.x = robot->x;
     robot_msg.request.robot.y = robot->y;
+    robot_msg.request.robot.home_world_x = robot->home_world_x;
+    robot_msg.request.robot.home_world_y = robot->home_world_y;
     robot_msg.request.robot.state = robot->state;
     robot_msg.request.robot.complex_state = robot->complex_state;
     if (optimal_ds_is_set())
@@ -2681,6 +2685,11 @@ void docking::send_robot()
     else
         robot_msg.request.robot.selected_ds = -1;
     sc_send_robot.call(robot_msg);
+    
+    adhoc_communication::EmRobot robot_msg_2;
+    robot_msg_2.home_world_x = robot->home_world_x;
+    robot_msg_2.home_world_y = robot->home_world_y;
+    pub_this_robot.publish(robot_msg_2);
 
     ros::Duration time = ros::Time::now() - time_start;
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);

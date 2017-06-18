@@ -39,6 +39,7 @@
 
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
+#include "adhoc_communication/EmRobot.h"
 
 
 enum MapMergerLog{
@@ -176,6 +177,18 @@ private:
     bool finished_exploration;
     void finished_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finished_exploration;
+    
+    struct robot_t
+    {
+        int id;
+        double home_world_x, home_world_y;
+    };
+    vector<robot_t> robot_list;
+    void robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
+    void this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
+    double robot_home_world_x, robot_home_world_y;
+    bool received_robot_info;
 };
 
 #endif // MAPMERGER_H
+

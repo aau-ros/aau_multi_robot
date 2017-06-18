@@ -1662,7 +1662,7 @@ class Explorer
                     else
                         ROS_INFO("tying to reach DS");
 
-                counter++;  // TODO(minor) what is this counter?
+                counter++;
                 moving_to_ds = true;          
                 navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
                 moving_to_ds = false;

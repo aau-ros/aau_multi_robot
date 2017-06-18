@@ -4695,7 +4695,7 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
 
     service_message.request.point.x = msg.get()->frontier_element[0].x_coordinate;
     service_message.request.point.y = msg.get()->frontier_element[0].y_coordinate;
-    service_message.request.point.src_robot = robo_name;   
+    service_message.request.point.src_robot_id = msg.get()->frontier_element[0].detected_by_robot;
     //ROS_DEBUG("Robot name:  %s", service_message.request.point.src_robot.c_str());
     
     //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
@@ -4905,7 +4905,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 
             negotiation_list.frontier_element.push_back(negotiation_element);
 
-            //my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
+            my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
             
             frontier_selected = true;            
             break;

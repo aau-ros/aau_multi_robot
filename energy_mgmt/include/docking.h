@@ -267,7 +267,7 @@ class docking
         int id;
         simple_state_t state;
         state_t complex_state;
-        double x, y;
+        double x, y, home_world_x, home_world_y;
         int selected_ds;
     };
     vector<robot_t> robots;
@@ -607,7 +607,7 @@ class docking
     ros::Subscriber sub_finalize_exploration;
     ros::Publisher pub_ds_position;
     int major_errors;
-  
+    ros::Publisher pub_this_robot;
     
 };
 
