@@ -1,6 +1,6 @@
 #include <docking.h>
 #define DEBUG false
-#define RESOLUTION 0.05
+#define DANGEROUS_TIME_VALUE 150
 
 //TODO(minor) ConstPtr
 
@@ -16,10 +16,13 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     /* Load parameters */  // TODO(minor) checks if these params exist...
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param("num_robots", num_robots, -1);
+    nh_tilde.param<float>("resolution", resolution, 0.05);
     nh_tilde.param("w1", w1, 0.25);
     nh_tilde.param("w2", w2, 0.25);
     nh_tilde.param("w3", w3, 0.25);
     nh_tilde.param("w4", w4, 0.25);
+    //nh_tilde.param("w5", w5, 0.25);
+    w5 = 2;
     nh_tilde.getParam("x", origin_absolute_x);
     nh_tilde.getParam("y", origin_absolute_y);
     nh_tilde.param<string>("move_base_frame", move_base_frame, "map");  // TODO(minor) remove this (used only to call map_merger translation)
@@ -303,12 +306,14 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     //mygraph.print();
     
     original_log_path = log_path;
-    major_errors_file = original_log_path + std::string("major_errors.log");
+    major_errors_file = original_log_path + std::string("_errors.log");
     
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
     pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
     pub_this_robot = nh.advertise<adhoc_communication::EmRobot>("this_robot", 10, true);
+    
+    major_errors = 0, minor_errors = 0;
     
 }
 
@@ -906,7 +911,7 @@ double docking::get_llh()
     /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) really
     // necessary???
     if (participating_to_auction == 0)
-        llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
+        llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4 + w5 * l5;
     
     return llh;
 }
@@ -1129,7 +1134,14 @@ void docking::update_l4() //TODO(minor) comments
     recompute_llh = false;
 }
 
-
+void docking::update_l5() //TODO(minor) comments
+{
+    ROS_DEBUG("Update l5");
+    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE)
+        l5 = 1;
+    else
+        l5 = 0;
+}
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction,
                                      string topic)  // TODO(minor) useless?
@@ -1174,8 +1186,8 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     /* Use euclidean distance if required by the caller */
     if (euclidean)
     {
-        double dx = (goal_x - start_x) * RESOLUTION; //TODO bad...
-        double dy = (goal_y - start_y) * RESOLUTION;
+        double dx = (goal_x - start_x) * resolution; //TODO bad...
+        double dy = (goal_y - start_y) * resolution;
         
         return sqrt(dx * dx + dy * dy);
     }
@@ -1216,10 +1228,11 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
     
-    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
+    ROS_ERROR("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
     update_l2();
+    update_l5();
     
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
@@ -3218,22 +3231,62 @@ void docking::log_major_error(std::string text) {
         ROS_FATAL("%s", text.c_str());
         ROS_INFO("%s", text.c_str());
         
-        major_errors_file = original_log_path + std::string("major_errors_docking.log");
+        major_errors++;
+        
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << robot_id << ": " << text << std::endl;
+        major_errors_fstream << "[MAJOR] " << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
 
         std::stringstream robot_number;
+        std::stringstream error_counter;
         robot_number << robot_id;
+        error_counter << major_errors;
         std::string prefix = "/robot_";
         
         std::string status_directory = "/simulation_status_error";
         std::string robo_name = prefix.append(robot_number.str());
-        std::string file_suffix(".error");
+        std::string file_name = robo_name.append(error_counter.str());
+        std::string file_suffix(".major_error");
 
 //        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
         std::string status_path = ros_package_path + status_directory;
-        std::string status_file = status_path + robo_name + file_suffix;
+        std::string status_file = status_path + file_name + file_suffix;
+
+        // TODO(minor): check whether directory exists
+        boost::filesystem::path boost_status_path(status_path.c_str());
+        if(!boost::filesystem::exists(boost_status_path))
+            if(!boost::filesystem::create_directories(boost_status_path))
+                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
+        std::ofstream outfile(status_file.c_str());
+        outfile.close();
+        ROS_INFO("Creating file %s to indicate error",
+        status_file.c_str());
+}
+
+void docking::log_minor_error(std::string text) {
+        ROS_FATAL("%s", text.c_str());
+        ROS_INFO("%s", text.c_str());
+        
+        minor_errors++;
+        
+        major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << "[minor] " << robot_id << ": " << text << std::endl;
+        major_errors_fstream.close();
+
+        std::stringstream robot_number;
+        std::stringstream error_counter;
+        robot_number << robot_id;
+        error_counter << minor_errors;
+        std::string prefix = "/robot_";
+        
+        std::string status_directory = "/simulation_status_minor_error";
+        std::string robo_name = prefix.append(robot_number.str());
+        std::string file_name = robo_name.append(error_counter.str());
+        std::string file_suffix(".minor_error");
+
+//        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
+        std::string status_path = ros_package_path + status_directory;
+        std::string status_file = status_path + file_name + file_suffix;
 
         // TODO(minor): check whether directory exists
         boost::filesystem::path boost_status_path(status_path.c_str());

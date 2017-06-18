@@ -140,6 +140,8 @@ class docking
      * Update the likelihood value l4.
      */
     void update_l4();
+    
+    void update_l5();
 
     /**
      * Send an auction to a multicast group.
@@ -309,12 +311,12 @@ class docking
     /**
      * Likelihood values for going recharging. A linear combination of the values is used in the auctions.
      */
-    double l1, l2, l3, l4;
+    double l1, l2, l3, l4, l5;
 
     /**
      * The weights for the weighted sum of the likelihood values l1,...,l4.
      */
-    double w1, w2, w3, w4;
+    double w1, w2, w3, w4, w5;
 
     // F
     ros::Publisher pub_ds, pub_new_target_ds, pub_finish;
@@ -596,6 +598,7 @@ class docking
     
     void runtime_checks();
     void log_major_error(std::string text);
+    void log_minor_error(std::string text);
     void path_callback(const std_msgs::String msg);
     
     std::string ros_package_path;
@@ -606,8 +609,9 @@ class docking
     void finalize_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finalize_exploration;
     ros::Publisher pub_ds_position;
-    int major_errors;
+    int major_errors, minor_errors;
     ros::Publisher pub_this_robot;
+    float resolution;
     
 };
 
