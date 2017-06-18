@@ -1218,6 +1218,8 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_charge = msg.get()->remaining_time_charge;
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
+    
+    ROS_DEBUG("SOC: %.1f; rem. time: %.1f; rem. distance: %.1f", battery.soc, battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
     //update_l2();
