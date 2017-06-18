@@ -3673,7 +3673,7 @@ class Explorer
         major_errors++;
         
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << robot_id << ": " << text << std::endl;
+        major_errors_fstream << "[MAJOR] " << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
 
         std::stringstream robot_number;
@@ -3710,7 +3710,7 @@ class Explorer
         minor_errors++;
         
         major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << robot_id << ": " << text << std::endl;
+        major_errors_fstream << "[minor] " << robot_id << ": " << text << std::endl;
         major_errors_fstream.close();
 
         std::stringstream robot_number;
