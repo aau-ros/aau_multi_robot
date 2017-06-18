@@ -630,7 +630,38 @@ class Explorer
                     ros::Duration(3).sleep();
                     ros::spinOnce();
                     continue;
-                   }  
+                   }
+                   
+                if(robot_state == leaving_ds)
+                {
+                    double distance = -1;
+                    int i = 0;
+                    while(distance < 0 && i < 10) {
+                        exploration->distance_from_robot(target_ds_x, target_ds_y);
+                        i++;
+                        ros::Duration(2).sleep();
+                    }
+                    if(distance < 0) {
+                        ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
+                    }
+                    else
+                        if (distance <
+                                min_distance_queue_ds)  // TODO could the DS change meanwhile???
+                                {
+                                    ROS_INFO("Robot is too close to the DS: moving a little bit farther...");
+                                    ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
+                                    //update_robot_state_2(moving_away_from_ds);
+//                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
+//                                    fs_csv_state.close();
+                                    move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
+                                    ROS_INFO("Now it is ok...");
+                                }
+                    update_robot_state_2(exploring);
+                    continue;
+                }
+                
+                
                     
                 //this is done because the robot, actually , can never use the full battery to move, since it has to perform some pre-processing operations with the costmap before selecting a frontier, and so meanwhile the battery life is decreased; so, we store the first available_distance that we have when performing the first frontier selection
                 if(conservative_maximum_available_distance < 0)

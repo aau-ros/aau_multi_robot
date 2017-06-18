@@ -955,17 +955,12 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
         return;
     }
 
-    /* Compute l1, considerign the boundaries */
+    /* Compute l1, considering boundaries */
     if (num_ds_vacant > num_robots_active)
-    
         l1 = 1;
-    
     else if (num_robots_active == 0)
-    
         l1 = 0;
-    
     else
-    
         l1 = num_ds_vacant / num_robots_active;
    
 }
@@ -1081,7 +1076,7 @@ void docking::update_l4() //TODO(minor) comments
     {       
         if (ds[i].id == best_ds->id)
         {
-            dist_ds = distance_from_robot(ds[i].x, ds[i].y, true);
+            dist_ds = distance_from_robot(ds[i].x, ds[i].y, true); // use euclidean distance to make it faster
             //ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
             if (dist_ds < 0)
             {
@@ -1219,7 +1214,7 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
     
-    ROS_DEBUG("SOC: %.1f; rem. time: %.1f; rem. distance: %.1f", battery.soc, battery.remaining_time_run, battery.remaining_distance);
+    ROS_DEBUG("SOC: %d%; rem. time: %.1f; rem. distance: %.1f", (int) battery.soc * 100, battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
     //update_l2();
@@ -2801,7 +2796,7 @@ void docking::check_reachable_ds()
                 log_major_error("error");
             int id2 = it->id;
             //discovered_ds.erase(it);
-            ROS_INFO("erase at position %d; size is %lu", i, discovered_ds.size());
+            ROS_INFO("erase at position %d; size after delete is %lu", i, discovered_ds.size() - 1);
             discovered_ds.erase(discovered_ds.begin() + i);
             
             it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
