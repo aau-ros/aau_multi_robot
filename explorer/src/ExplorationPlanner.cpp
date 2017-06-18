@@ -4794,7 +4794,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
-        ROS_ERROR("No frontier/cluster available");
+        ROS_INFO("No frontier/cluster available");
         return false;
     }
     
