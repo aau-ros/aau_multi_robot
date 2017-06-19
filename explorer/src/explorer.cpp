@@ -2898,7 +2898,7 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * 0.9 - max_av_distance * 0.15;
+        return available_distance * 0.9 - max_av_distance * 0.3;
     }
 
     bool move_robot(int seq, double position_x, double position_y)
@@ -2909,6 +2909,9 @@ class Explorer
         exploration->next_auction_position_y = position_y;
         int stuck_countdown = EXIT_COUNTDOWN;
         ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
+        ros::Duration my_fallback_countdown = ros::Duration(30);
+        bool timer_started = false;
+        ros::Time start_time_fallback;
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
          * given about the actual driving state of the robot. */
@@ -2997,11 +3000,8 @@ class Explorer
                     } else
                         return false;
                 }
-
-                ros::Duration(1).sleep();
                 
                 my_stuck_countdown -= ros::Time::now() - time_before;
-                time_before = ros::Time::now();
                 ROS_DEBUG("%.1f", my_stuck_countdown.toSec());
             }
             else
@@ -3013,23 +3013,40 @@ class Explorer
                 prev_pose_angle = pose_angle;
             }
 
-            remaining_distance = exploration->distance_from_robot(position_x, position_y);
+            if(robot_state == going_checking_vacancy || robot_state == going_in_queue || robot_state == going_charging) {
+                remaining_distance = exploration->distance_from_robot(position_x, position_y);
 
-            /* Print remaining distance to be travelled to reach goal if the goal is a DS */
-//            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
-                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+                /* Print remaining distance to be travelled to reach goal if the goal is a DS */
+    //            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
+                    ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
-            /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
-             * the DS */
-            if (remaining_distance > 0 && remaining_distance < queue_distance && (robot_state == going_checking_vacancy || robot_state == going_in_queue) )
-            {
-                ac.cancelGoal();
-                exploration->next_auction_position_x = robotPose.getOrigin().getX();
-                exploration->next_auction_position_y = robotPose.getOrigin().getY();
-                return true;
+                /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
+                 * the DS */
+                if ((robot_state == going_checking_vacancy || robot_state == going_in_queue) && remaining_distance > 0 && remaining_distance < queue_distance)
+                {
+                    ac.cancelGoal();
+                    exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                    exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                    return true;
+                }
+                if(robot_state == going_charging && remaining_distance < 3.0) {
+                    if(!timer_started) {
+                        timer_started = true;
+                        start_time_fallback = ros::Time::now();
+                    }
+                    my_fallback_countdown -= ros::Time::now() - time_before;
+                    if(my_fallback_countdown <= ros::Duration(0)) {
+                        ac.cancelGoal();
+                        exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                        exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                        log_minor_error("consider that robot reached the DS...");
+                        return true;
+                    }
+                }
             }
-
-            // ros::Duration(0.5).sleep(); //TODO(minor)
+            
+            time_before = ros::Time::now();
+            ros::Duration(1).sleep(); //TODO(minor)
         }
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)

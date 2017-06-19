@@ -44,7 +44,7 @@
 #define APPROACH 0
 //#define QUICK_SELECTION
 #define ALL_LOG_LEVEL false
-#define MUTEX_LOG false
+#define LOG_MUTEX false
 
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
@@ -8630,9 +8630,9 @@ float ExplorationPlanner::new_target_ds(float new_target_ds_x, float new_target_
 
 /* Try to acquire (lock) the mutex passed as argument */
 void ExplorationPlanner::acquire_mutex(boost::mutex *mutex, std::string function_name) {
-    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || MUTEX_LOG, "locks", "Function '%s' is trying to acquire mutex...", function_name.c_str());
+    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || LOG_MUTEX, "locks", "Function '%s' is trying to acquire mutex...", function_name.c_str());
     mutex->lock();
-    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || MUTEX_LOG, "locks", "%s acquired by function '%s'", "Mutex", function_name.c_str());
+    ROS_DEBUG_COND_NAMED(ALL_LOG_LEVEL || LOG_MUTEX, "locks", "%s acquired by function '%s'", "Mutex", function_name.c_str());
 }
 
 /* Release (unlock) the mutex passed as argument */
