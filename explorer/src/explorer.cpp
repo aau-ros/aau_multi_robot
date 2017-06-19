@@ -62,6 +62,8 @@
 #define TIMEOUT_CHECK_1 10
 #define DS_GRAPG_NAVIGATION_ALLOWED true
 
+#define STATE_TRANSITION_LOG true
+
 bool exploration_finished;
 
 boost::mutex costmap_mutex;
@@ -1624,8 +1626,11 @@ class Explorer
                                                  // corrent sleep time???
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
-//                    if (exploration->distance_from_robot(target_ds_x, target_ds_y) < min_distance_queue_ds)
-                        ; //ROS_ERROR("ROBOT TOO CLOSE TO DS!!!!!");  // TODO(minor) move robot away in this case...
+                    if (exploration->distance_from_robot(target_ds_x, target_ds_y) < min_distance_queue_ds) {
+                        ROS_INFO("robot too close to DS for being in queue...");
+                        counter++;
+                        move_robot_away(counter);
+                    }
 
                     update_robot_state();
                     i++;
@@ -1804,7 +1809,7 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-        ROS_INFO("State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_ERROR_COND(STATE_TRANSITION_LOG, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
@@ -2926,7 +2931,7 @@ class Explorer
         double remaining_distance = exploration->distance_from_robot(position_x, position_y);
 
         /* If the robot is moving toward a DS, check if it is already close to the DS: if it is, do not move it */
-        if (remaining_distance < queue_distance && (robot_state == going_in_queue || robot_state == going_checking_vacancy) )
+        if (remaining_distance > 0 && remaining_distance < queue_distance && (robot_state == going_in_queue || robot_state == going_checking_vacancy) )
         {
             //ROS_ERROR("\n\t\e[1;34mSTOP!! let's wait...\e[0m");
             //exploration->next_auction_position_x = robotPose.getOrigin().getX();
@@ -2996,7 +3001,7 @@ class Explorer
 
             /* Print remaining distance to be travelled to reach goal if the goal is a DS */
 //            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
-//                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
             /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
              * the DS */
@@ -3253,14 +3258,11 @@ class Explorer
         if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
-        else if (robot_state_next != fully_charged_next) { //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the next state...
+        else if (robot_state_next != fully_charged_next) { //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the *next* state...
             if (need_to_recharge)
                 robot_state_next = going_queue_next;
-            else {
-                ROS_INFO("ignoring the fact that the robot lost another robot's auction");
-                //robot_state_next = exploring_next;
-            }                
-                
+            else
+                robot_state_next = exploring_next;           
         } else
             ROS_INFO("ignoring");
     }
