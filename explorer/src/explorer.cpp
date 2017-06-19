@@ -107,6 +107,7 @@ class Explorer
     bool ds_graph_navigation_allowed;
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
+    float coeff_a, coeff_b;
     
     /*******************
      * CLASS FUNCTIONS *
@@ -173,6 +174,8 @@ class Explorer
         conservative_maximum_available_distance = -1;
         moving_to_ds = false;
         home_point_set = false;
+        coeff_a = 0.9;
+        coeff_b = 0.3;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -2154,7 +2157,7 @@ class Explorer
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
                   "conservative_available_distance,global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
-                  "recharge_cycles,energy_consumption,frontier_selection_strategy"
+                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << std::endl;
         fs_csv.close();
 
@@ -2196,7 +2199,7 @@ class Explorer
             fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << "," << conservative_available_distance(available_distance) << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << "," 
                    << map_progress.local_freespace << "," << free_cells_count << "," 
-                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << std::endl;
+                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b << std::endl;
             fs_csv.close();
 
             costmap_mutex.unlock();
@@ -2898,7 +2901,7 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * 0.9 - max_av_distance * 0.3; // was * 0.15
+        return available_distance * coeff_a - max_av_distance * coeff_b;
     }
 
     bool move_robot(int seq, double position_x, double position_y)

@@ -75,12 +75,75 @@ battery_simulate::battery_simulate()
     
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param<std::string>("log_path", log_path, "");
+    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
+    /* Initialize robot name */
+    if (robot_prefix.empty())
+    {
+        /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
+        ROS_INFO("Real robot");
+
+        /* Set robot name and hostname */
+        char hostname[1024];
+        hostname[1023] = '\0';
+        gethostname(hostname, 1023);
+        robot_name = string(hostname);
+
+        /* Set robot ID based on the robot name */
+        std::string bob = "bob";
+        std::string marley = "marley";
+        std::string turtlebot = "turtlebot";
+        std::string joy = "joy";
+        std::string hans = "hans";
+        if (robot_name.compare(turtlebot) == 0)
+            robot_id = 0;
+        if (robot_name.compare(joy) == 0)
+            robot_id = 1;
+        if (robot_name.compare(marley) == 0)
+            robot_id = 2;
+        if (robot_name.compare(bob) == 0)
+            robot_id = 3;
+        if (robot_name.compare(hans) == 0)
+            robot_id = 4;
+    }
+    else
+    {
+        /* Prefix is set: we are in a simulation */
+        ROS_INFO("Simulation");
+        robot_name = robot_prefix;
+    }
+    /* Create directory */
     log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+    {
+        ROS_INFO("Creating directory %s", log_path.c_str());
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+            {
+                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+                exit(-1);
+            }
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+            exit(-1);
+        }
+    }
+    else
+    {
+        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+    }
+
+    /* Create file names */
+    log_path = log_path.append("/");
     info_file = log_path + std::string("metadata_battery.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_moving,power_standing,power_charging" << std::endl;
-    fs_info << power_moving << "," << power_standing << "," << power_charging << std::endl;
+    fs_info << "#power_moving,power_standing,power_charging,charge_max" << std::endl;
+    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << std::endl;
     fs_info.close();
     
 }

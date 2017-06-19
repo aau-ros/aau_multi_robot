@@ -22,6 +22,8 @@ public:
 #include <stdlib.h>
 #include <fstream>
 
+#define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
+
 class battery_simulate
 {
 public:
@@ -219,6 +221,9 @@ private:
     std::string log_path;
     std::string info_file;
     std::fstream fs_info;
+    std::string robot_name;
+    std::string robot_prefix;
+    int robot_id;
     
 };
 
