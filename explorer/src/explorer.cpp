@@ -61,6 +61,8 @@
 #define DEBUG false
 #define TIMEOUT_CHECK_1 10
 #define DS_GRAPG_NAVIGATION_ALLOWED true
+#define COEFF_A 0.9
+#define COEFF_B 0.2
 
 #define LOG_STATE_TRANSITION true
 
@@ -174,8 +176,8 @@ class Explorer
         conservative_maximum_available_distance = -1;
         moving_to_ds = false;
         home_point_set = false;
-        coeff_a = 0.9;
-        coeff_b = 0.3;
+        coeff_a = COEFF_A;
+        coeff_b = COEFF_B;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
