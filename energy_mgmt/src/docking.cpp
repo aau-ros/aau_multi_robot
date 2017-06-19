@@ -1186,9 +1186,8 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     /* Use euclidean distance if required by the caller */
     if (euclidean)
     {
-        double dx = (goal_x - start_x) * resolution; //TODO bad...
-        double dy = (goal_y - start_y) * resolution;
-        
+        double dx = (goal_x - start_x);
+        double dy = (goal_y - start_y);
         return sqrt(dx * dx + dy * dy);
     }
 
