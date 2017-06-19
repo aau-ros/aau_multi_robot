@@ -2521,7 +2521,7 @@ class Explorer
         } else
             ROS_INFO("Status file created successfully");
         
-        if(percentage < 90 && robot_state != stuck) {
+        if(percentage < 90 && robot_state != stuck && robot_state != dead) {
             log_major_error("low percentage!!!");
         }
         
@@ -2975,6 +2975,7 @@ class Explorer
                 
                 my_stuck_countdown -= ros::Time::now() - time_before;
                 time_before = ros::Time::now();
+                ROS_DEBUG("%.1f", my_stuck_countdown.toSec());
             }
             else
             {
