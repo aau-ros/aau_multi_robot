@@ -481,31 +481,36 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         /* "Vacant" policy */
         else if (ds_selection_policy == 1)
         {
-            /* Check if there are vacant DSs. If there are, check also which one is the closest to the robot */
+            /* Check if there are vacant DSs that are currently reachable. If there are, check also which one is the closest to the robot */
             bool found_vacant_ds = false;
             double min_dist = numeric_limits<int>::max();
             for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
             {
                 if ((*it).vacant)
                 {
-                    /* We have just found a vacant DS (possibly the one already selected as optimal DS before calling
-                     * this function).
-                     *
-                     * Notice that is is important to consider also the already selected optimal DS when we loop on all
-                     *the DSs, since we have to update variable 'found_vacant_ds' to avoid falling back to "closest"
-                     *policy, i.e., we cannot use a check like best_ds->id != (*it).id here */
-                    found_vacant_ds = true;
-
-                    /* Check if that DS is also the closest one */
                     double dist = distance_from_robot((*it).x, (*it).y);
-                    if (dist < 0) {
-                        ROS_ERROR("Distance computation failed: skipping this DS in the computation of the optimal DS..."); //TODO(minor) place everywhere, and write it better...
+                    if (dist < 0)
                         continue;
-                    }
-                    if (dist < min_dist)
-                    {
-                        min_dist = dist;
-                        set_optimal_ds_given_id(it->id);
+                    if(dist < conservative_remaining_distance_with_return() ) {
+                        /* We have just found a vacant DS that is reachable (possibly the one already selected as optimal DS before calling
+                         * this function).
+                         *
+                         * Notice that is is important to consider also the already selected optimal DS when we loop on all
+                         *the DSs, since we have to update variable 'found_vacant_ds' to avoid falling back to "closest"
+                         *policy, i.e., we cannot use a check like best_ds->id != (*it).id here */
+                        found_vacant_ds = true;
+
+                        /* Check if that DS is also the closest one */
+                        double dist = distance_from_robot((*it).x, (*it).y);
+                        if (dist < 0) {
+                            ROS_ERROR("Distance computation failed: skipping this DS in the computation of the optimal DS..."); //TODO(minor) place everywhere, and write it better...
+                            continue;
+                        }
+                        if (dist < min_dist)
+                        {
+                            min_dist = dist;
+                            set_optimal_ds_given_id(it->id);
+                        }
                     }
                 }
             }
@@ -841,8 +846,15 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double cost = n_r + d_s + theta_s + d_f;
                 if (cost < min_cost)
                 {
-                    min_cost = cost;
-                    set_optimal_ds_given_index(d);
+                    // Check that the candidate new optimal DS is reachable
+                    double dist = distance_from_robot(ds.at(d).x, ds.at(d).y);
+                    if (dist < 0 || dist >= conservative_maximum_distance_with_return())
+                        continue;
+                    else {
+                        // The candidate new optimal DS can be set as new optimal DS (until we don't find a better one)
+                        min_cost = cost;
+                        set_optimal_ds_given_index(d);
+                    }                    
                 }
             }
         }
