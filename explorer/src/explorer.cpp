@@ -522,7 +522,7 @@ class Explorer
 
             ros::Time time_2 = ros::Time::now();
             ros::Time time = ros::Time::now();
-            if(robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != charging && robot_state != going_charging) {
+            if(robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != charging && robot_state != going_charging && robot_state != leaving_ds) {
                 
                 /**************************
                  * FRONTIER DETERMINATION *
@@ -680,8 +680,8 @@ class Explorer
 //                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
 //                                    fs_csv_state.close();
-                                    counter++;
-                                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
+                    counter++;
+                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
 //                                    ROS_INFO("Now it is ok...");
 //                                }
                     update_robot_state_2(exploring);
