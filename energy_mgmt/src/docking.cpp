@@ -1149,9 +1149,11 @@ void docking::update_l4() //TODO(minor) comments
 void docking::update_l5() //TODO(minor) comments
 {
     ROS_DEBUG("Update l5");
-    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE)
+    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE) {
+        if(l5 == 0)
+            ROS_INFO("l5 is set to 1");
         l5 = 1;
-    else
+    } else
         l5 = 0;
 }
 
