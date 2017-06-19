@@ -75,7 +75,7 @@ battery_simulate::battery_simulate()
     
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param<std::string>("log_path", log_path, "");
-    info_file = log_path + std::string("metadata.csv");
+    info_file = log_path + std::string("metadata_battery.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_info << "#power_moving,power_standing,power_charging" << std::endl;
