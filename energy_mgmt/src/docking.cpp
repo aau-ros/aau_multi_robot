@@ -310,10 +310,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
 //    ROS_ERROR("%s", major_errors_file.c_str());
     
-            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        major_errors_fstream << "[MAJOR] " << std::endl;
-        major_errors_fstream.close();
-    
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
     pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
