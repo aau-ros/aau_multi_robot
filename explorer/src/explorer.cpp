@@ -106,7 +106,7 @@ class Explorer
     ros::Timer checking_vacancy_timer;
     bool ds_graph_navigation_allowed;
     double conservative_maximum_available_distance;
-    bool moving_to_ds;
+    bool moving_to_ds, home_point_set;
     
     /*******************
      * CLASS FUNCTIONS *
@@ -172,6 +172,7 @@ class Explorer
         ds_graph_navigation_allowed = DS_GRAPG_NAVIGATION_ALLOWED;
         conservative_maximum_available_distance = -1;
         moving_to_ds = false;
+        home_point_set = false;
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -629,6 +630,19 @@ class Explorer
             }
             
             store_current_position();
+            if(!home_point_set) {
+                if(exploration->getRobotPose(robotPose)) {
+                    home_point_x = robotPose.getOrigin().getX();
+                    home_point_y = robotPose.getOrigin().getY();
+                }
+                else {
+                    log_major_error("cannot get robot home position");
+                    ROS_INFO("it will be assumed that the robot is starting at (0,0) in is local reference systen");
+                    home_point_x = 0;
+                    home_point_y = 0;
+                }
+                home_point_set = true;
+            }
             
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
@@ -645,10 +659,13 @@ class Explorer
                     //TODO
 //                    double distance = -1;
 //                    int i = 0;
-//                    while(distance < 0 && i < 10) {
+//                    while(i < 10) {
 //                        exploration->distance_from_robot(target_ds_x, target_ds_y);
 //                        i++;
-//                        ros::Duration(2).sleep();
+//                        if(distance > 0)
+//                            break;
+//                        else
+//                            ros::Duration(2).sleep();
 //                    }
 //                    if(distance < 0) {
 //                        ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
@@ -659,12 +676,12 @@ class Explorer
 //                                {
 //                                    ROS_INFO("Robot is too close to the DS: moving a little bit farther...");
 //                                    ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
-//                                    //update_robot_state_2(moving_away_from_ds);
-////                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-////                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
-////                                    fs_csv_state.close();
-//                                    counter++;
-//                                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
+                                    //update_robot_state_2(moving_away_from_ds);
+//                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
+//                                    fs_csv_state.close();
+                                    counter++;
+                                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
 //                                    ROS_INFO("Now it is ok...");
 //                                }
                     update_robot_state_2(exploring);
@@ -2818,8 +2835,6 @@ class Explorer
         homePoint.header.seq = home_point_message++;
         homePoint.header.stamp = ros::Time::now();
         homePoint.header.frame_id = move_base_frame;  //"map";
-        home_point_x = robotPose.getOrigin().getX();
-        home_point_y = robotPose.getOrigin().getY();
         homePoint.point.x = home_point_x;
         homePoint.point.y = home_point_y;
 
