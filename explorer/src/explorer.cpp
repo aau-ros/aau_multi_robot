@@ -1810,7 +1810,7 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-        ROS_ERROR_COND(LOG_STATE_TRANSITION, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_INFO_COND(LOG_STATE_TRANSITION, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
