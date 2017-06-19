@@ -75,6 +75,7 @@ battery_simulate::battery_simulate()
     
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param<std::string>("log_path", log_path, "");
+    log_path = log_path.append("/");
     info_file = log_path + std::string("metadata_battery.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
