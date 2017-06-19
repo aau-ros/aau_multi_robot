@@ -16,6 +16,11 @@ public:
 #include <explorer/Speed.h>
 #include "std_msgs/Float32.h"
 #include <adhoc_communication/EmRobot.h>
+#include <sstream>
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <stdlib.h>
+#include <fstream>
 
 class battery_simulate
 {
@@ -211,6 +216,9 @@ private:
     float mass;
     bool advanced_computations_bool;
     
+    std::string log_path;
+    std::string info_file;
+    std::fstream fs_info;
     
 };
 

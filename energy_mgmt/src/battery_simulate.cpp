@@ -72,6 +72,16 @@ battery_simulate::battery_simulate()
     pub_full_battery_info.publish(state);
     
     time_last = ros::Time::now();
+    
+    ros::NodeHandle nh_tilde("~");
+    nh_tilde.param<std::string>("log_path", log_path, "");
+    info_file = log_path + std::string("metadata.csv");
+
+    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_info << "#power_moving,power_standing,power_charging" << std::endl;
+    fs_info << power_moving << "," << power_standing << "," << power_charging << std::endl;
+    fs_info.close();
+    
 }
 
 void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
