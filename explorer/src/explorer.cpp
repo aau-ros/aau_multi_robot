@@ -497,6 +497,14 @@ class Explorer
         while (!exploration_finished)
         {
         
+            std::vector<double> final_goal;
+            std::vector<double> backoffGoal;
+            std::vector<std::string> robot_str;
+
+            bool navigate_to_goal = false;
+            bool negotiation;
+            int count = 0;
+        
 //            if(robot_id == 0) {
 //                finalize_exploration();
 //                continue;
@@ -509,6 +517,7 @@ class Explorer
             msg.data = ros::package::getPath("multi_robot_analyzer");
             pub_path.publish(msg); //TODO put in better place
 
+            
             ROS_INFO("EXPLORING");  // TODO(minor) here???
             
             ros::Time time_2 = ros::Time::now();
@@ -532,93 +541,6 @@ class Explorer
 
                 continue;
             }
-
-            /**************************
-             * FRONTIER DETERMINATION *
-             **************************/
-            std::vector<double> final_goal;
-            std::vector<double> backoffGoal;
-            std::vector<std::string> robot_str;
-
-            bool navigate_to_goal = false;
-            bool negotiation;
-            int count = 0;
-
-            ROS_INFO("****************** EXPLORE ******************");
-
-            ros::Time time = ros::Time::now();
-            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_exp_se_log << "0" << ": " << "Start new explore() loop iteration" << std::endl;
-            fs_exp_se_log.close();
-
-            /*
-            * Use mutex to lock the critical section (access to the costmap)
-            * since rosspin tries to update the costmap continuously
-            */
-            ROS_DEBUG("COSTMAP STUFF");
-            print_mutex_info("explore()", "acquiring");
-            costmap_mutex.lock();
-            ROS_DEBUG("COSTMAP STUFF, lock aquired");
-            print_mutex_info("explore()", "lock");
-
-            exploration->transformToOwnCoordinates_frontiers();
-            exploration->transformToOwnCoordinates_visited_frontiers();
-
-            //ROS_ERROR("initialize planner");
-            exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
-            //ROS_ERROR("planner initialized");
-         
-            if(skip_findFrontiers) {
-                ROS_INFO("skipping findFrontiers");
-            } else {
-                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-                fs_exp_se_log.close();
-                
-                exploration->findFrontiers();
-            }   
-    //            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    //            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
-    //            fs_exp_se_log.close();
-
-            if(skip_findFrontiers)
-                exploration->clearVisitedFrontiers();
-            exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
-            if(skip_findFrontiers)
-                exploration->clearSeenFrontiers(costmap2d_global);
-
-            costmap_mutex.unlock();
-            print_mutex_info("explore()", "unlock");
-            ROS_DEBUG("COSTMAP STUFF, lock released");
-            
-            //tf::Stamped<tf::Pose> robotPose;
-            
-            if(!created) {
-                while(!exploration->getRobotPose(robotPose)) {
-                    ROS_ERROR("HERE");   
-                    ros::Duration(3).sleep();
-                } 
-            
-                ss_robot_pose = nh.advertiseService("explorer/robot_pose", &Explorer::robot_pose_callback, this);
-                ss_distance_from_robot =
-                    nh.advertiseService("explorer/distance_from_robot", &Explorer::distance_from_robot_callback, this);
-                ss_reachable_target =
-                    nh.advertiseService("explorer/reachable_target", &Explorer::reachable_target_callback, this);
-                    
-                ss_distance =
-                    nh.advertiseService("explorer/distance", &Explorer::distance, this);
-                    
-                created = true;
-            }
-            
-            
-
-            /*
-             * Sleep to ensure that frontiers are exchanged
-             */
-            ros::Duration(2).sleep();
-            
-            explorer_ready = true;
             
             store_current_position();
             
@@ -668,6 +590,88 @@ class Explorer
                 if(conservative_maximum_available_distance < 0)
                     //conservative_maximum_available_distance = conservative_available_distance(available_distance); 
                     conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance); 
+                
+                
+                /**************************
+                 * FRONTIER DETERMINATION *
+                 **************************/
+
+                ROS_INFO("****************** EXPLORE ******************");
+
+                ros::Time time = ros::Time::now();
+                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                fs_exp_se_log << "0" << ": " << "Start new explore() loop iteration" << std::endl;
+                fs_exp_se_log.close();
+
+                /*
+                * Use mutex to lock the critical section (access to the costmap)
+                * since rosspin tries to update the costmap continuously
+                */
+                ROS_DEBUG("COSTMAP STUFF");
+                print_mutex_info("explore()", "acquiring");
+                costmap_mutex.lock();
+                ROS_DEBUG("COSTMAP STUFF, lock aquired");
+                print_mutex_info("explore()", "lock");
+
+                exploration->transformToOwnCoordinates_frontiers();
+                exploration->transformToOwnCoordinates_visited_frontiers();
+
+                //ROS_ERROR("initialize planner");
+                exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
+                //ROS_ERROR("planner initialized");
+             
+                if(skip_findFrontiers) {
+                    ROS_INFO("skipping findFrontiers");
+                } else {
+                    fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                    fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+                    fs_exp_se_log.close();
+                    
+                    exploration->findFrontiers();
+                }   
+        //            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        //            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
+        //            fs_exp_se_log.close();
+
+                if(skip_findFrontiers)
+                    exploration->clearVisitedFrontiers();
+                exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
+                if(skip_findFrontiers)
+                    exploration->clearSeenFrontiers(costmap2d_global);
+
+                costmap_mutex.unlock();
+                print_mutex_info("explore()", "unlock");
+                ROS_DEBUG("COSTMAP STUFF, lock released");
+                
+                //tf::Stamped<tf::Pose> robotPose;
+                
+                if(!created) {
+                    while(!exploration->getRobotPose(robotPose)) {
+                        ROS_ERROR("HERE");   
+                        ros::Duration(3).sleep();
+                    } 
+                
+                    ss_robot_pose = nh.advertiseService("explorer/robot_pose", &Explorer::robot_pose_callback, this);
+                    ss_distance_from_robot =
+                        nh.advertiseService("explorer/distance_from_robot", &Explorer::distance_from_robot_callback, this);
+                    ss_reachable_target =
+                        nh.advertiseService("explorer/reachable_target", &Explorer::reachable_target_callback, this);
+                        
+                    ss_distance =
+                        nh.advertiseService("explorer/distance", &Explorer::distance, this);
+                        
+                    created = true;
+                }
+                
+                
+
+                /*
+                 * Sleep to ensure that frontiers are exchanged
+                 */
+                ros::Duration(2).sleep();
+                
+                explorer_ready = true;
+                
                     
                 ROS_INFO("START FRONTIER SELECTION");
                     

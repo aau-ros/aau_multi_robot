@@ -9150,7 +9150,7 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
     }
     
     release_mutex(&store_frontier_mutex, __FUNCTION__);
-    ROS_INFO("finished my_sort_cost_4");
+    ROS_INFO("finished my_sort_cost_0");
   
 }
 
