@@ -62,7 +62,7 @@
 #define TIMEOUT_CHECK_1 10
 #define DS_GRAPG_NAVIGATION_ALLOWED true
 
-#define STATE_TRANSITION_LOG true
+#define LOG_STATE_TRANSITION true
 
 bool exploration_finished;
 
@@ -1809,7 +1809,7 @@ class Explorer
     
     void update_robot_state_2(int new_state)
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
-        ROS_ERROR_COND(STATE_TRANSITION_LOG, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
+        ROS_ERROR_COND(LOG_STATE_TRANSITION, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         adhoc_communication::EmRobot msg;
         msg.state = new_state;
