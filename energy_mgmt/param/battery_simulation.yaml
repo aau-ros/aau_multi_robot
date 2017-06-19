@@ -1,7 +1,7 @@
 speed_avg:            0.333 # m/s, needed for the initial estimation of remaining distance
                             # it also serves as a lower bound when estimating the remaining distance later on
 mass:                 1.0   # kg
-power_charging:     500.0   # W       - power that the power supply provides, e.g. 36 for P3DX
+power_charging:     300.0 # was 500  # W       - power that the power supply provides, e.g. 36 for P3DX
 power_moving:        18.0   # W/(m/s) - ...
 power_standing:      13.7   # W       - ...
 charge_max:           5.0   # Wh      - charge of battery if fully charged
