@@ -2121,7 +2121,7 @@ void MapMerger::robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg
 bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {
     //ROS_ERROR("transforming...");
-    ROS_ERROR("%d, %.1f, %.1f", req.point.src_robot_id, req.point.x, req.point.y);
+    //ROS_ERROR("%d, %.1f, %.1f", req.point.src_robot_id, req.point.x, req.point.y);
     if(!received_robot_info) {
         ROS_ERROR("No info on this robot");
         return false;

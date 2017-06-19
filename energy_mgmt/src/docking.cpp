@@ -981,6 +981,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
         l1 = 0;
     else
         l1 = num_ds_vacant / num_robots_active;
+    ROS_DEBUG("l1: %.1f", l1);
    
 }
 
@@ -1018,6 +1019,7 @@ void docking::update_l2()
 
     /* Compute l2 */
     l2 = time_charge / (time_charge + time_run);
+    ROS_DEBUG("l2: %.1f", l2);
 }
 
 void docking::update_l3()
@@ -1075,6 +1077,7 @@ void docking::update_l3()
         l3 = 1;
     else
         l3 = (num_jobs - num_jobs_close) / num_jobs;
+    ROS_DEBUG("l3: %.1f", l3);
         
 }
 
@@ -1142,6 +1145,7 @@ void docking::update_l4() //TODO(minor) comments
 
     // compute l4
     l4 = dist_job / (dist_job + dist_ds);
+    ROS_DEBUG("l4: %.1f", l4);
 
     recompute_llh = false;
 }
@@ -1155,6 +1159,7 @@ void docking::update_l5() //TODO(minor) comments
         l5 = 1;
     } else
         l5 = 0;
+    ROS_DEBUG("l5: %.1f", l5);
 }
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction,
@@ -1241,7 +1246,7 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
     
-    ROS_ERROR("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
+    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 
     /* Update parameter l2 of charging likelihood function */
     update_l2();

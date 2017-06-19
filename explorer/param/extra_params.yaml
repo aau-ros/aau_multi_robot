@@ -1,5 +1,5 @@
-queue_distance: 5.0 # Distance that a robot has to keep between itself and the docking station when it is in a queue.
+queue_distance: 5.0 # Distance, in meters, that a robot has to keep between itself and the docking station when it is in a queue.
                     # At the momemt this value is only indicative: it can happen than the robot is closer than 
                     # 'queue_distance' to the docking station...
-auction_timeout: 5.0 #s
-checking_vacancy_timeout: 7.0 #s
+auction_timeout: 5.0 # Timeout, in seconds, after which the robot can consider conclused an auction for the selection of a frontier
+checking_vacancy_timeout: 3.0 #s

@@ -2,7 +2,7 @@ auction_duration: 3 # Duration (in seconds) of an auction, i.e., after 'auction_
                     # has been started, it is considered concluded and the winner is computed
 reauctioning_timeout: 15 # Interval of time (in seconds) after which the robot (once it has reached a queue, if it is
                          # not already queued) will start another auction to gain access to a docking station
-extra_auction_time: 2 # Amount of time (in seconds) that is added to the stardard duration of an auction to obtain
+extra_auction_time: 3 # Amount of time (in seconds) that is added to the stardard duration of an auction to obtain
                       # the maximum time after which an auction must be considered concluded: the idea is that if a 
                       # robot has taken part to an auction, in case it does not receive the result of that auction,
                       # the robot will consider it concluded after 'auction_duration' + 'extra_auction_time' seconds
