@@ -305,8 +305,14 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     mygraph.addEdge(1,2,10);
     //mygraph.print();
     
-    original_log_path = log_path;
+    nh_tilde.param<std::string>("log_path", original_log_path, "");
     major_errors_file = original_log_path + std::string("_errors.log");
+    
+//    ROS_ERROR("%s", major_errors_file.c_str());
+    
+            major_errors_fstream.open(major_errors_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        major_errors_fstream << "[MAJOR] " << std::endl;
+        major_errors_fstream.close();
     
     graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
     
