@@ -2984,12 +2984,12 @@ class Explorer
             remaining_distance = exploration->distance_from_robot(position_x, position_y);
 
             /* Print remaining distance to be travelled to reach goal if the goal is a DS */
-            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
-                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+//            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
+//                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
             /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
              * the DS */
-            if (remaining_distance < queue_distance && (robot_state == going_checking_vacancy || robot_state == going_in_queue) )
+            if (remaining_distance > 0 && remaining_distance < queue_distance && (robot_state == going_checking_vacancy || robot_state == going_in_queue) )
             {
                 ac.cancelGoal();
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
