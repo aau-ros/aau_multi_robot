@@ -612,6 +612,7 @@ class docking
     int major_errors, minor_errors;
     ros::Publisher pub_this_robot;
     float resolution;
+    int id_next_target_ds;
     
 };
 

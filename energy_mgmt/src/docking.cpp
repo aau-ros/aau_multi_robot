@@ -890,7 +890,13 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             /* Keep track of the new optimal DS in log file */
             ros::Duration time = ros::Time::now() - time_start;
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << time.toSec() << "," << best_ds->id << "," << target_ds->id << "," << std::endl;
+            int target_ds_id;
+            if(target_ds == NULL)
+                target_ds_id = -1;
+            else
+                target_ds_id = target_ds->id;
+            ROS_ERROR("%d", target_ds_id);
+            fs_csv << time.toSec() << "," << best_ds->id << "," << target_ds_id << "," << std::endl;
             fs_csv.close();
 
             /* Update parameter l4 */
@@ -1911,9 +1917,9 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of
      * the auction whose result has been just
      * received */
-    if ((int)msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
+//    if ((int)msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
     {
-        ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
+//        ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
                                                                                     // acutally
                                                                                     // maybe
                                                                                     // it
@@ -1941,6 +1947,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                                            // this is needed otherwise when i have many pendning auction and with a
                                            // timeout enough high, i could have an inifite loop of restarting
                                            // auctions... or I could but a control in the timer_callback!!!
+            id_next_target_ds = (int)msg.get()->docking_station;
         }
         else
         {
@@ -1953,9 +1960,9 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             lost_other_robot_auction = true;
         }
     }
-    else
-        ROS_DEBUG("Received result of an auction the robot was not interested in: "
-                  "ignoring");
+//    else
+//        ROS_DEBUG("Received result of an auction the robot was not interested in: "
+//                  "ignoring");
 }
 
 //DONE++
@@ -2111,7 +2118,18 @@ void docking::update_robot_state()  // TODO(minor) simplify
                  * because otherwise there could be problem when the robot communicates
                  * to the other robot that the DS that is currently targettting is now
                  * vacant/occupied. */
-                target_ds = best_ds;
+                
+                bool found_ds = false;
+                for(unsigned int i=0; i < ds.size(); i++)
+                    if(ds[i].id == id_next_target_ds) {
+//                        best_ds = &ds[i];
+                        target_ds = &ds[i];
+                        found_ds = true;
+                        break;
+                    }
+                if(!found_ds)
+                    ROS_FATAL("this should not happen!!");
+                    
                 geometry_msgs::PointStamped msg1;
                 msg1.point.x = target_ds->x;
                 msg1.point.y = target_ds->y;
@@ -2688,7 +2706,11 @@ void docking::discover_docking_stations() //TODO(minor) comments
             /* Since an element from 'undiscovered_ds' was removed, we have to
              * decrease the iterator by one to compensate the future increment of 
              * the for loop, since, after the deletion of the element, all the elements in the vector whose position was after the one of the removed element are shifted by one position, and so we are already pointing to the next element, even without the future increment of the for loop */
-            it--;
+            
+//            it--;
+            // to be sure to start from the beginning
+            break;
+            
         } else
             ; //ROS_DEBUG("ds%d has not been discovered yet", (*it).id);
         
@@ -2846,18 +2868,22 @@ void docking::check_reachable_ds()
             pub_new_ds_on_graph.publish(new_ds_msg);
             
             new_ds_discovered = true;
-            ds_t new_ds; 
-            new_ds.id = it->id;
+//            ds_t new_ds; 
+//            new_ds.id = it->id;
             
             if(it->id < 0 || it->id >= num_ds) {
                 log_major_error("Trying to insert in 'ds' an invalid DS!!!");
                 break;
             }
             
-            new_ds.x = it->x;
-            new_ds.y = it->y;
-            new_ds.vacant = it->vacant;
-            ds.push_back(new_ds); //otherwise with ds.push_back(*it) valgrind complains...
+//            new_ds.x = it->x;
+//            new_ds.y = it->y;
+//            new_ds.vacant = it->vacant;
+            
+            // FIXME Valgrind complains about the push_back, but I don't understand why...
+            ds.push_back(*it);
+//            ds.push_back(new_ds);
+            
             int id1 = ds[ds.size()-1].id;
             if(id1 != it->id)
                 log_major_error("error");
