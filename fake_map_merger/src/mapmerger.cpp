@@ -2123,7 +2123,7 @@ bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, ma
     //ROS_ERROR("transforming...");
     //ROS_ERROR("%d, %.1f, %.1f", req.point.src_robot_id, req.point.x, req.point.y);
     if(!received_robot_info) {
-        ROS_ERROR("No info on this robot");
+        ROS_WARN("No info on this robot");
         return false;
     }
         
@@ -2136,7 +2136,7 @@ bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, ma
             //ROS_INFO("trasformed correctly");
             return true;
         }
-    ROS_WARN("No info on the robot whose coordinates must be translated");
+    ROS_ERROR("No info on the robot whose coordinates must be translated");
     return false;
 }
 
