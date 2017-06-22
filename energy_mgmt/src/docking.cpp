@@ -662,6 +662,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                         //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                                         set_optimal_ds_given_index(j);
                                         target_ds = &ds[j];
+                                        ROS_INFO("target_ds: %d", target_ds->id);
                                     }
                             }
                             else
@@ -1596,6 +1597,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
+    if(msg.get()->docking_station < 0 || msg.get()->docking_station >= num_ds) {
+        log_major_error("Invalid id for an auction (%d)! Ignoring...", msg.get()->docking_station);
+        return;
+    }
     
     // TODO(minor) should do this ckeck also when the robot receive the result of an auction
     bool already_known_ds = false;
@@ -1818,7 +1823,7 @@ void docking::start_new_auction()
 {
     if (!optimal_ds_is_set())
     {
-        ROS_FATAL("The robot needs to recharge, but it doesn't know about any "
+        log_major_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
         return;
     }
@@ -2106,6 +2111,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 /* Notify explorer node about the victory */
                 pub_won_auction.publish(msg);  // TODO(minor) it is important that this is after the other pub!!!! can we do better?
                 ROS_INFO("pub_won_auction");
+                ROS_DEBUG("target_ds: %d", target_ds->id);
             }
             else
                 ROS_INFO("The robot has already won an auction: ignore the result of "
@@ -3430,6 +3436,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                 set_optimal_ds_given_index(j);
                 target_ds = &ds[j];
+                ROS_INFO("target_ds: %d", target_ds->id);
                 break;
             }
     }
@@ -3520,6 +3527,7 @@ double min_dist = numeric_limits<int>::max();
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                 set_optimal_ds_given_index(j);
                 target_ds = &ds[j];
+                ROS_INFO("target_ds: %d", target_ds->id);
                 break;
             }
     }
