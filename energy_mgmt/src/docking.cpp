@@ -895,7 +895,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 target_ds_id = -1;
             else
                 target_ds_id = target_ds->id;
-            ROS_ERROR("%d", target_ds_id);
+            ROS_DEBUG("%d", target_ds_id);
             fs_csv << time.toSec() << "," << best_ds->id << "," << target_ds_id << "," << std::endl;
             fs_csv.close();
 
