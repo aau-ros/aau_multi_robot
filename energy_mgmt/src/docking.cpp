@@ -1598,7 +1598,8 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 {
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
     if(msg.get()->docking_station < 0 || msg.get()->docking_station >= num_ds) {
-        log_major_error("Invalid id for an auction (%d)! Ignoring...", msg.get()->docking_station);
+        log_major_error("Invalid id for an auction! Ignoring...");
+        ROS_ERROR("%d", msg.get()->docking_station);
         return;
     }
     
