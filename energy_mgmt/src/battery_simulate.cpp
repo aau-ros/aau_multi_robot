@@ -66,7 +66,7 @@ battery_simulate::battery_simulate()
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
     sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);    
-    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this); // TODO(minor) do we need this?
+//    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this); // TODO(minor) do we need this?
 
     //ROS_ERROR("remaining distance: %f", state.remaining_distance);
     pub_full_battery_info.publish(state);
@@ -303,10 +303,10 @@ void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr &msg)
 }
 
 // TODO(minor) do we need this?
-void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
-{
-    total_time = ("%F", msg->data);
-}
+//void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
+//{
+//    total_time = ("%F", msg->data);
+//}
 
 void battery_simulate::run() {
     while(ros::ok()) {
