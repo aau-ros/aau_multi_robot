@@ -266,20 +266,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     preload_docking_stations();
     create_log_files();
 
-    // TODO(minor) vary bad if we don't know the number of DS a-priori
-    /* Initialize docking station graph */
-    for (int i = 0; i < num_ds; i++)
-    {
-        std::vector<int> temp;
-        std::vector<float> temp_f;
-        for (int j = 0; j < undiscovered_ds.size(); j++) {
-            temp.push_back(-1);
-            temp_f.push_back(-1);
-        }
-        ds_mst.push_back(temp);
-        ds_graph.push_back(temp_f);
-    }
-
     if (DEBUG)
     {
         ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
@@ -436,6 +422,21 @@ void docking::preload_docking_stations()
     std::vector<ds_t>::iterator it;
     for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
         ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
+        
+    // TODO(minor) vary bad if we don't know the number of DS a-priori
+    /* Initialize docking station graph */
+    for (int i = 0; i < num_ds; i++)
+    {
+        std::vector<int> temp;
+        std::vector<float> temp_f;
+        for (int j = 0; j < undiscovered_ds.size(); j++) {
+            temp.push_back(-1);
+            temp_f.push_back(-1);
+        }
+        ds_mst.push_back(temp);
+        ds_graph.push_back(temp_f);
+    }
+
         
 }
 
@@ -1008,7 +1009,7 @@ void docking::update_l2()
     if (time_run < 0)
     {
         //log_major_error("Invalid run time");
-        ROS_ERROR("Invalid run time: %.2f!", time_run);
+//        ROS_ERROR("Invalid run time: %.2f!", time_run);
         l2 = 1;
         return;
     }
@@ -2893,8 +2894,10 @@ void docking::check_reachable_ds()
         for (int i = 0; i < ds.size(); i++) {
             for (int j = 0; j < ds.size(); j++) {
                 //safety checks   
-                if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
-                    ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
+                if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0) {
+                    log_major_error("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");
+                    return;      
+                }
                 if (i == j)
                     ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
                 else

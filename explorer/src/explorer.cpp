@@ -3406,11 +3406,11 @@ class Explorer
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
 
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
-        if (available_distance <= 0 && robot_state != charging)
-        {
-            log_major_error("Robot has run out of energy!");
-            abort();
-        }
+//        if (available_distance <= 0 && robot_state != charging)
+//        {
+//            log_major_error("Robot has run out of energy!");
+//            abort();
+//        }
         
         if(max_av_distance < available_distance)
             max_av_distance = available_distance;
