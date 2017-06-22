@@ -309,7 +309,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 //    }
 
     ros::NodeHandle nh;
-    sc_distance_frontier_robot = nh.serviceClient<explorer::Distance>("energy_mgmt/distance_on_graph", true);
+//    sc_distance_frontier_robot = nh.serviceClient<explorer::Distance>("energy_mgmt/distance_on_graph", true);
 
     srand((unsigned)time(0));
 }

@@ -117,7 +117,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     */
     ros::Duration(10).sleep();
     robot->id = robot_id;
-    robot->state = active;
+    robot->simple_state = active;
     robot->home_world_x = origin_absolute_x;
     robot->home_world_y = origin_absolute_y;
     abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
@@ -125,7 +125,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     robots.push_back(*robot);
     
     best_ds = NULL;
-    target_ds == NULL;
+    target_ds = NULL;
     best_ds = new ds_t;
     if(best_ds == NULL)
         ROS_FATAL("Allocation failure!");
@@ -175,7 +175,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
-    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
+//    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
     //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
     /* Subscribers */
@@ -429,7 +429,7 @@ void docking::preload_docking_stations()
     {
         std::vector<int> temp;
         std::vector<float> temp_f;
-        for (int j = 0; j < undiscovered_ds.size(); j++) {
+        for (unsigned int j = 0; j < undiscovered_ds.size(); j++) {
             temp.push_back(-1);
             temp_f.push_back(-1);
         }
@@ -535,8 +535,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery life) with EOs */
                 double min_dist = numeric_limits<int>::max();
                 bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
-                for (int i = 0; i < ds.size(); i++)
-                    for (int j = 0; j < jobs.size(); j++)
+                for (unsigned int i = 0; i < ds.size(); i++)
+                    for (unsigned int j = 0; j < jobs.size(); j++)
                     {
                         double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
                         if (dist < 0)
@@ -587,9 +587,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                             // what the paper asks?
                             double min_dist = numeric_limits<int>::max();
                             ds_t *min_ds = NULL;
-                            for (int i = 0; i < ds.size(); i++)
+                            for (unsigned int i = 0; i < ds.size(); i++)
                             {
-                                for (int j = 0; j < jobs.size(); j++)
+                                for (unsigned int j = 0; j < jobs.size(); j++)
                                 {
                                     double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
                                     if (dist < 0)
@@ -616,8 +616,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                             // compute closest DS
                             min_dist = numeric_limits<int>::max();
-                            ds_t *closest_ds;
-                            for (int i = 0; i < ds.size(); i++)
+                            ds_t *closest_ds = NULL;
+                            for (unsigned int i = 0; i < ds.size(); i++)
                             {
                                 double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
                                 if (dist < 0)
@@ -632,11 +632,13 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                             path.clear();
                             index_of_ds_in_path = 0;
+                            if(closest_ds == NULL)
+                                ROS_ERROR("NO CLOSEST DS HAS BEEN FOUND!!!");
                             ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
 
                             if (ds_found_with_mst)
                             {
-                                int closest_ds_id;
+//                                int closest_ds_id;
 
                                 moving_along_path = true;
 
@@ -645,8 +647,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                                                                // pass directly
                                                                                // msg_path to
                                                                                // find_path...
-                                for (int i = 0; i < path.size(); i++)
-                                    for (int j = 0; j < ds.size(); j++)
+                                for (unsigned int i = 0; i < path.size(); i++)
+                                    for (unsigned int j = 0; j < ds.size(); j++)
                                         if (ds[j].id == path[i])
                                         {
                                             adhoc_communication::MmPoint point;
@@ -656,7 +658,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                                 pub_moving_along_path.publish(msg_path);
 
-                                for (int j = 0; j < ds.size(); j++)
+                                for (unsigned int j = 0; j < ds.size(); j++)
                                     if (path[0] == ds[j].id)
                                     {
                                         //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
@@ -754,7 +756,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 /* If the currently optimal DS has still EOs, keep using it, otherwise use
                  * "closest" policy */
                 bool existing_eo = false;
-                for (int i = 0; i < jobs.size(); i++)
+                for (unsigned int i = 0; i < jobs.size(); i++)
                 {
                     double dist = distance(best_ds->x, best_ds->y, jobs.at(i).x_coordinate, jobs.at(i).y_coordinate);
                     if (dist < 0) {
@@ -779,11 +781,11 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         {   
             /* Compute DS with minimal cost */
             double min_cost = numeric_limits<int>::max();
-            for (int d = 0; d < ds.size(); d++)
+            for (unsigned int d = 0; d < ds.size(); d++)
             {
                 /* n_r */
                 int count = 0;
-                for (int i = 0; i < robots.size(); i++)
+                for (unsigned int i = 0; i < robots.size(); i++)
                     if (optimal_ds_is_set() &&
                         robots.at(i).selected_ds == best_ds->id)  // TODO(minor) best_ds or target_ds??? optimal_ds_is_set()?
                         count++;
@@ -791,7 +793,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                 /* d_s */
                 int sum_x = 0, sum_y = 0;
-                for (int i = 0; i < robots.size(); i++)
+                for (unsigned int i = 0; i < robots.size(); i++)
                 {
                     sum_x += robots.at(i).x;
                     sum_y += robots.at(i).y;
@@ -799,7 +801,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double flock_x = (double)sum_x / (double)num_robots;
                 double flock_y = (double)sum_y / (double)num_robots;
                 double max_distance = numeric_limits<int>::min();
-                for(int h=0; h < ds.size(); h++) {
+                for(unsigned int h=0; h < ds.size(); h++) {
                     double dist = distance(ds[d].x, ds[d].y, ds[h].x, ds[h].y);
                     if(dist < 0)
                         continue; //TODO(minor) hmm...
@@ -816,20 +818,24 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                 /* theta_s */
                 double swarm_direction_x = 0, swarm_direction_y = 0;
-                for (int i = 0; i < robots.size(); i++)
+                for (unsigned int i = 0; i < robots.size(); i++)
                 {
-                    double robot_i_target_ds_x, robot_i_target_ds_y;
+                    double robot_i_target_ds_x = -1, robot_i_target_ds_y = -1;
 
-                    for (int k = 0; k < ds.size(); k++)
+                    for (unsigned int k = 0; k < ds.size(); k++)
                         if (robots.at(i).selected_ds == ds.at(k).id)
                         {
                             robot_i_target_ds_x = ds.at(k).x;
                             robot_i_target_ds_y = ds.at(k).y;
                         }
+                        
+                    if(robot_i_target_ds_x < 0 || robot_i_target_ds_y < 0)
+                        ROS_ERROR("Invalid index(es)!");
 
                     swarm_direction_x += robot_i_target_ds_x - robots.at(i).x;
                     swarm_direction_y += robot_i_target_ds_y - robots.at(i).y;
                 }
+
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
@@ -837,7 +843,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                 /* d_f */
                 double d_f = numeric_limits<int>::max();
-                for (int i = 0; i < jobs.size(); i++)
+                for (unsigned int i = 0; i < jobs.size(); i++)
                 {
                     double dist = distance(ds[d].x, ds[d].y, jobs[i].x_coordinate, jobs[i].y_coordinate);
                     if (dist < 0)
@@ -946,7 +952,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
     
     /* Count vacant docking stations */
     int num_ds_vacant = 0;
-    for (int i = 0; i < ds.size(); ++i)
+    for (unsigned int i = 0; i < ds.size(); ++i)
     {
         if (ds[i].vacant == true)
             ++num_ds_vacant;
@@ -955,9 +961,9 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
 
     /* Count active robots */
     int num_robots_active = 0;
-    for (int i = 0; i < robots.size(); ++i)
+    for (unsigned int i = 0; i < robots.size(); ++i)
     {
-        if (robots[i].state == active)
+        if (robots[i].simple_state == active)
             ++num_robots_active;
     }
     ROS_DEBUG("Number of active robots DS: %d", num_robots_active);
@@ -1033,7 +1039,7 @@ void docking::update_l3()
     /* Count number of jobs: count frontiers and reachable frontiers */
     int num_jobs = 0;
     int num_jobs_close = 0;
-    for (int i = 0; i < jobs.size(); ++i)
+    for (unsigned int i = 0; i < jobs.size(); ++i)
     {
         ++num_jobs;
         double dist = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate, true); // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
@@ -1098,7 +1104,7 @@ void docking::update_l4() //TODO(minor) comments
     
     // get distance to docking station
     double dist_ds = -1;
-    for (int i = 0; i < ds.size(); i++)
+    for (unsigned int i = 0; i < ds.size(); i++)
     {       
         if (ds[i].id == best_ds->id)
         {
@@ -1117,7 +1123,7 @@ void docking::update_l4() //TODO(minor) comments
 
     // get distance to closest job
     double dist_job = numeric_limits<int>::max();
-    for (int i = 0; i < jobs.size(); i++)
+    for (unsigned int i = 0; i < jobs.size(); i++)
     {
         double dist_job_temp = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate,
                                                 true);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
@@ -1262,14 +1268,14 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
 void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TODO(minor) better name and do better
 {
     // TODO(minor) better update...
-    for(int i=0; i<robots.size(); i++)
-        if(robots[i].id == robot_id)
+    for(unsigned int i=0; i<robots.size(); i++)
+        if(robots[i].id == robot_id) {
             if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier ||
                 msg.get()->state == leaving_ds)
-                robots[i].state = active;
+                robots[i].simple_state = active;
             else
-                robots[i].state = idle;
-        
+                robots[i].simple_state = idle;
+        }
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
 
@@ -1417,7 +1423,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
 
     robot_state = static_cast<state_t>(msg.get()->state);
-    robot->complex_state = robot_state;
+    robot->state = robot_state;
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -1440,7 +1446,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
     /* Check if robot is in list already */
     bool new_robot = true;
-    for (int i = 0; i < robots.size(); ++i)
+    for (unsigned int i = 0; i < robots.size(); ++i)
     {
         if (robots[i].id == msg.get()->id)
         {
@@ -1448,12 +1454,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
             new_robot = false;
 
-            robots[i].complex_state == msg.get()->complex_state;
-            if (msg.get()->complex_state == exploring || msg.get()->complex_state == fully_charged ||
-                msg.get()->complex_state == moving_to_frontier)
-                robots[i].state = active;
+            robots[i].state = static_cast<state_t>(msg.get()->state);
+            if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
+                msg.get()->state == moving_to_frontier)
+                robots[i].simple_state = active;
             else
-                robots[i].state = idle;
+                robots[i].simple_state = idle;
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].selected_ds = msg.get()->selected_ds;
@@ -1468,12 +1474,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         /* Store robot information */    
         robot_t new_robot;
         new_robot.id = msg.get()->id;
-        new_robot.complex_state == msg.get()->complex_state;
+        new_robot.state = static_cast<state_t>(msg.get()->state);
         if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
             msg.get()->state == moving_to_frontier)
-            new_robot.state = active;
+            new_robot.simple_state = active;
         else
-            new_robot.state = idle;
+            new_robot.simple_state = idle;
         new_robot.x = msg.get()->x;
         new_robot.y = msg.get()->y;
         new_robot.selected_ds = msg.get()->selected_ds;
@@ -1481,7 +1487,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
         /* Recompute number of robots */
         int count = 0;
-        for (int i = 0; i < robots.size(); i++)
+        for (unsigned int i = 0; i < robots.size(); i++)
             count++;
         num_robots = count;  // TODO(minor) also works for real exp?
     }
@@ -1536,7 +1542,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
     /* Check if DS is in list already */
     bool new_ds = true;
-    for (int i = 0; i < ds.size(); ++i)
+    for (unsigned int i = 0; i < ds.size(); ++i)
     {
         if (ds[i].id == msg.get()->id)
         {
@@ -1597,7 +1603,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
-    if(msg.get()->docking_station < 0 || msg.get()->docking_station >= num_ds) {
+    if(msg.get()->docking_station < 0 || (int)msg.get()->docking_station >= num_ds) {
         log_major_error("Invalid id for an auction! Ignoring...");
         ROS_ERROR("%d", msg.get()->docking_station);
         return;
@@ -1606,12 +1612,12 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     // TODO(minor) should do this ckeck also when the robot receive the result of an auction
     bool already_known_ds = false;
     for(std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); it++) //TODO(minor) create list discovered_ds + ds
-        if(msg.get()->docking_station == (*it).id) {
+        if((int)msg.get()->docking_station == (*it).id) {
             already_known_ds = true;
             break;
         }
     for(std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
-        if(msg.get()->docking_station == (*it).id) {
+        if((int)msg.get()->docking_station == (*it).id) {
             already_known_ds = true;
             break;
         }  
@@ -1639,7 +1645,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     /* Check if the robot has some interested in participating to this auction,
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
-    if (!optimal_ds_is_set() || msg.get()->docking_station != best_ds->id)
+    if (!optimal_ds_is_set() || (int)msg.get()->docking_station != best_ds->id)
     {
         /* Robot received a bid of an auction whose auctioned docking station is not
          * the one the robot is interested in
@@ -1695,7 +1701,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
         return;
     }
     
-    if (auction_id != msg.get()->auction)
+    if (auction_id != (int)msg.get()->auction)
     {
         ROS_INFO("Received a bid that is not for the auction recently started by this robot: ignore it");
         return;
@@ -1703,7 +1709,7 @@ void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &m
 
     // TODO(minor) probably this is unnecessary, but jsut to be safe...
     for (std::vector<auction_bid_t>::iterator it = auction_bids.begin(); it != auction_bids.end(); it++)
-        if ((*it).robot_id == msg.get()->robot)
+        if ((*it).robot_id == (int)msg.get()->robot)
         {
             ROS_INFO("Received a bid that was already received before: ignore it");
             return;
@@ -1739,7 +1745,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
     /* Compute auction winner: loop through all the received bids and find the
      * robot that sent the highest one */
-    int winner;
+    int winner = -1;
     float winner_bid = numeric_limits<int>::min();
     std::vector<auction_bid_t>::iterator it = auction_bids.begin();
     for (; it != auction_bids.end(); it++)
@@ -1751,6 +1757,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
             winner_bid = (*it).bid;
         }
     }
+    if(winner < 0)
+        ROS_ERROR("invalid winner");
 
     ROS_DEBUG("The winner is robot_%d", winner);
 
@@ -1903,7 +1911,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of
      * the auction whose result has been just
      * received */
-    if (msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
+    if ((int)msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
     {
         ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
                                                                                     // acutally
@@ -1918,7 +1926,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
         update_state_required = true; //TODO maybe it would be better when it receive the bid?
 
         /* Check if the robot is the winner of the auction */
-        if (robot_id == msg.get()->robot)
+        if (robot_id == (int)msg.get()->robot) //TODO all ids should be unsigned int
         {
             /* The robot won the auction */
             ROS_INFO("Winner of the auction started by another robot");
@@ -2204,6 +2212,11 @@ void docking::create_log_files()
 
 void docking::set_target_ds_vacant(bool vacant)
 {
+    if(target_ds->id < 0 || target_ds->id >= num_ds) {
+        log_major_error("invalid target_ds in set_vacant!");
+        return;
+    }
+
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
@@ -2342,7 +2355,7 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
             }
             continue;
         }
-        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size() || parent[i] < 0) {
+        if((unsigned int)i >= ds_mst.size() || parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size() || parent[i] < 0) {
             log_major_error("SIZE!!!");
             ROS_ERROR("%d", i);   
             ROS_ERROR("%d", parent[i]);
@@ -2374,36 +2387,36 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
 }
 
 
-int docking::minKey(int key[], bool mstSet[], int V)
-{
-// A utility function to find the vertex with minimum key value, from
-// the set of vertices not yet included in MST
-    // Initialize min value
-    int min = INT_MAX, min_index;
-/*
-    for(int u=0; u < V; u++)
-        if(mstSet[u] == false) {
-            min_index = u;
-            break;
-        }
-        */
-    for (int v = 0; v < V; v++) {
-        if (mstSet[v] == false && key[v] < min) {
-            min = key[v];
-            min_index = v;
-        }
-    }
+//int docking::minKey(int key[], bool mstSet[], int V)
+//{
+//// A utility function to find the vertex with minimum key value, from
+//// the set of vertices not yet included in MST
+//    // Initialize min value
+//    int min = INT_MAX, min_index;
+///*
+//    for(int u=0; u < V; u++)
+//        if(mstSet[u] == false) {
+//            min_index = u;
+//            break;
+//        }
+//        */
+//    for (int v = 0; v < V; v++) {
+//        if (mstSet[v] == false && key[v] < min) {
+//            min = key[v];
+//            min_index = v;
+//        }
+//    }
 
-    return min_index;
-}
+//    return min_index;
+//}
 
-int docking::printMST(int parent[], int n, std::vector<std::vector<int> > graph)
-{
-// A utility function to print the constructed MST stored in parent[]
-    printf("Edge   Weight\n");
-    for (int i = 1; i < graph.size(); i++)
-        ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
-}
+//int docking::printMST(int parent[], int n, std::vector<std::vector<int> > graph)
+//{
+//// A utility function to print the constructed MST stored in parent[]
+//    printf("Edge   Weight\n");
+//    for (unsigned int i = 1; i < graph.size(); i++)
+//        ROS_ERROR("%d - %d    %d \n", parent[i], i, graph[i][parent[i]]);
+//}
 
 //DONE++
 bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
@@ -2422,9 +2435,9 @@ bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end,
      * that goes from 'start' to 'end' */
     if (path_found) {
         ROS_INFO("Path found!");
-        for (int i = inverse_path.size() - 1; i >= 0; i--)
+        for (unsigned int i = inverse_path.size() - 1; i >= 0; i--)
             path.push_back(inverse_path.at(i));
-        for(int i=0; i < path.size(); i++)
+        for(unsigned int i=0; i < path.size(); i++)
             ROS_DEBUG("\t%d", path[i]);
     }
     else
@@ -2439,13 +2452,13 @@ bool docking::find_path_aux(std::vector<std::vector<int> > tree, int start, int 
                             int prev_node)
 {
     /* Loop on all tree nodes */
-    for (int j = 0; j < tree.size(); j++)
+    for (unsigned int j = 0; j < tree.size(); j++)
 
         /* Check if there is an edge from node 'start' to node 'j', and check if node 'j' is not the node just visited in the previous step of the recursive descending */
-        if (tree[start][j] > 0 && j != prev_node)
+        if (tree[start][j] > 0 && j != (unsigned int)prev_node)
 
             /* If 'j' is the searched node ('end'), or if from 'j' there is a path that leads to 'end', we have to store 'j' as one of the node that must be visited to reach 'end' ('j' could be 'end' itself, but of course this is not a problem, since we have to visit 'end' to reach it), and then return true to tell the caller that a path to 'end' was found */
-            if (j == end || find_path_aux(tree, j, end, path, start))
+            if (j == (unsigned int)end || find_path_aux(tree, j, end, path, start))
             {
                 path.push_back(j);
                 return true;
@@ -2588,7 +2601,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
             */
             continue;
         }
-        if(i >= ds_mst.size() || parent[i] >= V || parent[i] >= ds_mst[i].size()) {
+        if((unsigned int)i >= ds_mst.size() || parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size()) {
             log_major_error("SIZE!!!");
             ROS_ERROR("%d", i);   
             ROS_ERROR("%d", parent[i]);
@@ -2717,8 +2730,8 @@ void docking::send_robot()
     robot_msg.request.robot.y = robot->y;
     robot_msg.request.robot.home_world_x = robot->home_world_x;
     robot_msg.request.robot.home_world_y = robot->home_world_y;
+    robot_msg.request.robot.simple_state = robot->simple_state;
     robot_msg.request.robot.state = robot->state;
-    robot_msg.request.robot.complex_state = robot->complex_state;
     if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = best_ds->id;
     else
@@ -2767,11 +2780,11 @@ void docking::debug_timer_callback_2(const ros::TimerEvent &event)
 //DONE+
 void docking::next_ds_callback(const std_msgs::Empty &msg)
 {
-    if (index_of_ds_in_path < path.size() - 1)
+    if ((unsigned int)index_of_ds_in_path < path.size() - 1)
     {
         ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
         index_of_ds_in_path++;
-        for (int i = 0; i < ds.size(); i++)
+        for (unsigned int i = 0; i < ds.size(); i++)
             if (path[index_of_ds_in_path] == ds[i].id)
             {   
                 ROS_INFO("Next DS on path: ds%d", ds[i].id);
@@ -2791,8 +2804,8 @@ void docking::check_reachable_ds()
     ROS_INFO("check_reachable_ds");
     
     bool new_ds_discovered = false;
-    int i=0;
-    for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end() && i < discovered_ds.size(); /*empty*/ )
+    unsigned int i=0;
+    for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end() && i < discovered_ds.size() && discovered_ds.size() > 0; /*empty*/ )
     {
         /* If the DS is inside a fiducial laser range, it can be considered
          * discovered */
@@ -2835,6 +2848,12 @@ void docking::check_reachable_ds()
             new_ds_discovered = true;
             ds_t new_ds; 
             new_ds.id = it->id;
+            
+            if(it->id < 0 || it->id >= num_ds) {
+                log_major_error("Trying to insert in 'ds' an invalid DS!!!");
+                break;
+            }
+            
             new_ds.x = it->x;
             new_ds.y = it->y;
             new_ds.vacant = it->vacant;
@@ -2898,10 +2917,10 @@ void docking::check_reachable_ds()
     if (new_ds_discovered || recompute_graph)
     {
         // construct ds graph //TODO(minor) construct graph only when a new DS is found
-        for (int i = 0; i < ds.size(); i++) {
-            for (int j = 0; j < ds.size(); j++) {
+        for (unsigned int i = 0; i < ds.size(); i++) {
+            for (unsigned int j = 0; j < ds.size(); j++) {
                 //safety checks   
-                if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0) {
+                if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0) {
                     log_major_error("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");
                     return;      
                 }
@@ -3148,10 +3167,10 @@ void docking::wait_battery_info() {
 void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
     ROS_INFO("Periodic recomputation of DS graph");
     return;
-    for (int i = 0; i < ds.size(); i++) {
-        for (int j = 0; j < ds.size(); j++) {
+    for (unsigned int i = 0; i < ds.size(); i++) {
+        for (unsigned int j = 0; j < ds.size(); j++) {
             //safety checks   
-            if( ds[i].id >= ds_graph.size() || ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
+            if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
                 ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
             if (i == j)
                 ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
@@ -3196,7 +3215,7 @@ void docking::start_join_timer() {
 }
 
 bool docking::set_optimal_ds_given_id(int id) {
-    for(int i =0; i < ds.size(); i++)
+    for(unsigned int i =0; i < ds.size(); i++)
         if(ds[i].id == id) {
             best_ds = &ds[i];
             optimal_ds_set = true;
@@ -3206,7 +3225,7 @@ bool docking::set_optimal_ds_given_id(int id) {
 }
 
 bool docking::set_optimal_ds_given_index(int index) {
-    if(index < 0 || index >= ds.size())
+    if((unsigned int)index < 0 || (unsigned int)index >= ds.size())
         return false;
     best_ds = &ds[index];
     optimal_ds_set = true;
@@ -3217,36 +3236,35 @@ void docking::test_2(const std_msgs::Empty &msg) {
     ROS_ERROR("Test 2");
 }
 
-bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res) {
-    //ROS_ERROR("called!");
-    return true;
-    
-    int index_closest_ds_to_frontier, index_closest_ds_to_robot;
-    double x1, y1, robot_x, robot_y; //TODO
-    double min_dist_frontier = numeric_limits<int>::max(), min_dist_robot = numeric_limits<int>::max();
-    for(int i; i < ds.size(); i++) {
-        double dist = distance(ds[i].x, ds[i].y, x1, y1, true);
-        if( dist < min_dist_frontier ) {
-            min_dist_frontier = dist;
-            index_closest_ds_to_frontier = i;
-        }
-        dist = distance(ds[i].x, ds[i].y, robot_x, robot_y, true);
-        if(dist < min_dist_robot)
-        {
-            min_dist_robot = dist;
-            index_closest_ds_to_robot = i;
-        }
-    }
-    
-    //compute_path(index_closest_ds_to_robot, index_closest_ds_to_robot);
-    
-    return true;
-}
+//bool docking::distance_robot_frontier_on_graph_callback(explorer::Distance::Request &req, explorer::Distance::Response &res) {
+//    ROS_ERROR("called!");
+//    
+//    int index_closest_ds_to_frontier, index_closest_ds_to_robot;
+//    double x1, y1, robot_x, robot_y; //TODO
+//    double min_dist_frontier = numeric_limits<int>::max(), min_dist_robot = numeric_limits<int>::max();
+//    for(unsigned int i; i < ds.size(); i++) {
+//        double dist = distance(ds[i].x, ds[i].y, x1, y1, true);
+//        if( dist < min_dist_frontier ) {
+//            min_dist_frontier = dist;
+//            index_closest_ds_to_frontier = i;
+//        }
+//        dist = distance(ds[i].x, ds[i].y, robot_x, robot_y, true);
+//        if(dist < min_dist_robot)
+//        {
+//            min_dist_robot = dist;
+//            index_closest_ds_to_robot = i;
+//        }
+//    }
+//    
+//    //compute_path(index_closest_ds_to_robot, index_closest_ds_to_robot);
+//    
+//    return true;
+//}
 
 void docking::runtime_checks() {
-    for(int i=0; i<robots.size()-1; i++)
-        for(int j=i+1; j<robots.size(); j++)
-            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].complex_state == charging && robots[j].complex_state == charging)
+    for(unsigned int i=0; i<robots.size()-1; i++)
+        for(unsigned int j=i+1; j<robots.size(); j++)
+            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging)
                 log_major_error("two robots recharging at the same DS!!!");
 }
 
@@ -3341,9 +3359,9 @@ void docking::compute_and_publish_path_on_ds_graph() {
     ds_t *min_ds = NULL;
     int retry = 0;
     while (min_ds == NULL && retry < 5) {
-        for (int i = 0; i < ds.size(); i++)
+        for (unsigned int i = 0; i < ds.size(); i++)
         {
-            for (int j = 0; j < jobs.size(); j++)
+            for (unsigned int j = 0; j < jobs.size(); j++)
             {
                 double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
                 if (dist < 0)
@@ -3379,7 +3397,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     ds_t *closest_ds = NULL;
     retry = 0;
     while(closest_ds == NULL && retry < 10) {
-        for (int i = 0; i < ds.size(); i++)
+        for (unsigned int i = 0; i < ds.size(); i++)
         {
             double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
             if (dist < 0)
@@ -3419,8 +3437,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
                                                        // pass directly
                                                        // msg_path to
                                                        // find_path...
-        for (int i = 0; i < path.size(); i++)
-            for (int j = 0; j < ds.size(); j++)
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
                 if (ds[j].id == path[i])
                 {
                     adhoc_communication::MmPoint point;
@@ -3431,7 +3449,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
         pub_moving_along_path.publish(msg_path);
         
-        for (int j = 0; j < ds.size(); j++)
+        for (unsigned int j = 0; j < ds.size(); j++)
             if (path[0] == ds[j].id)
             {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
@@ -3453,7 +3471,7 @@ double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
     while (min_ds == NULL && retry < 5) {
-        for (int i = 0; i < ds.size(); i++)
+        for (unsigned int i = 0; i < ds.size(); i++)
         {
                 double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0);
                 if (dist < 0)
@@ -3480,7 +3498,7 @@ double min_dist = numeric_limits<int>::max();
     ds_t *closest_ds = NULL;
     retry = 0;
     while(closest_ds == NULL && retry < 10) {
-        for (int i = 0; i < ds.size(); i++)
+        for (unsigned int i = 0; i < ds.size(); i++)
         {
             double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
             if (dist < 0)
@@ -3511,8 +3529,8 @@ double min_dist = numeric_limits<int>::max();
                                                        // pass directly
                                                        // msg_path to
                                                        // find_path...
-        for (int i = 0; i < path.size(); i++)
-            for (int j = 0; j < ds.size(); j++)
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
                 if (ds[j].id == path[i])
                 {
                     adhoc_communication::MmPoint point;
@@ -3522,7 +3540,7 @@ double min_dist = numeric_limits<int>::max();
 
         pub_moving_along_path.publish(msg_path);
         
-        for (int j = 0; j < ds.size(); j++)
+        for (unsigned int j = 0; j < ds.size(); j++)
             if (path[0] == ds[j].id)
             {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?

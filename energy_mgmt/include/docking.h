@@ -267,8 +267,8 @@ class docking
     struct robot_t
     {
         int id;
-        simple_state_t state;
-        state_t complex_state;
+        simple_state_t simple_state;
+        state_t state;
         double x, y, home_world_x, home_world_y;
         int selected_ds;
     };
