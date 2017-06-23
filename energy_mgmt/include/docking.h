@@ -611,7 +611,7 @@ class docking
     int major_errors, minor_errors;
     ros::Publisher pub_this_robot;
     float resolution;
-    int id_next_target_ds;
+    int id_next_target_ds, id_auctioned_ds;
     bool set_optimal_ds(int id);
     int get_optimal_ds_id();
     double get_optimal_ds_x();

@@ -262,6 +262,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     maximum_travelling_distance = -100;
     old_optimal_ds_id = -100;
     time_start = ros::Time::now();
+    id_next_target_ds = -1;
 
     /* Function calls */
     preload_docking_stations();
@@ -1787,6 +1788,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
         ROS_INFO("Winner of the auction");  // TODO(minor) specify which auction
 
         auction_winner = true;
+        id_next_target_ds = id_auctioned_ds; 
         timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the
                                        // idea in the paper... jsut put a
                                        // check in the timer callback...
@@ -1853,6 +1855,7 @@ void docking::start_new_auction()
     }
 
     ROS_INFO("Starting new auction");
+    id_auctioned_ds = get_optimal_ds_id();
     
     /* Keep track of robot bid */
     auction_bid_t bid;
@@ -2129,6 +2132,10 @@ void docking::update_robot_state()  // TODO(minor) simplify
                  * vacant/occupied. */
                 
                 bool found_ds = false;
+                if(id_next_target_ds < 0 || id_next_target_ds >= num_ds) {
+                    log_major_error("Invalid id_next_target_ds");
+                    ROS_DEBUG("id_next_target_ds: %d", id_next_target_ds);
+                }
                 for(unsigned int i=0; i < ds.size(); i++)
                     if(ds[i].id == id_next_target_ds) {
 //                        best_ds = &ds[i];

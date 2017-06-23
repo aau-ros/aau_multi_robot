@@ -2145,7 +2145,7 @@ class Explorer
                 else
                 */
                 //{
-                    ROS_ERROR("prearing for leaving_ds");
+                    ROS_DEBUG("prearing for leaving_ds");
 //                    if(robot_id != 0)
                         update_robot_state_2(leaving_ds);
                 //}
