@@ -505,7 +505,7 @@ void MapMerger::callback_global_pub(const ros::TimerEvent &e)
     else
     {
         if(!global_map_ready)
-            ROS_ERROR("!!!Global map not ready!!!");
+            ROS_WARN("!!!Global map not ready!!!");
         else if(global_map == NULL)
             ROS_ERROR("Global map still not exists!");
         
@@ -2120,6 +2120,7 @@ void MapMerger::robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg
 
 bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
 {
+    // Use these if the /map frame origin coincides with the robot starting position in Stage (which should be the case)
     //ROS_ERROR("transforming...");
     //ROS_ERROR("%d, %.1f, %.1f", req.point.src_robot_id, req.point.x, req.point.y);
     if(!received_robot_info) {
@@ -2136,8 +2137,13 @@ bool MapMerger::transformPointSRV_2(map_merger::TransformPoint::Request &req, ma
             //ROS_INFO("trasformed correctly");
             return true;
         }
-    ROS_ERROR("No info on the robot whose coordinates must be translated");
+    ROS_WARN("No info on the robot whose coordinates must be translated");
     return false;
+    
+    
+    // Use these if the /map frame origin coincides with Stage origin
+    //res.point.x = req.point.x;
+    //res.point.y = req.point.y;
 }
 
 bool MapMerger::simpleTransformPointSRV(map_merger::TransformPoint::Request &req, map_merger::TransformPoint::Response &res)
