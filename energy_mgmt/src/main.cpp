@@ -113,9 +113,6 @@ int main(int argc, char** argv)
     
     while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
         ros::Duration(10).sleep();
-    
-    thr_spin.interrupt();
-    thr_spin.join();
-
+        
     return 0;
 }
