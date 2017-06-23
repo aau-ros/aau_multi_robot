@@ -110,46 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    
-  private:
-    // enum state_t {exploring, going_charging, charging, finished, fully_charged,
-    // stuck, in_queue};
-    // state_t robot_state;
 
-    ros::Publisher pub_move_base;
-    ros::Publisher pub_Point;
-    ros::Publisher pub_home_Point;
-    ros::Publisher pub_frontiers;
-
-    ros::ServiceClient mm_log_client;
-
-    ros::NodeHandle nh;
-    ros::Time time_start;
-    ros::WallTime wall_time_start;
-
-    // Create a move_base_msgs to define a goal to steer the robot to
-    move_base_msgs::MoveBaseActionGoal action_goal_msg;
-    move_base_msgs::MoveBaseActionFeedback feedback_msgs;
-
-    geometry_msgs::PointStamped goalPoint;
-    geometry_msgs::PointStamped homePoint;
-
-    std::vector<geometry_msgs::PoseStamped> goals;
-    tf::Stamped<tf::Pose> robotPose;
-
-    explorationPlanner::ExplorationPlanner *exploration;
-
-    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
-
-    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
-    int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
-    int counter;
-    bool recharging;
-    bool pioneer;
-    int w1, w2, w3, w4;
-    
-  public:
-    
     /*******************
      * CLASS FUNCTIONS *
      *******************/
@@ -218,7 +179,6 @@ class Explorer
         home_point_set = false;
         coeff_a = COEFF_A;
         coeff_b = COEFF_B;
-        
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -700,7 +660,7 @@ class Explorer
                     continue;
                    }
                    
-                if(robot_state == leaving_ds)
+                if(robot_state == leaving_ds || robot_state == fully_charged )
                 {
                     //TODO
 //                    double distance = -1;
@@ -730,8 +690,10 @@ class Explorer
                     move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
 //                                    ROS_INFO("Now it is ok...");
 //                                }
-                    update_robot_state_2(exploring);
-                    continue;
+                    if(robot_state == leaving_ds) { //this is because at the moment in the code fully_charged in considered a state of computation with the idea that the computation is performed with full battery life, differently from 'exploring' state, and this information is used sometimes, so we should modifying the transition function to be "charging -> leaving_ds -> exploring_fully_charged | exploring_not_fully_charged"
+                        update_robot_state_2(exploring);
+                        continue;
+                    }
                 }
                 
                 
@@ -1335,6 +1297,12 @@ class Explorer
 //                            if(exploration->winner_of_auction)
 //                            {
                                 explorations++;
+//                                ROS_ERROR("%d", explorations);
+//                                if(explorations == 3 && robot_id == 0) {
+//                                    move_robot(counter, 0, 12);    
+//                                    update_robot_state_2(leaving_ds);
+//                                    continue;
+//                                }
 //                                if( ((explorations == 3 || explorations == 4)&& robot_id == 0) || (explorations == 4 && robot_id == 1) ) {
 //                                    ROS_ERROR("auctioning");
 //                                    update_robot_state_2(auctioning);    
@@ -1377,11 +1345,11 @@ class Explorer
                                 ROS_ERROR("Goal not found due to some computation failure, start auction...");
                                 ROS_INFO("Goal not found due to some computation failure, start auction...");
                                 
-                                //ros::Duration(3).sleep();
-                                //continue;
-                                
-                                update_robot_state_2(auctioning);
+                                ros::Duration(3).sleep();
                                 continue;
+                                
+//                                update_robot_state_2(auctioning);
+//                                continue;
                                 
                             }
                             
@@ -1391,18 +1359,25 @@ class Explorer
                                 continue;
                             }   
                             
+                            bool error = false;
                             ros::spinOnce(); //to udpate available_distance
                             if( !exploration->existFrontiers() ) {
                                 ROS_INFO("No more frontiers: moving home...");
                                 move_home_if_possible();
-                            } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance) ) {
+                            } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                 ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                 update_robot_state_2(auctioning);
                             }
-                            else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance) ){
+                            else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ){
                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                 update_robot_state_2(auctioning_2);
-                            } else {
+                            }
+//                          else if(error) {
+//                           
+//                          
+//                          }
+                            
+                            else {
 //                                if(!ds_graph_navigation_allowed)
 //                                    ROS_INFO("There are no more frontiers that can be reached from the current DS and Ds graph navigation is not allowed: start moving along DS graph...");
                                 log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
@@ -1696,7 +1671,7 @@ class Explorer
                     }
 
                     update_robot_state();
-                    i++;
+//                    i++; //if we use the "idle" mode when the robot is in queue, we don't have to perform recomputations...
                 }
                 if(robot_state == in_queue)
                     continue; //to force the recomputations of the frontiers
@@ -1727,6 +1702,9 @@ class Explorer
                     log_major_error("robot was saved from stucking in checking_vacancy");
                     update_robot_state_2(in_queue);   
                 }
+                
+                // Stop the timer, since I could have exited the while loop above due to a occupancy message
+                checking_vacancy_timer.stop();
                 
             }
 
@@ -1869,10 +1847,14 @@ class Explorer
     }
     
     void store_current_position() {
-        while(!exploration->getRobotPose(robotPose)) {
+        int i=0;
+        while(!exploration->getRobotPose(robotPose) && i < 10) {
             ROS_ERROR("Failed getting current position... retrying in a moment");
             ros::Duration(2).sleep();
+            i++;
         }
+//        if(i >= 10)
+//            ROS_FATAL("unable got get robot pose")
         stored_robot_x = robotPose.getOrigin().getX();
         stored_robot_y = robotPose.getOrigin().getY();
     }
@@ -2208,8 +2190,8 @@ class Explorer
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters,available_distance," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "conservative_available_distance,global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
+        fs_csv << "#time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
+                  "global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
                   "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << std::endl;
         fs_csv.close();
@@ -2249,8 +2231,8 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << "," << available_distance << "," << conservative_available_distance(available_distance) << ","
-                   << map_progress.global_freespace << "," << discovered_free_cells_count << "," 
+            fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << ","
+                   << map_progress.global_freespace << "," << discovered_free_cells_count << ","
                    << map_progress.local_freespace << "," << free_cells_count << "," 
                    << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b << std::endl;
             fs_csv.close();
@@ -2607,7 +2589,11 @@ class Explorer
             ROS_INFO("Status file created successfully");
         
         if(percentage < 90 && robot_state != stuck && robot_state != dead) {
-            log_major_error("low percentage!!!");
+            log_major_error("low percentage (<90%)!!!");
+        }
+        
+        if(percentage < 95 && robot_state != stuck && robot_state != dead) {
+            log_minor_error("percentage < 95%");
         }
         
         ros::Duration(10).sleep();
@@ -2949,12 +2935,12 @@ class Explorer
 
         markerArray.markers.push_back(marker);
         */
-        
-        
+         
     }
     
     double conservative_available_distance(double available_distance) {
-        return available_distance * coeff_a - max_av_distance * coeff_b;
+        //return available_distance * coeff_a - max_av_distance * coeff_b;
+        return available_distance;
     }
 
     bool move_robot(int seq, double position_x, double position_y)
@@ -3028,6 +3014,9 @@ class Explorer
         ROS_DEBUG("Moving toward goal...");
 
         ros::Time time_before = ros::Time::now();
+        prev_pose_x = pose_x;
+        prev_pose_y = pose_y;
+        double starting_x = pose_x, starting_y = pose_y;
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
@@ -3074,7 +3063,7 @@ class Explorer
 
                 /* Print remaining distance to be travelled to reach goal if the goal is a DS */
     //            if (robot_state == going_checking_vacancy || robot_state == going_in_queue)
-                    ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+//                    ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
                 /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
                  * the DS */
@@ -3085,7 +3074,7 @@ class Explorer
                     exploration->next_auction_position_y = robotPose.getOrigin().getY();
                     return true;
                 }
-                if(robot_state == going_charging && remaining_distance < 3.0) {
+                if( (robot_state == going_charging && remaining_distance < 3.0) || (robot_state == going_in_queue && remaining_distance < 6.0) ) {
                     if(!timer_started) {
                         timer_started = true;
                         start_time_fallback = ros::Time::now();
@@ -3114,7 +3103,7 @@ class Explorer
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 
-                if( (position_x - pose_x) * (position_x - pose_x) + (position_y - pose_y) * (position_y - pose_y) < 3*3 ) {
+                if( (position_x - pose_x) * (position_x - pose_x) + (position_y - pose_y) * (position_y - pose_y) < 5*5 ) {
                       ROS_ERROR("Robot seems unable to closely reach the goal, but it is close enough to consider the goal reached... ");
                       if(moving_to_ds || going_home) 
                         log_minor_error("Robot didn't properly reach home/DS");
@@ -3181,6 +3170,9 @@ class Explorer
         
         ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
         ros::Time time_before = ros::Time::now();
+        prev_pose_x = pose_x;
+        prev_pose_y = pose_y;
+        double starting_x = pose_x, starting_y = pose_y;
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
@@ -3367,7 +3359,7 @@ class Explorer
 
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-        ROS_INFO("Target DS is occupied");
+        ROS_INFO("Target DS is (going to be) occupied by robot %d", msg.get()->used_by_robot_id);
         //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
         if(robot_state == checking_vacancy) //TODO this check should be already in update_robot_state() probably...
             robot_state_next = going_queue_next;
@@ -3791,8 +3783,8 @@ class Explorer
             //ROS_ERROR("%f, %f", pose_x, pose_y);
 
             if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
-//                already_perfomed_recovery_procedure = false;
-                    ;
+                ;
+                // already_perfomed_recovery_procedure = false;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
@@ -4038,6 +4030,42 @@ class Explorer
     };
     state_next_t robot_state_next;
 
+  private:
+    // enum state_t {exploring, going_charging, charging, finished, fully_charged,
+    // stuck, in_queue};
+    // state_t robot_state;
+
+    ros::Publisher pub_move_base;
+    ros::Publisher pub_Point;
+    ros::Publisher pub_home_Point;
+    ros::Publisher pub_frontiers;
+
+    ros::ServiceClient mm_log_client;
+
+    ros::NodeHandle nh;
+    ros::Time time_start;
+    ros::WallTime wall_time_start;
+
+    // Create a move_base_msgs to define a goal to steer the robot to
+    move_base_msgs::MoveBaseActionGoal action_goal_msg;
+    move_base_msgs::MoveBaseActionFeedback feedback_msgs;
+
+    geometry_msgs::PointStamped goalPoint;
+    geometry_msgs::PointStamped homePoint;
+
+    std::vector<geometry_msgs::PoseStamped> goals;
+    tf::Stamped<tf::Pose> robotPose;
+
+    explorationPlanner::ExplorationPlanner *exploration;
+
+    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
+
+    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
+    int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
+    int counter;
+    bool recharging;
+    bool pioneer;
+    int w1, w2, w3, w4;
 };
 
 /********

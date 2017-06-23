@@ -1,4 +1,7 @@
+# Parameters for the global planner (NavFn or GlobalPlanner)
 navigation_path:
    allow_unknown: false
    default_tolerance: 5
    #use_grid_path: true
+   #use_quadratic: false
+   #use_dijkstra: false # i.e., use A*

@@ -360,7 +360,8 @@ void docking::wait_for_explorer() {
     ROS_INFO("Established persistent connection to service 'explorer/robot_pose'");    
     //ros::Duration(0.1).sleep();
     
-    ros::Duration(5).sleep();
+//    ros::Duration(5).sleep();
+    send_robot();
 }
 
 
@@ -837,7 +838,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                     swarm_direction_x += robot_i_target_ds_x - robots.at(i).x;
                     swarm_direction_y += robot_i_target_ds_y - robots.at(i).y;
                 }
-
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
@@ -888,6 +888,14 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 
             old_optimal_ds_id = get_optimal_ds_id();
             robot->selected_ds = get_optimal_ds_id();
+            
+            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
+            {
+                ROS_INFO("Changes also the target DS");
+                set_target_ds(get_optimal_ds_id());
+            }
+            else
+                ROS_INFO("Target DS cannot be updated at the moment");
 
             /* Keep track of the new optimal DS in log file */
             ros::Duration time = ros::Time::now() - time_start;
@@ -2001,7 +2009,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         return;
     }
 
-    ROS_INFO("Received request for vacancy check for %d", msg.get()->id); //TODO(minor) complete
+    ROS_INFO("Received request for vacancy check for ds%d", msg.get()->id); //TODO(minor) complete
 
     /* If the request for vacancy check is not about the target DS of the robot,
      * for sure the robot is not occupying it
@@ -2016,20 +2024,21 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         {
             /* Print some debut text */
             if (robot_state == charging || robot_state == going_charging)
-                ROS_INFO("I'm using / going to use that DS!!!!");
+                ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
-                ROS_INFO("I'm approachign that DS too!!!!");
+                ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
             else if (robot_state == fully_charged || robot_state == leaving_ds)
-                ROS_INFO("I'm leaving the DS, jsut wait a sec...");
+                ROS_INFO("I'm leaving ds%d, jsut wait a sec...", msg.get()->id);
 
             /* Reply to the robot that asked for the check, telling it that the DS is
              * occupied */
-            ROS_INFO("notify other robot that that the DS is occupied!");
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
             srv_msg.request.dst_robot = group_name;
             srv_msg.request.docking_station.id = get_target_ds_id();
+            srv_msg.request.docking_station.used_by_robot_id = robot_id;
             sc_send_docking_station.call(srv_msg);
+            ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
         }
         else
             ROS_DEBUG("target ds, but currently not used by the robot");
@@ -2139,7 +2148,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 for(unsigned int i=0; i < ds.size(); i++)
                     if(ds[i].id == id_next_target_ds) {
 //                        best_ds = &ds[i];
-                        set_target_ds_given_index(i);
+                        set_target_ds_given_index(i); //TODO should be reduntant
                         found_ds = true;
                         break;
                     }

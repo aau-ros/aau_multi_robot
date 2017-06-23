@@ -17,6 +17,7 @@
 #include <adhoc_communication/MmPoint.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/EmDockingStation.h>
+#include <adhoc_communication/EmRobot.h>
 #include <map_merger/TransformPoint.h>
 #include <math.h>
 #include <std_msgs/Int32.h>
@@ -284,7 +285,7 @@ namespace explorationPlanner
 
             //F
             bool existFrontiers();
-            bool existFrontiersReachableWithFullBattery(float max_available_distance);
+            bool existFrontiersReachableWithFullBattery(float max_available_distance, bool *error);
             double distance_from_robot(double x, double y);
             double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);
@@ -319,7 +320,7 @@ namespace explorationPlanner
             bool frontier_selected;
             bool my2_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool home_is_reachable(double available_distance);
-            bool existReachableFrontiersWithDsGraphNavigation(double available_distance);
+            bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
 
         private:
             bool auction_running;
@@ -433,6 +434,10 @@ namespace explorationPlanner
             double fallback_distance_computation(double end_x, double end_y);
             double fallback_distance_computation(double start_x, double start_y, double end_x, double end_y);
             bool optimal_ds_set;
+            ros::Subscriber sub_this_robot;
+            bool received_robot_info;
+            double robot_home_world_x, robot_home_world_y;
+            void this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
             
             
     };
