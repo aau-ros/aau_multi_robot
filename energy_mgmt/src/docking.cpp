@@ -448,7 +448,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     ROS_DEBUG("Compute optimal DS");
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently...
+    if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
         /* Store currently optimal DS (for debugging ans safety checks)
          *

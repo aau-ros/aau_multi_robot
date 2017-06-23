@@ -37,10 +37,7 @@ public:
      */
     void compute();
 
-    /**
-     * Outputs the battery soc to the console.
-     */
-    void output();
+    void log();
 
     /**
      * Publishes a message containing the battery state.
@@ -89,7 +86,7 @@ private:
      * Power_moving is the power consumption of the robot while in motion.
      * Power_standing is the power consumption of the robot while it is standing still.
      */
-    double power_charging, power_moving, power_standing, power_basic_computations, power_advanced_computation;
+    double power_charging, power_moving, power_standing, power_basic_computations, power_advanced_computation, power_idle;
 
     /**
      * Speed of the robot.
@@ -219,11 +216,14 @@ private:
     bool advanced_computations_bool;
     
     std::string log_path;
-    std::string info_file;
-    std::fstream fs_info;
+    std::string info_file, battery_state_filename;
+    std::fstream fs_info, battery_state_fs;
     std::string robot_name;
     std::string robot_prefix;
     int robot_id;
+    bool idle_mode;
+    ros::Time sim_time_start;
+    ros::WallTime wall_time_start;
     
 };
 
