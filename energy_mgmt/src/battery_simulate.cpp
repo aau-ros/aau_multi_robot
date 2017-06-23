@@ -13,6 +13,7 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
+    nh.getParam("energy_mgmt/power_idle", power_idle); // W
     nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
     nh.getParam("energy_mgmt/mass", mass); // kg
@@ -140,12 +141,22 @@ battery_simulate::battery_simulate()
     /* Create file names */
     log_path = log_path.append("/");
     info_file = log_path + std::string("metadata_battery.csv");
+    battery_state_filename = log_path + std::string("battery_state.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_info << "#power_moving,power_standing,power_charging,charge_max" << std::endl;
     fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << std::endl;
     fs_info.close();
     
+    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state" << std::endl;
+    battery_state_fs.close();
+    
+    idle_mode = false;
+    
+    sim_time_start = ros::Time::now();
+    wall_time_start = ros::WallTime::now();
+        
 }
 
 void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -156,21 +167,25 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         state.charging = true;
     }
     else {
-        if(msg.get()->state == fully_charged || msg.get()->state == leaving_ds || msg.get()->state == exploring)
-            advanced_computations_bool = true;
-        else
-            advanced_computations_bool = false;
-    
         /* The robot is not charging; if the battery was previously under charging, it means that the robot aborted the
-           recharging process */
+        recharging process */
         if (state.charging == true)
         {
             ROS_DEBUG("Recharging aborted");
             state.charging = false;
         }
-        
-           
     }
+    
+    if(msg.get()->state == fully_charged || msg.get()->state == leaving_ds || msg.get()->state == exploring)
+        advanced_computations_bool = true;
+    else
+        advanced_computations_bool = false;
+    
+    if(msg.get()->state == in_queue)
+        idle_mode = true;
+    else
+        idle_mode = false;
+        
 }
 
 void battery_simulate::compute()
@@ -216,8 +231,20 @@ void battery_simulate::compute()
             state.remaining_distance = state.remaining_time_run * speed_avg; 
             }
     }
-    else
-    {
+    else if(idle_mode) {
+        remaining_energy -= power_idle * time_diff_sec; // J
+        
+        state.soc = remaining_energy / total_energy;
+        
+        //state.remaining_time_run = state.soc * total_energy; // NO!!!
+        //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
+
+        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
+        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+        state.remaining_distance = state.remaining_time_run * speed_avg;
+        
+    } else {
+    
         /* If the robot is moving, than we have to consider also the energy consumed for moving, otherwise it is
          * sufficient to consider the fixed power cost.
          * Notice that this is clearly an approximation, since we are not sure that the robot was moving for the whole
@@ -247,26 +274,33 @@ void battery_simulate::compute()
 
     }
 
+
     //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
     time_last = ros::Time::now();
 }
 
-void battery_simulate::output()
+void battery_simulate::log()
 {
-    /*
-    if ((int(state.soc) % 10) == 0)
-    {
-        if (output_shown == false)
-        {
-            ROS_INFO("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc, state.remaining_distance);
-            output_shown = true;
-        }
-    }
+    std::string state_std;
+    if(idle_mode)
+        state_std = "idle";
+    else if(state.charging) 
+        state_std = "charging";
+    else if(advanced_computations_bool)
+        state_std = "computing";
+    else if(speed_linear > 0 || speed_angular > 0)
+        state_std = "moving";
     else
-    */
-        output_shown = false;
+        state_std = "standing";
+        
+    ros::Duration sim_time = ros::Time::now() - sim_time_start;
+    ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
+    
+    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << std::endl;
+    battery_state_fs.close();
 }
 
 void battery_simulate::publish()
@@ -316,8 +350,8 @@ void battery_simulate::run() {
         // compute new battery state
         compute();
 
-        // output battery state to console
-        //bat.output();
+        // log battery
+        log();
 
         // publish battery state
         publish();
