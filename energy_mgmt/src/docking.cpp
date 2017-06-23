@@ -2752,7 +2752,6 @@ void docking::send_robot()
     robot_msg.request.robot.y = robot->y;
     robot_msg.request.robot.home_world_x = robot->home_world_x;
     robot_msg.request.robot.home_world_y = robot->home_world_y;
-    robot_msg.request.robot.simple_state = robot->simple_state;
     robot_msg.request.robot.state = robot->state;
     if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = best_ds->id;

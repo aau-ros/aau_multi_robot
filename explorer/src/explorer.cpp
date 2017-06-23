@@ -154,31 +154,27 @@ class Explorer
      * CLASS FUNCTIONS *
      *******************/
     Explorer(tf::TransformListener &tf)  // TODO(minor) put comments (until CREATE LOG PATH)
-        : 
-          rotation_counter(0),
-          nh("~"),
-          number_of_robots(1),
-          accessing_cluster(0),
-          cluster_element_size(0),
-          cluster_flag(false),
-          cluster_element(-1),
-          cluster_initialize_flag(false),
-          global_iterations(0),
-          global_iterations_counter(0),
-          counter_waiting_for_clusters(0),
-          global_costmap_iteration(0),
-          robot_prefix_empty(false),
-          robot_id(0),
-          battery_charge(100),
-          recharge_cycles(0),
-          battery_charge_temp(100),
-          energy_consumption(0),
-          available_distance(0)
+        : nh("~")
     {
         if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
            ros::console::notifyLoggerLevelsChanged();
         }
         
+//        ros::NodeHandle nh("~");
+        rotation_counter = 0;
+        number_of_robots = 1;
+        accessing_cluster = 0;
+        cluster_element_size = 0;
+        cluster_flag=false;
+        cluster_element=-1;
+        cluster_initialize_flag=false;
+        global_iterations = 0;
+        global_iterations_counter = 0;
+        counter_waiting_for_clusters = 0;
+        global_costmap_iteration = 0;
+        robot_prefix_empty = false;
+        robot_id = 0;
+        battery_charge=100;
         counter = 0;
         charge_time = 0;
         pose_x = 0;
@@ -187,6 +183,10 @@ class Explorer
         prev_pose_x = 0;
         prev_pose_y = 0;
         prev_pose_angle = 0;
+        recharge_cycles= 0;
+        battery_charge_temp = 100;
+        energy_consumption= 0;
+        available_distance= 0;
     
         // F
         test = true;
