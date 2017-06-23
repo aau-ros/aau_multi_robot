@@ -448,7 +448,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     ROS_DEBUG("Compute optimal DS");
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0)
+    if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently...
     {
         /* Store currently optimal DS (for debugging ans safety checks)
          *
@@ -1929,9 +1929,9 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of
      * the auction whose result has been just
      * received */
-//    if ((int)msg.get()->docking_station == best_ds->id)  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
+    if ((int)msg.get()->docking_station == get_optimal_ds_id())  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
     {
-//        ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
+        ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
                                                                                     // acutally
                                                                                     // maybe
                                                                                     // it

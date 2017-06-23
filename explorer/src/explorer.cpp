@@ -1723,8 +1723,10 @@ class Explorer
                     update_robot_state();
                     i++;
                 }
-                if(i >= 30)
+                if(i >= 30) {
                     log_major_error("robot was saved from stucking in checking_vacancy");
+                    update_robot_state_2(in_queue);   
+                }
                 
             }
 
@@ -2096,7 +2098,7 @@ class Explorer
             
             /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
             else if (robot_state == going_checking_vacancy) {
-                ROS_INFO("robot is going_checking_vacancy... let's already going_in_queue for later...");
+                ROS_INFO("robot is going_checking_vacancy... ignore going_in_queue then...");
                 update_robot_state_2(going_in_queue);
             }
             
