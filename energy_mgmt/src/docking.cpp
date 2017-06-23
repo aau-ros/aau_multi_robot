@@ -894,6 +894,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 ROS_INFO("Changes also the target DS, and inform explorer");
                 set_target_ds(get_optimal_ds_id());
 
+                // If we inform explorer here, we are sure that it will know the target DS even if it loses an auction, so it knows where to go in_queue
                 geometry_msgs::PointStamped msg1;
                 msg1.point.x = get_target_ds_x();
                 msg1.point.y = get_target_ds_y();
