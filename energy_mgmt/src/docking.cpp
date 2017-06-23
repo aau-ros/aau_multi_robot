@@ -2884,16 +2884,17 @@ void docking::check_reachable_ds()
             ds.push_back(*it);
 //            ds.push_back(new_ds);
             
-            int id1 = ds[ds.size()-1].id;
-            if(id1 != it->id)
-                log_major_error("error");
-            int id2 = it->id;
+//            int id1 = ds[ds.size()-1].id;
+//            if(id1 != it->id)
+//                log_major_error("error");
+//            int id2 = it->id;
             //discovered_ds.erase(it);
             ROS_INFO("erase at position %d; size after delete is %lu", i, discovered_ds.size() - 1);
             discovered_ds.erase(discovered_ds.begin() + i);
             
-            it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
-            i=0;
+//            it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
+//            i=0;
+            break;
             
             
 //            // Visualize in RViz
@@ -2929,8 +2930,8 @@ void docking::check_reachable_ds()
             //ROS_ERROR("x: %.1f, y: %.1f", pose->pose.pose.position.x, pose->pose.pose.position.y);
             
 
-            if(id1 != id2)
-                log_major_error("ERROR");
+//            if(id1 != id2)
+//                log_major_error("ERROR");
             
         }
         else {
@@ -3050,7 +3051,7 @@ void docking::spin()
     ROS_INFO("Start thread to receive callbacks"); //TODO(minor) remove spin in other points of the code
     double rate = 10.0; // Hz
     ros::Rate loop_rate(rate);
-    while (ros::ok)
+    while (ros::ok())
     {
         ros::spinOnce();   
         loop_rate.sleep();  // sleep for 1/rate seconds

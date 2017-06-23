@@ -25,7 +25,7 @@
 #include <limits>
 #include <cstddef>
 #include <iostream>
-#include <printf.h>
+//#include <printf.h>
 #include <stdexcept>
 #include <stdio.h>
 #define verbose (0)
@@ -225,7 +225,7 @@ bool Hungarian::check_solution(const vector<int>& row_dec, const vector<int>& co
 bool Hungarian::assign_solution(const vector<int>& row_dec,const vector<int>&  col_inc, const vector<int>&  col_vertex)
 {
 	  // End Hungarian algorithm 18
-	int i, j, k, l, m, n;
+	int i, k, l, m, n;
 
 	m = m_rows;
 	n = m_cols;
@@ -388,7 +388,8 @@ bool Hungarian::solve()
 		if (checked)
 		{
 			//finish assignment, wrap up and done.
-			bool assign = assign_solution(row_dec, col_inc, col_vertex);
+			//bool assign = assign_solution(row_dec, col_inc, col_vertex);
+			assign_solution(row_dec, col_inc, col_vertex);
 			return true;
 		}
 		else
@@ -411,7 +412,6 @@ bool Hungarian::solve()
 			fprintf(stderr, "Matched %d rows.\n",m-t);
 		}
 		q=0;
-		bool try_matching;
 		while (1)
 		{
 			while (q<t)
@@ -540,7 +540,8 @@ bool Hungarian::solve()
 			if (checked)
 			{
 				//finish assignment, wrap up and done.
-				bool assign = assign_solution(row_dec, col_inc, col_vertex);
+				//bool assign = assign_solution(row_dec, col_inc, col_vertex);
+				assign_solution(row_dec, col_inc, col_vertex);
 				return true;
 			}
 			else

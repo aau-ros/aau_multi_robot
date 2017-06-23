@@ -168,6 +168,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     received_scan = false;
     errors = 0;
     optimal_ds_set = false;
+    robot_x = 0, robot_y = 0;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -6676,7 +6677,11 @@ void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w
     if(frontiers.size() > 0)
     {
         //ROS_ERROR("%lu", frontiers.size());
-        double robot_x, robot_y;
+        double robot_x, robot_y; //TODO use the "global" robot_x and _y?
+        
+        // robot position
+        robot_x = robotPose.getOrigin().getX();
+        robot_y = robotPose.getOrigin().getY();
         
         for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
         //for(int i = frontiers.size(); i >= 0 && i > frontiers.size() - max_front - skipped_due_to_auction; --i)
@@ -6710,10 +6715,6 @@ void ExplorationPlanner::sort_cost_1(bool energy_above_th, int w1, int w2, int w
                  * d_gbe       .. -d_gb if battery charge is above threshold (e.g. 50%), d_gb if battery charge is below threshold
                  * theta       .. measure of how much the robot has to turn to reach frontier, theta in [0,1]
                  */
-
-                // robot position
-                robot_x = robotPose.getOrigin().getX();
-                robot_y = robotPose.getOrigin().getY();
 
                 // frontier position
                 double frontier_x = frontiers.at(j).x_coordinate;

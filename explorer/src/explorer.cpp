@@ -111,11 +111,50 @@ class Explorer
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
     
+  private:
+    // enum state_t {exploring, going_charging, charging, finished, fully_charged,
+    // stuck, in_queue};
+    // state_t robot_state;
+
+    ros::Publisher pub_move_base;
+    ros::Publisher pub_Point;
+    ros::Publisher pub_home_Point;
+    ros::Publisher pub_frontiers;
+
+    ros::ServiceClient mm_log_client;
+
+    ros::NodeHandle nh;
+    ros::Time time_start;
+    ros::WallTime wall_time_start;
+
+    // Create a move_base_msgs to define a goal to steer the robot to
+    move_base_msgs::MoveBaseActionGoal action_goal_msg;
+    move_base_msgs::MoveBaseActionFeedback feedback_msgs;
+
+    geometry_msgs::PointStamped goalPoint;
+    geometry_msgs::PointStamped homePoint;
+
+    std::vector<geometry_msgs::PoseStamped> goals;
+    tf::Stamped<tf::Pose> robotPose;
+
+    explorationPlanner::ExplorationPlanner *exploration;
+
+    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
+
+    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
+    int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
+    int counter;
+    bool recharging;
+    bool pioneer;
+    int w1, w2, w3, w4;
+    
+  public:
+    
     /*******************
      * CLASS FUNCTIONS *
      *******************/
     Explorer(tf::TransformListener &tf)  // TODO(minor) put comments (until CREATE LOG PATH)
-        : counter(0),
+        : 
           rotation_counter(0),
           nh("~"),
           number_of_robots(1),
@@ -134,19 +173,20 @@ class Explorer
           recharge_cycles(0),
           battery_charge_temp(100),
           energy_consumption(0),
-          available_distance(0),
-          // robot_state(fully_charged),
-          charge_time(0),
-          pose_x(0),
-          pose_y(0),
-          pose_angle(0),
-          prev_pose_x(0),
-          prev_pose_y(0),
-          prev_pose_angle(0)
+          available_distance(0)
     {
         if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
            ros::console::notifyLoggerLevelsChanged();
         }
+        
+        counter = 0;
+        charge_time = 0;
+        pose_x = 0;
+        pose_y = 0;
+        pose_angle = 0;
+        prev_pose_x = 0;
+        prev_pose_y = 0;
+        prev_pose_angle = 0;
     
         // F
         test = true;
@@ -178,6 +218,7 @@ class Explorer
         home_point_set = false;
         coeff_a = COEFF_A;
         coeff_b = COEFF_B;
+        
 
         /* Initial robot state */
         robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
@@ -808,7 +849,7 @@ class Explorer
                         {
                             if (exploration->clusters.size() > 0)
                             {
-                                for (int i = 0; i < exploration->clusters.size(); i++)
+                                for (unsigned int i = 0; i < exploration->clusters.size(); i++)
                                 {
                                     if (exploration->clusters.at(i).id == cluster_element)
                                     {
@@ -1134,13 +1175,12 @@ class Explorer
                                 double next_ds_x = complex_path[ds_path_counter+1].x;
                                 double next_ds_y = complex_path[ds_path_counter+1].y;
                                 double dist = -1;
-                                ROS_ERROR("Compute distance");
-//                                for(int i=0; i<5 || dist >= 0; i++) {
-//                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
-//                                    ros::Duration(1).sleep();   
-//                                }
-                                dist = 10;
-                                ROS_ERROR("Distance computed");
+                                ROS_INFO("Compute distance");
+                                for(int i=0; i<5 || dist >= 0; i++) {
+                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
+                                    ros::Duration(1).sleep();   
+                                }
+                                ROS_INFO("Distance computed");
                                 
                                 if(dist < 0) {
                                     log_major_error("unable to compute distance to reach next DS!!!");
@@ -1669,18 +1709,23 @@ class Explorer
                 /* Robot reached frontier */
                 //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
                 
+                ROS_DEBUG("Start checking for DS vacancy (timeout: %.1fs)", checking_vacancy_timeout);
+                checking_vacancy_timer.stop();
                 checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
                 checking_vacancy_timer.start();
 
                 // TODO(minor) use a bterr way!!!
-                while (robot_state == checking_vacancy)
+                int i = 0; //just for safety
+                while (robot_state == checking_vacancy && i < 30)
                 {
                     ros::Duration(1).sleep();
                     ros::spinOnce();
                     update_robot_state();
+                    i++;
                 }
+                if(i >= 30)
+                    log_major_error("robot was saved from stucking in checking_vacancy");
                 
-                checking_vacancy_timer.stop();
             }
 
             // navigate robot home for recharging
@@ -2050,7 +2095,11 @@ class Explorer
             }
             
             /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
-            //else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
+            else if (robot_state == going_checking_vacancy) {
+                ROS_INFO("robot is going_checking_vacancy... let's already going_in_queue for later...");
+                update_robot_state_2(going_in_queue);
+            }
+            
             else if (robot_state == checking_vacancy)
             {
                 ROS_INFO("discovered that the DS is occupied!");
@@ -2270,7 +2319,7 @@ class Explorer
         if (OPERATE_ON_GLOBAL_MAP == false)
         {
             occupancy_grid_local = costmap2d_local->getCostmap()->getCharMap();
-            int num_map_cells_ =
+            unsigned int num_map_cells_ =
                 costmap2d_local->getCostmap()->getSizeInCellsX() * costmap2d_local->getCostmap()->getSizeInCellsY();
             int free = 0;
 
@@ -2286,9 +2335,9 @@ class Explorer
         else
         {
             occupancy_grid_local = costmap2d_local_size->getCostmap()->getCharMap();
-            int num_map_cells_ = costmap2d_local_size->getCostmap()->getSizeInCellsX() *
+            unsigned int num_map_cells_ = costmap2d_local_size->getCostmap()->getSizeInCellsX() *
                                  costmap2d_local_size->getCostmap()->getSizeInCellsY();
-            int free = 0;
+            unsigned int free = 0;
 
             for (unsigned int i = 0; i < num_map_cells_; i++)
             {
@@ -2344,10 +2393,10 @@ class Explorer
         double exploration_time = ros_time.toSec();
         int navigation_goals_required = counter;
         double exploration_travel_path = (double)exploration->exploration_travel_path_global_meters;
-        double size_global_map =
-            map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
+//        double size_global_map =
+//            map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
 
-        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
+//        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
 
         std::string tmp_log;
         if (!final)
@@ -2483,7 +2532,7 @@ class Explorer
             map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
         ROS_INFO("overall freespace in the global map: %f", size_global_map);
 
-        for (int i = 0; i < map_progress_during_exploration.size(); i++)
+        for (unsigned int i = 0; i < map_progress_during_exploration.size(); i++)
         {
             ROS_INFO("map progress: %f",
                      (map_progress_during_exploration.at(i).global_freespace / size_global_map) * 100);
@@ -2498,7 +2547,7 @@ class Explorer
         ROS_DEBUG("******************************************");
         ROS_DEBUG("******************************************");
 
-        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
+//        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
 
         /*
          * WRITE LOG FILE
@@ -2912,7 +2961,7 @@ class Explorer
 
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
-        int stuck_countdown = EXIT_COUNTDOWN;
+//        int stuck_countdown = EXIT_COUNTDOWN;
         ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
         ros::Duration my_fallback_countdown = ros::Duration(30);
         bool timer_started = false;
@@ -3089,7 +3138,7 @@ class Explorer
     bool move_robot_away(int seq)
     {
         ROS_INFO("Preparing to move toward goal...");
-        int stuck_countdown = EXIT_COUNTDOWN;
+//        int stuck_countdown = EXIT_COUNTDOWN;
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
          * given about the actual driving state of the robot. */
@@ -3168,7 +3217,7 @@ class Explorer
             else
             {
                 //ROS_ERROR("(%f, %f; %f) : (%f, %f; %f)", prev_pose_x, prev_pose_y, prev_pose_angle, pose_x, pose_y, pose_angle);
-                stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
+//                stuck_countdown = STUCK_COUNTDOWN;  // robot is moving again
                 prev_pose_x = pose_x;
                 prev_pose_y = pose_y;
                 prev_pose_angle = pose_angle;
@@ -3323,9 +3372,11 @@ class Explorer
     }
     
     void vacancy_callback(const ros::TimerEvent &event) {
-        ROS_INFO("FINISHED");
+        ROS_INFO("Timeout for vacancy check");
         if(robot_state_next != going_queue_next && robot_state == checking_vacancy)
             robot_state_next = going_charging_next;
+        else
+            robot_state_next = going_queue_next;
     }
 
     void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
@@ -3614,7 +3665,7 @@ class Explorer
     
     void safety_checks() {
     
-        bool already_perfomed_recovery_procedure = false;
+//        bool already_perfomed_recovery_procedure = false;
         double sleeping_time = 10.0;
         while(exploration == NULL)
             ros::Duration(sleeping_time).sleep();
@@ -3629,7 +3680,7 @@ class Explorer
         int prints_count = 0;
         
         //tf::Stamped<tf::Pose> robotPose;
-        state_t prev_robot_state = fully_charged;
+//        state_t prev_robot_state = fully_charged;
             
         ros::Time prev_time = ros::Time::now();   
         while(ros::ok() && !exploration_finished) {
@@ -3683,7 +3734,7 @@ class Explorer
                     
                 prev_robot_x = pose_x;
                 prev_robot_y = pose_y;
-                prev_robot_state = robot_state;
+//                prev_robot_state = robot_state;
                 //prints_count = 1;  
             }
             
@@ -3738,7 +3789,8 @@ class Explorer
             //ROS_ERROR("%f, %f", pose_x, pose_y);
 
             if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
-                already_perfomed_recovery_procedure = false;
+//                already_perfomed_recovery_procedure = false;
+                    ;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
@@ -3962,8 +4014,10 @@ class Explorer
 
     std::string get_text_for_enum(int enumVal)
     {
-        if(enumVal >= enum_string.size())
+        if((unsigned int)enumVal >= enum_string.size()) {
             log_major_error("segmenv in get_text_for_enum");
+            return "";
+        }
         else
             return enum_string[enumVal];
     }
@@ -3982,42 +4036,6 @@ class Explorer
     };
     state_next_t robot_state_next;
 
-  private:
-    // enum state_t {exploring, going_charging, charging, finished, fully_charged,
-    // stuck, in_queue};
-    // state_t robot_state;
-
-    ros::Publisher pub_move_base;
-    ros::Publisher pub_Point;
-    ros::Publisher pub_home_Point;
-    ros::Publisher pub_frontiers;
-
-    ros::ServiceClient mm_log_client;
-
-    ros::NodeHandle nh;
-    ros::Time time_start;
-    ros::WallTime wall_time_start;
-
-    // Create a move_base_msgs to define a goal to steer the robot to
-    move_base_msgs::MoveBaseActionGoal action_goal_msg;
-    move_base_msgs::MoveBaseActionFeedback feedback_msgs;
-
-    geometry_msgs::PointStamped goalPoint;
-    geometry_msgs::PointStamped homePoint;
-
-    std::vector<geometry_msgs::PoseStamped> goals;
-    tf::Stamped<tf::Pose> robotPose;
-
-    explorationPlanner::ExplorationPlanner *exploration;
-
-    double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
-
-    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
-    int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
-    int counter;
-    bool recharging;
-    bool pioneer;
-    int w1, w2, w3, w4;
 };
 
 /********
