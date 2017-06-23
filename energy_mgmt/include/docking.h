@@ -322,10 +322,10 @@ class docking
     ros::Publisher pub_ds, pub_new_target_ds, pub_finish;
     
     /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
-    ds_t *best_ds;
+//    ds_t *best_ds;
     
     /* The DS which the robot has currently won the access to. It could be different from optimal_ds because while moving to target_ds, the robot could compute another optimal DS and so it would update optimal_ds, but not target_ds, since it would need have the right to occupy target_ds, not best_ds. This difference is important for when the robot receive a request to double check if a certain DS is not going to be occupied by another robot. */
-    ds_t *target_ds;
+//    ds_t *target_ds;
     
     
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
@@ -578,8 +578,7 @@ class docking
 
     
     ros::Timer join_timer;
-    bool optimal_ds_set;
-    bool set_optimal_ds_given_id(int id);
+    bool optimal_ds_set, target_ds_set;
 
     bool set_optimal_ds_given_index(int index);
     int old_optimal_ds_id;
@@ -613,7 +612,20 @@ class docking
     ros::Publisher pub_this_robot;
     float resolution;
     int id_next_target_ds;
-    
+    bool set_optimal_ds(int id);
+    int get_optimal_ds_id();
+    double get_optimal_ds_x();
+    double get_optimal_ds_y();
+    int optimal_ds_id;
+    double optimal_ds_x, optimal_ds_y;
+    int get_target_ds_id();
+    double get_target_ds_x();
+    double get_target_ds_y();
+    int target_ds_id;
+    double target_ds_x, target_ds_y;
+    bool set_target_ds(int id);
+    bool set_target_ds_given_index(int index);
+  
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
