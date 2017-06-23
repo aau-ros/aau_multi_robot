@@ -891,8 +891,14 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             
             if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
             {
-                ROS_INFO("Changes also the target DS");
+                ROS_INFO("Changes also the target DS, and inform explorer");
                 set_target_ds(get_optimal_ds_id());
+
+                geometry_msgs::PointStamped msg1;
+                msg1.point.x = get_target_ds_x();
+                msg1.point.y = get_target_ds_y();
+                pub_new_target_ds.publish(msg1);
+                
             }
             else
                 ROS_INFO("Target DS cannot be updated at the moment");
@@ -2155,13 +2161,13 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 if(!found_ds)
                     ROS_FATAL("this should not happen!!");
                     
-                geometry_msgs::PointStamped msg1;
-                msg1.point.x = get_target_ds_x();
-                msg1.point.y = get_target_ds_y();
-                pub_new_target_ds.publish(msg1);
+//                geometry_msgs::PointStamped msg1;
+//                msg1.point.x = get_target_ds_x();
+//                msg1.point.y = get_target_ds_y();
+//                pub_new_target_ds.publish(msg1);
 
                 /* Notify explorer node about the victory */
-                pub_won_auction.publish(msg);  // TODO(minor) it is important that this is after the other pub!!!! can we do better?
+                pub_won_auction.publish(msg);  // TODO(minor) it is important that this is after the other pub!!!! can we do better? //TODO probably is reduntant to publish also info about the target ds
                 ROS_INFO("pub_won_auction");
                 ROS_DEBUG("target_ds: %d", get_target_ds_id());
             }
