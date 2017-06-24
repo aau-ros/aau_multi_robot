@@ -3179,24 +3179,28 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
 
 //DONE++
 float docking::conservative_remaining_distance_with_return() {
-    return (battery.remaining_distance / (double)2) * safety_coeff;
+    //return (battery.remaining_distance / (double)2) * safety_coeff;
+    return (battery.remaining_distance / (double)2);
 }
 
 //DONE++
 float docking::conservative_maximum_distance_with_return() {
     //ROS_ERROR("%f", maximum_travelling_distance);
-    return (maximum_travelling_distance / (double)2 ) * safety_coeff;
+    //return (maximum_travelling_distance / (double)2 ) * safety_coeff;
+    return (maximum_travelling_distance / (double)2 );
 }
 
 //DONE++
 float docking::conservative_remaining_distance_one_way() {
-    return battery.remaining_distance * safety_coeff;
+    //return battery.remaining_distance * safety_coeff;
+    return battery.remaining_distance;
 }
 
 //DONE++
 float docking::conservative_maximum_distance_one_way() {
     //ROS_ERROR("%f", maximum_travelling_distance);
-    return maximum_travelling_distance * safety_coeff;
+    //return maximum_travelling_distance * safety_coeff;
+    return maximum_travelling_distance;
 }
 
 void docking::full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg) {
@@ -3222,7 +3226,6 @@ void docking::wait_battery_info() {
 
 void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
     ROS_INFO("Periodic recomputation of DS graph");
-    return;
     for (unsigned int i = 0; i < ds.size(); i++) {
         for (unsigned int j = 0; j < ds.size(); j++) {
             //safety checks   
@@ -3243,9 +3246,11 @@ void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
                 //ROS_ERROR("%f", conservative_maximum_distance_one_way());
                 if(conservative_maximum_distance_one_way() <= 0){
                     ROS_ERROR("Cannot compute DS graph at the moment...");
+                    recompute_graph = true;
                     return;
                 }
-                if (dist < conservative_maximum_distance_one_way())
+                //update distance only if it is a valid distance and if it is better than the one already stored
+                if (dist < conservative_maximum_distance_one_way() && (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id]) )
                 {
                     ds_graph[ds[i].id][ds[j].id] = dist;
                     ds_graph[ds[j].id][ds[i].id] = dist;
@@ -3418,14 +3423,18 @@ void docking::compute_and_publish_path_on_ds_graph() {
             for (unsigned int j = 0; j < jobs.size(); j++)
             {
                 double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
-                if (dist < 0)
+                if (dist < 0) {
+                    ROS_ERROR("Distance computation failed");
                     continue;
+                }
 
                 if (dist < conservative_maximum_distance_with_return())
                 {
                     double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
-                    if (dist2 < 0)
+                    if (dist2 < 0) {
+                        ROS_ERROR("Distance computation failed");
                         continue;
+                    }
 
                     if (dist2 < min_dist)
                     {
@@ -3438,6 +3447,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
             }
         }
         retry++;
+        if(min_ds == NULL)
+            ros::Duration(3).sleep();
     }
     
     if (min_ds == NULL) {
@@ -3454,8 +3465,10 @@ void docking::compute_and_publish_path_on_ds_graph() {
         for (unsigned int i = 0; i < ds.size(); i++)
         {
             double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
-            if (dist < 0)
+            if (dist < 0) {
+                ROS_ERROR("Distance computation failed");
                 continue;
+            }
 
             if (dist < min_dist)
             {
@@ -3464,6 +3477,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
             }
         }
         retry++;
+        if(closest_ds == NULL)
+            ros::Duration(3).sleep();
     }
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
@@ -3485,7 +3500,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     if (ds_found_with_mst)
     {
-
+        ROS_INFO("Found path on DS graph to reach a DS with EOs");
         adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
                                                        // maybe I can
                                                        // pass directly
@@ -3514,9 +3529,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
             }
     }
     else {
-        ROS_ERROR("no path found");
-        ROS_INFO("no path found");
-        
+        log_major_error("No path found on DS graph");
+        ROS_INFO("No path found on DS graph: this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs");
     }
 }
 
