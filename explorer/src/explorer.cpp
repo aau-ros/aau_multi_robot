@@ -1336,17 +1336,19 @@ class Explorer
                             // TODO(minor) useless
                             // charge_countdown = EXIT_COUNTDOWN;
                             
+                            ROS_DEBUG("reset retries counter");
                             retries = 0;
                         }
 
                         else
                         {
                             if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
-                                ROS_ERROR("Goal not found, trying to recompute goal...");
-                                ROS_INFO("Goal not found, trying to recompute goal...");
+                                ROS_ERROR("Goal not found due to some computation failure, trying to recompute goal...");
+                                ROS_INFO("Goal not found due to some computation failure, trying to recompute goal...");
 //                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
 //                                ROS_INFO("Goal not found due to some computation failure, start auction...");
                                 retries++;
+                                ROS_DEBUG("%d", retries);
                                 
                                 ros::Duration(3).sleep();
                                 continue;

@@ -4973,6 +4973,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
     selection_time = (ros::Time::now() - start_time).toSec();    
     
+    my_error_counter = 0;
     return frontier_selected;
 
 }

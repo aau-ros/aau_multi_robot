@@ -1619,6 +1619,14 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                 ds[i].vacant = msg.get()->vacant;
                 ROS_INFO("ds%d is now %s", msg.get()->id,
                           (msg.get()->vacant ? "vacant" : "occupied"));
+                          
+                // if the ds is now vacant and it's robot's target ds and the robot is in queue, the robot can start already start a new auction
+                if(ds[i].vacant && ds[i].id == get_target_ds_id()) {
+                    ROS_INFO("Anticipate periodic re-auctioning");
+                    timer_restart_auction.stop();
+                    start_periodic_auction();
+                }
+                    
             }
             else
                 ROS_DEBUG("State of ds%d is unchanged (%s)", msg.get()->id,
@@ -1657,6 +1665,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     update_l1();
 }
 
+//TODO stop auction of a bid from another robot with a "hierarchically higher" id for the same target DS is received
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
@@ -1864,6 +1873,11 @@ void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
 
 void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &event)
 {
+    ROS_INFO("Periodic auction timeout");
+    start_periodic_auction();
+}
+
+void docking::start_periodic_auction() {
     ROS_INFO("Periodic re-auctioning");
     
     //start auction only if no other one for teh same ds is on going: this is to avoid an "infinite loop" of auctions"
@@ -1882,7 +1896,7 @@ void docking::timer_callback_schedure_auction_restarting(const ros::TimerEvent &
                   "instead of starting another one...");
         timer_restart_auction.stop(); //reduntant?
         timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
-        timer_restart_auction.start();
+        timer_restart_auction.start(); //TODO would be better to start the timer only when the robot losts the auction...
     }
 }
 

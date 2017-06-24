@@ -626,6 +626,7 @@ class docking
     bool set_target_ds(int id);
     bool set_target_ds_given_index(int index);
   	void update_ds_graph();
+  	void start_periodic_auction();
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
