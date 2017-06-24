@@ -48,7 +48,7 @@
 
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
-#define VALIDITY_INTERVAL 10
+#define VALIDITY_INTERVAL 600 //s
 
 int limit_search = 10000;
 
@@ -9275,8 +9275,10 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
     for(unsigned int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
     
         // remove auctioned frontiers that are too old //TODO should be better doing this in another place... but it may be inefficient
-        if(time_now - last_robot_auctioned_frontier_list.at(i).timestamp > ros::Duration(VALIDITY_INTERVAL))
+        if(time_now - last_robot_auctioned_frontier_list.at(i).timestamp > ros::Duration(VALIDITY_INTERVAL)) {
+            ROS_INFO("expired");
             last_robot_auctioned_frontier_list.erase(last_robot_auctioned_frontier_list.begin() + i);
+        }
         else {
             double distance = euclidean_distance(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
             if(distance < 0)
