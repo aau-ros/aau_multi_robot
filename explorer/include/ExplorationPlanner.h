@@ -47,6 +47,7 @@ namespace explorationPlanner
                 double my_distance_to_optimal_ds;
                 float cost;
                 int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
+                ros::Time timestamp;
             } frontier, unreachable_frontier;
 
             struct responded_t
@@ -438,6 +439,7 @@ namespace explorationPlanner
             bool received_robot_info;
             double robot_home_world_x, robot_home_world_y;
             void this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
+            ros::Time time_start;
             
             
     };

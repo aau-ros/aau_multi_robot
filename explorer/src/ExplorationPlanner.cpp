@@ -48,6 +48,7 @@
 
 #include <typeinfo>
 #define SHOW(a) std::cout << #a << ": " << (a) << std::endl
+#define VALIDITY_INTERVAL 10
 
 int limit_search = 10000;
 
@@ -315,6 +316,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     sub_this_robot = nh.subscribe("this_robot", 10, &ExplorationPlanner::this_robot_callback, this);
 
     srand((unsigned)time(0));
+    
+    time_start = ros::Time::now();
 }
 
 void ExplorationPlanner::this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg) {
@@ -4491,6 +4494,8 @@ bool ExplorationPlanner::existFrontiers() {
 }
 
 bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error) {
+    ROS_INFO("existReachableFrontiersWithDsGraphNavigation");
+    ROS_DEBUG("frontiers.size(): %lu", frontiers.size());
     this->available_distance = available_distance;
     bool found_reachable_frontier = false;
     bool exit = false;
@@ -4504,16 +4509,16 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
             double y_ds = ds_list[j].y;
             
             //check euclidean distances
-            total_distance = euclidean_distance(x_f, y_f, x_ds, y_ds) * 2;
+            total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f) * 2;
             if(total_distance > available_distance)
-                exit = true;
+                continue;
             
             // distance DS-frontier
             total_distance = trajectory_plan_meters(x_ds, y_ds, x_f, y_f) * 2;
             if(total_distance < 0){
                 ROS_ERROR("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
                 ROS_INFO("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
-                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
+//                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
 //                if(errors == 0)
 //                    my_error_counter++;
 //                errors++;
@@ -4734,18 +4739,20 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
         return;
     }   
     
-    bool found = false;
-    for(int i=0; i<last_robot_auctioned_frontier_list.size() && !found; i++)
-        if(last_robot_auctioned_frontier_list.at(i).detected_by_robot == msg.get()->frontier_element[0].detected_by_robot) {
-           last_robot_auctioned_frontier_list.at(i).x_coordinate = service_message.response.point.x;
-           last_robot_auctioned_frontier_list.at(i).y_coordinate = service_message.response.point.y;
-           found = true;
-        }
-    if(!found) {
+//    bool found = false;
+//    for(int i=0; i<last_robot_auctioned_frontier_list.size() && !found; i++)
+//        if(last_robot_auctioned_frontier_list.at(i).detected_by_robot == msg.get()->frontier_element[0].detected_by_robot) {
+//           last_robot_auctioned_frontier_list.at(i).x_coordinate = service_message.response.point.x;
+//           last_robot_auctioned_frontier_list.at(i).y_coordinate = service_message.response.point.y;
+//           found = true;
+//        }
+//    if(!found)
+    {
         frontier_t new_goal;
         new_goal.detected_by_robot = msg.get()->frontier_element[0].detected_by_robot;
         new_goal.x_coordinate = msg.get()->frontier_element[0].x_coordinate;
         new_goal.y_coordinate = msg.get()->frontier_element[0].y_coordinate;
+        new_goal.timestamp = ros::Time::now();
         last_robot_auctioned_frontier_list.push_back(new_goal);
     }
 }
@@ -9264,12 +9271,19 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
     
     // calculate d_r
     double d_r = 0;
-    for(int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
-        double distance = euclidean_distance(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
-        if(distance < 0)
-            continue;
-        if(distance < d_r || d_r == 0) 
-            d_r = distance;
+    ros::Time time_now = ros::Time::now();
+    for(unsigned int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
+    
+        // remove auctioned frontiers that are too old //TODO should be better doing this in another place... but it may be inefficient
+        if(time_now - last_robot_auctioned_frontier_list.at(i).timestamp > ros::Duration(VALIDITY_INTERVAL))
+            last_robot_auctioned_frontier_list.erase(last_robot_auctioned_frontier_list.begin() + i);
+        else {
+            double distance = euclidean_distance(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
+            if(distance < 0)
+                continue;
+            if(distance < d_r || d_r == 0) 
+                d_r = distance;        
+        }
     }
 
     // calculate theta

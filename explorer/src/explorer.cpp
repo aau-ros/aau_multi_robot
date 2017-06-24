@@ -110,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries;
+    unsigned int retries, retries2;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -150,7 +150,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0;
+        retries = 0, retries2 = 0;
     
         // F
         test = true;
@@ -1367,29 +1367,42 @@ class Explorer
                                 continue;
                             }   
                             
+                            
+                            retries2++;
                             bool error = false;
                             ros::spinOnce(); //to udpate available_distance
                             if( !exploration->existFrontiers() ) {
                                 ROS_INFO("No more frontiers: moving home...");
                                 move_home_if_possible();
+                                retries2 = 0;
                             } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                 ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                 update_robot_state_2(auctioning);
+                                retries2 = 0;
                             }
                             else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ){
                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                 update_robot_state_2(auctioning_2);
+                                retries2 = 0;
                             }
-//                          else if(error) {
-//                           
-//                          
-//                          }
-                            
                             else {
+                                if(error)
+                                    if(retries < 4) {
+                                        ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
+                                        ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
+                                        ros::Duration(3).sleep();
+                                        continue;
+                                    } else {
+                                        log_major_error("tried many times to check if reachable frontiers still exists, but the check always failed");
+                                        move_home_if_possible();
+                                    }
+                                
 //                                if(!ds_graph_navigation_allowed)
 //                                    ROS_INFO("There are no more frontiers that can be reached from the current DS and Ds graph navigation is not allowed: start moving along DS graph...");
-                                log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                move_home_if_possible();
+                                else {
+                                    log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
+                                    move_home_if_possible();
+                                }
                             }
                                 
 //                            else if (robot_state == fully_charged)
