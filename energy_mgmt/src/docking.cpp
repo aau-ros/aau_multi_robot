@@ -420,11 +420,15 @@ void docking::preload_docking_stations()
     /* Store the number of DSs in the environment */
     num_ds = undiscovered_ds.size(); //TODO(minor) a problem in general!!
 
-    /* Print loaded DSs with their coordinates relative to the local reference system of the robot; only for debugging
+    /* Print loaded DSs with their coordinates relative to the local reference system of the robot, and also store them on file
      */  // TODO(minor) or better in global system?
     std::vector<ds_t>::iterator it;
-    for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
+    for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++) {
         ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
+        ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        ds_fs << it->id << "," << it->x << "," << it->y << std::endl;
+        ds_fs.close();
+    }
         
     // TODO(minor) vary bad if we don't know the number of DS a-priori
     /* Initialize docking station graph */
@@ -1040,6 +1044,7 @@ void docking::update_l2()
     {
         //log_major_error("Invalid run time");
 //        ROS_ERROR("Invalid run time: %.2f!", time_run);
+        ROS_WARN("Run time is negative: %.2f", time_run);
         l2 = 1;
         return;
     }
@@ -1075,7 +1080,19 @@ void docking::update_l3()
             return;
         }
         
-        if (dist <= conservative_maximum_distance_with_return()) //NB I'm considering the frontiers that are reachable, possibly, with a recharging, whereare previopusly I've count just the unvisited frontiers, not matter if they are reachable or not...
+        double dist2;
+        if(optimal_ds_is_set())
+            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, get_optimal_ds_x(), get_optimal_ds_y(), true);
+        else
+            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, 0, 0, true); //TODO 
+        if (dist2 < 0)
+        {
+            ROS_INFO("Computation of l3 failed: it will be recomputed later...");
+            recompute_llh = true;
+            return;
+        }
+        
+        if (dist + dist2 <= conservative_maximum_distance_one_way()) //NB I'm considering the frontiers that are reachable with current battery life, whereare previously I've count just the unvisited frontiers, not matter if they are reachable or not...
             ++num_jobs_close;
     }
     ROS_DEBUG("Number of frontiers: %d", num_jobs);
@@ -1160,6 +1177,7 @@ void docking::update_l4() //TODO(minor) comments
                                                 true);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
         if (dist_job_temp < 0)
         {
+            ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
             recompute_llh = true;
             return;
         }
@@ -1193,12 +1211,12 @@ void docking::update_l4() //TODO(minor) comments
 
 void docking::update_l5() //TODO(minor) comments
 {
-    ROS_DEBUG("Update l5");
-    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE)
-        l5 = (DANGEROUS_TIME_VALUE - battery.remaining_time_run) / DANGEROUS_TIME_VALUE + 1.0;
-    else
+//    ROS_DEBUG("Update l5");
+//    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE)
+//        l5 = (DANGEROUS_TIME_VALUE - battery.remaining_time_run) / DANGEROUS_TIME_VALUE + 1.0;
+//    else
         l5 = 0;
-    ROS_DEBUG("l5: %.1f", l5);
+//    ROS_DEBUG("l5: %.1f", l5);
 }
 
 bool docking::auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction,
@@ -1341,6 +1359,11 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == checking_vacancy)
     {
+        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
+            log_major_error("sending invalid DS id 5!!!");
+            ROS_ERROR("%d",  get_target_ds_id());  
+        }
+    
         ;  // ROS_ERROR("\n\t\e[1;34m checking vacancy!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/check_vacancy";
@@ -1612,6 +1635,9 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         ds_t s;
         s.id = msg.get()->id;
         
+        if(s.id < 0 || s.id >= num_ds)
+            log_major_error("invalid ds id 3!!!");
+        
         abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
         
         s.vacant = msg.get()->vacant;
@@ -1866,6 +1892,7 @@ void docking::start_new_auction()
     {
         log_major_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
+        compute_and_publish_path_on_ds_graph_to_home();
         return;
     }
 
@@ -1995,15 +2022,25 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 //DONE++
 void docking::abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y)
 {
+    // Use these if the /map frame origin coincides with the robot starting position in Stage (which should be the case)
     *relative_x = absolute_x - origin_absolute_x;
     *relative_y = absolute_y - origin_absolute_y;
+
+    // Use these if the /map frame origin coincides with Stage origin
+//    *relative_x = absolute_x;
+//    *relative_y = absolute_y;
 }
 
 //DONE++
 void docking::rel_to_abs(double relative_x, double relative_y, double *absolute_x, double *absolute_y)
 {
+    // Use these if the /map frame origin coincides with the robot starting position in Stage (which should be the case)
     *absolute_x = relative_x + origin_absolute_x;
     *absolute_y = relative_y + origin_absolute_y;
+    
+    // Use these if the /map frame origin coincides with Stage origin
+//    *absolute_x = relative_x;
+//    *absolute_y = relative_y;
 }
 
 void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)  // TODO(minor) explain
@@ -2013,6 +2050,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
     // Safety check on the received DS
     if(msg.get()->id < 0) {
         ROS_ERROR("Invalid DS id: %d", msg.get()->id);
+        log_major_error("received invalid DS from a robot...");
         return;
     }
 
@@ -2026,6 +2064,8 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         /* If the robot is going to or already charging, or if it is going to check
          * already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
+//        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
+//            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
             robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         {
@@ -2139,7 +2179,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
             {
                 //safety check
                 if(!optimal_ds_is_set())
-                    ROS_FATAL("THIS SHOULD NOT HAPPEN!");
+                    log_major_error("THIS SHOULD NOT HAPPEN!");
                     
                 /* Notify explorer node about the new target DS.
                  * Notice that it is important that target_ds is updated only here,
@@ -2238,6 +2278,8 @@ void docking::create_log_files()
     csv_file_2 = log_path + std::string("position.log");
     csv_file_3 = log_path + std::string("connectivity.log");
     info_file = log_path + std::string("metadata.csv");
+    graph_file = log_path + std::string("graph.log");
+    ds_filename = log_path + std::string("ds.csv");
 
     /* Create and initialize files */
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -2290,153 +2332,158 @@ void docking::set_target_ds_vacant(bool vacant)
     update_l1();
 }
 
-void docking::compute_MST()  // TODO(minor) check all functions related to MST
-{
-    int V = ds_graph.size();
-    //int N = ds.size();
-    //int graph_2[V][V];
-    int parent[V];   // Array to store constructed MST
-    float key[V];      // Key values used to pick minimum weight edge in cut
-    bool mstSet[V];  // To represent set of vertices not yet included in MST
-    
-    // Initialize all keys as INFINITE
-    for (int i = 0; i < V; i++) {
-        key[i] = INT_MAX;
-        mstSet[i] = false;
-    }
-    
-    /*
-    for(int i=0; i<V; i++)
-        for(int j=0; j<V; j++)
-            graph_2[i][j] = 0;
-    for(int i=0; i<V-1; i++)
-        for(int j=0; j<V-1; j++)
-            graph_2[i][j] = graph[i][j];
-            
-    graph_2[1][2] = 100;
-    graph_2[2][1] = 100;
-    graph_2[2][4] = 20;
-    graph_2[4][2] = 20;
-    
-*/    
-    
-//    for (int i = 0; i < V; i++)
-//        for (int j = 0; j < V; j++)
-//            ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
+//void docking::compute_MST()  // TODO(minor) check all functions related to MST
+//{
+//    unsigned int V = ds_graph.size();
+//    //int N = ds.size();
+//    //int graph_2[V][V];
+//    int parent[V];   // Array to store constructed MST
+//    float key[V];      // Key values used to pick minimum weight edge in cut
+//    bool mstSet[V];  // To represent set of vertices not yet included in MST
+//    
+//    // Initialize all keys as INFINITE
+//    for (unsigned int i = 0; i < V; i++) {
+//        key[i] = INT_MAX;
+//        mstSet[i] = false;
+//    }
+//    
+//    /*
+//    for(int i=0; i<V; i++)
+//        for(int j=0; j<V; j++)
+//            graph_2[i][j] = 0;
+//    for(int i=0; i<V-1; i++)
+//        for(int j=0; j<V-1; j++)
+//            graph_2[i][j] = graph[i][j];
+//            
+//    graph_2[1][2] = 100;
+//    graph_2[2][1] = 100;
+//    graph_2[2][4] = 20;
+//    graph_2[4][2] = 20;
+//    
+//*/    
+//    
+////    for (int i = 0; i < V; i++)
+////        for (int j = 0; j < V; j++)
+////            ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
 
 
-    // Always include first 1st vertex in MST.
-    key[0] = 0;      // Make key 0 so that this vertex is picked as first vertex
-    parent[0] = -1;  // First node is always root of MST
+//    // Always include first 1st vertex in MST.
+//    key[0] = 0;      // Make key 0 so that this vertex is picked as first vertex
+//    parent[0] = -1;  // First node is always root of MST
 
-    // The MST will have V vertices
-    for (int count = 0; count < V - 1; count++)
-    {
+//    // The MST will have V vertices
+//    for (unsigned int count = 0; count < V - 1; count++)
+//    {
 
-        // Pick the minimum key vertex from the set of vertices
-        // not yet included in MST
-        //int u = minKey(key, mstSet, V);
-        
-        
-        int min = INT_MAX, u = -1;
-        /*
-        for(int u=0; u < V; u++)
-            if(mstSet[u] == false) {
-                min_index = u;
-                break;
-            }
-        */
-        for (int v = 0; v < V; v++) {
-            //ROS_ERROR("%d", mstSet[v]);        
-            //ROS_ERROR("%d", key[v]);
-            if (mstSet[v] == false && key[v] < min) {
-                min = key[v];
-                u = v;
-            }
-        }
+//        // Pick the minimum key vertex from the set of vertices
+//        // not yet included in MST
+//        //int u = minKey(key, mstSet, V);
+//        
+//        
+//        int min = INT_MAX;
+//        unsigned int u = -1;
+//        /*
+//        for(int u=0; u < V; u++)
+//            if(mstSet[u] == false) {
+//                min_index = u;
+//                break;
+//            }
+//        */
+//        for (unsigned int v = 0; v < V; v++) {
+//            //ROS_ERROR("%d", mstSet[v]);        
+//            //ROS_ERROR("%d", key[v]);
+//            if (mstSet[v] == false && key[v] < min) {
+//                min = key[v];
+//                u = v;
+//            }
+//        }
 
-        if(u < 0) {
-            log_major_error("DS graph has unconnected components! Not implemented for the moment...");
-            return;
-            
-            /*
-            for(u=0; u < V; u++)
-            if(mstSet[u] == false)
-                break;
-            if(u >= V) {
-                ROS_FATAL("Strange DS graph... abort computation of MST");
-                return;
-            }
-            parent[u] = -1;
-            */
-        }
-        
+//        if(u < 0) {
+//            log_major_error("DS graph has unconnected components! Not implemented for the moment...");
+//            return;
+//            
+//            /*
+//            for(u=0; u < V; u++)
+//            if(mstSet[u] == false)
+//                break;
+//            if(u >= V) {
+//                ROS_FATAL("Strange DS graph... abort computation of MST");
+//                return;
+//            }
+//            parent[u] = -1;
+//            */
+//        }
+//        
 
-        // Add the picked vertex to the MST Set
-        mstSet[u] = true;
+//        // Add the picked vertex to the MST Set
+//        mstSet[u] = true;
 
-        // Update key value and parent index of the adjacent vertices of
-        // the picked vertex. Consider only those vertices which are not yet
-        // included in MST
-        for (int v = 0; v < V; v++)
+//        // Update key value and parent index of the adjacent vertices of
+//        // the picked vertex. Consider only those vertices which are not yet
+//        // included in MST
+//        for (unsigned int v = 0; v < V; v++) {
+//            
+//            if( u >=    ds_graph.size() || v >=  ds_graph[u].size())
+//                log_major_error("size in compute_MST()");
+//            
+//            // graph[u][v] is non zero only for adjacent vertices of m
+//            // mstSet[v] is false for vertices not yet included in MST
+//            // Update the key only if graph[u][v] is smaller than key[v]
+//            if (ds_graph[u][v] > 0 && mstSet[v] == false && ds_graph[u][v] < key[v]) {
+//                parent[v] = u;
+//                key[v] = ds_graph[u][v];
+//            }
+//        }
+//    }
 
-            // graph[u][v] is non zero only for adjacent vertices of m
-            // mstSet[v] is false for vertices not yet included in MST
-            // Update the key only if graph[u][v] is smaller than key[v]
-            if (ds_graph[u][v] > 0 && mstSet[v] == false && ds_graph[u][v] < key[v]) {
-                parent[v] = u;
-                key[v] = ds_graph[u][v];
-            }
-    }
+//    // print the constructed MST
+//    // printMST(parent, V, graph);
+//    //int ds_mst_2[V][V];
+//    for (unsigned int i = 0; i < V; i++)
+//        for (unsigned int j = 0; j < V; j++)
+//            ds_mst[i][j] = 0;
 
-    // print the constructed MST
-    // printMST(parent, V, graph);
-    //int ds_mst_2[V][V];
-    for (int i = 0; i < V; i++)
-        for (int j = 0; j < V; j++)
-            ds_mst[i][j] = 0;
+//    // TODO(minor) does not work if a DS is not connected to any other DS
+//    for (unsigned int i = 1; i < V; i++)
+//    {
+//        if(parent[i] < 0) {
+//            ROS_ERROR("This node is not connected with other nodes");
+//            for(unsigned int j=0; j < V; j++) {
+//                ds_mst[i][j] = -10;
+//                ds_mst[j][i] = -10;
+//            }
+//            continue;
+//        }
+//        if(i >= ds_mst.size() || (unsigned int)parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size() || parent[i] < 0) {
+//            log_major_error("SIZE!!!");
+//            ROS_ERROR("%d", i);   
+//            ROS_ERROR("%d", parent[i]);
+//        }
+//        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
+//        ds_mst[parent[i]][i] = 1;
+//    }
 
-    // TODO(minor) does not work if a DS is not connected to any other DS
-    for (int i = 1; i < V; i++)
-    {
-        if(parent[i] < 0) {
-            ROS_ERROR("This node is not connected with other nodes");
-            for(int j=0; j < V; j++) {
-                ds_mst[i][j] = -10;
-                ds_mst[j][i] = -10;
-            }
-            continue;
-        }
-        if((unsigned int)i >= ds_mst.size() || parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size() || parent[i] < 0) {
-            log_major_error("SIZE!!!");
-            ROS_ERROR("%d", i);   
-            ROS_ERROR("%d", parent[i]);
-        }
-        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
-        ds_mst[parent[i]][i] = 1;
-    }
+//    
+////    for (unsigned int i = 0; i < V; i++)
+////        for (unsigned int j = 0; j < V; j++)
+////            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+//    
 
-    
-    for (int i = 0; i < V; i++)
-        for (int j = 0; j < V; j++)
-            ; //ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
-    
+//    /*
+//    int k = 0;              // index of the closest recheable DS
+//    int target = 4;         // the id of the DS that we want to reach
+//    std::vector<int> path;  // sequence of nodes that from target leads to k;
+//    i.e., if the vector is traversed in the
+//                            // inverse order (from end to begin), it contains the
+//    path to go from k to target
 
-    /*
-    int k = 0;              // index of the closest recheable DS
-    int target = 4;         // the id of the DS that we want to reach
-    std::vector<int> path;  // sequence of nodes that from target leads to k;
-    i.e., if the vector is traversed in the
-                            // inverse order (from end to begin), it contains the
-    path to go from k to target
+//    find_path(ds_mst, k, target, path);
 
-    find_path(ds_mst, k, target, path);
-
-    std::vector<int>::iterator it;
-    for (it = path.begin(); it != path.end(); it++)
-        ROS_ERROR("%d - ", *it);
-        */
-}
+//    std::vector<int>::iterator it;
+//    for (it = path.begin(); it != path.end(); it++)
+//        ROS_ERROR("%d - ", *it);
+//        */
+//}
 
 
 //int docking::minKey(int key[], bool mstSet[], int V)
@@ -2474,6 +2521,7 @@ void docking::compute_MST()  // TODO(minor) check all functions related to MST
 bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
 {
     ROS_INFO("Searching for path from ds%d to ds%d...", start, end);
+    
     /* Temporary variable to store the path from 'end' to 'start' */
     std::vector<int> inverse_path;
 
@@ -2619,7 +2667,10 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
         // Update key value and parent index of the adjacent vertices of
         // the picked vertex. Consider only those vertices which are not yet
         // included in MST
-        for (int v = 0; v < V; v++)
+        for (int v = 0; v < V; v++) {
+        
+            if((unsigned int)u >=    ds_graph.size() || (unsigned int)v >=  ds_graph[u].size())
+                log_major_error("size in compute_MST_2()");
 
             // graph[u][v] is non zero only for adjacent vertices of m
             // mstSet[v] is false for vertices not yet included in MST
@@ -2629,6 +2680,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
                 key[v] = key[u] + ds_graph[u][v];
                 //ROS_ERROR("%d has %d as parent; cost of %d is %f", v, parent[v], v, key[v]); 
             }
+        }
     }
 
     // print the constructed MST
@@ -2724,6 +2776,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
                      (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
             discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
             undiscovered_ds.erase(it);
+            
+            if(it->id < 0 || it->id >= num_ds)
+                log_major_error("sending invalid DS id!!!");
 
             /* Inform other robots about the "new" DS */
             adhoc_communication::SendEmDockingStation send_ds_srv_msg;
@@ -2913,7 +2968,6 @@ void docking::check_reachable_ds()
 //            new_ds.y = it->y;
 //            new_ds.vacant = it->vacant;
             
-            // FIXME Valgrind complains about the push_back, but I don't understand why...
             ds.push_back(*it);
 //            ds.push_back(new_ds);
             
@@ -2974,46 +3028,8 @@ void docking::check_reachable_ds()
 
     if (new_ds_discovered || recompute_graph)
     {
-        // construct ds graph //TODO(minor) construct graph only when a new DS is found
-        for (unsigned int i = 0; i < ds.size(); i++) {
-            for (unsigned int j = 0; j < ds.size(); j++) {
-                //safety checks   
-                if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0) {
-                    log_major_error("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");
-                    return;      
-                }
-                if (i == j)
-                    ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
-                else
-                {
-                    double dist;
-                    dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                    if (dist < 0)
-                    {
-                        recompute_graph = true;
-                        return;
-                    }
-                    //ROS_ERROR("%f", dist);
-                    //ROS_ERROR("%f", conservative_maximum_distance_one_way());
-                    if(conservative_maximum_distance_one_way() <= 0){
-                        ROS_ERROR("Cannot compute DS graph at the moment...");
-                        recompute_graph = true;
-                        return;
-                    }
-                    if (dist < conservative_maximum_distance_one_way())
-                    {
-                        ds_graph[ds[i].id][ds[j].id] = dist;
-                        ds_graph[ds[j].id][ds[i].id] = dist;
-                    }
-                    else
-                    {
-                        ds_graph[ds[i].id][ds[j].id] = 0;
-                        ds_graph[ds[j].id][ds[i].id] = 0;
-                    }
-                }
-            }
-        }
-        recompute_graph = false;
+        update_ds_graph();
+        
 
         // construct MST starting from ds graph
         //compute_MST_2(1);
@@ -3025,6 +3041,69 @@ void docking::check_reachable_ds()
     
 }
 
+void docking::update_ds_graph() {
+    for (unsigned int i = 0; i < ds.size(); i++) {
+        for (unsigned int j = 0; j < ds.size(); j++) {
+            //safety checks   
+            if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
+                ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
+            if (i == j)
+                ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
+            else
+            {
+                double dist;
+                dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                if (dist <= 0)
+                {
+                    ROS_ERROR("Cannot compute DS graph at the moment...");
+                    recompute_graph = true;
+                    return;
+                }
+                //ROS_ERROR("%f", dist);
+                //ROS_ERROR("%f", conservative_maximum_distance_one_way());
+                if(conservative_maximum_distance_one_way() <= 0){
+                    ROS_ERROR("Cannot compute DS graph at the moment...");
+                    recompute_graph = true;
+                    return;
+                }
+                if (dist < conservative_maximum_distance_one_way())
+                {
+                    //update distance only if it is better than the one already stored (which can happen if a new shorter path between two ds is found)
+                    if (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id]) {
+                        ds_graph[ds[i].id][ds[j].id] = dist;
+                        ds_graph[ds[j].id][ds[i].id] = dist;
+                    }
+                }
+                else
+                {
+                    ds_graph[ds[i].id][ds[j].id] = 0;
+                    ds_graph[ds[j].id][ds[i].id] = 0;
+                }
+            }
+        }
+    }
+    recompute_graph = false;
+    
+    graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
+    for(unsigned int k=0; k < ds.size(); k++) {
+        for(unsigned int i=0; i < ds.size(); i++)
+            if((unsigned int)ds.at(i).id == k)
+                for(unsigned int h=0; h < ds.size(); h++)
+                    for(unsigned int j=0; j < ds.size(); j++)
+                        if((unsigned int)ds.at(j).id == h)
+                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+        graph_fs << std::endl;
+    }
+    graph_fs << std::endl;
+    for(unsigned int i=0; i < ds.size(); i++) {
+        for(unsigned int j=0; j < ds.size(); j++)
+            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+        graph_fs << std::endl;
+    }
+    graph_fs.close();
+    
+}
+
 void docking::finalize() //TODO(minor) do better
 {
     ROS_INFO("Close log files");
@@ -3032,6 +3111,7 @@ void docking::finalize() //TODO(minor) do better
     ros::Duration time = ros::Time::now() - time_start;
 
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out); //TODO(minor) avoid continusouly open-close...
+    fs_csv << "#end" << std::endl;
     fs_csv << time.toSec() << ","
            << "-1"
            << "," 
@@ -3145,8 +3225,11 @@ void docking::update_robot_position()
 }
 
 void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) { //TODO(minor) do better...
-    ROS_INFO("Sending complete list of discovered docking stations");
+    ROS_INFO("Sending complete list of discovered (but possibly not reachable) docking stations");
     for(std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); it++) {
+        if(it->id < 0 || it->id >= num_ds)
+         log_major_error("sending invalid DS id 2!!!");
+    
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "docking_stations";
         srv_msg.request.docking_station.id = it->id;
@@ -3160,7 +3243,11 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
         sc_send_docking_station.call(srv_msg);
     }
-        for(std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++) {
+    
+    for(std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++) {
+        if(it->id < 0 || it->id >= num_ds)
+         log_major_error("sending invalid DS id 3!!!");
+    
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "docking_stations";
         srv_msg.request.docking_station.id = it->id;
@@ -3179,15 +3266,15 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
 
 //DONE++
 float docking::conservative_remaining_distance_with_return() {
-    //return (battery.remaining_distance / (double)2) * safety_coeff;
-    return (battery.remaining_distance / (double)2);
+    //return (battery.remaining_distance / (double) 2.0 ) * safety_coeff;
+    return battery.remaining_distance / (double) 2.0;
 }
 
 //DONE++
 float docking::conservative_maximum_distance_with_return() {
     //ROS_ERROR("%f", maximum_travelling_distance);
-    //return (maximum_travelling_distance / (double)2 ) * safety_coeff;
-    return (maximum_travelling_distance / (double)2 );
+    //return (maximum_travelling_distance / (double) 2.0 ) * safety_coeff;
+    return maximum_travelling_distance / (double) 2.0;
 }
 
 //DONE++
@@ -3226,43 +3313,7 @@ void docking::wait_battery_info() {
 
 void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
     ROS_INFO("Periodic recomputation of DS graph");
-    for (unsigned int i = 0; i < ds.size(); i++) {
-        for (unsigned int j = 0; j < ds.size(); j++) {
-            //safety checks   
-            if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
-                ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
-            if (i == j)
-                ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
-            else
-            {
-                double dist;
-                dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                if (dist < 0)
-                {
-                    recompute_graph = true;
-                    return;
-                }
-                //ROS_ERROR("%f", dist);
-                //ROS_ERROR("%f", conservative_maximum_distance_one_way());
-                if(conservative_maximum_distance_one_way() <= 0){
-                    ROS_ERROR("Cannot compute DS graph at the moment...");
-                    recompute_graph = true;
-                    return;
-                }
-                //update distance only if it is a valid distance and if it is better than the one already stored
-                if (dist < conservative_maximum_distance_one_way() && (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id]) )
-                {
-                    ds_graph[ds[i].id][ds[j].id] = dist;
-                    ds_graph[ds[j].id][ds[i].id] = dist;
-                }
-                else
-                {
-                    ds_graph[ds[i].id][ds[j].id] = 0;
-                    ds_graph[ds[j].id][ds[i].id] = 0;
-                }
-            }
-        }
-    }
+    update_ds_graph();
     //compute_MST();
 }
 
@@ -3454,6 +3505,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
     if (min_ds == NULL) {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
+        log_major_error("No DS with EOs was found"); //this shouldn't happen because auctioning_2 should be entered only if explorer thinks that there are EOs
+        return;
         // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
     }
 
@@ -3483,6 +3536,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
+        log_major_error("impossible...");
+        return;
     }
 
     path.clear();

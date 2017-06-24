@@ -517,8 +517,8 @@ class docking
     void cb_recharge(const std_msgs::Empty &msg);
     void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
 
-    std::string csv_file, csv_file_2, csv_file_3, info_file;
-    std::fstream fs_csv, fs2_csv, fs3_csv, fs_info;
+    std::string csv_file, csv_file_2, csv_file_3, info_file, graph_file, ds_filename;
+    std::fstream fs_csv, fs2_csv, fs3_csv, fs_info, graph_fs, ds_fs;
     
     ros::Time time_start;
     

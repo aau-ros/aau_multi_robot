@@ -2723,7 +2723,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     else
         total_distance_eu += euclidean_distance(x, y, robot_home_x, robot_home_y);
     if(total_distance_eu > available_distance)
-        return false;       
+        return false;
     
     // distance to robot
     total_distance = trajectory_plan_meters(x, y);
@@ -4514,9 +4514,9 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
                 ROS_ERROR("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
                 ROS_INFO("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
                 total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
-                if(errors == 0)
-                    my_error_counter++;
-                errors++;
+//                if(errors == 0)
+//                    my_error_counter++;
+//                errors++;
                 *error = true;
             }
             if(available_distance > total_distance) {
@@ -4911,11 +4911,16 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     sort_time = (ros::Time::now() - start_time).toSec();
     start_time = ros::Time::now();
     number_of_frontiers = frontiers.size();
-
+    
     ROS_DEBUG("sorted_frontiers size: %lu", sorted_frontiers.size());
+    if(sorted_frontiers.size() == 0) {
+        my_error_counter = 0;
+        return false;
+    }
+
     if(frontier_selected || APPROACH == 0) {
         frontier_selected = false;
-        for(int i=0; i < sorted_frontiers.size(); i++)
+        for(unsigned int i=0; i < sorted_frontiers.size(); i++)
         {
             if(APPROACH == 0)
                 if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i))) {

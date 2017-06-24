@@ -110,6 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
+    unsigned int retries;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -148,6 +149,8 @@ class Explorer
         battery_charge_temp = 100;
         energy_consumption= 0;
         available_distance= 0;
+        starting_x = 0, starting_y = 0;
+        retries = 0;
     
         // F
         test = true;
@@ -1310,9 +1313,6 @@ class Explorer
 //                                else {
 //                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
-                                    //store where the robot is moving from
-                                    starting_x = pose_x;
-                                    starting_y = pose_y;
 //                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
@@ -1335,15 +1335,18 @@ class Explorer
 
                             // TODO(minor) useless
                             // charge_countdown = EXIT_COUNTDOWN;
+                            
+                            retries = 0;
                         }
 
                         else
                         {
-                            if(exploration->recomputeGoal()) { //TODO(IMPORTANT)
-//                                ROS_ERROR("Goal not found, trying to recompute goal...");
-//                                ROS_INFO("Goal not found, trying to recompute goal...");
-                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
-                                ROS_INFO("Goal not found due to some computation failure, start auction...");
+                            if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
+                                ROS_ERROR("Goal not found, trying to recompute goal...");
+                                ROS_INFO("Goal not found, trying to recompute goal...");
+//                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
+//                                ROS_INFO("Goal not found due to some computation failure, start auction...");
+                                retries++;
                                 
                                 ros::Duration(3).sleep();
                                 continue;
@@ -1352,6 +1355,9 @@ class Explorer
 //                                continue;
                                 
                             }
+                            
+                            if(retries >= 7)
+                                log_major_error("too many retries, this shouldn't happend");
                             
                             //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
                             if(robot_state != fully_charged) {
@@ -1763,7 +1769,7 @@ class Explorer
                     number_of_recharges++;  // TODO(minor) remove
                     update_robot_state_2(charging);
 
-                    /* Compute path length */  //TODO(minor) maybe we shoiuld also call this method when a robot reaches a queue, when it is moving from a queue to the DS, when it leaves the DS to queue again, ...
+                    // do not store travelled distance here... the move_robot called at the previous iteration has done it...
                     //exploration->trajectory_plan_store(target_ds_x, target_ds_y);
                 }
 
@@ -1773,7 +1779,8 @@ class Explorer
                     if (robot_state == moving_to_frontier)
                         update_robot_state_2(exploring);
 
-                    ROS_INFO("STORING PATH");
+                    // do not store travelled distance here... the move_robot called at the previous iteration has done it...
+//                    ROS_INFO("STORING PATH");
                     //exploration->trajectory_plan_store(
                     //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).x_coordinate,
                     //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);
@@ -1835,7 +1842,7 @@ class Explorer
                 }
             }
             
-            exploration->trajectory_plan_store(stored_robot_x, stored_robot_y); //TODO(minor) here? yes it should be ok because even if the robot failes reaching the goal, in the worst case the travelled distance is 0, so it's ok if I add it to the global_travelled distance, and if instead it moved a little, I have to take note of this travelled distance...
+//            exploration->trajectory_plan_store(stored_robot_x, stored_robot_y); //TODO(minor) here? yes it should be ok because even if the robot failes reaching the goal, in the worst case the travelled distance is 0, so it's ok if I add it to the global_travelled distance, and if instead it moved a little, I have to take note of this travelled distance...
 
             ROS_DEBUG("                                             ");
             ROS_DEBUG("                                             ");
@@ -2233,8 +2240,9 @@ class Explorer
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
-                   << map_progress.local_freespace << "," << free_cells_count << "," 
-                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b << std::endl;
+                   << map_progress.local_freespace << "," << free_cells_count //<< "," 
+//                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b
+                   << std::endl;
             fs_csv.close();
 
             costmap_mutex.unlock();
@@ -3016,7 +3024,6 @@ class Explorer
         ros::Time time_before = ros::Time::now();
         prev_pose_x = pose_x;
         prev_pose_y = pose_y;
-        double starting_x = pose_x, starting_y = pose_y;
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
@@ -3034,13 +3041,16 @@ class Explorer
 
                 if (my_stuck_countdown <= ros::Duration(0))
                 {
+                    store_travelled_distance();
+
+                    ac.cancelGoal();
+                    exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                    exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                    approximate_success++;
+                
                     if( fabs(position_x - pose_x) < 1 && fabs(position_y - pose_y) < 1 ) {
                         ROS_ERROR("robot seems unable to received ACK from actionlib even if the goal have been reached");
                         ROS_INFO("robot seems unable to received ACK from actionlib even if the goal have been reached");
-                        ac.cancelGoal();
-                        exploration->next_auction_position_x = robotPose.getOrigin().getX();
-                        exploration->next_auction_position_y = robotPose.getOrigin().getY();
-                        approximate_success++;
                         return true;
                     } else
                         return false;
@@ -3072,6 +3082,9 @@ class Explorer
                     ac.cancelGoal();
                     exploration->next_auction_position_x = robotPose.getOrigin().getX();
                     exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                    
+                    store_travelled_distance();
+                    
                     return true;
                 }
                 if( (robot_state == going_charging && remaining_distance < 3.0) || (robot_state == going_in_queue && remaining_distance < 6.0) ) {
@@ -3085,6 +3098,8 @@ class Explorer
                         exploration->next_auction_position_x = robotPose.getOrigin().getX();
                         exploration->next_auction_position_y = robotPose.getOrigin().getY();
                         log_minor_error("consider that robot reached the DS...");
+                        
+                        store_travelled_distance();
                         return true;
                     }
                 }
@@ -3099,7 +3114,7 @@ class Explorer
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED)
             {
                 
-                
+                store_travelled_distance();
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 
@@ -3123,6 +3138,7 @@ class Explorer
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
 
         approximate_success = 0;
+        store_travelled_distance();
         return true;
     }
     
@@ -3172,7 +3188,6 @@ class Explorer
         ros::Time time_before = ros::Time::now();
         prev_pose_x = pose_x;
         prev_pose_y = pose_y;
-        double starting_x = pose_x, starting_y = pose_y;
         while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
@@ -3197,6 +3212,7 @@ class Explorer
                         exploration->next_auction_position_x = robotPose.getOrigin().getX();
                         exploration->next_auction_position_y = robotPose.getOrigin().getY();
 //                        approximate_success++;
+                        store_travelled_distance();
                         return true;
 //                    } else
 //                        return false;
@@ -3239,7 +3255,7 @@ class Explorer
 
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
-
+        store_travelled_distance();
         return true;
     }
 
@@ -3904,6 +3920,14 @@ class Explorer
         lock_fstream << ros::Time::now() - time_start << ": " << function_name << ": " << action << std::endl;
         lock_fstream.close();
         log_mutex.unlock();
+    }
+    
+    void store_travelled_distance() {
+        ROS_INFO("Storing travelled distance");
+        exploration->trajectory_plan_store(starting_x, starting_y);
+        ROS_INFO("Stored");
+        starting_x = pose_x;
+        starting_y = pose_y;
     }
 
     /********************
