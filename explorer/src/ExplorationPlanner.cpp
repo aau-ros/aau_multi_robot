@@ -1128,7 +1128,9 @@ int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double t
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
     //acquire_mutex(&costmap_mutex, __FUNCTION__);
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap_global_ros_->getCostmap()->getMutex()));
     //release_mutex(&costmap_mutex, __FUNCTION__);    
     
     if(successful == true)
@@ -1215,7 +1217,9 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 
     //acquire_mutex(&costmap_mutex, __FUNCTION__);
 //    ROS_INFO("computing path");
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap_global_ros_->getCostmap()->getMutex()));
 //    ROS_INFO("path computed");
     //release_mutex(&costmap_mutex, __FUNCTION__);
     
@@ -4456,7 +4460,9 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
     //acquire_mutex(&costmap_mutex, __FUNCTION__);
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap_global_ros_->getCostmap()->getMutex()));
     //release_mutex(&costmap_mutex, __FUNCTION__);
     
     if(successful == true) {

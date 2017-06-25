@@ -259,7 +259,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     llh = 0;
     local_auction_id = 0;
     participating_to_auction = 0;
-    maximum_travelling_distance = -100;
+    maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
     time_start = ros::Time::now();
     id_next_target_ds = -1;
@@ -2081,15 +2081,15 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
 //        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
 //            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
+            robot_state == checking_vacancy)
         {
             /* Print some debut text */
             if (robot_state == charging || robot_state == going_charging)
                 ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
                 ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
-            else if (robot_state == fully_charged || robot_state == leaving_ds)
-                ROS_INFO("I'm leaving ds%d, jsut wait a sec...", msg.get()->id);
+//            else if (robot_state == fully_charged || robot_state == leaving_ds)
+//                ROS_INFO("I'm leaving ds%d, jsut wait a sec...", msg.get()->id);
 
             /* Reply to the robot that asked for the check, telling it that the DS is
              * occupied */
@@ -3519,6 +3519,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
 //    job.y_coordinate = 20;
 //    jobs.push_back(job);
 
+    ROS_DEBUG("%lu", jobs.size());
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
@@ -3650,7 +3651,7 @@ double min_dist = numeric_limits<int>::max();
     while (min_ds == NULL && retry < 5) {
         for (unsigned int i = 0; i < ds.size(); i++)
         {
-                double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0);
+                double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0); //TODO use robot_home_x
                 if (dist < 0)
                     continue;
 
@@ -3667,7 +3668,9 @@ double min_dist = numeric_limits<int>::max();
     if (min_ds == NULL) {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
+        log_major_error("impossible, min_ds == NULL for going home...");
         // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+        return;
     }
 
     // compute closest DS
@@ -3692,6 +3695,8 @@ double min_dist = numeric_limits<int>::max();
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
+        log_major_error("impossible, closest_ds == NULL for going home...");
+        return;
     }
 
     path.clear();

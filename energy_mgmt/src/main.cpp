@@ -56,13 +56,13 @@ int main(int argc, char** argv)
     //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
     while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
-        //ros::spinOnce();
+//        ros::spinOnce();
         
-        //doc.test();
+//        doc.test();
         
-        //ros::spinOnce();
+//        ros::spinOnce();
         
-        //doc.join_all_multicast_groups();
+//        doc.join_all_multicast_groups();
         
         doc.update_robot_position();
         
@@ -76,11 +76,11 @@ int main(int argc, char** argv)
         
         doc.send_robot();
         
-        doc.update_llh();
+//        doc.update_llh();
         
-        //doc.recompute_MST();
+//        doc.recompute_MST();
         
-        //doc.send_fake_msg();
+//        doc.send_fake_msg();
         
 
         // sleep for 1/rate seconds
@@ -90,16 +90,16 @@ int main(int argc, char** argv)
         ROS_INFO("End of main loop");
         
         /*
-                                geometry_msgs::Twist cmd_vel;
-                        cmd_vel.linear.x = 0.0;
-                        cmd_vel.linear.y = 0.0;
-                        //cmd_vel.linear.z = 0.0;
-                        //cmd_vel.angular.x = 0.0;
-                        //cmd_vel.angular.y = 0.0;
-                        cmd_vel.angular.z = 0.5;
-                        ROS_ERROR("%s",  pub_cmd_vel.getTopic().c_str());
-                        pub_cmd_vel.publish(cmd_vel);
-                        */
+        geometry_msgs::Twist cmd_vel;
+        cmd_vel.linear.x = 0.0;
+        cmd_vel.linear.y = 0.0;
+        //cmd_vel.linear.z = 0.0;
+        //cmd_vel.angular.x = 0.0;
+        //cmd_vel.angular.y = 0.0;
+        cmd_vel.angular.z = 0.5;
+        ROS_ERROR("%s",  pub_cmd_vel.getTopic().c_str());
+        pub_cmd_vel.publish(cmd_vel);
+        */
     }
     
     ROS_INFO("shutting down...");
@@ -111,8 +111,8 @@ int main(int argc, char** argv)
     
     ros::shutdown();
     
-    while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
-        ros::Duration(10).sleep();
+//    while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
+//        ros::Duration(10).sleep();
         
     return 0;
 }
