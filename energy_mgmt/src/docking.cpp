@@ -2532,34 +2532,69 @@ void docking::set_target_ds_vacant(bool vacant)
 //}
 
 //DONE++
+//bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
+//{
+//    ROS_INFO("Searching for path from ds%d to ds%d...", start, end);
+//    
+//    /* Temporary variable to store the path from 'end' to 'start' */
+////    std::vector<int> inverse_path;
+
+//    /* Call auxiliary function find_path_aux() to perform the search */
+////    bool path_found = find_path_aux(tree, start, end, inverse_path, start);
+//    bool path_found = find_path_aux(tree, start, end, path, start);
+
+//    /* If a path was found, reverse the constructed path to obtain the real path
+//     * that goes from 'start' to 'end' */
+//    if (path_found) {
+//        ROS_INFO("Path found!");
+//        
+//        /* Push also the starting node (as last node of the inverse path), since find_path_aux() does not push it automatically */
+////        inverse_path.push_back(start);
+//        path.push_back(start);
+//        
+//        // Reverse the found path, since find_path_aux returns a path starting from 'end', whereas obviously we need a path starting from 'start' (that we have previously inserted)
+//        std::reverse(path.begin(), path.end());
+//        
+////        for (unsigned int i = inverse_path.size() - 1; i >= 0; i--)
+////            path.push_back(inverse_path.at(i));
+//        for(unsigned int i=0; i < path.size(); i++)
+//            ROS_DEBUG("\t%d", path[i]);
+//    }
+//    else
+//        ROS_INFO("No path found");
+
+//    /* Tell the caller if a path was found or not */
+//    return path_found;
+//}
+
 bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
 {
     ROS_INFO("Searching for path from ds%d to ds%d...", start, end);
-    
-    /* Temporary variable to store the path from 'end' to 'start' */
-    std::vector<int> inverse_path;
 
-    /* Call auxiliary function find_path_aux() to perform the search */
-    bool path_found = find_path_aux(tree, start, end, inverse_path, start);
+    // Call auxiliary function find_path_aux() to perform the search
+    bool path_found = find_path_aux(tree, start, end, path, start);
 
-    /* Push also the starting node (as last node of the inverse path), since find_path_aux() does not push it automatically */
-    inverse_path.push_back(start);
-
-    /* If a path was found, reverse the constructed path to obtain the real path
-     * that goes from 'start' to 'end' */
+    // If find_path_aux() found a path, the returned path is from 'end' to the node before 'start', so we need to manually push 'start' and then reverse the path
     if (path_found) {
         ROS_INFO("Path found!");
-        for (unsigned int i = inverse_path.size() - 1; i >= 0; i--)
-            path.push_back(inverse_path.at(i));
+        
+        // Push the starting node
+        path.push_back(start);
+        
+        // Reverse the path (that now includes also 'start')
+        std::reverse(path.begin(), path.end());
+        
+        // Log the path (for debugging)
         for(unsigned int i=0; i < path.size(); i++)
             ROS_DEBUG("\t%d", path[i]);
     }
     else
         ROS_INFO("No path found");
 
-    /* Tell the caller if a path was found or not */
+    // Tell the caller if a path was found or not
     return path_found;
 }
+
 
 //DONE++
 bool docking::find_path_aux(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path,
