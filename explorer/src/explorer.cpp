@@ -1115,7 +1115,7 @@ class Explorer
 
                     
                     if(moving_along_path) {
-                        ROS_ERROR("moving along DS path");
+                        ROS_INFO("moving along DS path");
                         if(OPP_ONLY_TWO_DS)
                             if (ds_path_counter < 2)
                             {
@@ -1133,15 +1133,15 @@ class Explorer
                             if(ds_path_counter < ds_path_size - 1)
                             {
                                 ros::spinOnce();
-                                ROS_ERROR("Trying to reach next DS");
-                                ROS_ERROR("%d, %d", ds_path_counter, ds_path_size);
+                                ROS_INFO("Trying to reach next DS");
+                                ROS_INFO("ds_path_counter: %d; ds_path_size: %d", ds_path_counter, ds_path_size);
                                 //double next_ds_x = path[ds_path_counter+1][0];
                                 //double next_ds_y = path[ds_path_counter+1][0];
                                 double next_ds_x = complex_path[ds_path_counter+1].x;
                                 double next_ds_y = complex_path[ds_path_counter+1].y;
                                 double dist = -1;
                                 ROS_INFO("Compute distance");
-                                for(int i=0; i<5 || dist >= 0; i++) {
+                                for(int i=0; i<5 && dist < 0; i++) {
                                     dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
                                     ros::Duration(1).sleep();   
                                 }

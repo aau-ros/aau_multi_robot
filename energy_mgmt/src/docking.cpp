@@ -1286,7 +1286,6 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
         } else
             ros::Duration(1).sleep();
     
-    
     /* If the service is not working at the moment, return invalid value */ //TODO(minor) raise exception?
     ROS_ERROR("Unable to compute distance at the moment...");
     return -1;
@@ -3105,18 +3104,18 @@ void docking::update_ds_graph() {
                 ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
             else
             {
-                double dist;
+                double dist = -1;
                 dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
-                if (dist <= 0)
+                if (dist < 0)
                 {
-                    ROS_ERROR("Cannot compute DS graph at the moment...");
+                    ROS_ERROR("Cannot compute DS graph at the moment: computation of distance between ds%d and ds%d failed; retring later", ds.at(i).id, ds.at(j).id);
                     recompute_graph = true;
                     return;
                 }
                 //ROS_ERROR("%f", dist);
                 //ROS_ERROR("%f", conservative_maximum_distance_one_way());
                 if(conservative_maximum_distance_one_way() <= 0){
-                    ROS_ERROR("Cannot compute DS graph at the moment...");
+                    ROS_ERROR("Invalid value from conservative_maximum_distance_one_way() ...");
                     recompute_graph = true;
                     return;
                 }
