@@ -1161,8 +1161,7 @@ class Explorer
                                         update_robot_state_2(stopped);
                                         finalize_exploration();
                                 }
-                                    
-                                
+
 //                                else if(dist > available_distance * safety_coeff) 
                                 else if(dist > conservative_available_distance(available_distance) )  {
                                     //robot cannot reach next next DS, it must recharge at current one
@@ -1174,8 +1173,8 @@ class Explorer
                                         ROS_ERROR("Cannot reach next DS on the path: reauction for current one");
                                         update_robot_state_2(auctioning);
                                     }
-                               } else {
-                                    ROS_ERROR("Going to next DS in path");
+                                } else {
+                                    ROS_INFO("Going to next DS in path");
                                     retry_recharging_current_ds = 0;
                                     ds_path_counter++;
                                     target_ds_x = complex_path[ds_path_counter].x; 
@@ -1186,7 +1185,7 @@ class Explorer
                                 }
                             }
                             else {
-                                ROS_ERROR("Finished path traversal");
+                                ROS_INFO("Finished path traversal");
                                 moving_along_path = false;
                                 std_msgs::Empty msg;
                                 pub_next_ds.publish(msg);

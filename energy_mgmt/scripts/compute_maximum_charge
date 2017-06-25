@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-distance_between_ds = 50                # m
+distance_between_ds = 33                # m
 safety_coefficient = 1.5                # (adimensional)
 pessimistic_speed = 0.3                 # m/s
 hour_to_seconds_conversion_coeff = 3600 # s
