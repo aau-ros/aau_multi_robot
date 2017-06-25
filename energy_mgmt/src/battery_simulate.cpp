@@ -53,7 +53,7 @@ battery_simulate::battery_simulate()
     // initialize battery state
     state.charging = false;
     state.soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
-    state.remaining_time_charge = 0; //TODO(minor) -1? (but everywhere if yes...)
+    state.remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
     state.remaining_time_run = maximum_running_time; //s //TODO(minor) "maximum" is misleading: use "estimated"...
     state.remaining_distance = maximum_running_time * speed_avg_init; //m //TODO(minor) explain why we use max_speed_linear and not min_speed, etc.
 

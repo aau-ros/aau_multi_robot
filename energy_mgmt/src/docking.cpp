@@ -513,7 +513,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                         /* Check if that DS is also the closest one */
                         double dist = distance_from_robot((*it).x, (*it).y);
                         if (dist < 0) {
-                            ROS_ERROR("Distance computation failed: skipping this DS in the computation of the optimal DS..."); //TODO(minor) place everywhere, and write it better...
+                            ROS_ERROR("Distance computation failed: skipping this DS in the computation of the optimal DS..."); //TODO(minor) place everywhere, and write it better... //TODO maybe we should instead skip the computation of the next optimal DS in these cases...
                             continue;
                         }
                         if (dist < min_dist)
