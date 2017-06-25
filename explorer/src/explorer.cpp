@@ -1361,11 +1361,10 @@ class Explorer
                                 log_major_error("too many retries, this shouldn't happend");
                             
                             //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
-                            if(robot_state != fully_charged) {
-                                update_robot_state_2(auctioning);
-                                continue;
-                            }   
-                            
+//                            if(robot_state != fully_charged) {
+//                                update_robot_state_2(auctioning);
+//                                continue;
+//                            } 
                             
                             retries2++;
                             bool error = false;
