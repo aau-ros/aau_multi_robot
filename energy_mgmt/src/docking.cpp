@@ -2570,13 +2570,15 @@ void docking::set_target_ds_vacant(bool vacant)
 bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
 {
     ROS_INFO("Searching for path from ds%d to ds%d...", start, end);
+    // Clear 'path', just for safety
+    path.clear();
 
     // Call auxiliary function find_path_aux() to perform the search
     bool path_found = find_path_aux(tree, start, end, path, start);
 
     // If find_path_aux() found a path, the returned path is from 'end' to the node before 'start', so we need to manually push 'start' and then reverse the path
     if (path_found) {
-        ROS_INFO("Path found!");
+        ROS_INFO("Path found");
         
         // Push the starting node
         path.push_back(start);
@@ -2586,7 +2588,7 @@ bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end,
         
         // Log the path (for debugging)
         for(unsigned int i=0; i < path.size(); i++)
-            ROS_DEBUG("\t%d", path[i]);
+            ROS_DEBUG("%d", path.at(i));
     }
     else
         ROS_INFO("No path found");
@@ -3079,6 +3081,9 @@ void docking::check_reachable_ds()
     {
         update_ds_graph();
         
+        int start = ds.at(0).id;
+        int end = ds.at(ds.size()-1).id;
+        find_path_2(start, end, path);
 
         // construct MST starting from ds graph
         //compute_MST_2(1);
