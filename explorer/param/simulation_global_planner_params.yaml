@@ -4,4 +4,4 @@ navigation_path:
    default_tolerance: 5
    #use_grid_path: true
    #use_quadratic: false
-   #use_dijkstra: false # i.e., use A*
+   use_dijkstra: false # i.e., use A*
