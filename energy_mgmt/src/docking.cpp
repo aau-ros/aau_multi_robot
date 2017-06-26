@@ -892,21 +892,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 
             old_optimal_ds_id = get_optimal_ds_id();
             robot->selected_ds = get_optimal_ds_id();
-            
-            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
-            {
-                ROS_INFO("Changes also the target DS, and inform explorer");
-                set_target_ds(get_optimal_ds_id());
-
-                // If we inform explorer here, we are sure that it will know the target DS even if it loses an auction, so it knows where to go in_queue
-                geometry_msgs::PointStamped msg1;
-                msg1.point.x = get_target_ds_x();
-                msg1.point.y = get_target_ds_y();
-                pub_new_target_ds.publish(msg1);
-                
-            }
-            else
-                ROS_INFO("Target DS cannot be updated at the moment");
 
             /* Keep track of the new optimal DS in log file */
             ros::Duration time = ros::Time::now() - time_start;
@@ -917,7 +902,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             else
                 target_ds_id = get_target_ds_id();
             ROS_DEBUG("%d", target_ds_id);
-            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl;
+            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl; //TODO target_ds_id could be wrong here...
             fs_csv.close();
 
             /* Update parameter l4 */
@@ -933,6 +918,24 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         }
         else
             ROS_DEBUG("Optimal DS unchanged");
+            
+        if(get_optimal_ds_id() != get_target_ds_id()) {
+            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
+            {
+                ROS_INFO("Update target DS, and inform explorer");
+                set_target_ds(get_optimal_ds_id());
+
+                // If we inform explorer here, we are sure that it will know the target DS even if it loses an auction, so it knows where to go in_queue
+                geometry_msgs::PointStamped msg1;
+                msg1.point.x = get_target_ds_x();
+                msg1.point.y = get_target_ds_y();
+                pub_new_target_ds.publish(msg1);
+                
+            }
+            else
+                ROS_INFO("Target DS cannot be updated at the moment");
+        }
+            
     }
     else
         ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not "
@@ -2768,7 +2771,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
     
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
-            ; //ROS_INFO("(%d, %d): %d ", i, j, ds_mst[i][j]);
+            ROS_DEBUG("(%d, %d): %d ", i, j, ds_mst[i][j]);
     
 
     /*
@@ -3080,9 +3083,9 @@ void docking::check_reachable_ds()
     {
         update_ds_graph();
         
-        int start = ds.at(0).id;
-        int end = ds.at(ds.size()-1).id;
-        find_path_2(start, end, path);
+//        int start = ds.at(0).id;
+//        int end = ds.at(ds.size()-1).id;
+//        find_path_2(start, end, path);
 
         // construct MST starting from ds graph
         //compute_MST_2(1);
@@ -3596,16 +3599,23 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     path.clear();
     index_of_ds_in_path = 0;
-    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+    
+    bool ds_found_with_mst = false;
+    if(closest_ds->id == min_ds->id) {
+        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+        ds_found_with_mst = true;
+        path.push_back(closest_ds->id);
+    }
+    else
+         ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+         
 //    bool ds_found_with_mst = find_path_2(0, 2, path);
-
 //    for (int i = 0; i < ds_mst.size(); i++)
 //        for (int j = 0; j < ds_mst.size(); j++)
 //            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
 //    for (int i = 0; i < ds_mst.size(); i++)
 //        for (int j = 0; j < ds_mst.size(); j++)
 //            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
-
 
     if (ds_found_with_mst)
     {
@@ -3639,7 +3649,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     }
     else {
         log_major_error("No path found on DS graph");
-        ROS_INFO("No path found on DS graph: this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs");
+        ROS_INFO("No path found on DS graph: this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
     }
 }
 

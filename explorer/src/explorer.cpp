@@ -325,7 +325,7 @@ class Explorer
         fs_computation_time.close();
 
 
-        ROS_INFO("*********************************************");
+        ROS_INFO_NAMED("start", "*********************************************");
         ROS_INFO("******* Initializing Simple Navigation ******");
         ROS_INFO("                                             ");
 
@@ -1171,7 +1171,7 @@ class Explorer
                                         finalize_exploration();
                                     }
                                     else {
-                                        ROS_ERROR("Cannot reach next DS on the path: reauction for current one");
+                                        ROS_INFO("Cannot reach next DS on the path: reauction for current one");
                                         update_robot_state_2(auctioning);
                                     }
                                 } else {
