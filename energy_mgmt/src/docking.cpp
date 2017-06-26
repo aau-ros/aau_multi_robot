@@ -1623,11 +1623,12 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                           (msg.get()->vacant ? "vacant" : "occupied"));
                           
                 // if the ds is now vacant and it's robot's target ds and the robot is in queue, the robot can start already start a new auction
-                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
-                    ROS_INFO("Anticipate periodic re-auctioning");
-                    timer_restart_auction.stop();
-                    start_periodic_auction();
-                }
+                //TODO but in this way we start an auction when the DS has become vacant because the robot that was previously recharging at that DS was forced to leave because it has just lost an auction, which means that we have already a winner for the DS...
+//                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
+//                    ROS_INFO("Anticipate periodic re-auctioning");
+//                    timer_restart_auction.stop();
+//                    start_periodic_auction();
+//                }
                     
             }
             else
