@@ -1360,7 +1360,7 @@ class Explorer
                                 
                             }
                             
-                            if(retries >= 7)
+                            if(retries >= 4)
                                 log_major_error("too many retries, this shouldn't happend");
                             
                             //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
