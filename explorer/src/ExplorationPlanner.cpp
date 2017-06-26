@@ -3085,6 +3085,8 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
             }
         }
     }
+    
+    ROS_DEBUG("frontiers.size() after cleaning: %lu", frontiers.size());
 }
 
 /**
@@ -3264,7 +3266,7 @@ void ExplorationPlanner::findFrontiers()
             }
             
             //F
-//            if(!result)
+//            if(result)
 //                for (unsigned int j = 0; j < visited_frontiers.size(); j++)
 //                {
 //                    if (fabs(wx - visited_frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - visited_frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
@@ -3273,7 +3275,7 @@ void ExplorationPlanner::findFrontiers()
 //                        break;
 //                    }
 //                }
-            if(!result)
+            if(result)
                 for (unsigned int j = 0; j < unreachable_frontiers.size(); j++)
                 {
                     if (fabs(wx - unreachable_frontiers.at(j).x_coordinate) <= MAX_GOAL_RANGE && fabs(wy - unreachable_frontiers.at(j).y_coordinate) <= MAX_GOAL_RANGE)
@@ -4499,7 +4501,7 @@ bool ExplorationPlanner::existFrontiers() {
     return frontiers.size() > 0 ? true : false;
 }
 
-bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error) {
+bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max_available_distance, bool *error) {
     ROS_INFO("existReachableFrontiersWithDsGraphNavigation");
     ROS_DEBUG("frontiers.size(): %lu", frontiers.size());
     this->available_distance = available_distance;
@@ -4516,7 +4518,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
             
             //check euclidean distances
             total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f) * 2;
-            if(total_distance > available_distance)
+            if(total_distance > max_available_distance)
                 continue;
             
             // distance DS-frontier
@@ -4530,7 +4532,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double ava
 //                errors++;
                 *error = true;
             }
-            if(available_distance > total_distance) {
+            if(max_available_distance > total_distance) {
                 found_reachable_frontier = true;
                 exit = true;   
             }
@@ -4546,9 +4548,10 @@ bool ExplorationPlanner::recomputeGoal() {
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {
+    ROS_INFO("existFrontiersReachableWithFullBattery");
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
-        double total_distance;
+        double total_distance = -1;
         total_distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) * 2; //TODO safety coefficient is missing
         if(total_distance < 0){
             ROS_ERROR("Failed to compute distance!");

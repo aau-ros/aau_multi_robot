@@ -567,6 +567,7 @@ class Explorer
                     fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
                     fs_exp_se_log.close();
                     
+                    
                     exploration->findFrontiers();
         //                }   
         //            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -574,8 +575,8 @@ class Explorer
         //            fs_exp_se_log.close();
 
         //                if(skip_findFrontiers)
-                    exploration->clearVisitedFrontiers();
-                exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
+//                    exploration->clearVisitedFrontiers();
+//                exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
         //                if(skip_findFrontiers)
                     exploration->clearSeenFrontiers(costmap2d_global);
 
@@ -1384,6 +1385,7 @@ class Explorer
                                 retries2 = 0;
                             }
                             else {
+                                ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
                                 if(error)
                                     if(retries < 4) {
                                         ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
@@ -1612,7 +1614,7 @@ class Explorer
                         /* Failed to Failed to find backoff goal */
                         ROS_ERROR("Failed to find backoff goal, mark original goal "
                                   "(%.2f,%.2f) as unreachable",
-                                  final_goal.at(0), final_goal.at(1));
+                                  final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
                         navigate_to_goal = false;  // navigate(final_goal);
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
@@ -1851,7 +1853,7 @@ class Explorer
                     exploration->storeUnreachableFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
                                                           robot_str.at(0), final_goal.at(3));
                     ROS_DEBUG("Stored unreachable frontier");
-                    ros::Duration(10).sleep();
+                    ros::Duration(3).sleep();
                 }
             }
             
@@ -2179,9 +2181,9 @@ class Explorer
             print_mutex_info("frontiers()", "lock");
 
             /* Clean frontiers */
-            exploration->clearSeenFrontiers(costmap2d_global);
-            exploration->clearVisitedFrontiers();
-            exploration->clearUnreachableFrontiers();
+//            exploration->clearSeenFrontiers(costmap2d_global);
+//            exploration->clearVisitedFrontiers();
+//            exploration->clearUnreachableFrontiers();
 
             /* Publish frontiers */
             exploration->publish_frontier_list();

@@ -19,8 +19,8 @@
 		<param name="position_local_robot_topic" value="odom" />
 		<param name="seconds_send_timer" value="8" />
 		<param name="seconds_pub_timer" value="6" />
-		<param name="seconds_recompute_transform" value="300" />
-		<param name="seconds_send_position" value="1" />
+		<param name="seconds_recompute_transform" value="30" />
+		<param name="seconds_send_position" value="3" />
 		<param name="position_other_robots_topic" value="position_other_robots"/>       
     	<param name="split_size" value="2048" />
     	<param name="splitted" value="true" />
