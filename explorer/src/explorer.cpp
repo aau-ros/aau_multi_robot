@@ -3770,52 +3770,54 @@ class Explorer
                 }
             }
             
-            if( (robot_state != in_queue && robot_state != charging) && fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
-                countdown_2 -= ros::Time::now() - prev_time;
-                
-                if(countdown_2 < ros::Duration(0)) {
-                
-                    /*
-                    if(!already_perfomed_recovery_procedure) {
-                        ROS_ERROR("Trying to recover from stuck...");
-                        stuck_x = pose_x;
-                        stuck_y = pose_y;
-                        geometry_msgs::Twist msg;
-                        msg.linear.y = -1;
-                        ros::NodeHandle nh;
-                        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-                        pub.publish(msg);
-                        already_perfomed_recovery_procedure = true;
-                        countdown = ros::Duration(starting_value_moving);
-                        countdown_2 = ros::Duration(starting_value_countdown_2);
+            else if( robot_state != in_queue && robot_state != charging) {
+                if( fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
+                    countdown_2 -= ros::Time::now() - prev_time;
+                    
+                    if(countdown_2 < ros::Duration(0)) {
+                    
+                        /*
+                        if(!already_perfomed_recovery_procedure) {
+                            ROS_ERROR("Trying to recover from stuck...");
+                            stuck_x = pose_x;
+                            stuck_y = pose_y;
+                            geometry_msgs::Twist msg;
+                            msg.linear.y = -1;
+                            ros::NodeHandle nh;
+                            ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+                            pub.publish(msg);
+                            already_perfomed_recovery_procedure = true;
+                            countdown = ros::Duration(starting_value_moving);
+                            countdown_2 = ros::Duration(starting_value_countdown_2);
+                        }
+                        else {
+                        */
+                            ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                            ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                            if(percentage > 90)
+                                log_major_error("deadlock / slow execution / waiting for auction result? BUT at high percentage fortunately!");
+                            else
+                                log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
+                                
+                            //abort();
+                            log_stopped();
+                        //}
+                    } 
+                    else if(countdown_2 < ros::Duration(5*50) && prints_count == 1) {
+                        prints_count++;
+                        ROS_ERROR("Robot is not moving from 10 minutes!");
+                    } else if(countdown_2 < ros::Duration(10*60) && prints_count == 0) {
+                        ROS_ERROR("Robot is not moving from 5 minutes!");
+                        prints_count++;   
                     }
-                    else {
-                    */
-                        ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                        ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                        if(percentage > 90)
-                            log_major_error("deadlock / slow execution / waiting for auction result? BUT at high percentage fortunately!");
-                        else
-                            log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
-                            
-                        //abort();
-                        log_stopped();
-                    //}
-                } 
-                else if(countdown_2 < ros::Duration(5*50) && prints_count == 1) {
-                    prints_count++;
-                    ROS_ERROR("Robot is not moving from 10 minutes!");
-                } else if(countdown_2 < ros::Duration(10*60) && prints_count == 0) {
-                    ROS_ERROR("Robot is not moving from 5 minutes!");
-                    prints_count++;   
                 }
-            }
-            else
-            {
-                prev_robot_x_2 = pose_x;
-                prev_robot_y_2 = pose_y;
-                countdown_2 = ros::Duration(starting_value_countdown_2);
-                prints_count = 0;
+                else
+                {
+                    prev_robot_x_2 = pose_x;
+                    prev_robot_y_2 = pose_y;
+                    countdown_2 = ros::Duration(starting_value_countdown_2);
+                    prints_count = 0;
+                }
             }
             
             //ROS_ERROR("%f, %f", pose_x, pose_y);
