@@ -59,7 +59,7 @@
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
 #define DEBUG false
-#define TIMEOUT_CHECK_1 10
+#define TIMEOUT_CHECK_1 5
 #define DS_GRAPG_NAVIGATION_ALLOWED true
 #define COEFF_A 0.9
 #define COEFF_B 0.2
@@ -3270,7 +3270,7 @@ class Explorer
             // ros::Duration(0.5).sleep(); //TODO(minor)
         }
 
-        ROS_INFO("Goal reached");
+        ROS_INFO("DS left"); // althought this could be false... in the sense that maybe the movement was simply aborted
 
         exploration->next_auction_position_x = robotPose.getOrigin().getX();
         exploration->next_auction_position_y = robotPose.getOrigin().getY();
@@ -3726,45 +3726,48 @@ class Explorer
             //IMPORTANT: be careful that a robot could change state while it is stucked, since it may continuosly change between 'moving_to_fonrtier' to 'exploring' to compute and try rearching a new goal!!!
             //if((int) prev_robot_state == (int) robot_state && pose_x == prev_robot_x && pose_y == prev_robot_y) 
             //if( ((int) prev_robot_state == (int) robot_state) && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) 
-            if(robot_is_moving() && fabs(pose_x - prev_robot_x) < 0.1 && fabs(pose_y - prev_robot_y) < 0.1 ) 
-            { 
-                //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
-                //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
-                if(countdown < ros::Duration(60))
-                {
-                    ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                    //prints_count++;   
-                }
-                //}
-                //else {
-                //    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
-                //}
-                
-                countdown -= ros::Time::now() - prev_time;
-                
-                
-                if(countdown < ros::Duration(0)) {
-                    ROS_ERROR("Robot is not moving anymore");
-                    ROS_INFO("Robot is not moving anymore");
-                    //abort();
-                    log_stucked();
-                }
-                
-            } else {
-                //ROS_DEBUG("Robot is moving");
-                //ROS_ERROR("state: %d - %d", prev_robot_state, robot_state);
-                //ROS_ERROR("x: %f - %f", prev_robot_x, pose_x);
-                //ROS_ERROR("y: %f - %f", prev_robot_y, pose_y);
-                //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
-                    countdown = ros::Duration(starting_value_moving);
-                //else
-                //    countdown = ros::Duration(starting_value_standing);
+            if(robot_is_moving()) {
+                if (fabs(pose_x - prev_robot_x) < 0.1 && fabs(pose_y - prev_robot_y) < 0.1 ) 
+                { 
+                    //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) {
+                    //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
+                    if(countdown < ros::Duration(60))
+                    {
+                        ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                        ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
+                        //prints_count++;   
+                    }
+                    //}
+                    //else {
+                    //    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
+                    //}
                     
-                prev_robot_x = pose_x;
-                prev_robot_y = pose_y;
-//                prev_robot_state = robot_state;
-                //prints_count = 1;  
+                    countdown -= ros::Time::now() - prev_time;
+                    
+                    
+                    if(countdown < ros::Duration(0)) {
+                        ROS_ERROR("Robot is not moving anymore");
+                        ROS_INFO("Robot is not moving anymore");
+                        //abort();
+                        log_stucked();
+                    }
+                }
+                
+                else {
+                    //ROS_DEBUG("Robot is moving");
+                    //ROS_ERROR("state: %d - %d", prev_robot_state, robot_state);
+                    //ROS_ERROR("x: %f - %f", prev_robot_x, pose_x);
+                    //ROS_ERROR("y: %f - %f", prev_robot_y, pose_y);
+                    //if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy) //TODO complete
+                        countdown = ros::Duration(starting_value_moving);
+                    //else
+                    //    countdown = ros::Duration(starting_value_standing);
+                        
+                    prev_robot_x = pose_x;
+                    prev_robot_y = pose_y;
+    //                prev_robot_state = robot_state;
+                    //prints_count = 1;  
+                }
             }
             
             if( (robot_state != in_queue && robot_state != charging) && fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
