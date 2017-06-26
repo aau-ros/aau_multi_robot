@@ -1403,7 +1403,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 	        moving_along_path = true;
 	        compute_and_publish_path_on_ds_graph();
             if(finished_bool) {
-                ROS_ERROR("No more frontiers..."); //TODO(minor) probably this checks are reduntant with the ones of explorer
                 std_msgs::Empty msg;
                 pub_finish.publish(msg);
             } else {
@@ -3743,9 +3742,8 @@ double min_dist = numeric_limits<int>::max();
             }
     }
     else {
-        ROS_ERROR("no path found");
-        ROS_INFO("no path found");
-        
+        log_major_error("no path found to reach home!!!");
+        finished_bool = true;
     }
 }
 

@@ -4563,7 +4563,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         if(max_available_distance > total_distance)                  
             return true;
     }
-   return false;
+    return false;
                 
 }
 
