@@ -1371,13 +1371,12 @@ class Explorer
                             
                             //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
                             retries2++;
-                            if(retries < 4) {
+                            if(retries2 < 4) {
                                 bool error = false;
                                 ros::spinOnce(); //to udpate available_distance
                                 if( !exploration->existFrontiers() ) {
                                     ROS_INFO("No more frontiers: moving home...");
                                     move_home_if_possible();
-                                    retries2 = 0;
                                 } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                     update_robot_state_2(auctioning);
@@ -1385,7 +1384,6 @@ class Explorer
                                 else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ){
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                     update_robot_state_2(auctioning_2);
-                                    retries2 = 0;
                                 }
                                 else {
                                     ROS_DEBUG("errors: %s", (error ? "yes" : "no") );

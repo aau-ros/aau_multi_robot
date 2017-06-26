@@ -4504,7 +4504,6 @@ bool ExplorationPlanner::existFrontiers() {
 bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max_available_distance, bool *error) {
     ROS_INFO("existReachableFrontiersWithDsGraphNavigation");
     ROS_DEBUG("frontiers.size(): %lu", frontiers.size());
-    this->available_distance = available_distance;
     bool found_reachable_frontier = false;
     bool exit = false;
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -4518,7 +4517,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
             
             //check euclidean distances
             total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f);
-            if(total_distance > 0.9 * max_available_distance * 2)
+            if(total_distance * 2 > 0.9 * max_available_distance)
                 continue;
             
             // distance DS-frontier
@@ -4532,9 +4531,9 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 //                errors++;
                 *error = true;
             }
-            if(0.9 * max_available_distance > total_distance * 2) {
+            if(total_distance * 2 < 0.9 * max_available_distance) {
                 found_reachable_frontier = true;
-                exit = true;   
+                exit = true;
             }
         }
     release_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -4551,16 +4550,22 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
     ROS_INFO("existFrontiersReachableWithFullBattery");
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
-        double total_distance = -1;
-        total_distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate); //TODO safety coefficient is missing
-        if(total_distance < 0){
+        double distance;
+        
+        //check euclidean distances
+        distance = euclidean_distance(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+        if(distance * 2 > 0.9 * max_available_distance)
+            continue;
+        
+        distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate); //TODO safety coefficient is missing
+        if(distance < 0){
             ROS_ERROR("Failed to compute distance!");
             *error = true;
             continue;
         }
         // convert from cells to meters
         //total_distance *= costmap_ros_->getCostmap()->getResolution();
-        if(0.9 * max_available_distance > total_distance * 2) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking...
+        if(distance * 2 < 0.9 * max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking...
             return true;
     }
     return false;
