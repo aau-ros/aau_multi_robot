@@ -878,12 +878,14 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             }
         }
 
+        bool changed = false;
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
         if (!optimal_ds_is_set())
             ROS_DEBUG("No optimal DS has been selected yet");
         else if (old_optimal_ds_id != get_optimal_ds_id())
         {
             finished_bool = false; //TODO(minor) find better place...
+            changed = true;
             
             /* Debug output */
             if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
@@ -895,18 +897,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 
             old_optimal_ds_id = get_optimal_ds_id();
             robot->selected_ds = get_optimal_ds_id();
-
-            /* Keep track of the new optimal DS in log file */
-            ros::Duration time = ros::Time::now() - time_start;
-            fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            int target_ds_id;
-            if(!target_ds_is_set())
-                target_ds_id = -1;
-            else
-                target_ds_id = get_target_ds_id();
-            ROS_DEBUG("%d", target_ds_id);
-            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl; //TODO target_ds_id could be wrong here...
-            fs_csv.close();
 
             /* Update parameter l4 */
             update_l4();
@@ -924,7 +914,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             
         if(get_optimal_ds_id() != get_target_ds_id()) {
             if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
-            {
+            {   
+                changed = true;
                 ROS_INFO("Update target DS, and inform explorer");
                 set_target_ds(get_optimal_ds_id());
 
@@ -937,6 +928,20 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             }
             else
                 ROS_INFO("Target DS cannot be updated at the moment");
+        }
+        
+        if(changed) {
+            /* Keep track of the new optimal DS in log file */
+            ros::Duration time = ros::Time::now() - time_start;
+            fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+            int target_ds_id;
+            if(!target_ds_is_set())
+                target_ds_id = -1;
+            else
+                target_ds_id = get_target_ds_id();
+            ROS_DEBUG("%d", target_ds_id);
+            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl; //TODO target_ds_id could be wrong here...
+            fs_csv.close();
         }
             
     }

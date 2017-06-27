@@ -111,6 +111,7 @@ class Explorer
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
     unsigned int retries, retries2, retries3;
+    bool use_full_energy;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -151,6 +152,7 @@ class Explorer
         available_distance= 0;
         starting_x = 0, starting_y = 0;
         retries = 0, retries2 = 0, retries3 = 0;
+        next_available_distance = -1;
     
         // F
         test = true;
@@ -507,7 +509,7 @@ class Explorer
 
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
-        {
+        {       
         
             std::vector<double> final_goal;
             std::vector<double> backoffGoal;
@@ -657,12 +659,17 @@ class Explorer
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
-                if(available_distance <= 0) {
+                if(next_available_distance <= 0) {
                     ROS_DEBUG("waiting battery info");
                     ros::Duration(3).sleep();
                     ros::spinOnce();
                     continue;
                    }
+                   
+                if(use_full_energy) {
+                    available_distance = conservative_maximum_available_distance;
+                } else
+                    available_distance = next_available_distance;
                    
                 if(robot_state == leaving_ds || robot_state == fully_charged )
                 {
@@ -1318,6 +1325,7 @@ class Explorer
 //                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
                                     retries3 = 0;
+                                    use_full_energy = false;
 //                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
@@ -2079,6 +2087,7 @@ class Explorer
             //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
+                use_full_energy = true;
             //}
         }
 
@@ -3508,7 +3517,7 @@ class Explorer
         ROS_DEBUG("Received battery state");
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
-        available_distance = msg->remaining_distance;
+        next_available_distance = msg->remaining_distance;
         ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
