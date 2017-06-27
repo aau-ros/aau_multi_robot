@@ -673,11 +673,13 @@ class Explorer
                    }
                    
                 if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < 0.95*conservative_available_distance(available_distance)) {
+                    ROS_INFO("setting maximum distance");
                     conservative_maximum_available_distance = conservative_available_distance(available_distance); 
 //                    conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance);
                 }
                    
                 if(use_full_energy) {
+                    ROS_INFO("using max distance");
                     available_distance = conservative_maximum_available_distance;
                 } else
                     available_distance = next_available_distance;
