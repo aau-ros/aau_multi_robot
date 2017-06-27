@@ -263,9 +263,11 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     participating_to_auction = 0;
     maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
+    next_optimal_ds_id = old_optimal_ds_id;
     time_start = ros::Time::now();
     id_next_target_ds = -1;
     path_navigation_tries = 0;
+    next_remaining_distance = 0, current_remaining_distance = 0;
 
     /* Function calls */
     preload_docking_stations();
@@ -458,6 +460,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
     if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
+
+        jobs_mutex.lock();
+        std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
+        std::copy(jobs.begin(), jobs.end(), jobs_local_list.begin()); //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
+        jobs_mutex.unlock();
+
         /* Store currently optimal DS (for debugging ans safety checks)
          *
          * NB: even if the robot position does not change during the execution of
@@ -522,7 +530,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                         if (dist < min_dist)
                         {
                             min_dist = dist;
-                            set_optimal_ds(it->id);
+                            next_optimal_ds_id = it->id;
                         }
                     }
                 }
@@ -546,9 +554,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double min_dist = numeric_limits<int>::max();
                 bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
                 for (unsigned int i = 0; i < ds.size(); i++)
-                    for (unsigned int j = 0; j < jobs.size(); j++)
+                    for (unsigned int j = 0; j < jobs_local_list.size(); j++)
                     {
-                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
+                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
                         if (dist < 0)
                             continue;
                         if (dist < conservative_maximum_distance_with_return())
@@ -572,7 +580,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                 {
                                     /* Update optimal DS */
                                     min_dist = dist2;
-                                    set_optimal_ds_given_index(i);
+                                    next_optimal_ds_id = ds.at(i).id;
                                 }
                             }
                         }
@@ -599,9 +607,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                             ds_t *min_ds = NULL;
                             for (unsigned int i = 0; i < ds.size(); i++)
                             {
-                                for (unsigned int j = 0; j < jobs.size(); j++)
+                                for (unsigned int j = 0; j < jobs_local_list.size(); j++)
                                 {
-                                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
+                                    double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
                                     if (dist < 0)
                                         continue;
 
@@ -672,7 +680,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                     if (path[0] == ds[j].id)
                                     {
                                         //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
-                                        set_optimal_ds_given_index(j);
+                                        next_optimal_ds_id = ds.at(j).id;
                                         set_target_ds_given_index(j);
                                         ROS_INFO("target_ds: %d", get_target_ds_id());
                                     }
@@ -691,9 +699,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                 for (int i = 0; i < ds.size(); i++)
                                 {
                                     bool existing_eo;
-                                    for (int j = 0; j < jobs.size(); j++)
+                                    for (int j = 0; j < jobs_local_list.size(); j++)
                                     {
-                                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x, jobs.at(j).y);
+                                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x, jobs_local_list.at(j).y);
                                         if (dist < 0)
                                             continue;
                                         if (dist < battery.remaining_distance / 2)
@@ -766,9 +774,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 /* If the currently optimal DS has still EOs, keep using it, otherwise use
                  * "closest" policy */
                 bool existing_eo = false;
-                for (unsigned int i = 0; i < jobs.size(); i++)
+                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
                 {
-                    double dist = distance(get_optimal_ds_x(), get_optimal_ds_y(), jobs.at(i).x_coordinate, jobs.at(i).y_coordinate);
+                    double dist = distance(get_optimal_ds_x(), get_optimal_ds_y(), jobs_local_list.at(i).x_coordinate, jobs_local_list.at(i).y_coordinate);
                     if (dist < 0) {
                         //ROS_ERROR("Computation of DS-frontier distance failed: ignore this frontier (i.e., do not consider it an EO)");
                         continue;
@@ -852,9 +860,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
                 /* d_f */
                 double d_f = numeric_limits<int>::max();
-                for (unsigned int i = 0; i < jobs.size(); i++)
+                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
                 {
-                    double dist = distance(ds[d].x, ds[d].y, jobs[i].x_coordinate, jobs[i].y_coordinate);
+                    double dist = distance(ds[d].x, ds[d].y, jobs_local_list[i].x_coordinate, jobs_local_list[i].y_coordinate);
                     if (dist < 0)
                         continue;
                     if (dist < d_f)
@@ -872,7 +880,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                     else {
                         // The candidate new optimal DS can be set as new optimal DS (until we don't find a better one)
                         min_cost = cost;
-                        set_optimal_ds_given_index(d);
+                        next_optimal_ds_id = ds.at(d).id;
                     }                    
                 }
             }
@@ -881,7 +889,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
         if (!optimal_ds_is_set())
             ROS_DEBUG("No optimal DS has been selected yet");
-        else if (old_optimal_ds_id != get_optimal_ds_id())
+        else if (old_optimal_ds_id != next_optimal_ds_id)
         {
             finished_bool = false; //TODO(minor) find better place...
             
@@ -892,21 +900,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 ROS_INFO("Change optimal DS: (none) -> ds%d", get_optimal_ds_id());
             if(get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
                 log_major_error("OH NO!!!!!!!!!!!!");
-                
-            old_optimal_ds_id = get_optimal_ds_id();
-            robot->selected_ds = get_optimal_ds_id();
 
-            /* Keep track of the new optimal DS in log file */
-            ros::Duration time = ros::Time::now() - time_start;
-            fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            int target_ds_id;
-            if(!target_ds_is_set())
-                target_ds_id = -1;
-            else
-                target_ds_id = get_target_ds_id();
-            ROS_DEBUG("%d", target_ds_id);
-            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl; //TODO target_ds_id could be wrong here...
-            fs_csv.close();
+            set_optimal_ds(next_optimal_ds_id);
+            old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+            robot->selected_ds = get_optimal_ds_id();
 
             /* Update parameter l4 */
             update_l4();
@@ -1307,6 +1304,8 @@ void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
     battery.remaining_time_charge = msg.get()->remaining_time_charge;
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
+
+    next_remaining_distance = battery.remaining_distance;
     
     ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 
@@ -2214,7 +2213,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 for(unsigned int i=0; i < ds.size(); i++)
                     if(ds[i].id == id_next_target_ds) {
 //                        best_ds = &ds[i];
-                        set_target_ds_given_index(i); //TODO should be reduntant
+                        set_target_ds_given_index(i); //necessary because we need to set the DS with ID 'id_next_target_ds' as the target DS, since it could be different from the current target DS
                         found_ds = true;
                         break;
                     }
@@ -2808,7 +2807,7 @@ void docking::compute_closest_ds()
         if (dist < min_dist)
         {
             min_dist = dist;
-            set_optimal_ds(it->id);
+            next_optimal_ds_id = it->id;
         }
     }
 }
@@ -3323,10 +3322,14 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         
 }
 
+void docking::update_reamining_distance() {
+    current_remaining_distance = next_remaining_distance;
+}
+
 //DONE++
 float docking::conservative_remaining_distance_with_return() {
     //return (battery.remaining_distance / (double) 2.0 ) * safety_coeff;
-    return battery.remaining_distance / (double) 2.0;
+    return current_remaining_distance / (double) 2.0;
 }
 
 //DONE++
@@ -3339,7 +3342,7 @@ float docking::conservative_maximum_distance_with_return() {
 //DONE++
 float docking::conservative_remaining_distance_one_way() {
     //return battery.remaining_distance * safety_coeff;
-    return battery.remaining_distance;
+    return current_remaining_distance;
 }
 
 //DONE++
@@ -3524,6 +3527,11 @@ void docking::compute_and_publish_path_on_ds_graph() {
 //    job.y_coordinate = 20;
 //    jobs.push_back(job);
 
+    jobs_mutex.lock();
+    std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
+    std::copy(jobs.begin(), jobs.end(), jobs_local_list.begin()); //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
+    jobs_mutex.unlock();
+
     ROS_DEBUG("%lu", jobs.size());
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
@@ -3531,9 +3539,9 @@ void docking::compute_and_publish_path_on_ds_graph() {
     while (min_ds == NULL && retry < 5) {
         for (unsigned int i = 0; i < ds.size(); i++)
         {
-            for (unsigned int j = 0; j < jobs.size(); j++)
+            for (unsigned int j = 0; j < jobs_local_list.size(); j++)
             {
-                double dist = distance(ds.at(i).x, ds.at(i).y, jobs.at(j).x_coordinate, jobs.at(j).y_coordinate);
+                double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
                 if (dist < 0) {
                     ROS_ERROR("Distance computation failed");
                     continue;
@@ -3887,6 +3895,13 @@ bool docking::set_optimal_ds(int id) {
             break;
         }
     optimal_ds_set = true;
+
+    /* Keep track of the new optimal DS in log file */
+    ros::Duration time = ros::Time::now() - time_start;
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
+    fs_csv.close();
+
     return true;
 }
 
@@ -3911,6 +3926,13 @@ bool docking::set_target_ds(int id) {
             break;
         }
     target_ds_set = true;
+
+    /* Keep track of the new target DS in log file */
+    ros::Duration time = ros::Time::now() - time_start;
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
+    fs_csv.close();
+
     return true;
 }
 
