@@ -618,7 +618,8 @@ class Explorer
                 /*
                  * Sleep to ensure that frontiers are exchanged
                  */
-                ros::Duration(2).sleep();
+//                ros::Duration(2).sleep();
+                ros::Duration(10).sleep();
                 
                 explorer_ready = true;
             
