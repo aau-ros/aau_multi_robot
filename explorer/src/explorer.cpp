@@ -1261,8 +1261,6 @@ class Explorer
                             costmap_mutex.lock();
                             print_mutex_info("explore()", "lock");
                             goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
-                            costmap_mutex.unlock();
-                            print_mutex_info("explore()", "unlock");
 //                        }
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
@@ -1517,6 +1515,9 @@ class Explorer
 //                                }
 //                            }
                         }
+                        
+                        costmap_mutex.unlock();
+                        print_mutex_info("explore()", "unlock");
                     }
                 }
 
@@ -2221,12 +2222,13 @@ class Explorer
             //ROS_DEBUG("frontiers(): lock acquired");
             print_mutex_info("frontiers()", "lock");
 
-            /* Clean frontiers */
-//            exploration->clearSeenFrontiers(costmap2d_global);
-//            exploration->clearVisitedFrontiers();
-//            exploration->clearUnreachableFrontiers();
-
-            /* Publish frontiers */
+            exploration->findFrontiers();
+            exploration->clearVisitedFrontiers();
+            exploration->clearUnreachableFrontiers();
+            exploration->clearSeenFrontiers(costmap2d_global);
+            
+            //ROS_INFO("publish_frontier_list and visualize them in rviz");
+            exploration->publish_frontier_list();
             exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
                                                            // only the frontier visited by this robot...
 
@@ -2239,7 +2241,7 @@ class Explorer
             //ROS_DEBUG("frontiers(): lock released");
             print_mutex_info("frontiers()", "unlock");
 
-            ros::Rate(5).sleep();
+            ros::Rate(10).sleep();
         }
     }
 
@@ -2692,8 +2694,8 @@ class Explorer
         exploration->transformToOwnCoordinates_visited_frontiers();
 
         exploration->initialize_planner("exploration planner", costmap2d_global, costmap2d_global);
+        
         exploration->findFrontiers();
-
         exploration->clearVisitedFrontiers();
         exploration->clearUnreachableFrontiers();
         exploration->clearSeenFrontiers(costmap2d_global);
