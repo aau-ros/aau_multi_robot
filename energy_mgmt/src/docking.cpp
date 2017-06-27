@@ -455,15 +455,16 @@ void docking::preload_docking_stations()
 void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in distance computation??
 //TODO(minor) maybe there are more efficient for some steps; for instance, i coudl keep track somewhere of the DS with EOs and avoid recomputing them two times in the same call of this funcion...
 {   
-    ROS_DEBUG("Compute optimal DS");
+    ROS_INFO("Compute optimal DS");
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
     if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 
+        // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
         jobs_mutex.lock();
         std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
-        std::copy(jobs.begin(), jobs.end(), jobs_local_list.begin()); //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
+        jobs_local_list = jobs; //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
         jobs_mutex.unlock();
 
         /* Store currently optimal DS (for debugging ans safety checks)
@@ -1592,7 +1593,7 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     
     jobs_mutex.lock();
     jobs = msg.get()->frontier_element;
-    jobs_mutex.lock();
+    jobs_mutex.unlock();
     
     if(jobs.size() > 0)
         no_jobs_received_yet = false;
@@ -3546,7 +3547,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
 
     jobs_mutex.lock();
     std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
-    std::copy(jobs.begin(), jobs.end(), jobs_local_list.begin()); //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
+    jobs_local_list = jobs; //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
     jobs_mutex.unlock();
 
     ROS_DEBUG("%lu", jobs.size());
