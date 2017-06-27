@@ -76,6 +76,8 @@ int main(int argc, char** argv)
         
         doc.send_robot();
         
+        doc.update_reamining_distance();
+        
 //        doc.update_llh();
         
 //        doc.recompute_MST();
