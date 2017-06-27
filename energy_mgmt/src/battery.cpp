@@ -32,7 +32,7 @@ battery::battery()
  //   state.remaining_distance = speed_avg_init * charge_max / power_moving * 3600;
 
 
-    bool debugShown = false;
+//    bool debugShown = false;
 
     // advertise topics
     pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
@@ -109,11 +109,11 @@ void battery::cb_speed(const explorer::Speed &msg)
 
 void battery::cb_soc(const std_msgs::Float32::ConstPtr& msg)
 {
-    state.soc = ("%F", msg->data);
+    state.soc = msg->data;
 }
 
 //TODO: do we need this?
 void battery::totalTime(const std_msgs::Float32::ConstPtr& msg)
 {
-    total_time = ("%F", msg->data);
+    total_time = msg->data;
 }
