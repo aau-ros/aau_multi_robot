@@ -486,7 +486,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
          * compute_optimal_ds() because the distances could have changed, but we
          * accept this. */
 
-        if(old_optimal_ds_id > 10000) //can happen sometimes... why??
+        if(old_optimal_ds_id > 10000) //can happen sometimes... why? segmentation fault?
             log_major_error("WHAT?????????????????????????");
 
         if (moving_along_path) {
@@ -888,9 +888,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         bool changed = false;
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
-        if (!optimal_ds_is_set())
-            ROS_DEBUG("No optimal DS has been selected yet");
-        else if (old_optimal_ds_id != next_optimal_ds_id)
+//        if (!optimal_ds_is_set())
+//            ROS_DEBUG("No optimal DS has been selected yet");
+        if (old_optimal_ds_id != next_optimal_ds_id)
         {
             finished_bool = false; //TODO(minor) find better place...
             changed = true;
@@ -919,7 +919,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         }
         else
-            ROS_DEBUG("Optimal DS unchanged");
+            ROS_ERROR("Optimal DS unchanged");
             
         if(get_optimal_ds_id() != get_target_ds_id()) {
             if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
@@ -2813,7 +2813,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
 //DONE+
 void docking::compute_closest_ds()
 {
-    //ROS_DEBUG("Using 'closest' strategy to compute optimal DS");
+//    ROS_DEBUG("Using 'closest' strategy to compute optimal DS");
     double min_dist = numeric_limits<int>::max();
     for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
     {
