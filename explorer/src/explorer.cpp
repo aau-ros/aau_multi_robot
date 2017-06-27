@@ -1382,7 +1382,7 @@ class Explorer
 //                            } 
                             
                             //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-                            if(retries2 < 4 && retries3 < 10) {
+                            if(retries2 < 4 && retries3 < 5) {
                                 bool error = false;
                                 ros::spinOnce(); //to udpate available_distance
                                 if( !exploration->existFrontiers() ) {
@@ -1436,7 +1436,7 @@ class Explorer
                                 if(retries2 >= 4)
                                     log_major_error("tried too many times to navigate graph: retries2 >= 4");
                                 else
-                                    log_major_error("tried too many times to navigate graph: retries3 >= 10");
+                                    log_major_error("tried too many times to navigate graph: retries3 >= 5");
                                 move_home_if_possible();
                             }
                                 
