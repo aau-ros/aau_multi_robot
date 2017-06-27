@@ -324,7 +324,7 @@ namespace explorationPlanner
             bool my2_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool home_is_reachable(double available_distance);
             bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
-            bool compute_and_publish_ds_path(double maximum_available_distance);
+            bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
 
         private:
             bool auction_running;

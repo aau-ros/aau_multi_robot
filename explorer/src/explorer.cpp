@@ -110,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries, retries2;
+    unsigned int retries, retries2, retries3;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -150,7 +150,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0, retries2 = 0;
+        retries = 0, retries2 = 0, retries3 = 0;
     
         // F
         test = true;
@@ -1317,7 +1317,7 @@ class Explorer
 //                                else {
 //                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
-                                    retries2 = 0;
+                                    retries3 = 0;
 //                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
@@ -1373,7 +1373,7 @@ class Explorer
 //                            } 
                             
                             //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-                            if(retries2 < 4) {
+                            if(retries2 < 4 && retries3 < 10) {
                                 bool error = false;
                                 ros::spinOnce(); //to udpate available_distance
                                 if( !exploration->existFrontiers() ) {
@@ -1383,13 +1383,29 @@ class Explorer
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                     update_robot_state_2(auctioning);
                                 }
-                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ){
+                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                    if(exploration->compute_and_publish_ds_path(conservative_maximum_available_distance))
+                                    int result = -1;
+                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                    if(result == 0) //TODO very very orrible idea, using result...
+                                    {
                                         update_robot_state_2(auctioning_2);
+                                        retries2 = 0;
+                                    }
                                     else {
                                         retries2++;
-                                        ROS_ERROR("Failures in    compute_and_publish_ds_path()");
+                                        
+                                        if(result == 1)
+                                            log_major_error("No DS with EOs was found");
+                                        else if(result == 2)
+                                            log_major_error("impossible, no closest ds found...");
+                                        else if(result == 3) {
+                                            log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                            update_robot_state_2(auctioning_2);
+                                            retries3++;
+                                        }
+                                        else
+                                            log_major_error("invalid result value");
                                     }
                                 }
                                 else {
@@ -1408,7 +1424,10 @@ class Explorer
                                 }
                             }
                             else {
-                                log_major_error("tried too many times to navigate graph");
+                                if(retries2 >= 4)
+                                    log_major_error("tried too many times to navigate graph: retries2 >= 4");
+                                else
+                                    log_major_error("tried too many times to navigate graph: retries3 >= 10");
                                 move_home_if_possible();
                             }
                                 
