@@ -75,6 +75,7 @@ class docking
     bool finished_bool;
     void test();
     void test_2(const std_msgs::Empty &msg);
+    void update_reamining_distance();
     
     ros::Publisher pub_test, pub_new_ds_on_graph, pub_ds_count;
     ros::Subscriber sub_test;
@@ -627,12 +628,15 @@ class docking
     bool set_target_ds_given_index(int index);
   	void update_ds_graph();
   	void start_periodic_auction();
-  	unsigned int path_navigation_tries;
-  	void goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-  	ros::Subscriber sub_goal_ds_for_path_navigation;
-  	int goal_ds_path_id;
-  	void simple_compute_and_publish_path_on_ds_graph();
-  	
+    int next_optimal_ds_id;
+    double next_remaining_distance, current_remaining_distance;
+    boost::mutex jobs_mutex;
+    ros::Subscriber sub_goal_ds_for_path_navigation;
+    unsigned int  path_navigation_tries;
+    void simple_compute_and_publish_path_on_ds_graph();
+    void goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    int goal_ds_path_id;
+
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
