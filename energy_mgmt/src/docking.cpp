@@ -919,7 +919,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         }
         else
-            ROS_ERROR("Optimal DS unchanged");
+            ROS_INFO("Optimal DS unchanged");
             
         if(get_optimal_ds_id() != get_target_ds_id()) {
             if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
