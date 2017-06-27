@@ -112,6 +112,7 @@ class Explorer
     float coeff_a, coeff_b;
     unsigned int retries, retries2, retries3;
     bool use_full_energy;
+    double next_available_distance;
 
     /*******************
      * CLASS FUNCTIONS *
