@@ -2688,6 +2688,7 @@ class Explorer
         exploration->clearUnreachableFrontiers();
         exploration->clearSeenFrontiers(costmap2d_global);
         
+        ROS_INFO("publish_frontier_list");
         exploration->publish_frontier_list();
 
         costmap_mutex.unlock();

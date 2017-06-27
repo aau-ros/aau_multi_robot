@@ -4638,6 +4638,7 @@ bool ExplorationPlanner::recomputeGoal() {
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {
     ROS_INFO("existFrontiersReachableWithFullBattery");
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
         double distance;
@@ -4653,9 +4654,13 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
             *error = true;
             continue;
         }
-        if(distance * 2 < max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking...
+        if(distance * 2 < max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking... 
+        {
+            release_mutex(&store_frontier_mutex, __FUNCTION__);
             return true;
+        }
     }
+    release_mutex(&store_frontier_mutex, __FUNCTION);
     return false;
                 
 }
