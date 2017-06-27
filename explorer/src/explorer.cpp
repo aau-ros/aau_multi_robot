@@ -672,6 +672,11 @@ class Explorer
                     continue;
                    }
                    
+                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < 0.95*conservative_available_distance(available_distance)) {
+                    conservative_maximum_available_distance = conservative_available_distance(available_distance); 
+//                    conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance);
+                }
+                   
                 if(use_full_energy) {
                     available_distance = conservative_maximum_available_distance;
                 } else
@@ -716,12 +721,7 @@ class Explorer
                 
                     
                 //this is done because the robot, actually , can never use the full battery to move, since it has to perform some pre-processing operations with the costmap before selecting a frontier, and so meanwhile the battery life is decreased; so, we store the first available_distance that we have when performing the first frontier selection
-                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < 0.95*conservative_available_distance(available_distance)) {
-                    //conservative_maximum_available_distance = conservative_available_distance(available_distance); 
-                    
-                    conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance);
-                    
-                }
+
                     
                 ROS_INFO("START FRONTIER SELECTION");
                     
@@ -1391,14 +1391,16 @@ class Explorer
                                 if( !exploration->existFrontiers() ) {
                                     ROS_INFO("No more frontiers: moving home...");
                                     move_home_if_possible();
-                                } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
+                                
+                                //TODO use 0.99 as coefficient?
+                                } else if( exploration->existFrontiersReachableWithFullBattery(0.99*conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                     update_robot_state_2(auctioning);
                                 }
-                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ) {
+                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.99*conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                     int result = -1;
-                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                    exploration->compute_and_publish_ds_path(0.99*conservative_maximum_available_distance, &result);
                                     if(result == 0) //TODO very very orrible idea, using result...
                                     {
                                         update_robot_state_2(auctioning_2);
