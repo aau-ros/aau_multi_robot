@@ -1590,9 +1590,9 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     }
     */
     
-    //boost::mutex frontiers_mutex.lock();
+    jobs_mutex.lock();
     jobs = msg.get()->frontier_element;
-    //frontiers_mutex.lock();
+    jobs_mutex.lock();
     
     if(jobs.size() > 0)
         no_jobs_received_yet = false;

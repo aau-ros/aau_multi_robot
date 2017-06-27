@@ -566,12 +566,18 @@ class Explorer
         //                if(skip_findFrontiers) {
         //                    ROS_INFO("skipping findFrontiers");
         //                } else {
-                    fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                    fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-                    fs_exp_se_log.close();
+                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+                fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+                fs_exp_se_log.close();
                     
-                    
-                    exploration->findFrontiers();
+                exploration->transformToOwnCoordinates_frontiers();
+                exploration->transformToOwnCoordinates_visited_frontiers();
+                  
+                exploration->findFrontiers();
+                exploration->clearVisitedFrontiers();
+                exploration->clearUnreachableFrontiers();
+                exploration->clearSeenFrontiers(costmap2d_global);
+                
         //                }   
         //            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         //            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
@@ -581,7 +587,7 @@ class Explorer
 //                    exploration->clearVisitedFrontiers();
 //                exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
         //                if(skip_findFrontiers)
-                    exploration->clearSeenFrontiers(costmap2d_global);
+//                    exploration->clearSeenFrontiers(costmap2d_global);
 
                 costmap_mutex.unlock();
                 print_mutex_info("explore()", "unlock");
@@ -616,10 +622,8 @@ class Explorer
                 
                 explorer_ready = true;
             
-            
             }
-            
-            
+
             
 
             // TODO(minor) better while loops
@@ -2214,13 +2218,23 @@ class Explorer
 
     void frontiers()
     {
+        while(!explorer_ready)
+            ros::Duration(10).sleep();
+    
+        ros::Duration(10).sleep();
+        ROS_INFO("Can start periodical recomputation and publishing of frontiers"); //TODO probably now the findFrontiers, etc., in explorer are useless... but we have to be sure that when we search for a frontier we have an updated map
+        
         while (ros::ok())
         {
+
             //ROS_DEBUG("frontiers(): acquiring lock");
             print_mutex_info("frontiers()", "acquiring");
             costmap_mutex.lock();
             //ROS_DEBUG("frontiers(): lock acquired");
             print_mutex_info("frontiers()", "lock");
+            
+            exploration->transformToOwnCoordinates_frontiers();
+            exploration->transformToOwnCoordinates_visited_frontiers();
 
             exploration->findFrontiers();
             exploration->clearVisitedFrontiers();
@@ -2229,7 +2243,7 @@ class Explorer
             
             //ROS_INFO("publish_frontier_list and visualize them in rviz");
             exploration->publish_frontier_list();
-            exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
+//            exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
                                                            // only the frontier visited by this robot...
 
             /* Publish frontier points for rviz */
@@ -2241,7 +2255,7 @@ class Explorer
             //ROS_DEBUG("frontiers(): lock released");
             print_mutex_info("frontiers()", "unlock");
 
-            ros::Rate(10).sleep();
+            ros::Rate(0.1).sleep();
         }
     }
 
