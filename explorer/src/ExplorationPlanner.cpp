@@ -269,6 +269,9 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     
     sub_new_ds_on_graph = nh.subscribe("new_ds_on_graph", 10000, &ExplorationPlanner::new_ds_on_graph_callback, this);
     sub_ds_count = nh.subscribe("ds_count", 10, &ExplorationPlanner::ds_count_callback, this);
+    
+    publish_goal_ds_for_path_navigation = nh.advertise<adhoc_communication::EmDockingStation>("goal_ds_for_path_navigation", 10);
+    
     //ROS_ERROR("%s", sub_new_ds_on_graph.getTopic().c_str());
     //ROS_ERROR("%s", sub_ds_count.getTopic().c_str());
     
@@ -4540,6 +4543,96 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
     return found_reachable_frontier;
 }
 
+bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance) {
+    //just compute the goal ds for the moment //TODO complete
+    ROS_DEBUG("%lu", frontiers.size());
+    double min_dist = std::numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    int retry = 0;
+    while (min_ds == NULL && retry < 5) {
+        for (unsigned int i = 0; i < ds_list.size(); i++)
+        {
+            for (unsigned int j = 0; j < frontiers.size(); j++)
+            {
+                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+                if (dist < 0) {
+                    ROS_ERROR("Distance computation failed");
+                    continue;
+                }
+
+                if (dist * 2 < max_available_distance * 0.9)
+                {
+                    double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+                    if (dist2 < 0) {
+                        ROS_ERROR("Distance computation failed");
+                        continue;
+                    }
+
+                    if (dist2 < min_dist)
+                    {
+                        min_dist = dist2;
+                        min_ds = &ds_list.at(i);
+                    }
+                    
+                    break;
+                }
+            }
+        }
+        retry++;
+        if(min_ds == NULL)
+            ros::Duration(3).sleep();
+    }
+    
+    if (min_ds == NULL) {
+        ROS_ERROR("No DS with EOs was found"); //this shouldn't happen because auctioning_2 should be entered only if explorer thinks that there are EOs
+        ROS_INFO("No DS with EOs was found");
+        return false;
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    }
+
+    // compute closest DS
+    min_dist = std::numeric_limits<int>::max();
+    ds_t *closest_ds = NULL;
+    retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (unsigned int i = 0; i < ds_list.size(); i++)
+        {
+            double dist = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+            if (dist < 0) {
+                ROS_ERROR("Distance computation failed");
+                continue;
+            }
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds_list.at(i);
+            }
+        }
+        retry++;
+        if(closest_ds == NULL)
+            ros::Duration(3).sleep();
+    }
+    if(closest_ds == NULL)  {
+        ROS_ERROR("impossible...");
+        ROS_INFO("impossible...");
+        return false;
+    }
+    
+    bool ds_found_with_mst = false;
+    if(closest_ds->id == min_ds->id) {
+        ROS_ERROR("closest_ds->id == min_ds->id, this should not happen...");
+        ROS_INFO("closest_ds->id == min_ds->id, this should not happen...");
+        return false;
+    }
+
+    adhoc_communication::EmDockingStation msg;
+    msg.id = min_ds->id;
+    publish_goal_ds_for_path_navigation.publish(msg);
+    return true;
+    
+}
+
 bool ExplorationPlanner::recomputeGoal() {
     ROS_INFO("my_error_counter: %d", my_error_counter);
     ROS_INFO("retrying_searching_frontiers: %d", retrying_searching_frontiers);
@@ -4554,7 +4647,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         
         //check euclidean distances
         distance = euclidean_distance(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
-        if(distance * 2 > 0.9 * max_available_distance)
+        if(distance * 2 > max_available_distance)
             continue;
         
         distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate); //TODO safety coefficient is missing
@@ -4565,7 +4658,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         }
         // convert from cells to meters
         //total_distance *= costmap_ros_->getCostmap()->getResolution();
-        if(distance * 2 < 0.9 * max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking...
+        if(distance * 2 < max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking...
             return true;
     }
     return false;

@@ -21,6 +21,8 @@
 #include <map_merger/TransformPoint.h>
 #include <math.h>
 #include <std_msgs/Int32.h>
+#include <stdlib.h>
+#include <limits>
 
 namespace explorationPlanner
 {
@@ -322,6 +324,7 @@ namespace explorationPlanner
             bool my2_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool home_is_reachable(double available_distance);
             bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
+            bool compute_and_publish_ds_path(double maximum_available_distance);
 
         private:
             bool auction_running;
@@ -440,7 +443,7 @@ namespace explorationPlanner
             double robot_home_world_x, robot_home_world_y;
             void this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
             ros::Time time_start;
-            
+            ros::Publisher publish_goal_ds_for_path_navigation;
             
     };
 }

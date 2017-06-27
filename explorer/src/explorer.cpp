@@ -703,9 +703,12 @@ class Explorer
                 
                     
                 //this is done because the robot, actually , can never use the full battery to move, since it has to perform some pre-processing operations with the costmap before selecting a frontier, and so meanwhile the battery life is decreased; so, we store the first available_distance that we have when performing the first frontier selection
-                if(conservative_maximum_available_distance < 0)
+                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < 0.95*conservative_available_distance(available_distance)) {
                     //conservative_maximum_available_distance = conservative_available_distance(available_distance); 
-                    conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance); 
+                    
+                    conservative_maximum_available_distance = 0.95*conservative_available_distance(available_distance);
+                    
+                }
                     
                 ROS_INFO("START FRONTIER SELECTION");
                     
@@ -1370,7 +1373,6 @@ class Explorer
 //                            } 
                             
                             //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-                            retries2++;
                             if(retries2 < 4) {
                                 bool error = false;
                                 ros::spinOnce(); //to udpate available_distance
@@ -1383,7 +1385,12 @@ class Explorer
                                 }
                                 else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ){
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                    update_robot_state_2(auctioning_2);
+                                    if(exploration->compute_and_publish_ds_path(conservative_maximum_available_distance))
+                                        update_robot_state_2(auctioning_2);
+                                    else {
+                                        retries2++;
+                                        ROS_ERROR("Failures in    compute_and_publish_ds_path()");
+                                    }
                                 }
                                 else {
                                     ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
@@ -1391,6 +1398,7 @@ class Explorer
                                             ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
                                             ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
                                             ros::Duration(3).sleep();
+                                            retries2++;
                                             continue;
                                     }
                                     else {
@@ -1722,7 +1730,7 @@ class Explorer
                     i++;
                 }
                 if(i >= 30) {
-                    log_major_error("robot was saved from stucking in checking_vacancy");
+                    log_minor_error("robot was saved from stucking in checking_vacancy");
                     update_robot_state_2(in_queue);   
                 }
                 
@@ -1865,6 +1873,7 @@ class Explorer
             ROS_DEBUG("                                             ");
             
             ROS_INFO("DONE EXPLORING");
+            
         }
         
         ROS_INFO("out of while loop of explore()");
@@ -1950,6 +1959,7 @@ class Explorer
         if(robot_state_next == finished_next) {
             ROS_INFO("Have to finish...");
             //robot_state == auctioning_3;
+            move_home_if_possible();
             finalize_exploration();
         }
         
@@ -2188,7 +2198,6 @@ class Explorer
 //            exploration->clearUnreachableFrontiers();
 
             /* Publish frontiers */
-            exploration->publish_frontier_list();
             exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
                                                            // only the frontier visited by this robot...
 
@@ -2659,6 +2668,8 @@ class Explorer
         exploration->clearVisitedFrontiers();
         exploration->clearUnreachableFrontiers();
         exploration->clearSeenFrontiers(costmap2d_global);
+        
+        exploration->publish_frontier_list();
 
         costmap_mutex.unlock();
         //ROS_INFO("iterate_global_costmap(): lock released");
