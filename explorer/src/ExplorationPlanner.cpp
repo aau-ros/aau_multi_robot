@@ -4660,7 +4660,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
             return true;
         }
     }
-    release_mutex(&store_frontier_mutex, __FUNCTION);
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
     return false;
                 
 }
