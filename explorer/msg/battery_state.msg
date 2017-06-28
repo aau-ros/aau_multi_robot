@@ -1,0 +1,5 @@
+bool charging
+float32 soc
+float32 remaining_time_charge
+float32 remaining_time_run
+float32 remaining_distance

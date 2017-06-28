@@ -1314,7 +1314,7 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     return -1;
 }
 
-void docking::cb_battery(const energy_mgmt::battery_state::ConstPtr &msg)
+void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 {
     //ROS_DEBUG("Received battery state");
 
@@ -3380,7 +3380,7 @@ float docking::conservative_maximum_distance_one_way() {
     return maximum_travelling_distance;
 }
 
-void docking::full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg) {
+void docking::full_battery_info_callback(const explorer::battery_state::ConstPtr &msg) {
     ROS_INFO("Received!"); //TODO(minor) it seems that this message is not even sent... i think that it's because the instance of battery is created before the isntance of docking, and so when the message is published, there is still no subscriber to receive it... the best way should be to create a una tantum function for abttery, that is called after that both bat and doc objects are created...
     maximum_travelling_distance = msg.get()->remaining_distance;
 }

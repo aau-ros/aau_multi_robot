@@ -58,10 +58,10 @@ battery_simulate::battery_simulate()
     state.remaining_distance = maximum_running_time * speed_avg_init; //m //TODO(minor) explain why we use max_speed_linear and not min_speed, etc.
 
     // advertise topics
-    pub_battery = nh.advertise<energy_mgmt::battery_state>("battery_state", 1);
+    pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
     pub_charging_completed = nh.advertise<std_msgs::Empty>("charging_completed", 1);
     
-    pub_full_battery_info = nh.advertise<energy_mgmt::battery_state>("full_battery_info", 1);
+    pub_full_battery_info = nh.advertise<explorer::battery_state>("full_battery_info", 1);
 
     // subscribe to topics
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);

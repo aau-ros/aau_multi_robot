@@ -12,7 +12,8 @@ public:
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Twist.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
-#include <energy_mgmt/battery_state.h>
+//#include <energy_mgmt/battery_state.h>
+#include <explorer/battery_state.h>
 #include <explorer/Speed.h>
 #include "std_msgs/Float32.h"
 #include <adhoc_communication/EmRobot.h>
@@ -53,7 +54,7 @@ public:
      *  - float32 remaining_time_run
      *  - float32 remaining_distance
      */
-    energy_mgmt::battery_state state;
+    explorer::battery_state state;
     
     void run();
 

@@ -18,7 +18,7 @@
 #include <adhoc_communication/ChangeMCMembership.h>
 //#include <adhoc_communication/SendMmPoint.h>
 #include <map_merger/TransformPoint.h>
-#include <energy_mgmt/battery_state.h>
+#include <explorer/battery_state.h>
 #include <energy_mgmt/AuctionResult.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -110,7 +110,7 @@ class docking
     /**
      * Callbacks for the subscribed topics.
      */
-    void cb_battery(const energy_mgmt::battery_state::ConstPtr &msg);
+    void cb_battery(const explorer::battery_state::ConstPtr &msg);
     void cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg);
     void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg);
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg);
@@ -295,7 +295,7 @@ class docking
     /**
      * The battery state containing time needed to fully charge the battery and time left until battery depletion.
      */
-    energy_mgmt::battery_state battery;
+    explorer::battery_state battery;
 
     /**
      * A vector of all currently available jobs (e.g. frontiers for exploration).
@@ -560,7 +560,7 @@ class docking
     
     float maximum_travelling_distance;
     
-    void full_battery_info_callback(const energy_mgmt::battery_state::ConstPtr &msg);
+    void full_battery_info_callback(const explorer::battery_state::ConstPtr &msg);
     
     bool explorer_ready;
     

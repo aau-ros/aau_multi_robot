@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 #include <ros/console.h>
-#include <battery.h>
+//#include <battery.h>
 #include <battery_simulate.h>
 #include <docking.h>
 #include <boost/thread.hpp>

@@ -21,7 +21,8 @@
 #include <navfn/navfn_ros.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-#include "energy_mgmt/battery_state.h"
+//#include "energy_mgmt/battery_state.h"
+#include "explorer/battery_state.h"
 #include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
 #include <std_msgs/Empty.h>
@@ -3542,7 +3543,7 @@ class Explorer
         }
     }
 
-    void bat_callback(const energy_mgmt::battery_state::ConstPtr &msg)
+    void bat_callback(const explorer::battery_state::ConstPtr &msg)
     {
         ROS_DEBUG("Received battery state");
         battery_charge = (int) (msg->soc * 100);

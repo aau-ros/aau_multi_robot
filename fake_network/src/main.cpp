@@ -4,7 +4,7 @@
 #include "fake_network/NetworkMessage.h"
 #include "std_msgs/Empty.h"
 #include <fake_network/RobotPosition.h>
-#include <adhoc_communication/EmRobot.h>
+//#include <adhoc_communication/EmRobot.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 #define RESOLUTION 0.05
@@ -126,30 +126,30 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     return true;
 }
 
-void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
-    robot_list[msg.id].x = msg.x;
-    robot_list[msg.id].y = msg.y;
-    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
-}
+//void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
+//    robot_list[msg.id].x = msg.x;
+//    robot_list[msg.id].y = msg.y;
+//    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
+//}
 
 void end_simulation(const ros::TimerEvent &event) {
     ros::shutdown();
 }
 
-void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
-    ROS_INFO("robot_%d has finished exploring", msg.id);
-    robot_list[msg.id].finished = true;
-    
-    bool all_finished = true;
-    for(int i=0; i<robot_list.size(); i++)
-        if(!robot_list[i].finished)
-            all_finished = false;
-            
-    if(all_finished) {
-        ros::NodeHandle nh;
-        timer = nh.createTimer(ros::Duration(180), end_simulation, true, true);
-    }
-}
+//void finished_exploration_callback(const adhoc_communication::EmRobot msg) {
+//    ROS_INFO("robot_%d has finished exploring", msg.id);
+//    robot_list[msg.id].finished = true;
+//    
+//    bool all_finished = true;
+//    for(int i=0; i<robot_list.size(); i++)
+//        if(!robot_list[i].finished)
+//            all_finished = false;
+//            
+//    if(all_finished) {
+//        ros::NodeHandle nh;
+//        timer = nh.createTimer(ros::Duration(180), end_simulation, true, true);
+//    }
+//}
 
 
 int main(int argc, char** argv)
@@ -169,8 +169,8 @@ int main(int argc, char** argv)
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 1000000));
         sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
-        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
-        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
+//        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
+//        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;
         robot.x = 0;    //TODO not very good...

@@ -55,7 +55,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  battery_state.msg
+#  battery_state.msg
   AuctionResult.msg
 )
 
@@ -130,7 +130,7 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(battery src/battery.cpp)
+#add_library(battery src/battery.cpp)
 add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 
@@ -138,7 +138,7 @@ add_library(docking src/docking.cpp)
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(battery energy_mgmt_gencpp)
+#add_dependencies(battery energy_mgmt_gencpp)
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
@@ -153,7 +153,7 @@ add_dependencies(energy_mgmt map_merger map_merger_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(energy_mgmt
-  battery
+#  battery
   docking
   battery_simulate
   ${Boost_LIBRARIES}
