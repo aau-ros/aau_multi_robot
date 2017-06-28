@@ -4,6 +4,6 @@ distance_between_ds = 25                # m
 safety_coefficient = 1.1                # (adimensional)
 pessimistic_speed = 0.3                 # m/s
 hour_to_seconds_conversion_coeff = 3600 # s
-max_speed = 1                           # m/s
+max_speed = 0.8                         # m/s
 
 print (distance_between_ds * 2 * safety_coefficient / pessimistic_speed) * (13.7 + 18*max_speed + 8+3) / hour_to_seconds_conversion_coeff

@@ -2275,8 +2275,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
     {
         /* Do nothing, just print some debug text */
         if (participating_to_auction > 0 && !update_state_required)
-            ROS_DEBUG("There are still pending auctions, and moreover no update is "
-                      "necessary for the moment");
+            ROS_DEBUG("There are still pending auctions (%d), and moreover no update is "
+                      "necessary for the moment", participating_to_auction);
         else if (!update_state_required)
             ROS_DEBUG("No state update required");
         else if (participating_to_auction > 0)
