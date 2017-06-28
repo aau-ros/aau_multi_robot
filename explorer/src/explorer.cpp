@@ -2155,7 +2155,8 @@ class Explorer
             }
             
             /* If the robot is going to check if the target DS is free or it is already checking, do nothing (the robot will receive messages from the other robots telling it that the DS is not vacant) */ //TODO what if all these messages are lost
-            else if (robot_state == going_checking_vacancy) {
+            else if (robot_state == going_checking_vacancy)
+            {
                 ROS_INFO("robot is going_checking_vacancy... ignore going_in_queue then...");
                 update_robot_state_2(going_in_queue);
             }
@@ -2167,10 +2168,11 @@ class Explorer
             }
             
             /* Otherwise, something strange happened */
-            else 
+            else {
                 log_major_error("robot would like to go in queue even if it should not!");
                 ROS_DEBUG("robot state in fact is: %s", get_text_for_enum(robot_state).c_str());
                 ROS_INFO("ignoring going_queue_next");
+            }
         }
 
         /* */
@@ -2267,7 +2269,6 @@ class Explorer
             //ROS_DEBUG("frontiers(): lock released");
             print_mutex_info("frontiers()", "unlock");
 
-            
         }
     }
 
