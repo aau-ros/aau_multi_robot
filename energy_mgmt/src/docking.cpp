@@ -268,6 +268,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     id_next_target_ds = -1;
     path_navigation_tries = 0;
     next_remaining_distance = 0, current_remaining_distance = 0;
+    has_to_free_target_ds = false;
+    id_ds_to_be_freed = -1;
 
     /* Function calls */
     preload_docking_stations();
@@ -1468,12 +1470,17 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
-        set_target_ds_vacant(true);
+        has_to_free_target_ds = true;
+        id_ds_to_be_freed = get_target_ds_id();
     }
-    else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue ||
-             msg.get()->state == exploring)
+    else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
+        ;
+    else if(msg.get()->state == exploring)
     {
-        ;  // ROS_ERROR("\n\t\e[1;34midle!!!\e[0m");
+        if(has_to_free_target_ds) {
+            has_to_free_target_ds = false;
+            free_ds(id_ds_to_be_freed);
+        }
     }
     else if (msg.get()->state == finished)
     {
@@ -1644,9 +1651,9 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                 // if the ds is now vacant and it's robot's target ds and the robot is in queue, the robot can start already start a new auction
                 //TODO but in this way we start an auction when the DS has become vacant because the robot that was previously recharging at that DS was forced to leave because it has just lost an auction, which means that we have already a winner for the DS...
 //                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
-//                    ROS_INFO("Anticipate periodic re-auctioning");
-//                    timer_restart_auction.stop();
-//                    start_periodic_auction();
+                    ROS_INFO("Anticipate periodic re-auctioning");
+                    timer_restart_auction.stop();
+                    start_periodic_auction();
 //                }
                     
             }
@@ -2100,18 +2107,18 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         /* If the robot is going to or already charging, or if it is going to check
          * already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
-//        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-//            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
         if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-            robot_state == checking_vacancy)
+            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
+//        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
+//            robot_state == checking_vacancy)
         {
             /* Print some debut text */
             if (robot_state == charging || robot_state == going_charging)
                 ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
             else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
                 ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
-//            else if (robot_state == fully_charged || robot_state == leaving_ds)
-//                ROS_INFO("I'm leaving ds%d, jsut wait a sec...", msg.get()->id);
+            else if (robot_state == fully_charged || robot_state == leaving_ds)
+                ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
 
             /* Reply to the robot that asked for the check, telling it that the DS is
              * occupied */
@@ -3964,4 +3971,33 @@ double docking::get_target_ds_x() {
 
 double docking::get_target_ds_y() {
     return target_ds_y;
+}
+
+void docking::free_ds(int id) {
+    if(id < 0 || id >= num_ds) {
+        log_major_error("invalid target_ds in free_ds!");
+        return;
+    }
+
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "docking_stations";
+    srv_msg.request.dst_robot = group_name;
+    srv_msg.request.docking_station.id = id;
+    double x, y;
+    
+    for(unsigned int i=0; i < ds.size(); i++)
+        if(ds.at(i).id == id) {
+            ds.at(i).vacant = vacant;
+            rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
+        }
+    
+    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
+                                            // received, robots perform checks on the coordinates
+    srv_msg.request.docking_station.y = y;
+    srv_msg.request.docking_station.vacant = true;
+    sc_send_docking_station.call(srv_msg);
+
+    ROS_INFO("Updated own information about ds%d state", id);
+
+    update_l1();
 }

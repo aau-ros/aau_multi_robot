@@ -224,6 +224,7 @@ private:
     bool idle_mode;
     ros::Time sim_time_start;
     ros::WallTime wall_time_start;
+    bool do_not_consume_battery;
     
 };
 

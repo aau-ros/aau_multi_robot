@@ -636,6 +636,9 @@ class docking
     void simple_compute_and_publish_path_on_ds_graph();
     void goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     int goal_ds_path_id;
+    bool has_to_free_target_ds;
+    int id_ds_to_be_freed;
+    void free_ds(int id);
 
 };
 

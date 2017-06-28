@@ -153,6 +153,7 @@ battery_simulate::battery_simulate()
     battery_state_fs.close();
     
     idle_mode = false;
+    do_not_consume_battery = false;
     
     sim_time_start = ros::Time::now();
     wall_time_start = ros::WallTime::now();
@@ -175,6 +176,11 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
             state.charging = false;
         }
     }
+    
+    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
+        do_not_consume_battery = true;
+    else
+        do_not_consume_battery = false;
     
     if(msg.get()->state == fully_charged || msg.get()->state == leaving_ds || msg.get()->state == exploring)
         advanced_computations_bool = true;
@@ -199,6 +205,12 @@ void battery_simulate::compute()
     if (time_diff_sec <= 0) {
         return;
     }
+    
+    // If the robot is in fully
+    if(do_not_consume_battery) {
+        time_last = ros::Time::now();
+        return;
+    }   
 
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)

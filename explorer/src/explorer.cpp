@@ -186,7 +186,8 @@ class Explorer
         coeff_b = COEFF_B;
 
         /* Initial robot state */
-        robot_state = fully_charged;  // TODO(minor) what if instead it is not fully charged?
+        robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
+//        robot_state = fully_charged; //fully_charged is then the robot is still occupying the DS
         robot_state_next = current_state;
 
         /* Robot state publishers */
@@ -683,7 +684,8 @@ class Explorer
                 } else
                     available_distance = next_available_distance;
                    
-                if(robot_state == leaving_ds || robot_state == fully_charged )
+//                if(robot_state == leaving_ds || robot_state == fully_charged )
+                if(robot_state == leaving_ds)
                 {
                     //TODO
 //                    double distance = -1;
@@ -713,10 +715,10 @@ class Explorer
                     move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
 //                                    ROS_INFO("Now it is ok...");
 //                                }
-                    if(robot_state == leaving_ds) { //this is because at the moment in the code fully_charged in considered a state of computation with the idea that the computation is performed with full battery life, differently from 'exploring' state, and this information is used sometimes, so we should modifying the transition function to be "charging -> leaving_ds -> exploring_fully_charged | exploring_not_fully_charged"
+//                    if(robot_state == leaving_ds) { //this is because at the moment in the code fully_charged in considered a state of computation with the idea that the computation is performed with full battery life, differently from 'exploring' state, and this information is used sometimes, so we should modifying the transition function to be "charging -> leaving_ds -> exploring_fully_charged | exploring_not_fully_charged"
                         update_robot_state_2(exploring);
                         continue;
-                    }
+//                    }
                 }
                 
                 
@@ -2232,6 +2234,10 @@ class Explorer
         
         while (ros::ok())
         {
+            ros::Rate(0.1).sleep();
+            
+            if(robot_state == in_queue) //idle mode
+                continue;
 
             //ROS_DEBUG("frontiers(): acquiring lock");
             print_mutex_info("frontiers()", "acquiring");
@@ -2261,7 +2267,7 @@ class Explorer
             //ROS_DEBUG("frontiers(): lock released");
             print_mutex_info("frontiers()", "unlock");
 
-            ros::Rate(0.1).sleep();
+            
         }
     }
 
