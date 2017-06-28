@@ -673,10 +673,10 @@ class Explorer
                     continue;
                    }
                    
-                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < 0.95*conservative_available_distance(next_available_distance)) {
+                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < conservative_available_distance(next_available_distance)) {
                     ROS_INFO("setting maximum distance");
 //                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance); 
-                    conservative_maximum_available_distance = 0.95*conservative_available_distance(next_available_distance);
+                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance);
                 }
                    
                 if(robot_state == fully_charged) {
