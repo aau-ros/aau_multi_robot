@@ -264,6 +264,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
     next_optimal_ds_id = old_optimal_ds_id;
+    old_optimal_ds_id_for_log = old_optimal_ds_id;
+    old_target_ds_id_for_log = old_optimal_ds_id_for_log;
     time_start = ros::Time::now();
     id_next_target_ds = -1;
     path_navigation_tries = 0;
@@ -943,23 +945,26 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         }
         
         if(changed) {
-            /* Keep track of the new optimal DS in log file */
-            ros::Duration time = ros::Time::now() - time_start;
-            fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            int target_ds_id;
-            if(!target_ds_is_set())
-                target_ds_id = -1;
-            else
-                target_ds_id = get_target_ds_id();
-            ROS_DEBUG("%d", target_ds_id);
-            fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << target_ds_id << "," << std::endl; //TODO target_ds_id could be wrong here...
-            fs_csv.close();
+
         }
             
     }
     else
         ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not "
                   "been computed");
+}
+
+void docking::log_optimal_and_target_ds() {
+    /* Keep track of the optimal and target DSs in log file */
+    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
+        ros::Duration time = ros::Time::now() - time_start;
+        fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+        ROS_DEBUG("%d", target_ds_id);
+        fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
+        fs_csv.close();
+        old_optimal_ds_id_for_log = get_optimal_ds_id();
+        old_target_ds_id_for_log = get_target_ds_id();
+    }
 }
 
 void docking::points(const adhoc_communication::MmListOfPoints::ConstPtr &msg)  // TODO(minor)

@@ -3,7 +3,7 @@
 
 #include <ExplorationPlanner.h>
 //#include <navfn/navfn_ros.h>
-#include "global_planner/planner_core.h"
+#include <global_planner/planner_core.h>
 #include "ros/ros.h"
 #include "hungarian.h"
 #include <ros/console.h>

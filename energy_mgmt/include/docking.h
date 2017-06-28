@@ -79,6 +79,7 @@ class docking
     
     ros::Publisher pub_test, pub_new_ds_on_graph, pub_ds_count;
     ros::Subscriber sub_test;
+    void log_optimal_and_target_ds();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -639,6 +640,8 @@ class docking
     bool has_to_free_target_ds;
     int id_ds_to_be_freed;
     void free_ds(int id);
+    int old_optimal_ds_id_for_log;
+    int old_target_ds_id_for_log;
 
 };
 
