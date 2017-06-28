@@ -265,7 +265,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     old_optimal_ds_id = -100;
     next_optimal_ds_id = old_optimal_ds_id;
     old_optimal_ds_id_for_log = old_optimal_ds_id;
-    old_target_ds_id_for_log = old_optimal_ds_id_for_log;
+    old_target_ds_id_for_log = -1;
+    target_ds_id = -1;
     time_start = ros::Time::now();
     id_next_target_ds = -1;
     path_navigation_tries = 0;
@@ -899,16 +900,16 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         {
             finished_bool = false; //TODO(minor) find better place...
             changed = true;
+            set_optimal_ds(next_optimal_ds_id);
             
             /* Debug output */
             if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
                 ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, next_optimal_ds_id);
             else
                 ROS_INFO("Change optimal DS: (none) -> ds%d", next_optimal_ds_id);
-            if(get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
+            if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
                 log_major_error("OH NO!!!!!!!!!!!!");
 
-            set_optimal_ds(next_optimal_ds_id);
             old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
             robot->selected_ds = get_optimal_ds_id();
 
