@@ -3934,13 +3934,6 @@ bool docking::set_optimal_ds(int id) {
             break;
         }
     optimal_ds_set = true;
-
-    /* Keep track of the new optimal DS in log file */
-    ros::Duration time = ros::Time::now() - time_start;
-    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
-    fs_csv.close();
-
     return true;
 }
 
@@ -3965,13 +3958,6 @@ bool docking::set_target_ds(int id) {
             break;
         }
     target_ds_set = true;
-
-    /* Keep track of the new target DS in log file */
-    ros::Duration time = ros::Time::now() - time_start;
-    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
-    fs_csv.close();
-
     return true;
 }
 
