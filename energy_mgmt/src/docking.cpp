@@ -900,9 +900,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             
             /* Debug output */
             if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
-                ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, get_optimal_ds_id());
+                ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, next_optimal_ds_id);
             else
-                ROS_INFO("Change optimal DS: (none) -> ds%d", get_optimal_ds_id());
+                ROS_INFO("Change optimal DS: (none) -> ds%d", next_optimal_ds_id);
             if(get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
                 log_major_error("OH NO!!!!!!!!!!!!");
 
@@ -1349,6 +1349,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
             else
                 robots[i].simple_state = idle;
         }
+        
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
 
@@ -1472,6 +1473,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         has_to_free_target_ds = true;
         id_ds_to_be_freed = get_target_ds_id();
+        going_to_ds = false;
     }
     else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
         ;
@@ -1879,19 +1881,20 @@ void docking::timerCallback(const ros::TimerEvent &event)
         auction_winner = false;
     }
 
+    ROS_DEBUG("Send auction results to other robots");
     adhoc_communication::SendEmAuction srv_msg;
     srv_msg.request.topic = "adhoc_communication/auction_winner";
     srv_msg.request.dst_robot = group_name;
     srv_msg.request.auction.auction = auction_id;
     srv_msg.request.auction.robot = winner;
-
-    srv_msg.request.auction.docking_station = get_optimal_ds_id();
-    srv_msg.request.auction.bid = get_llh();
+    srv_msg.request.auction.docking_station = id_auctioned_ds;
+    srv_msg.request.auction.bid = get_llh(); //TODO wrong, although unused (?) because maybe meanwhile
 
     // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv_msg);
 
     /* Computation completed */
+    ROS_INFO("Auction completed");
     participating_to_auction--;
 }
 
@@ -3811,8 +3814,10 @@ void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::Em
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
         {
-            ros::Duration(10).sleep();
             start_new_auction();
+        }
+        else {
+            ROS_INFO("going_to_ds is true, so we cannot start another auction");
         }
     }
 }
