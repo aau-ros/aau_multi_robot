@@ -1352,6 +1352,12 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
+        
+    if (has_to_free_target_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds)
+     {
+            has_to_free_target_ds = false;
+            free_ds(id_ds_to_be_freed);
+        }
 
     if (msg.get()->state == in_queue)
     {
@@ -1479,10 +1485,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ;
     else if(msg.get()->state == exploring)
     {
-        if(has_to_free_target_ds) {
-            has_to_free_target_ds = false;
-            free_ds(id_ds_to_be_freed);
-        }
+        ;
     }
     else if (msg.get()->state == finished)
     {
