@@ -111,7 +111,6 @@ class Explorer
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
     unsigned int retries, retries2, retries3;
-    bool use_full_energy;
     double next_available_distance;
 
     /*******************
@@ -678,7 +677,7 @@ class Explorer
                     conservative_maximum_available_distance = 0.95*conservative_available_distance(next_available_distance);
                 }
                    
-                if(use_full_energy) {
+                if(robot_state == fully_charged) {
                     ROS_INFO("using max distance");
                     available_distance = conservative_maximum_available_distance;
                 } else
@@ -1162,7 +1161,8 @@ class Explorer
                                 ROS_INFO("Compute distance");
                                 for(int i=0; i<5 && dist < 0; i++) {
                                     dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
-                                    ros::Duration(1).sleep();   
+                                    if(dist<0)
+                                        ros::Duration(1).sleep();
                                 }
                                 ROS_INFO("Distance computed");
                                 
@@ -1258,8 +1258,11 @@ class Explorer
 //                        else
                             //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
  
-
                         ros::spinOnce(); // to update available_distance
+
+                        if(robot_state != fully_charged)
+                            available_distance = next_available_distance;    
+                        
 //                        if(conservative_available_distance(available_distance) <= 0)
 //                            goal_determined = false;
 //                        else {
@@ -1331,7 +1334,6 @@ class Explorer
 //                                    ROS_ERROR("%d", explorations);
                                     update_robot_state_2(moving_to_frontier);
                                     retries3 = 0;
-                                    use_full_energy = false;
 //                                }
                                     
                                 //exploration->clean_frontiers_under_auction();
@@ -2098,7 +2100,6 @@ class Explorer
             //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
-                use_full_energy = true;
             //}
         }
 
