@@ -182,7 +182,7 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
     else
         do_not_consume_battery = false;
     
-    if(msg.get()->state == fully_charged || msg.get()->state == leaving_ds || msg.get()->state == exploring)
+    if(msg.get()->state == fully_charged || msg.get()->state == exploring)
         advanced_computations_bool = true;
     else
         advanced_computations_bool = false;

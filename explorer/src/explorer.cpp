@@ -2302,8 +2302,9 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_explored_cells,global_map_explored_cells_2,local_map_explored_cells,total_number_of_cells,battery_state,"
-                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
+                  "global_map_explored_cells,discovered_free_cells_count,local_map_explored_cells,total_number_of_free_cells"
+//                  ",battery_state,"
+//                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << std::endl;
         fs_csv.close();
 
