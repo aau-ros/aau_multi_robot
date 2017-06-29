@@ -22,7 +22,6 @@
 #include <energy_mgmt/AuctionResult.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <fake_network/RobotPosition.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <sstream>
@@ -33,9 +32,11 @@
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <ros/console.h>
-#include "ros/package.h"
+#include <ros/package.h>
 #include <std_msgs/String.h>
 #include <visualization_msgs/Marker.h>
+#include "fake_network/RobotPositionSrv.h"
+#include "fake_network/RobotPosition.h"
 
 
 #define PI 3.14159265

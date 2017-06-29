@@ -168,7 +168,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     /* General services */
     //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
     //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");
     //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
     //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
     sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
@@ -227,7 +227,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sub_test = nh.subscribe("test", 10, &docking::test_2, this);
 	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
 	
-	pub_robot_absolute_position = nh.advertise<adhoc_communication::EmRobot>("fake_network/robot_absolute_position", 10);
+	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 10);
 	
 	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
 	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
@@ -361,7 +361,7 @@ void docking::wait_for_explorer() {
     
     ros::service::waitForService("explorer/robot_pose");
     //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose");      
+    sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");      
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_ERROR("No connection to service 'explorer/robot_pose': retrying...");
         ros::Duration(3).sleep();
@@ -3271,7 +3271,7 @@ void docking::update_robot_position()
     
     /* Get current robot position (once the service required to do that is ready) by calling explorer's service */
     //ros::service::waitForService("explorer/robot_pose");
-    fake_network::RobotPosition srv_msg;
+    fake_network::RobotPositionSrv srv_msg;
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_FATAL("NO MORE CONNECTION!");
         ros::Duration(1).sleep();
@@ -3304,14 +3304,14 @@ void docking::update_robot_position()
                   sc_robot_pose.getService().c_str());
     */
     
-    adhoc_communication::EmRobot msg;
+    fake_network::RobotPosition msg;
     msg.id = robot_id;
     double x, y;
     
     rel_to_abs(robot->x, robot->y, &x, &y);
     
-    msg.x = x;
-    msg.y = y;    
+    msg.world_x = x;
+    msg.world_y = y;    
 
     //ROS_ERROR("(%f, %f)", robot->x, robot->y);
     //ROS_ERROR("(%f, %f)", x, y);

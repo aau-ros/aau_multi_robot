@@ -50,13 +50,14 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   NetworkMessage.msg
+  RobotPosition.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
    SendMessage.srv
-   RobotPosition.srv
+   RobotPositionSrv.srv
 )
 
 ## Generate actions in the 'action' folder

@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   explorer
   map_merger
   roslib
+  fake_network
 )
 
 ## System dependencies are found with CMake's conventions

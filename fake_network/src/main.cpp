@@ -14,7 +14,7 @@ ros::Publisher pub;
 std::vector<ros::ServiceServer> ss_send_message_list;
 std::vector<ros::ServiceClient> sc_publish_message_list;
 std::vector<ros::Publisher> pub_publish_message_list;
-std::vector<ros::ServiceClient> sc_robot_position_list;
+//std::vector<ros::ServiceClient> sc_robot_position_list;
 std::vector<ros::Subscriber> sub_robot_position_list;
 std::vector<ros::ServiceServer> ss_robot_position_list;
 std::vector<ros::Subscriber> sub_finished_exploration_list;
@@ -126,11 +126,11 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
     return true;
 }
 
-//void robot_absolute_position_callback(const adhoc_communication::EmRobot msg) {
-//    robot_list[msg.id].x = msg.x;
-//    robot_list[msg.id].y = msg.y;
-//    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
-//}
+void robot_absolute_position_callback(const fake_network::RobotPosition msg) {
+    robot_list[msg.id].x = msg.world_x;
+    robot_list[msg.id].y = msg.world_y;
+    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
+}
 
 void end_simulation(const ros::TimerEvent &event) {
     ros::shutdown();
@@ -168,8 +168,8 @@ int main(int argc, char** argv)
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 1000000));
-        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
-//        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
+//        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
+        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
 //        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;
@@ -180,7 +180,7 @@ int main(int argc, char** argv)
         reachability_list.push_back(false);
     }
     
-    fake_network::RobotPosition robot_position;
+//    fake_network::RobotPosition robot_position;
     
     // Frequency of loop
     double rate = 10; // Hz

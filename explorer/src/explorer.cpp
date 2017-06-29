@@ -29,7 +29,7 @@
 #include "nav_msgs/GetMap.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <adhoc_communication/EmDockingStation.h>
-#include <fake_network/RobotPosition.h>
+#include <fake_network/RobotPositionSrv.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
 #include <adhoc_communication/EmRobot.h>
@@ -1175,6 +1175,8 @@ class Explorer
                                         ROS_INFO("unable to compute distance");
                                         ROS_ERROR("reauction for current one");
                                         ROS_INFO("reauction for current one");
+                                        counter++;
+                                        move_robot_away(counter);
                                         update_robot_state_2(auctioning);
                                         retry_recharging_current_ds++;
                                     }
@@ -1193,6 +1195,8 @@ class Explorer
                                     }
                                     else {
                                         ROS_INFO("Cannot reach next DS on the path: reauction for current one");
+                                        counter++;
+                                        move_robot_away(counter);
                                         update_robot_state_2(auctioning);
                                     }
                                 } else {
@@ -1402,6 +1406,8 @@ class Explorer
                                 //TODO use 0.99 as coefficient?
                                 } else if( exploration->existFrontiersReachableWithFullBattery(0.99*conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
+                                    counter++;
+                                    move_robot_away(counter);
                                     update_robot_state_2(auctioning);
                                 }
                                 else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.99*conservative_maximum_available_distance, &error) ) {
@@ -1410,6 +1416,8 @@ class Explorer
                                     exploration->compute_and_publish_ds_path(0.99*conservative_maximum_available_distance, &result);
                                     if(result == 0) //TODO very very orrible idea, using result...
                                     {
+                                        counter++;
+                                        move_robot_away(counter);
                                         update_robot_state_2(auctioning_2);
                                         retries2 = 0;
                                     }
@@ -1422,6 +1430,8 @@ class Explorer
                                             log_major_error("impossible, no closest ds found...");
                                         else if(result == 3) {
                                             log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                            counter++;
+                                            move_robot_away(counter);
                                             update_robot_state_2(auctioning_2);
                                             retries3++;
                                         }
@@ -3232,7 +3242,7 @@ class Explorer
     
     bool move_robot_away(int seq)
     {
-        ROS_INFO("Preparing to move toward goal...");
+        ROS_INFO("Preparing to move away...");
 //        int stuck_countdown = EXIT_COUNTDOWN;
 
         /* Move the robot with the help of an action client. Goal positions are transmitted to the robot and feedback is
@@ -3241,6 +3251,20 @@ class Explorer
         //{
         //    ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
         //}
+        
+        double remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
+        
+        if(remaining_distance > queue_distance / 2.0 || exploration->distance_from_robot(home_point_x, home_point_y) < 1 ) {
+        
+            ROS_INFO("alreayd away from DS"); // althought this could be false... in the sense that maybe the movement was simply aborted
+
+            exploration->next_auction_position_x = robotPose.getOrigin().getX();
+            exploration->next_auction_position_y = robotPose.getOrigin().getY();
+//            store_travelled_distance();
+            return true;
+        }
+       
+        
 
         actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base", true);
 
@@ -3321,11 +3345,11 @@ class Explorer
                 prev_pose_angle = pose_angle;
             }
 
-            double remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
+            remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
 
             /* Print remaining distance to be travelled to reach goal if the goal is a DS */
             if (remaining_distance > queue_distance / 2.0) {
-                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
+//                ROS_DEBUG("Remaining distance: %.3f\e[0m", remaining_distance);
 
             /* If the robot is approaching a DS to queue or to check if it is free, stop it when it is close enough to
              * the DS */
@@ -3651,7 +3675,7 @@ class Explorer
         
     }
 
-    bool robot_pose_callback(fake_network::RobotPosition::Request &req, fake_network::RobotPosition::Response &res)
+    bool robot_pose_callback(fake_network::RobotPositionSrv::Request &req, fake_network::RobotPositionSrv::Response &res)
     {
         
         //tf::Stamped<tf::Pose> robotPose;
@@ -4000,6 +4024,8 @@ class Explorer
         }
         else {
             going_home = true;
+            counter++;
+            move_robot_away(counter);
             update_robot_state_2(auctioning_3);
         }
     }
