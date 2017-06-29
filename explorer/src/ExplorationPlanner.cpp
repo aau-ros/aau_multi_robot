@@ -2781,7 +2781,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
     
     total_distance += distance;
 
-    ROS_INFO("Distance to frontier and then home: %.2f",total_distance);
+    ROS_INFO("Distance to frontier and then DS: %.2f",total_distance);
     return available_distance > total_distance;
 
 }
@@ -4520,7 +4520,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
             
             //check euclidean distances
             total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f);
-            if(total_distance * 2 > 0.95 * max_available_distance)
+            if(total_distance * 2 > max_available_distance) //todo reduce the value from the one used by existFrontiersReachableWithFullBattery
                 continue;
             
             // distance DS-frontier
@@ -4534,7 +4534,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 //                errors++;
                 *error = true;
             }
-            if(total_distance * 2 < 0.95 * max_available_distance) {
+            if(total_distance * 2 < max_available_distance) {
                 found_reachable_frontier = true;
                 exit = true;
             }
@@ -4560,7 +4560,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
                     continue;
                 }
 
-                if (dist * 2 < max_available_distance * 0.9)
+                if (dist * 2 < max_available_distance)
                 {
                     double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
                     if (dist2 < 0) {
@@ -4634,6 +4634,21 @@ bool ExplorationPlanner::recomputeGoal() {
     ROS_INFO("my_error_counter: %d", my_error_counter);
     ROS_INFO("retrying_searching_frontiers: %d", retrying_searching_frontiers);
     return ( (retrying_searching_frontiers > 0 && retrying_searching_frontiers <= 3) || (my_error_counter > 0 && my_error_counter <= 5) ) ? true : false;
+}
+
+void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << "### Frontiers (in Stage coordinates) ###";
+    
+    fs_csv << "# Remaining frontiers";
+    for(unsigned int i=0; i < frontiers.size(); i++)
+        fs_csv << frontiers.at(i).x_coordinate + robot_home_world_x << "," << frontiers.at(i).y_coordinate + robot_home_world_y << std::endl;
+        
+    fs_csv << "# Unreachable frontiers";
+    for(unsigned int i=0; i < unreachable_frontiers.size(); i++)
+        fs_csv << unreachable_frontiers.at(i).x_coordinate + robot_home_world_x << "," << unreachable_frontiers.at(i).y_coordinate + robot_home_world_y << std::endl;
+        
+    fs_csv.close();
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {

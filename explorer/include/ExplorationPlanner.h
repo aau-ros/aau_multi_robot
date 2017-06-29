@@ -1,7 +1,6 @@
 #ifndef PLANNER_H___
 #define PLANNER_H___
 
-#include <ExplorationPlanner.h>
 //#include <navfn/navfn_ros.h>
 #include <global_planner/planner_core.h>
 #include "ros/ros.h"
@@ -23,6 +22,45 @@
 #include <std_msgs/Int32.h>
 #include <stdlib.h>
 #include <limits>
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <ros/console.h>
+#include <boost/lexical_cast.hpp>
+#include <move_base/MoveBaseConfig.h>
+#include <move_base_msgs/MoveBaseAction.h>
+#include <move_base_msgs/MoveBaseActionFeedback.h>
+#include <costmap_2d/costmap_2d_ros.h>
+#include <costmap_2d/costmap_2d.h>
+#include <costmap_2d/cost_values.h>
+#include <costmap_2d/costmap_2d_publisher.h>
+#include <costmap_2d/observation.h>
+#include <costmap_2d/observation_buffer.h>
+#include <tf/transform_listener.h>
+#include <std_msgs/String.h>
+#include <actionlib/client/simple_action_client.h>
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <iostream>
+#include <navfn/navfn_ros.h>
+#include <boost/filesystem.hpp>
+#include <map_merger/LogMaps.h>
+//#include "energy_mgmt/battery_state.h"
+#include "explorer/battery_state.h"
+#include "explorer/Speed.h"
+#include <std_msgs/Int32.h>
+#include <std_msgs/Empty.h>
+#include "nav_msgs/GetMap.h"
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <adhoc_communication/EmDockingStation.h>
+#include <fake_network/RobotPositionSrv.h>
+#include <explorer/Distance.h>
+#include <explorer/DistanceFromRobot.h>
+#include <adhoc_communication/EmRobot.h>
+#include <adhoc_communication/MmListOfPoints.h>
+#include <adhoc_communication/MmPoint.h>
+//#include <robot_state/GetRobotState.h>
+#include <std_msgs/Int32.h>
+#include <geometry_msgs/Twist.h>
 
 namespace explorationPlanner
 {
@@ -325,6 +363,7 @@ namespace explorationPlanner
             bool home_is_reachable(double available_distance);
             bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
             bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
+            void logRemainingFrontiers(std::string csv_file);
 
         private:
             bool auction_running;
@@ -444,6 +483,7 @@ namespace explorationPlanner
             void this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg);
             ros::Time time_start;
             ros::Publisher publish_goal_ds_for_path_navigation;
+            std::fstream fs_csv;
             
     };
 }

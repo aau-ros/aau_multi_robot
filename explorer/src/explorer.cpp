@@ -1,7 +1,6 @@
 #include "ros/ros.h"
 #include "ExplorationPlanner.h"
 #include <ros/console.h>
-#include <ExplorationPlanner.h>
 #include <boost/lexical_cast.hpp>
 #include <move_base/MoveBaseConfig.h>
 #include <move_base_msgs/MoveBaseAction.h>
@@ -111,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries, retries2, retries3;
+    unsigned int retries, retries2, retries3, retries4;
     double next_available_distance;
 
     /*******************
@@ -152,7 +151,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0, retries2 = 0, retries3 = 0;
+        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0;
         next_available_distance = -1;
     
         // F
@@ -1404,22 +1403,24 @@ class Explorer
                                     move_home_if_possible();
                                 
                                 //TODO use 0.99 as coefficient?
-                                } else if( exploration->existFrontiersReachableWithFullBattery(0.99*conservative_maximum_available_distance, &error) ) {
+                                } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                     counter++;
                                     move_robot_away(counter);
                                     update_robot_state_2(auctioning);
+                                    retries4 = 0;
                                 }
-                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.99*conservative_maximum_available_distance, &error) ) {
+                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                     int result = -1;
-                                    exploration->compute_and_publish_ds_path(0.99*conservative_maximum_available_distance, &result);
+                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
                                     if(result == 0) //TODO very very orrible idea, using result...
                                     {
                                         counter++;
                                         move_robot_away(counter);
                                         update_robot_state_2(auctioning_2);
                                         retries2 = 0;
+                                        retries4 = 0;
                                     }
                                     else {
                                         retries2++;
@@ -1449,8 +1450,16 @@ class Explorer
                                             continue;
                                     }
                                     else {
-                                        log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                        move_home_if_possible();
+                                        retries4++;
+                                        if(retries4 < 3) {
+                                            ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
+                                            continue;
+                                        }
+                                        else
+                                        {
+                                            log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
+                                            move_home_if_possible();
+                                        }
                                     }
                                 }
                             }
@@ -2599,7 +2608,7 @@ class Explorer
         // run, this kills all processes and starts a new run
         this->indicateSimulationEnd();
     
-        
+        exploration->logRemainingFrontiers(log_path + std::string("remaining_frontiers.log"));
 
         // finish log files
         exploration_has_finished();
