@@ -3055,6 +3055,7 @@ void docking::check_reachable_ds()
                 log_major_error("Trying to insert in 'ds' an invalid DS!!!");
                 break;
             }
+            it->vacant = true;
             
 //            new_ds.x = it->x;
 //            new_ds.y = it->y;
