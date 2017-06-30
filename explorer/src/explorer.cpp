@@ -1379,6 +1379,8 @@ class Explorer
                                 ROS_DEBUG("%d", retries);
                                 
                                 ros::Duration(3).sleep();
+                                costmap_mutex.unlock();
+                                print_mutex_info("explore()", "unlock");
                                 continue;
                                 
 //                                update_robot_state_2(auctioning);
@@ -1449,12 +1451,16 @@ class Explorer
                                             ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
                                             ros::Duration(3).sleep();
                                             retries2++;
+                                            costmap_mutex.unlock();
+                                            print_mutex_info("explore()", "unlock");
                                             continue;
                                     }
                                     else {
                                         retries4++;
                                         if(retries4 < 3) {
                                             ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
+                                            costmap_mutex.unlock();
+                                            print_mutex_info("explore()", "unlock");
                                             continue;
                                         }
                                         else
