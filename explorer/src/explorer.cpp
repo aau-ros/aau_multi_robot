@@ -1394,6 +1394,8 @@ class Explorer
                             //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
 //                            if(robot_state != fully_charged) {
 //                                update_robot_state_2(auctioning);
+//                                costmap_mutex.unlock();
+//                                print_mutex_info("explore()", "unlock");
 //                                continue;
 //                            } 
                             
