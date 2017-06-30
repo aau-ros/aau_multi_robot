@@ -1381,11 +1381,8 @@ class Explorer
                                 ros::Duration(3).sleep();
                                 costmap_mutex.unlock();
                                 print_mutex_info("explore()", "unlock");
-                                continue;
-                                
 //                                update_robot_state_2(auctioning);
-//                                continue;
-                                
+                                continue;                             
                             }
                             
                             if(retries >= 4)
