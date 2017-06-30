@@ -110,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries, retries2, retries3, retries4;
+    unsigned int retries, retries2, retries3, retries4, retries5;
     double next_available_distance;
 
     /*******************
@@ -151,7 +151,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0;
+        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0;
         next_available_distance = -1;
     
         // F
