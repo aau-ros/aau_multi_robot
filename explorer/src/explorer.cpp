@@ -2319,7 +2319,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
         
-        double last_moving_instant = 0;
+        double prelast_moving_instant = 0;
 
         while (ros::ok() && !exploration_finished)
         {
@@ -2341,8 +2341,8 @@ class Explorer
             if(robot_is_moving()) { //notice that since the loop is executed every N seconds, we won't have a very precise value, but given that we use approximation in computing the remaining battery life it is ok...
                 double elapsed_time_in_moviment = ros::Time::now().toSec() - last_moving_instant;
                 moving_time += elapsed_time_in_moviment;
-                last_moving_instant = ros::Time::now().toSec();
             }
+            last_moving_instant = ros::Time::now().toSec();
             
             map_progress_during_exploration.push_back(map_progress);
             if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
