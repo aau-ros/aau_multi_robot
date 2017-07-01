@@ -268,7 +268,8 @@ void battery_simulate::compute()
             mult = 1;
         else
             mult = 0;
-        if (speed_linear > 0 || speed_angular > 0)
+        //if (speed_linear > 0 || speed_angular > 0) //in the foruma speed_angular is not used, so...
+        if (speed_linear > 0)
             remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
         else
             remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J

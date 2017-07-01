@@ -4685,7 +4685,6 @@ void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDo
     optimal_ds_x = msg.get()->x;
     optimal_ds_y = msg.get()->y;
     optimal_ds_set = true;
-    //ROS_ERROR("!!!!!!");
 }
 
 bool ExplorationPlanner::my_negotiate()
@@ -9414,7 +9413,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
     // calculate theta
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
     double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
+    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI)); //it seems complex, but it's just to keep into account the sign of the angle (which would be lost with just the fabs calls)
 
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;
