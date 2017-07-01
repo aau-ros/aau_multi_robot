@@ -2319,7 +2319,7 @@ class Explorer
                << std::endl;
         fs_csv.close();
         
-        double prelast_moving_instant = 0;
+        double last_moving_instant = 0;
 
         while (ros::ok() && !exploration_finished)
         {
