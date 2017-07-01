@@ -1038,7 +1038,7 @@ void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
         exploration_travel_path_global_meters += distance;
     }
     else {
-        log_minor_error("Failed to compute and store distance!");
+        ROS_ERROR("Failed to compute and store distance!");
         //ROS_ERROR("Failed to compute and store distance! Using euclidean distance as approximation..."); //TODO it could fail due to a failure of getRobotPose
         //exploration_travel_path_global_meters += euclidean_distance(target_x, target_y);
     }
