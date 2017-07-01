@@ -112,6 +112,7 @@ class Explorer
     float coeff_a, coeff_b;
     unsigned int retries, retries2, retries3, retries4, retries5;
     double next_available_distance;
+    double moving_time;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -153,6 +154,7 @@ class Explorer
         starting_x = 0, starting_y = 0;
         retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0;
         next_available_distance = -1;
+        moving_time = 0;
     
         // F
         test = true;
@@ -2316,6 +2318,8 @@ class Explorer
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << std::endl;
         fs_csv.close();
+        
+        double last_moving_instant = 0;
 
         while (ros::ok() && !exploration_finished)
         {
@@ -2333,6 +2337,13 @@ class Explorer
             //map_progress.global_freespace = discovered_free_cells_count;
             map_progress.local_freespace = local_costmap_size();
             map_progress.time = time;
+            
+            if(robot_is_moving()) { //notice that since the loop is executed every N seconds, we won't have a very precise value, but given that we use approximation in computing the remaining battery life it is ok...
+                double elapsed_time_in_moviment = ros::Time::now().toSec() - last_moving_instant;
+                moving_time += elapsed_time_in_moviment;
+                last_moving_instant = ros::Time::now().toSec();
+            }
+            
             map_progress_during_exploration.push_back(map_progress);
             if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
                 percentage = -1;
@@ -2376,7 +2387,10 @@ class Explorer
 
             // publish average speed
             explorer::Speed speed_msg;
-            speed_msg.avg_speed = exploration_travel_path_global / map_progress.time;
+            
+//            speed_msg.avg_speed = exploration_travel_path_global / map_progress.time;
+            speed_msg.avg_speed = exploration_travel_path_global / moving_time;
+
             publisher_speed.publish(speed_msg);
 
             ros::Duration(5.0).sleep();
@@ -3786,7 +3800,7 @@ class Explorer
     }
     
     bool robot_is_moving() {
-        if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == going_in_queue)
+        if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == going_in_queue) //TODO formally we should consider also leaving_ds, but this state is used for so little that probably we can ignore it
             return true;
         return false;
     
