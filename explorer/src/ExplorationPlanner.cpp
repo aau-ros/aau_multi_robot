@@ -9414,7 +9414,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
     // calculate theta
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
     double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
 
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;
@@ -9471,7 +9471,7 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
     // calculate theta
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
     double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - abs(abs(theta_s - theta_g) - M_PI));
+    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
 
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;
