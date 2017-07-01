@@ -9409,6 +9409,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
                 d_r = distance;        
         }
     }
+    d_r = -d_r;
 
     // calculate theta
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
