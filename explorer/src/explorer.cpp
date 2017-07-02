@@ -1410,10 +1410,10 @@ class Explorer
                                 //TODO use 0.99 as coefficient?
                                 } else
                                 {
-                                    if(!exploration->discovered_new_frontier)
-                                        retries6++;
-                                    else
+                                    if(exploration->discovered_new_frontier)
                                         retries6 = 0;
+                                    else
+                                        retries6++;
                                         
                                     if(retries6 >= 3) {
                                         log_major_error("tried too many times to navigate graph: retries6 >= 3");
