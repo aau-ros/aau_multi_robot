@@ -149,7 +149,7 @@ battery_simulate::battery_simulate()
     fs_info.close();
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state" << std::endl;
+    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state,average_speed" << std::endl;
     battery_state_fs.close();
     
     idle_mode = false;
@@ -312,7 +312,7 @@ void battery_simulate::log()
     ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << std::endl;
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << speed_avg << std::endl;
     battery_state_fs.close();
 }
 
