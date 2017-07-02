@@ -1412,6 +1412,8 @@ class Explorer
                                 {
                                     if(!exploration->discovered_new_frontier)
                                         retries6++;
+                                    else
+                                        retries6 = 0;
                                         
                                     if(retries6 >= 3) {
                                         log_major_error("tried too many times to navigate graph: retries6 >= 3");
@@ -1420,7 +1422,6 @@ class Explorer
                                     else
                                     {
                                         exploration->discovered_new_frontier = false;
-                                        retries6 = 0;
 
                                         if( exploration->existFrontiersReachableWithFullBattery(0.999*conservative_maximum_available_distance, &error) ) {
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
