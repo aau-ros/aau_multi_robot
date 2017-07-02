@@ -1408,8 +1408,11 @@ class Explorer
                                     move_home_if_possible();
                                 
                                 //TODO use 0.99 as coefficient?
-                                } else if(!exploration->discovered_new_frontier) {
-                                    retries6++;
+                                } else
+                                {
+                                    if(!exploration->discovered_new_frontier)
+                                        retries6++;
+                                        
                                     if(retries6 >= 3) {
                                         log_major_error("tried too many times to navigate graph: retries6 >= 3");
                                         move_home_if_possible();
