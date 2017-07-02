@@ -113,6 +113,7 @@ class Explorer
     unsigned int retries, retries2, retries3, retries4, retries5, retries6;
     double next_available_distance;
     double moving_time;
+    bool received_battery_info;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -186,6 +187,7 @@ class Explorer
         home_point_set = false;
         coeff_a = COEFF_A;
         coeff_b = COEFF_B;
+        received_battery_info = false;
 
         /* Initial robot state */
         robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
@@ -667,12 +669,14 @@ class Explorer
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
-                if(next_available_distance <= 0) {
+                if(!received_battery_info && next_available_distance <= 0) {
                     ROS_DEBUG("waiting battery info");
                     ros::Duration(3).sleep();
                     ros::spinOnce();
                     continue;
                    }
+                   
+                received_battery_info = true;
                    
                 if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < conservative_available_distance(next_available_distance)) {
                     ROS_INFO("setting maximum distance");
