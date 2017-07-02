@@ -6,6 +6,8 @@
 // Declare a test
 TEST(TestSuite, testCase1)
 {
+    int i = 10;
+    EXPECT_EQ(i, 1);
     ; //<test things here, calling EXPECT_* and/or ASSERT_* macros as needed>
 }
 

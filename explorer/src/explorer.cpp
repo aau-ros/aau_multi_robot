@@ -1408,14 +1408,14 @@ class Explorer
                                     move_home_if_possible();
                                 
                                 //TODO use 0.99 as coefficient?
-                                } else if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
+                                } else if( exploration->existFrontiersReachableWithFullBattery(0.999*conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                     counter++;
                                     move_robot_away(counter);
                                     update_robot_state_2(auctioning);
                                     retries4 = 0;
                                 }
-                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(conservative_maximum_available_distance, &error) ) {
+                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                     int result = -1;
                                     exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
