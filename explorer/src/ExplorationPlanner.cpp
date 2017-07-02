@@ -1393,6 +1393,7 @@ bool ExplorationPlanner::storeFrontier(double x, double y, int detected_by_robot
 
         //store_frontier_mutex.lock();
         acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+        discovered_new_frontier = true;
         frontiers.push_back(new_frontier);
         release_mutex(&store_frontier_mutex, __FUNCTION__);
     }else
@@ -1415,6 +1416,7 @@ bool ExplorationPlanner::storeFrontier(double x, double y, int detected_by_robot
 
         //store_frontier_mutex.lock();
         acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+        discovered_new_frontier = true;
         frontiers.push_back(new_frontier);
         release_mutex(&store_frontier_mutex, __FUNCTION__);
     }
@@ -3236,6 +3238,10 @@ void ExplorationPlanner::findFrontiers()
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     
     ROS_INFO("%lu", allFrontiers.size());
+    
+    // If there are no free cells in the map, get rid of all the previously stored frontiers, since for sure they are no more valid frontiers (or there should be some free cells in the map)
+    if(allFrontiers.size() == 0)
+        frontiers.clear();
     
     for (unsigned int i = 0; i < allFrontiers.size(); ++i)
     {
@@ -8851,7 +8857,7 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
         
         //F
         new_frontier.cluster_id = -1;
-        
+        discovered_new_frontier = true;
         frontiers.push_back(new_frontier);
     }else
     {
@@ -8871,7 +8877,7 @@ bool ExplorationPlanner::storeFrontier_without_locking(double x, double y, int d
         
         //F
         new_frontier.cluster_id = -1;
-        
+        discovered_new_frontier = true;
         frontiers.push_back(new_frontier);
     }
 

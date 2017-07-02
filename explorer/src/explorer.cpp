@@ -110,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries, retries2, retries3, retries4, retries5;
+    unsigned int retries, retries2, retries3, retries4, retries5, retries6;
     double next_available_distance;
     double moving_time;
 
@@ -152,7 +152,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0;
+        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0, retries6 = 0;
         next_available_distance = -1;
         moving_time = 0;
     
@@ -1408,69 +1408,82 @@ class Explorer
                                     move_home_if_possible();
                                 
                                 //TODO use 0.99 as coefficient?
-                                } else if( exploration->existFrontiersReachableWithFullBattery(0.999*conservative_maximum_available_distance, &error) ) {
-                                    ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
-                                    counter++;
-                                    move_robot_away(counter);
-                                    update_robot_state_2(auctioning);
-                                    retries4 = 0;
-                                }
-                                else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
-                                    ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                    int result = -1;
-                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
-                                    if(result == 0) //TODO very very orrible idea, using result...
-                                    {
-                                        counter++;
-                                        move_robot_away(counter);
-                                        update_robot_state_2(auctioning_2);
-                                        retries2 = 0;
-                                        retries4 = 0;
+                                } else if(!exploration->discovered_new_frontier) {
+                                    retries6++;
+                                    if(retries6 >= 3) {
+                                        log_major_error("tried too many times to navigate graph: retries6 >= 3");
+                                        move_home_if_possible();
                                     }
-                                    else {
-                                        retries2++;
-                                        
-                                        if(result == 1)
-                                            log_major_error("No DS with EOs was found");
-                                        else if(result == 2)
-                                            log_major_error("impossible, no closest ds found...");
-                                        else if(result == 3) {
-                                            log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                    else
+                                    {
+                                        exploration->discovered_new_frontier = false;
+                                        retries6 = 0;
+
+                                        if( exploration->existFrontiersReachableWithFullBattery(0.999*conservative_maximum_available_distance, &error) ) {
+                                            ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
                                             move_robot_away(counter);
-                                            update_robot_state_2(auctioning_2);
-                                            retries3++;
+                                            update_robot_state_2(auctioning);
+                                            retries4 = 0;
                                         }
-                                        else
-                                            log_major_error("invalid result value");
-                                    }
-                                }
-                                else {
-                                    ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
-                                    if(error) {
-                                            ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
-                                            ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
-                                            ros::Duration(3).sleep();
-                                            retries2++;
-                                            costmap_mutex.unlock();
-                                            print_mutex_info("explore()", "unlock");
-                                            continue;
-                                    }
-                                    else {
-                                        retries4++;
-                                        if(retries4 < 3) {
-                                            ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
-                                            costmap_mutex.unlock();
-                                            print_mutex_info("explore()", "unlock");
-                                            continue;
+                                        else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
+                                            ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
+                                            int result = -1;
+                                            exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                            if(result == 0) //TODO very very orrible idea, using result...
+                                            {
+                                                counter++;
+                                                move_robot_away(counter);
+                                                update_robot_state_2(auctioning_2);
+                                                retries2 = 0;
+                                                retries4 = 0;
+                                            }
+                                            else {
+                                                retries2++;
+                                                
+                                                if(result == 1)
+                                                    log_major_error("No DS with EOs was found");
+                                                else if(result == 2)
+                                                    log_major_error("impossible, no closest ds found...");
+                                                else if(result == 3) {
+                                                    log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                    counter++;
+                                                    move_robot_away(counter);
+                                                    update_robot_state_2(auctioning_2);
+                                                    retries3++;
+                                                }
+                                                else
+                                                    log_major_error("invalid result value");
+                                            }
                                         }
-                                        else
-                                        {
-                                            log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                            move_home_if_possible();
+                                        else {
+                                            ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
+                                            if(error) {
+                                                    ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
+                                                    ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
+                                                    ros::Duration(3).sleep();
+                                                    retries2++;
+                                                    costmap_mutex.unlock();
+                                                    print_mutex_info("explore()", "unlock");
+                                                    continue;
+                                            }
+                                            else {
+                                                retries4++;
+                                                if(retries4 < 3) {
+                                                    ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
+                                                    costmap_mutex.unlock();
+                                                    print_mutex_info("explore()", "unlock");
+                                                    continue;
+                                                }
+                                                else
+                                                {
+                                                    log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
+                                                    move_home_if_possible();
+                                                }
+                                            }
                                         }
-                                    }
-                                }
+                                     }
+                                 }
                             }
                             else {
                                 if(retries2 >= 4)

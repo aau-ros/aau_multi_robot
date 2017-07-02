@@ -364,6 +364,7 @@ namespace explorationPlanner
             bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
             bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
             void logRemainingFrontiers(std::string csv_file);
+            bool discovered_new_frontier;
 
         private:
             bool auction_running;
