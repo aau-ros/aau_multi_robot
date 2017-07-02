@@ -59,7 +59,7 @@
 #define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
 #define DEBUG false
-#define TIMEOUT_CHECK_1 5
+#define TIMEOUT_CHECK_1 3
 #define DS_GRAPG_NAVIGATION_ALLOWED true
 #define COEFF_A 0.9
 #define COEFF_B 0.2
@@ -1414,7 +1414,7 @@ class Explorer
                                         retries6 = 0;
                                     else
                                         retries6++;
-                                        
+                                    ROS_INFO("retries6: %d", retries6);
                                     if(retries6 >= 3) {
                                         log_major_error("tried too many times to navigate graph: retries6 >= 3");
                                         move_home_if_possible();
@@ -3172,7 +3172,7 @@ class Explorer
         ros::Time time_before = ros::Time::now();
         prev_pose_x = pose_x;
         prev_pose_y = pose_y;
-        while (ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        while (robot_is_moving() && ac.getState() == actionlib::SimpleClientGoalState::ACTIVE)
         {
             // robot seems to be stuck
             if ( fabs(prev_pose_x - pose_x) < 0.1 && fabs(prev_pose_y - pose_y) < 0.1 && fabs(prev_pose_angle - pose_angle) < 0.1 )  // TODO(minor) ...
@@ -3259,6 +3259,15 @@ class Explorer
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
         {
+            if(!robot_is_moving()) {
+                log_minor_error("robot was forced to stop from another thread");
+                ac.cancelGoal();
+                store_travelled_distance();
+                exploration->next_auction_position_x = robotPose.getOrigin().getX();
+                exploration->next_auction_position_y = robotPose.getOrigin().getY();
+                return true;
+            }
+            
             if (ac.getState() == actionlib::SimpleClientGoalState::ABORTED)
             {
                 
@@ -3889,10 +3898,16 @@ class Explorer
                     
                     
                     if(countdown < ros::Duration(0)) {
-                        ROS_ERROR("Robot is not moving anymore");
-                        ROS_INFO("Robot is not moving anymore");
-                        //abort();
-                        log_stucked();
+                        if(robot_state == going_charging) {
+                            log_major_error("Consider that robot has reached DS to recharge...");
+                            update_robot_state_2(charging);
+                        }
+                        else {
+                            ROS_ERROR("Robot is not moving anymore");
+                            ROS_INFO("Robot is not moving anymore");
+                            //abort();
+                            log_stucked();
+                        }
                     }
                 }
                 
@@ -3950,7 +3965,7 @@ class Explorer
                         prints_count++;
                         ROS_ERROR("Robot is not moving from 10 minutes!");
                     } else if(countdown_2 < ros::Duration(10*60) && prints_count == 0) {
-                        ROS_ERROR("Robot is not moving from 5 minutes!");
+//                        ROS_ERROR("Robot is not moving from 5 minutes!");
                         prints_count++;   
                     }
                 }
