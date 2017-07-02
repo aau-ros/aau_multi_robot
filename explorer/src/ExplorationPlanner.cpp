@@ -3237,8 +3237,6 @@ void ExplorationPlanner::findFrontiers()
      //F
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     
-    ROS_INFO("%lu", allFrontiers.size());
-    
     // If there are no free cells in the map, get rid of all the previously stored frontiers, since for sure they are no more valid frontiers (or there should be some free cells in the map)
     if(allFrontiers.size() == 0)
         frontiers.clear();
@@ -3360,7 +3358,7 @@ void ExplorationPlanner::findFrontiers()
         }
     }
   
-    if(!received_scan && (allFrontiers.size() == 0 || (allFrontiers.size() != 0 && frontiers.size() == 0) ) ) {
+    if(!received_scan && allFrontiers.size() == 0) {
         ROS_ERROR("Apparently no laser scan has been received yet: retying later...");
         retrying_searching_frontiers++;
     }
