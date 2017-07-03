@@ -8,3 +8,6 @@ w4: 20
 
 # weights for manhattan map
 # w1=220, w2=21, w3=104, w4=100
+
+# weights on paper
+# w1: 10, w2: 9, w3: 10, w4: 20
