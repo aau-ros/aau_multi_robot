@@ -6,7 +6,7 @@ using namespace std;
 
 //TODO(minor) comments, debugs, and so on...
 
-battery_simulate::battery_simulate() 
+battery_simulate::battery_simulate() //TODO the constructor should require as argument an instance of TimeManagerInterface
 {
     // read parameters
     nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
