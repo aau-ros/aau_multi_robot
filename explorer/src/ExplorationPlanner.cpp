@@ -4630,6 +4630,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     msg.id = min_ds->id;
     publish_goal_ds_for_path_navigation.publish(msg);
     *result = 0;
+    ROS_DEBUG("Finished compute_and_publish_ds_path()");
     return true;
     
 }

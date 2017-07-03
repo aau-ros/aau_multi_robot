@@ -3842,7 +3842,7 @@ class Explorer
     }
     
     bool robot_is_moving() {
-        if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == going_in_queue) //TODO formally we should consider also leaving_ds, but this state is used for so little that probably we can ignore it
+        if(robot_state == moving_to_frontier || robot_state == going_charging || robot_state == going_checking_vacancy || robot_state == going_in_queue || robot_state == leaving_ds)
             return true;
         return false;
     
@@ -3915,8 +3915,13 @@ class Explorer
                     
                     if(countdown < ros::Duration(0)) {
                         if(robot_state == going_charging) {
-                            log_minor_error("Force the robot robot to think that is has reached the target DS");
+                            log_minor_error("Force the robot to think that it has reached the target DS");
                             update_robot_state_2(charging);
+                        }
+                        else if(robot_state == leaving_ds)
+                        {
+                            log_minor_error("Force the robot to think that it has left the target DS");
+                            update_robot_state_2(exploring);
                         }
                         else {
                             ROS_ERROR("Robot is not moving anymore");
