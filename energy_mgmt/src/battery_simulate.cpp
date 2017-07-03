@@ -144,8 +144,8 @@ battery_simulate::battery_simulate()
     battery_state_filename = log_path + std::string("battery_state.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_moving,power_standing,power_charging,charge_max" << std::endl;
-    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << std::endl;
+    fs_info << "#power_moving,power_standing,power_charging,charge_max,power_idle,power_basic_computations,power_advanced_computationsmax_linear_speed,initial_speed_avg" << std::endl;
+    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << "," << power_idle << "," << power_basic_computations << "," << power_advanced_computation << "," << max_speed_linear << "," << speed_avg_init << std::endl;
     fs_info.close();
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);

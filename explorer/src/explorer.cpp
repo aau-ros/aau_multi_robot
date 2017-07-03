@@ -2576,6 +2576,13 @@ class Explorer
         fs << "number of recharges              = " << recharge_cycles << std::endl;
         fs << "energy_consumption               = " << energy_consumption << std::endl;
         fs << "available_distance               = " << available_distance << std::endl;
+        fs << "w1                               = " << w1 << std::endl;
+        fs << "w2                               = " << w2 << std::endl;
+        fs << "w3                               = " << w3 << std::endl;
+        fs << "w4                               = " << w4 << std::endl;
+        fs << "queue_distance                   = " << queue_distance << std::endl;
+        fs << "auction_timeout                  = " << auction_timeout << std::endl;
+        fs << "checking_vacancy_timeout         = " << checking_vacancy_timeout << std::endl;
 
         double param_double;
         int param_int;
@@ -3249,7 +3256,7 @@ class Explorer
                         ac.cancelGoal();
                         exploration->next_auction_position_x = robotPose.getOrigin().getX();
                         exploration->next_auction_position_y = robotPose.getOrigin().getY();
-                        log_minor_error("consider that robot reached the DS...");
+                        log_minor_error("consider that robot reached the DS");
                         
                         store_travelled_distance();
                         return true;
@@ -3903,7 +3910,7 @@ class Explorer
                     
                     if(countdown < ros::Duration(0)) {
                         if(robot_state == going_charging) {
-                            log_major_error("Consider that robot has reached DS to recharge...");
+                            log_minor_error("Force the robot robot to think that is has reached the target DS");
                             update_robot_state_2(charging);
                         }
                         else {
@@ -3957,7 +3964,7 @@ class Explorer
                             ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                             ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                             if(percentage > 90)
-                                log_major_error("deadlock / slow execution / waiting for auction result? BUT at high percentage fortunately!");
+                                log_minor_error("deadlock / slow execution / waiting for auction result? BUT with percentage>90%!");
                             else
                                 log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
                                 

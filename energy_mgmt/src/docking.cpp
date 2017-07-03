@@ -16,7 +16,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     /* Load parameters */  // TODO(minor) checks if these params exist...
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param("num_robots", num_robots, -1);
-    nh_tilde.param<float>("resolution", resolution, 0.05);
+//    nh_tilde.param<float>("resolution", resolution, 0.05);
     nh_tilde.param("w1", w1, 0.25);
     nh_tilde.param("w2", w2, 0.25);
     nh_tilde.param("w3", w3, 0.25);
@@ -34,7 +34,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     nh_tilde.param<int>("reauctioning_timeout", reauctioning_timeout, 10); //s
     nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 30.0); //m
     nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true);         // not used at the moment...
-    nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
+//    nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
     counter = 0;
 
     // TODO(minor) other checks
@@ -2351,9 +2351,9 @@ void docking::create_log_files()
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
-               "starting_absolute_y" << std::endl;
+               "starting_absolute_y,w1,w2,w3,w4,auction_duration" << std::endl;
     fs_info << robot_id << "," << num_robots << "," << ds_selection_policy << "," << origin_absolute_x << ","
-            << origin_absolute_y << std::endl;
+            << origin_absolute_y << "," << w1 << "," << w2 << "," << w3 << "," << w4 << "," << auction_timeout << "," << reauctioning_timeout << "," << extra_time << std::endl;
     fs_info.close();
 }
 
@@ -2372,7 +2372,7 @@ void docking::set_target_ds_vacant(bool vacant)
     
     rel_to_abs(get_target_ds_x(), get_target_ds_y(), &x, &y);
     
-    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
+    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a DS is
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = vacant;
