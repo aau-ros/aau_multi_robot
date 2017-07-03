@@ -52,12 +52,20 @@
 
 int limit_search = 10000;
 
+//TODO
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wreorder"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wreturn-type"
+
 // A utility function to find the vertex with minimum distance value, from
 // the set of vertices not yet included in shortest path tree
 int minDistance(int dist[], unsigned long size, bool sptSet[])
 {
    // Initialize min value
-   int min = INT_MAX, min_index;
+   int min = INT_MAX, min_index = -1;
   
    for (int v = 0; v < size; v++)
      if (sptSet[v] == false && dist[v] <= min)
@@ -67,7 +75,7 @@ int minDistance(int dist[], unsigned long size, bool sptSet[])
 }
   
 // A utility function to print the constructed distance array
-int printSolution(int dist[], unsigned long size)
+void printSolution(int dist[], unsigned long size)
 {
    printf("Vertex   Distance from Source\n");
    for (int i = 0; i < size; i++)
@@ -99,6 +107,9 @@ float dijkstra(std::vector <std::vector<float> > graph, int src, int dest)
        // Pick the minimum distance vertex from the set of vertices not
        // yet processed. u is always equal to src in first iteration.
        int u = minDistance(dist, V, sptSet);
+       
+       if(u < 0)
+         ROS_ERROR("Unconnected components!!!");
   
        // Mark the picked vertex as processed
        sptSet[u] = true;
@@ -153,6 +164,7 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
     {
         return lhs.cluster_element.front().dist_to_robot < rhs.cluster_element.front().dist_to_robot;
     }
+    return false; //F
 }
 
 ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), exploration_travel_path_global_meters(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
@@ -410,7 +422,7 @@ void ExplorationPlanner::initialize_planner(std::string name,
 
 }
 
-bool ExplorationPlanner::clusterFrontiers()
+void ExplorationPlanner::clusterFrontiers()
 {
 
 //    ROS_INFO("Clustering frontiers");
@@ -427,9 +439,9 @@ bool ExplorationPlanner::clusterFrontiers()
     //store_frontier_mutex.lock();
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
 
-    for(int i = 0; i < frontiers.size(); i++)
+    for(unsigned int i = 0; i < frontiers.size(); i++)
     {
-        ROS_DEBUG("Frontier at: %d   and cluster size: %lu",i, clusters.size());
+        ROS_DEBUG("Frontier at: %u   and cluster size: %lu",i, clusters.size());
         
         //F
         /* If the frontier has been already inserted in a cluster, move to next frontier */
@@ -440,16 +452,16 @@ bool ExplorationPlanner::clusterFrontiers()
         bool frontier_used = false;
         same_id = false;
 
-        for(int j = 0; j < clusters.size(); j++)
+        for(unsigned int j = 0; j < clusters.size(); j++)
         {
-            ROS_DEBUG("cluster %d contains %lu elements", j, clusters.at(j).cluster_element.size());
-            for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
+            ROS_DEBUG("cluster %u contains %lu elements", j, clusters.at(j).cluster_element.size());
+            for(unsigned int n = 0; n < clusters.at(j).cluster_element.size(); n++)
             {
-               ROS_DEBUG("accessing cluster %d   and element: %d", j, n);
+               ROS_DEBUG("accessing cluster %u   and element: %d", j, n);
 
                if(fabs(frontiers.at(i).x_coordinate - clusters.at(j).cluster_element.at(n).x_coordinate) < MAX_NEIGHBOR_DIST && fabs(frontiers.at(i).y_coordinate - clusters.at(j).cluster_element.at(n).y_coordinate) < MAX_NEIGHBOR_DIST)
                {
-                   for(int m = 0; m < clusters.at(j).cluster_element.size(); m++)
+                   for(unsigned int m = 0; m < clusters.at(j).cluster_element.size(); m++)
                    {
                       ROS_DEBUG("checking id %d with element id: %d",frontiers.at(i).id,clusters.at(j).cluster_element.at(m).id);
 
@@ -539,19 +551,19 @@ bool ExplorationPlanner::clusterFrontiers()
         while(run_without_merging == false)
         {
             bool merge_clusters = false;
-            for(int i = 0; i < clusters.size(); i++)
+            for(unsigned int i = 0; i < clusters.size(); i++)
             {
-                for(int m = 0; m < clusters.at(i).cluster_element.size(); m ++)
+                for(unsigned int m = 0; m < clusters.at(i).cluster_element.size(); m ++)
                 {
                     if(clusters.at(i).cluster_element.size() > 1)
                     {
-                        for(int j = 0; j < clusters.size(); j++)
+                        for(unsigned int j = 0; j < clusters.size(); j++)
                         {
                             if(clusters.at(i).id != clusters.at(j).id)
                             {
                                 if(clusters.at(j).cluster_element.size() > 1)
                                 {
-                                    for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
+                                    for(unsigned int n = 0; n < clusters.at(j).cluster_element.size(); n++)
                                     {
                                         if(fabs(clusters.at(i).cluster_element.at(m).x_coordinate - clusters.at(j).cluster_element.at(n).x_coordinate) < CLUSTER_MERGING_DIST && fabs(clusters.at(i).cluster_element.at(m).y_coordinate - clusters.at(j).cluster_element.at(n).y_coordinate) < CLUSTER_MERGING_DIST)
                                         {
@@ -566,7 +578,7 @@ bool ExplorationPlanner::clusterFrontiers()
                                          * Now merge cluster i with cluster j.
                                          * afterwards delete cluster j.
                                          */
-                                        for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
+                                        for(unsigned int n = 0; n < clusters.at(j).cluster_element.size(); n++)
                                         {
                                             frontier_t frontier_to_merge;
                                             frontier_to_merge = clusters.at(j).cluster_element.at(n);
@@ -605,19 +617,19 @@ bool ExplorationPlanner::clusterFrontiers()
         while(run_without_merging == false)
         {
             bool merge_clusters = false;
-            for(int i = 0; i < clusters.size(); i++)
+            for(unsigned int i = 0; i < clusters.size(); i++)
             {
-                for(int m = 0; m < clusters.at(i).cluster_element.size(); m ++)
+                for(unsigned int m = 0; m < clusters.at(i).cluster_element.size(); m ++)
                 {
                     if(clusters.at(i).cluster_element.size() > 1)
                     {
-                        for(int j = 0; j < clusters.size(); j++)
+                        for(unsigned int j = 0; j < clusters.size(); j++)
                         {
                             if(clusters.at(i).id != clusters.at(j).id)
                             {
                                 if(clusters.at(j).cluster_element.size() > 1)
                                 {
-                                    for(int n = 0; n < clusters.at(j).cluster_element.size(); n++)
+                                    for(unsigned int n = 0; n < clusters.at(j).cluster_element.size(); n++)
                                     {
                                         unsigned char cost;
                                         unsigned int mx,my;
@@ -898,7 +910,8 @@ bool ExplorationPlanner::transformToOwnCoordinates_frontiers()
         }
     }
     release_mutex(&store_frontier_mutex, __FUNCTION__);
-    ROS_INFO(" Transform frontier coordinates DONE");
+    ROS_INFO("Transform frontier coordinates DONE");
+    return true;
 }
 
 bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
@@ -1007,7 +1020,8 @@ bool ExplorationPlanner::transformToOwnCoordinates_visited_frontiers()
             }
         }
     }
-    ROS_INFO(" Transform visited frontier coordinates DONE");
+    ROS_INFO("Transform visited frontier coordinates DONE");
+    return true;
 }
 
 /**
@@ -2066,7 +2080,7 @@ void ExplorationPlanner::auctionCallback(const adhoc_communication::ExpAuction::
 {
     auction_running = true;
     //ROS_ERROR("CALLING AUCTION CALLBACK!!!!!!!!!!!!");
-    int robots_int_name;
+    int robots_int_name = -1;
 
     bool same_robot = false;
     if(robot_prefix_empty_param == true)
@@ -4485,16 +4499,18 @@ bool ExplorationPlanner::reachable_target(double x, double y) {
         
         //ROS_ERROR("finals: (%f, %f) - target: (%f, %f)", final_x, final_y, x, y);
         
-        if(final_x > x)
+        if(final_x > x) {
             if(final_x - x > acc)
                 return false;
             else if(x - final_x > acc)
                 return false;
-        if(final_y > y)
+        }
+        if(final_y > y) {
             if(final_y - y > acc)
                 return false;
             else if(y - final_y > acc)
                 return false;
+        }
         return true;
     }
     else {
@@ -6006,7 +6022,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
 
         else if(strategy == 2)
         {
-            for (int i = 0 + count; i < frontiers.size(); i++)
+            for (unsigned int i = 0 + count; i < frontiers.size(); i++)
             {
                 if (check_efficiency_of_goal(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate) == true)
                 {
@@ -6060,7 +6076,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                 {
                     if(clusters.size() > 0)
                     {
-                        for (int i = 0; i < clusters.size(); i++)
+                        for (unsigned int i = 0; i < clusters.size(); i++)
                         {
                             if(clusters.at(i).id == actual_cluster_id)
                             {
@@ -6084,12 +6100,12 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                  */
                 int nothing_found_in_actual_cluster = 0;
                 int visited_clusters = 0;
-                for (int i = 0 + count; i < clusters.size(); i++)
+                for (unsigned int i = 0 + count; i < clusters.size(); i++)
                 {
 //                    ROS_INFO("Cluster vector: %d  i: %d ", cluster_vector_position, i);
                     i = i+ cluster_vector_position;
                     i = i % (clusters.size());
-                    for (int j = 0; j < clusters.at(i).cluster_element.size(); j++)
+                    for (unsigned int j = 0; j < clusters.at(i).cluster_element.size(); j++)
                     {
                         if (check_efficiency_of_goal(clusters.at(i).cluster_element.at(j).x_coordinate, clusters.at(i).cluster_element.at(j).y_coordinate) == true)
                         {
@@ -6134,7 +6150,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                 {
                     if(clusters.size() > 0)
                     {
-                        for (int i = 0; i < clusters.size(); i++)
+                        for (unsigned int i = 0; i < clusters.size(); i++)
                         {
                             if(clusters.at(i).id == actual_cluster_id)
                             {
@@ -6176,7 +6192,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
 //                {
 
                     int position = (cluster_vector_position +count) % (clusters.size());
-                    for (int j = 0; j < clusters.at(position).cluster_element.size(); j++)
+                    for (unsigned int j = 0; j < clusters.at(position).cluster_element.size(); j++)
                     {
                         if(count >= clusters.size())
                         {
@@ -6218,7 +6234,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                 {
                     if(clusters.size() > 0)
                     {
-                        for (int i = 0; i < clusters.size(); i++)
+                        for (unsigned int i = 0; i < clusters.size(); i++)
                         {
                             if(clusters.at(i).id == actual_cluster_id)
                             {
@@ -6258,7 +6274,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
 
 //                    ROS_INFO("position: %lu", (cluster_vector_position +count) % (clusters.size()));
                     int position = (cluster_vector_position +count) % (clusters.size());
-                    for (int j = 0; j < clusters.at(position).cluster_element.size(); j++)
+                    for (unsigned int j = 0; j < clusters.at(position).cluster_element.size(); j++)
                     {
                         if(count >= clusters.size())
                         {
@@ -6502,7 +6518,7 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
     
     int index_closest_ds_to_robot = -1, index_optimal_ds = -1;
     double min_dist = std::numeric_limits<double>::max();
-    for(int i=0; i < ds_list.size(); i++) {
+    for(unsigned int i=0; i < ds_list.size(); i++) {
         double distance = euclidean_distance(robot_x, robot_y, ds_list.at(i).x, ds_list.at(i).y);
         if(distance < min_dist) {
             min_dist = distance;
@@ -6512,10 +6528,10 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
             index_optimal_ds = i;
     }
     
-    for(int i=0; i < frontiers.size(); i++) {
+    for(unsigned int i=0; i < frontiers.size(); i++) {
         double min_dist = std::numeric_limits<double>::max();
         int index_closest_ds_to_frontier = -1;
-        for(int j=0; j < ds_list.size(); j++) {
+        for(unsigned int j=0; j < ds_list.size(); j++) {
             double distance = euclidean_distance(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, ds_list.at(j).x, ds_list.at(j).y);
             if(distance < min_dist) {
                 min_dist = distance;
@@ -7907,13 +7923,13 @@ void ExplorationPlanner::visualize_Cluster_Cells()
     clear_Visualized_Cluster_Cells(used_ids);
 }
 
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 void ExplorationPlanner::visualize_Clusters()
 {
     ROS_INFO("Visualize clusters");
 
     geometry_msgs::PolygonStamped cluster_polygon;
-
 
     for(int i= 0; i< clusters.size(); i++)
     {
@@ -7989,6 +8005,7 @@ void ExplorationPlanner::visualize_Clusters()
         //break;// FIXME
     }
 }
+#pragma GCC diagnostic pop
 
 
 void ExplorationPlanner::visualize_Frontiers()
@@ -8330,7 +8347,7 @@ int ExplorationPlanner::isFrontier(int point) {
 		//int Neighbours = 0;
 		//int points[((int)pow(8,Neighbours+1))+8]; // NEIGHBOURS points, each containing 8 adjacent points
 		int no_inf_count = 0;
-		int inscribed_count = 0;
+//		int inscribed_count = 0;
 		int adjacent_points[16];
 		/*
 		 * Now take one point and lookup all adjacent points (surrounding points).
@@ -8419,7 +8436,7 @@ int ExplorationPlanner::isFrontier_2(int point) {
 		//int Neighbours = 0;
 		//int points[((int)pow(8,Neighbours+1))+8]; // NEIGHBOURS points, each containing 8 adjacent points
 		int no_inf_count = 0;
-		int inscribed_count = 0;
+//		int inscribed_count = 0;
 		int adjacent_points[16];
 		/*
 		 * Now take one point and lookup all adjacent points (surrounding points).
@@ -8889,13 +8906,13 @@ void ExplorationPlanner::set_auction_timeout(int timeout) {
 
 void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t frontier)
 {
-    for(int i=0; i < frontiers_under_auction.size(); i++)
+    for(unsigned int i=0; i < frontiers_under_auction.size(); i++)
         if(frontier.id == frontiers_under_auction.at(i).id) {
             ROS_INFO("This frontier is targetted by another robot: ignore it");
             return;
         }
     
-    int k;
+    unsigned int k;
     bool inserted = false;
     for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
         if(frontier.cost < sorted_frontiers.at(k).cost) {
@@ -9326,7 +9343,7 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
     
     if(frontiers.size() > 0)
     {     
-        for(int j = 0; j < frontiers.size(); j++)
+        for(unsigned int j = 0; j < frontiers.size(); j++)
         {
             if(!my_quick_check_efficiency_of_goal(this->available_distance, &frontiers.at(j)))
                 continue;
@@ -9461,7 +9478,7 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
     
     // calculate d_r
     double d_r = 0;
-    for(int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
+    for(unsigned int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
         double distance = trajectory_plan_meters(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
         if(distance < 0) {
             ROS_ERROR("failed distance");

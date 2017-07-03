@@ -1,13 +1,6 @@
 #ifndef BATTERY_SIMULATE_H
 #define BATTERY_SIMULATE_H
 
-/*
-class battery_simulate : public battery {
-public:
-    battery_simulate() : battery();
-};
-*/
-
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <geometry_msgs/Twist.h>
@@ -22,6 +15,7 @@ public:
 #include <boost/filesystem.hpp>
 #include <stdlib.h>
 #include <fstream>
+#include "time_manager_interface.h"
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
@@ -58,6 +52,18 @@ public:
     
     void run();
 
+    void createLogDirectory();
+    void createLogFiles();
+    
+    /* For debugging */
+    double getChargeMax();
+    void setTimeManager(TimeManagerInterface *time_manager);
+    double last_time_secs();
+    void set_last_time();
+    void initializeSimulationTime();
+    double getRemainingEnergy();
+    double getElapsedTime();
+    void spinOnce();
 
 private:
     /**
@@ -226,6 +232,8 @@ private:
     ros::Time sim_time_start;
     ros::WallTime wall_time_start;
     bool do_not_consume_battery;
+    TimeManagerInterface *time_manager;
+    double elapsed_time;
     
 };
 

@@ -1,10 +1,11 @@
 #include <ros/ros.h>
 #include <ros/console.h>
 //#include <battery.h>
-#include <battery_simulate.h>
-#include <docking.h>
+#include "battery_simulate.h"
+#include "docking.h"
 #include <boost/thread.hpp>
 #include <geometry_msgs/Twist.h>
+#include "time_manager.h"
 
 int main(int argc, char** argv)
 {
@@ -31,7 +32,12 @@ int main(int argc, char** argv)
     }
     */
     
+    TimeManager tm;
     battery_simulate bat;
+    bat.setTimeManager(&tm);
+    bat.initializeSimulationTime();
+    bat.createLogDirectory();
+    bat.createLogFiles();
     bat.compute(); //force computation and publishing...
     bat.publish();
     boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 

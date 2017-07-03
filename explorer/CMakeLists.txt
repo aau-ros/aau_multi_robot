@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(explorer)
 
 # Flags to add symbols in core dumps and to link the boost_system library
-SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
+SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 ## Find catkin macros and libraries
@@ -138,7 +138,7 @@ add_library(munkres src/src/munkres.cpp)
 #add_library(rosaria src/rosaria.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
-add_dependencies(exploration_planner adhoc_communication_gencpp hungarian munkres)
+add_dependencies(exploration_planner adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp hungarian munkres)
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
@@ -147,7 +147,7 @@ add_executable(explorer src/explorer.cpp)
 target_link_libraries( explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES})
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-add_dependencies(explorer adhoc_communication_gencpp explorer_generate_messages_cpp energy_mgmt_gencpp)
+add_dependencies(explorer adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp energy_mgmt_gencpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES} )

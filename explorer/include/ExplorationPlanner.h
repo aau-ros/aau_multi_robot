@@ -313,7 +313,7 @@ namespace explorationPlanner
             bool smartGoalBackoff(double x, double y, costmap_2d::Costmap2DROS *global_costmap, std::vector<double> *new_goal);
             void setRobotConfig(int name, double robot_home_position_x, double robot_home_position_y, std::string frame);
             bool negotiate_Frontier(double x, double y, int detected_by, int id, int cluster);
-            bool clusterFrontiers();
+            void clusterFrontiers();
             void visualize_Clusters();
             void visualize_Cluster_Cells();
 

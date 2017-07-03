@@ -1,6 +1,6 @@
 #include <battery_simulate.h>
 
-#define INFINITE_ENERGY 0
+#define INFINITE_ENERGY false
 
 using namespace std;
 
@@ -13,18 +13,17 @@ battery_simulate::battery_simulate()
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
-    nh.getParam("energy_mgmt/power_idle", power_idle); // W
+    nh.getParam("energy_mgmt/power_idle", power_idle);         // W
+    nh.getParam("energy_mgmt/power_basic_computations", power_basic_computations);  // W
+    nh.getParam("energy_mgmt/power_advanced_computations", power_advanced_computation);  // W
     nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
     nh.getParam("energy_mgmt/mass", mass); // kg
-    power_basic_computations = 8.0; // W
-    power_advanced_computation = 3.0;
     advanced_computations_bool = true;
     
     //ROS_ERROR("%f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max);
 
     // initialize private variables
-    speed_linear = 0;
     speed_angular = 0;
     time_moving = 0;   //TODO(minor) useless?
     time_standing = 0; //TODO(minor) useless?
@@ -32,6 +31,8 @@ battery_simulate::battery_simulate()
     perc_standing = 0.5; //TODO(minor) useless?
     output_shown = false; //TODO(minor) useless?
     speed_avg = speed_avg_init;
+    idle_mode = false;
+    do_not_consume_battery = false;
     
     charge = charge_max;
     total_energy = charge_max * 3600; // J (i.e, joule)       
@@ -72,8 +73,6 @@ battery_simulate::battery_simulate()
     //ROS_ERROR("remaining distance: %f", state.remaining_distance);
     pub_full_battery_info.publish(state);
     
-    time_last = ros::Time::now();
-    
     ros::NodeHandle nh_tilde("~");
     nh_tilde.param<std::string>("log_path", log_path, "");
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
@@ -112,51 +111,14 @@ battery_simulate::battery_simulate()
         ROS_INFO("Simulation");
         robot_name = robot_prefix;
     }
-    /* Create directory */
-    log_path = log_path.append("/energy_mgmt");
-    log_path = log_path.append(robot_name);
-    boost::filesystem::path boost_log_path(log_path.c_str());
-    if (!boost::filesystem::exists(boost_log_path))
-    {
-        ROS_INFO("Creating directory %s", log_path.c_str());
-        try
-        {
-            if (!boost::filesystem::create_directories(boost_log_path))
-            {
-                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
-                exit(-1);
-            }
-        }
-        catch (const boost::filesystem::filesystem_error &e)
-        {
-            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
-            exit(-1);
-        }
-    }
+        
+}
+
+void battery_simulate::initializeSimulationTime() {
+    if(time_manager == NULL)
+        ROS_ERROR("Instance of TimeManager not set!");
     else
-    {
-        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
-    }
-
-    /* Create file names */
-    log_path = log_path.append("/");
-    info_file = log_path + std::string("metadata_battery.csv");
-    battery_state_filename = log_path + std::string("battery_state.csv");
-
-    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_moving,power_standing,power_charging,charge_max,power_idle,power_basic_computations,power_advanced_computationsmax_linear_speed,initial_speed_avg" << std::endl;
-    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << "," << power_idle << "," << power_basic_computations << "," << power_advanced_computation << "," << max_speed_linear << "," << speed_avg_init << std::endl;
-    fs_info.close();
-    
-    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state,average_speed" << std::endl;
-    battery_state_fs.close();
-    
-    idle_mode = false;
-    do_not_consume_battery = false;
-    
-    sim_time_start = ros::Time::now();
-    wall_time_start = ros::WallTime::now();
+        time_last = time_manager->simulationTimeNow();
         
 }
 
@@ -198,17 +160,17 @@ void battery_simulate::compute()
 {
     /* Compute the number of elapsed seconds since the last time that we updated the battery state (since we use
      * powers) */
-    ros::Duration time_diff = ros::Time::now() - time_last;
+    ros::Duration time_diff = time_manager->simulationTimeNow() - time_last;
     double time_diff_sec = time_diff.toSec();
+    elapsed_time = time_diff_sec; //TODO for debugging, should be removed...
     
     /* If there is no time difference to last computation, there is nothing to do */
-    if (time_diff_sec <= 0) {
+    if (time_diff_sec <= 0)
         return;
-    }
     
     // If the robot is in fully
     if(do_not_consume_battery) {
-        time_last = ros::Time::now();
+        time_last = time_manager->simulationTimeNow();
         return;
     }   
 
@@ -269,7 +231,7 @@ void battery_simulate::compute()
         else
             mult = 0;
         //if (speed_linear > 0 || speed_angular > 0) //in the foruma speed_angular is not used, so...
-        if (speed_linear > 0)
+        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...)
             remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
         else
             remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
@@ -287,11 +249,10 @@ void battery_simulate::compute()
 
     }
 
-
     //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
-    time_last = ros::Time::now();
+    time_last = time_manager->simulationTimeNow();
 }
 
 void battery_simulate::log()
@@ -308,11 +269,11 @@ void battery_simulate::log()
     else
         state_std = "standing";
         
-    ros::Duration sim_time = ros::Time::now() - sim_time_start;
+    ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
     ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << speed_avg << std::endl;
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << std::endl;
     battery_state_fs.close();
 }
 
@@ -369,4 +330,84 @@ void battery_simulate::run() {
         // publish battery state
         publish();
     }
+}
+
+void battery_simulate::setTimeManager(TimeManagerInterface *time_manager) {
+    this->time_manager = time_manager;
+}
+
+void battery_simulate::createLogDirectory() {
+    /* Create directory */
+    log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+    {
+        ROS_INFO("Creating directory %s", log_path.c_str());
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+            {
+                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+                exit(-1);
+            }
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+            exit(-1);
+        }
+    }
+    else
+    {
+        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+    }
+}
+
+void battery_simulate::createLogFiles() {
+    /* Create file names */
+    log_path = log_path.append("/");
+    info_file = log_path + std::string("metadata_battery.csv");
+    battery_state_filename = log_path + std::string("battery_state.csv");
+
+    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_info << "#power_moving,power_standing,power_charging,charge_max,power_idle,power_basic_computations,power_advanced_computationsmax_linear_speed,initial_speed_avg" << std::endl;
+    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << "," << power_idle << "," << power_basic_computations << "," << power_advanced_computation << "," << max_speed_linear << "," << speed_avg_init << std::endl;
+    fs_info.close();
+    
+    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state" << std::endl;
+    battery_state_fs.close();
+    
+    sim_time_start = ros::Time::now();
+    wall_time_start = ros::WallTime::now();
+}
+
+
+/*************************
+ ** Debugging functions **
+ *************************
+ */
+void battery_simulate::set_last_time() {
+    time_last = time_manager->simulationTimeNow();
+}
+
+double battery_simulate::last_time_secs() {
+    return time_last.toSec();
+}
+
+double battery_simulate::getChargeMax() {
+    return charge_max;
+}
+
+double battery_simulate::getRemainingEnergy() {
+    return remaining_energy;
+}
+
+double battery_simulate::getElapsedTime() {
+    return elapsed_time;
+}
+
+void battery_simulate::spinOnce() {
+    ros::spinOnce();
 }

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="energy_mgmt/max_linear_speed" value="0.5"/>
+    <param name="energy_mgmt/charge_max" value="200"/>
+    <param name="energy_mgmt/power_standing" value="37"/>
+    <param name="energy_mgmt/power_moving" value="19"/>    
+    <param name="energy_mgmt/power_basic_computations" value="10"/>
+    <param name="energy_mgmt/power_advanced_computations" value="23"/>
+    <param name="energy_mgmt/power_charging" value="50"/>
+    <param name="energy_mgmt/power_idle" value="1"/>
+  <test pkg="energy_mgmt" test-name="energy_mgmt" type="utest" />
+</launch>
+

@@ -134,6 +134,7 @@ include_directories(
 #add_library(battery src/battery.cpp)
 add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
+add_library(time_manager src/time_manager.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -153,10 +154,16 @@ add_dependencies(energy_mgmt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORT
 add_dependencies(energy_mgmt map_merger map_merger_gencpp)
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(battery_simulate
+  time_manager
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(energy_mgmt
 #  battery
   docking
   battery_simulate
+  time_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -201,7 +208,26 @@ target_link_libraries(energy_mgmt
 #############
 
 ## Add gtest based cpp test target and link libraries
-catkin_add_gtest(utest test/utest.cpp)
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+
+  add_library(mock_time_manager test/mock_time_manager.cpp)
+
+  add_rostest_gtest(utest
+    test/test.launch
+    test/utest.cpp
+  )
+  target_link_libraries(utest
+    battery_simulate
+    mock_time_manager
+    ${catkin_LIBRARIES}
+  )
+  add_dependencies(utest
+    adhoc_communication_generate_messages_cpp
+    ${PROJECT_NAME}_generate_messages_cpp
+    ${catkin_EXPORTED_TARGETS}
+  )
+endif()
 #if(TARGET ${PROJECT_NAME}-test)
 #  target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 #endif()
