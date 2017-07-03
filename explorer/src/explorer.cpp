@@ -2394,14 +2394,6 @@ class Explorer
             costmap_mutex.unlock();
             print_mutex_info("map_info()", "unlock");
 
-            // call map_merger to log data
-            map_merger::LogMaps log;
-            log.request.log = 12;  /// request local and global map progress
-            ROS_INFO("Calling map_merger service logOutput");
-            if (!mm_log_client.call(log))
-                ROS_ERROR("Could not call map_merger service to store log.");
-            ROS_DEBUG("Finished service call.");
-
             ROS_DEBUG("Saving progress...");
             save_progress();
             ROS_DEBUG("Progress have been saved");
@@ -2415,6 +2407,19 @@ class Explorer
             publisher_speed.publish(speed_msg);
 
             ros::Duration(5.0).sleep();
+        }
+    }
+    
+    void log_map() {
+        while (ros::ok() && !exploration_finished) {
+            // call map_merger to log data
+            map_merger::LogMaps log;
+            log.request.log = 12;  /// request local and global map progress
+            ROS_INFO("Calling map_merger service logOutput");
+            if (!mm_log_client.call(log))
+                ROS_ERROR("Could not call map_merger service to store log.");
+            ROS_DEBUG("Finished service call.");
+            ros::Duration(30).sleep();
         }
     }
 
@@ -4349,6 +4354,8 @@ int main(int argc, char **argv)
      * Otherwise it produces unused output.
      */
     boost::thread thr_map(boost::bind(&Explorer::map_info, &explorer));
+    
+    boost::thread thr_log_map(boost::bind(&Explorer::log_map, &explorer));
 
     /* Create thread to periodically publish unexplored frontiers */
     boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &explorer));
@@ -4381,6 +4388,8 @@ int main(int argc, char **argv)
     thr_map.interrupt();
     thr_explore.join();
     thr_map.join();
+    thr_log_map.interrupt();
+    thr_log_map.join();
     // TODO thr_frontiers...
 
 #ifdef PROFILE
