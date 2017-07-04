@@ -1440,6 +1440,7 @@ class Explorer
                                             exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
                                             if(result == 0) //TODO very very orrible idea, using result...
                                             {
+                                                ROS_INFO("path successfully found");
                                                 counter++;
                                                 move_robot_away(counter);
                                                 update_robot_state_2(auctioning_2);
@@ -1769,7 +1770,7 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if(auctioning_counter >= 1000) {
+                if(auctioning_counter >= 100) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
                     continue;   
@@ -3725,7 +3726,7 @@ class Explorer
 
         std::string prefix = "/robot_";
         
-        std::string status_directory = "/simulation_status_stuck";
+        std::string status_directory = "/simulation_status_stopped";
         std::string robo_name = prefix.append(robot_number.str());
         std::string file_suffix(".stuck");
 
@@ -3994,6 +3995,8 @@ class Explorer
                                 log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
                                 
                             //abort();
+                            if(!robot_is_moving())
+                                log_major_error("robot has to be stopped even if it is not moving!");
                             log_stopped();
                         //}
                     } 

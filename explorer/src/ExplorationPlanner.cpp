@@ -4565,10 +4565,11 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 
 bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance, int *result) {
     //just compute the goal ds for the moment //TODO complete
-    ROS_DEBUG("%lu", frontiers.size());
+    ROS_DEBUG("Searching path on DS graph; %lu frontiers exist", frontiers.size());
     double min_dist = std::numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
+    
     while (min_ds == NULL && retry < 5) {
         for (unsigned int i = 0; i < ds_list.size(); i++)
         {
@@ -4604,6 +4605,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     }
     
     if (min_ds == NULL) {
+        ROS_INFO("min_ds == NULL");
         *result = 1;
         return false;
         // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
@@ -4633,19 +4635,23 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
             ros::Duration(3).sleep();
     }
     if(closest_ds == NULL)  {
+        ROS_INFO("closest_ds == NULL");
         *result = 2;
         return false;
     }
     
     if(closest_ds->id == min_ds->id) {
+        ROS_INFO("closest_ds->id == min_ds->id");
         *result = 3;
         return false;
     }
 
     adhoc_communication::EmDockingStation msg;
     msg.id = min_ds->id;
+    ROS_DEBUG("publishing path...");
     publish_goal_ds_for_path_navigation.publish(msg);
     *result = 0;
+    
     ROS_DEBUG("Finished compute_and_publish_ds_path()");
     return true;
     

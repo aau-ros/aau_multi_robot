@@ -402,6 +402,10 @@ void docking::preload_docking_stations()
     int index = 0;  // index of the DS, used to loop among all the docking stations
                     // inserted in the file
     double x, y;    // DS coordinates
+    
+    // TOSO should be reduntant, since the functions that read undiscovered_ds are in the same thread of this function...
+//    boost::unique_lock< boost::shared_mutex > lock(ds_mutex);
+    ds_mutex.lock();
 
     /* If the x-coordinate of a DS with index <index> is found, it means that that DS
      * is present in the file and must be loaded. Notice that we assume that if there is a x-coordinate, also the corresponding y is present */
@@ -454,14 +458,16 @@ void docking::preload_docking_stations()
         ds_mst.push_back(temp);
         ds_graph.push_back(temp_f);
     }
-
-        
+    ds_mutex.unlock();
+      
 }
 
 void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in distance computation??
 //TODO(minor) maybe there are more efficient for some steps; for instance, i coudl keep track somewhere of the DS with EOs and avoid recomputing them two times in the same call of this funcion...
 {   
     ROS_INFO("Compute optimal DS");
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
     if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
@@ -953,7 +959,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     }
     else
         ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not "
-                  "been computed");
+                  "been computed");             
 }
 
 void docking::log_optimal_and_target_ds() {
@@ -1007,6 +1013,7 @@ void docking::update_l1() //TODO(minor) would be better to update them only when
 {
     ROS_DEBUG("Update l1");
     
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     /* Count vacant docking stations */
     int num_ds_vacant = 0;
     for (unsigned int i = 0; i < ds.size(); ++i)
@@ -1179,9 +1186,10 @@ void docking::update_l4() //TODO(minor) comments
         return;
     }
     
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     // get distance to docking station
     double dist_ds = -1;
-    for (unsigned int i = 0; i < ds.size(); i++)
+    for (unsigned int i = 0; i < ds.size() && !recompute_llh; i++)
     {
 //        ROS_ERROR("%d", get_optimal_ds_id());
         if (ds[i].id == get_optimal_ds_id())
@@ -1192,7 +1200,6 @@ void docking::update_l4() //TODO(minor) comments
             {
                 ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
                 recompute_llh = true;
-                return;
             }
             break;
         }
@@ -1626,6 +1633,8 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
     ROS_INFO("received ds%d", msg.get()->id);
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    ds_mutex.lock();
     
     // Safety check on the received DS
     if(msg.get()->id < 0) {
@@ -1682,6 +1691,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             break;
         }
     }
+    
 
     /* If the DS is new, add it */
     if (new_ds)
@@ -1707,6 +1717,8 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                 break;
             }
     }
+    
+    ds_mutex.unlock();
 
     /* Update parameter l1 of charging likelihood function */
     update_l1();
@@ -2254,6 +2266,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
                     log_major_error("Invalid id_next_target_ds");
                     ROS_DEBUG("id_next_target_ds: %d", id_next_target_ds);
                 }
+//                boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
                 for(unsigned int i=0; i < ds.size(); i++)
                     if(ds[i].id == id_next_target_ds) {
 //                        best_ds = &ds[i];
@@ -2861,6 +2874,9 @@ void docking::discover_docking_stations() //TODO(minor) comments
 {
     ROS_INFO("discover_docking_stations");
     
+//    boost::unique_lock< boost::shared_mutex > lock(ds_mutex); //TODO improve
+    ds_mutex.lock();
+    
     // Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
@@ -2870,34 +2886,40 @@ void docking::discover_docking_stations() //TODO(minor) comments
         else if (dist < fiducial_signal_range)
         {
             // Safety check
-            if(it->id < 0 || it->id >= num_ds)
+            if(it->id < 0 || it->id >= num_ds) {
                 log_major_error("inserting invalid DS id in discovered_ds!!!");
-        
-            // Store new DS in the vector of known DSs
-            ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
-                     (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
-            discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
-
-            // Inform other robots about the "new" DS
-            adhoc_communication::SendEmDockingStation send_ds_srv_msg;
-            send_ds_srv_msg.request.topic = "docking_stations";
-            send_ds_srv_msg.request.docking_station.id = (*it).id;
-            double x, y;
-            rel_to_abs((*it).x, (*it).y, &x, &y);
-            send_ds_srv_msg.request.docking_station.x = x;
-            send_ds_srv_msg.request.docking_station.y = y;
-            send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
-            sc_send_docking_station.call(send_ds_srv_msg);
-
-            // Remove discovered DS from the vector undiscovered DSs
-            undiscovered_ds.erase(it);
+                   
+            }
+            else {
             
-            // Since it seems that erase() makes the iterator invalid, it is better to stop the loop and retry later from the beginning of the vector with a new and aclean iterator //TODO or we could "clean" the current one, although it seems that Valgrind complains...
-            break;
+                // Store new DS in the vector of known DSs
+                ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
+                         (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
+                discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
+
+                // Inform other robots about the "new" DS
+                adhoc_communication::SendEmDockingStation send_ds_srv_msg;
+                send_ds_srv_msg.request.topic = "docking_stations";
+                send_ds_srv_msg.request.docking_station.id = (*it).id;
+                double x, y;
+                rel_to_abs((*it).x, (*it).y, &x, &y);
+                send_ds_srv_msg.request.docking_station.x = x;
+                send_ds_srv_msg.request.docking_station.y = y;
+                send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
+                sc_send_docking_station.call(send_ds_srv_msg);
+
+                // Remove discovered DS from the vector undiscovered DSs
+                undiscovered_ds.erase(it);
+                
+                // Since it seems that erase() makes the iterator invalid, it is better to stop the loop and retry later from the beginning of the vector with a new and aclean iterator //TODO or we could "clean" the current one, although it seems that Valgrind complains...
+                
+                break;
+            }
             
         } else
             ROS_DEBUG_COND(false, "ds%d has not been discovered yet", (*it).id);        
     }
+    ds_mutex.unlock();
 }
 
 void docking::join_all_multicast_groups() { //TODO(minor) maybe it's enough to join just mc_robot_0
@@ -2984,6 +3006,7 @@ void docking::debug_timer_callback_2(const ros::TimerEvent &event)
 //DONE+
 void docking::next_ds_callback(const std_msgs::Empty &msg)
 {
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     if ((unsigned int)index_of_ds_in_path < path.size() - 1)
     {
         ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
@@ -3006,7 +3029,8 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
 void docking::check_reachable_ds()
 {
     ROS_INFO("check_reachable_ds");
-    
+//    boost::unique_lock< boost::shared_mutex > lock(ds_mutex);
+    ds_mutex.lock();
     bool new_ds_discovered = false;
     unsigned int i=0;
     for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end() && i < discovered_ds.size() && discovered_ds.size() > 0; it++, i++)
@@ -3135,13 +3159,14 @@ void docking::check_reachable_ds()
         //timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, true, false); //TODO(minor) timeout
     }
     
-    
+    ds_mutex.unlock();
     
 }
 
 void docking::update_ds_graph() {
-    for (unsigned int i = 0; i < ds.size(); i++) {
-        for (unsigned int j = 0; j < ds.size(); j++) {
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    for (unsigned int i = 0; i < ds.size() && !recompute_graph; i++) {
+        for (unsigned int j = 0; j < ds.size() && !recompute_graph; j++) {
             //safety checks   
             if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
                 ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
@@ -3155,14 +3180,12 @@ void docking::update_ds_graph() {
                 {
                     ROS_ERROR("Cannot compute DS graph at the moment: computation of distance between ds%d and ds%d failed; retring later", ds.at(i).id, ds.at(j).id);
                     recompute_graph = true;
-                    return;
                 }
                 //ROS_ERROR("%f", dist);
                 //ROS_ERROR("%f", conservative_maximum_distance_one_way());
                 if(conservative_maximum_distance_one_way() <= 0){
                     ROS_ERROR("Invalid value from conservative_maximum_distance_one_way() ...");
                     recompute_graph = true;
-                    return;
                 }
                 if (dist < conservative_maximum_distance_one_way())
                 {
@@ -3571,6 +3594,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
     std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
     jobs_local_list = jobs; //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
     jobs_mutex.unlock();
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
     ROS_DEBUG("%lu", jobs.size());
     double min_dist = numeric_limits<int>::max();
@@ -3610,13 +3635,15 @@ void docking::compute_and_publish_path_on_ds_graph() {
             ros::Duration(3).sleep();
     }
     
+    
     if (min_ds == NULL) {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
         log_major_error("No DS with EOs was found"); //this shouldn't happen because auctioning_2 should be entered only if explorer thinks that there are EOs
-        return;
         // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
     }
+    
+//    boost::shared_lock< boost::shared_mutex > lock2(ds_mutex);
 
     // compute closest DS
     min_dist = numeric_limits<int>::max();
@@ -3641,6 +3668,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
         if(closest_ds == NULL)
             ros::Duration(3).sleep();
     }
+    
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
@@ -3717,6 +3745,8 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
 
     ROS_INFO("simple computing path on DS graph");
 
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+
     // compute closest DS
     double min_dist = numeric_limits<int>::max();
     ds_t *closest_ds = NULL;
@@ -3740,6 +3770,7 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
         if(closest_ds == NULL)
             ros::Duration(3).sleep();
     }
+    
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
@@ -3838,6 +3869,9 @@ void docking::compute_and_publish_path_on_ds_graph_to_home() {
 double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    
     while (min_ds == NULL && retry < 5) {
         for (unsigned int i = 0; i < ds.size(); i++)
         {
@@ -3880,8 +3914,11 @@ double min_dist = numeric_limits<int>::max();
                 closest_ds = &ds.at(i);
             }
         }
+      
+      
         retry++;
     }
+    
     if(closest_ds == NULL)  {
         std_msgs::Empty msg;
         pub_finish.publish(msg);
@@ -3929,6 +3966,7 @@ double min_dist = numeric_limits<int>::max();
 }
 
 bool docking::set_optimal_ds(int id) {
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     optimal_ds_id = id;
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
@@ -3953,6 +3991,7 @@ double docking::get_optimal_ds_y() {
 }
 
 bool docking::set_target_ds(int id) {
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     target_ds_id = id;
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
@@ -3988,6 +4027,7 @@ void docking::free_ds(int id) {
     srv_msg.request.docking_station.id = id;
     double x, y;
     
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
             ds.at(i).vacant = vacant;
