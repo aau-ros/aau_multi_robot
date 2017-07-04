@@ -3925,7 +3925,11 @@ class Explorer
                         }
                         else if(robot_state == going_in_queue) {
                             log_minor_error("Force the robot to think that it reached the queue");
-                            update_robot_state_2(exploring);
+                            update_robot_state_2(in_queue);
+                        }
+                        else if(robot_state == going_checkin_vacancy) {
+                            log_minor_error("Force the robot to think that it reached the DS to check vavancy");
+                            update_robot_state_2(checking_vacancy);
                         }
                         else {
                             if(retries_moving < 3) {
