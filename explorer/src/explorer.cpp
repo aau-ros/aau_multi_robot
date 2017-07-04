@@ -110,7 +110,7 @@ class Explorer
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
     float coeff_a, coeff_b;
-    unsigned int retries, retries2, retries3, retries4, retries5, retries6;
+    unsigned int retries, retries2, retries3, retries4, retries5, retries6, retries_moving;
     double next_available_distance;
     double moving_time;
     bool received_battery_info;
@@ -153,7 +153,7 @@ class Explorer
         energy_consumption= 0;
         available_distance= 0;
         starting_x = 0, starting_y = 0;
-        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0, retries6 = 0;
+        retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0, retries6 = 0, retries_moving = 0;
         next_available_distance = -1;
         moving_time = 0;
     
@@ -3923,11 +3923,21 @@ class Explorer
                             log_minor_error("Force the robot to think that it has left the target DS");
                             update_robot_state_2(exploring);
                         }
+                        else if(robot_state == going_in_queue) {
+                            log_minor_error("Force the robot to think that it reached the queue");
+                            update_robot_state_2(exploring);
+                        }
                         else {
-                            ROS_ERROR("Robot is not moving anymore");
-                            ROS_INFO("Robot is not moving anymore");
-                            //abort();
-                            log_stucked();
+                            if(retries_moving < 3) {
+                                log_minor_error("Robot is not moving anymore... retrying");
+                                retries_moving++;
+                                update_robot_state_2(exploring);
+                            }
+                            else {
+                                log_major_error("Robot is not moving anymore");
+                                //abort();
+                                log_stucked();
+                            }
                         }
                     }
                 }
@@ -3946,6 +3956,7 @@ class Explorer
                     prev_robot_y = pose_y;
     //                prev_robot_state = robot_state;
                     //prints_count = 1;  
+                    retries_moving = 0;
                 }
             }
             
