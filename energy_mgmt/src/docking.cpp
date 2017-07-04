@@ -273,6 +273,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     next_remaining_distance = 0, current_remaining_distance = 0;
     has_to_free_target_ds = false;
     id_ds_to_be_freed = -1;
+    already_printed_matching_error = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -1644,10 +1645,16 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             
             abs_to_rel(msg.get()->x, msg.get()->y, &x, &y);
             
-            if (ds[i].x != x || ds[i].y != y)
-                ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
-                          "%.2f) != (%.2f, %.2f)",
-                          ds[i].id, ds[i].x, ds[i].y, x, y);
+            if (ds[i].x != x || ds[i].y != y) {
+                if(!already_printed_matching_error) {
+                    ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
+                              "%.2f) != (%.2f, %.2f)",
+                              ds[i].id, ds[i].x, ds[i].y, x, y);
+                    log_major_error("Coordinates of docking station do not match");
+                    already_printed_matching_error = true;
+                }
+                break;
+            }
 
             /* DS is already in list, update its state; notice that, due to message loss, it could be possible that the robot has received a new state (vacant or occupied) for the DS that it is no different from the one already stored by the robot */
 
@@ -2880,6 +2887,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
             send_ds_srv_msg.request.docking_station.x = x;
             send_ds_srv_msg.request.docking_station.y = y;
             send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
+            sc_send_docking_station.call(send_ds_srv_msg);
 
             // Remove discovered DS from the vector undiscovered DSs
             undiscovered_ds.erase(it);

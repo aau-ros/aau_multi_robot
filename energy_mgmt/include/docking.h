@@ -643,6 +643,7 @@ class docking
     void free_ds(int id);
     int old_optimal_ds_id_for_log;
     int old_target_ds_id_for_log;
+    bool already_printed_matching_error;
 
 };
 
