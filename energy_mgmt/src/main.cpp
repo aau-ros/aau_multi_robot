@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     bat.createLogFiles();
     bat.compute(); //force computation and publishing...
     bat.publish();
-    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
+//    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
     docking doc;
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     //doc.start_join_timer();
     
     
-    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+//    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
     
 
 // Frequency of loop
@@ -62,15 +62,15 @@ int main(int argc, char** argv)
     //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
     while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
-//        ros::spinOnce();
+        ros::spinOnce();
         
 //        doc.test();
         
         ros::spinOnce();
         
-//        bat.compute(); //force computation and publishing...
-//        bat.publish();
-//        bat.log();
+        bat.compute(); //force computation and publishing...
+        bat.publish();
+        bat.log();
         
 //        doc.join_all_multicast_groups();
         
@@ -117,10 +117,10 @@ int main(int argc, char** argv)
     
     ROS_INFO("shutting down...");
     
-    thr_battery.interrupt();
-    thr_battery.join();
-    thr_spin.interrupt();
-    thr_spin.join();
+//    thr_battery.interrupt();
+//    thr_battery.join();
+//    thr_spin.interrupt();
+//    thr_spin.join();
     
     ros::shutdown();
     
