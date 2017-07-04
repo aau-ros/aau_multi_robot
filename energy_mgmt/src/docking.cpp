@@ -2854,7 +2854,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
 {
     ROS_INFO("discover_docking_stations");
     
-    /* Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS */
+    // Check if there are DSs that can be considered discovered (a DS is considered discovered if the euclidean distance between it and the robot is less than the range of the "simulated" fiducial signal emmitted by the DS
     for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
     {
         double dist = distance_from_robot((*it).x, (*it).y, true);
@@ -2862,39 +2862,33 @@ void docking::discover_docking_stations() //TODO(minor) comments
             ROS_WARN("Failed distance computation!");
         else if (dist < fiducial_signal_range)
         {
-            /* Store new DS in the vector of known DSs, and remove it from the vector
-             * of undiscovered DSs */
+            // Safety check
+            if(it->id < 0 || it->id >= num_ds)
+                log_major_error("inserting invalid DS id in discovered_ds!!!");
+        
+            // Store new DS in the vector of known DSs
             ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
                      (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
             discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
-            undiscovered_ds.erase(it);
-            
-            if(it->id < 0 || it->id >= num_ds)
-                log_major_error("sending invalid DS id!!!");
 
-            /* Inform other robots about the "new" DS */
+            // Inform other robots about the "new" DS
             adhoc_communication::SendEmDockingStation send_ds_srv_msg;
             send_ds_srv_msg.request.topic = "docking_stations";
             send_ds_srv_msg.request.docking_station.id = (*it).id;
             double x, y;
-            
             rel_to_abs((*it).x, (*it).y, &x, &y);
-            
             send_ds_srv_msg.request.docking_station.x = x;
             send_ds_srv_msg.request.docking_station.y = y;
             send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
 
-            /* Since an element from 'undiscovered_ds' was removed, we have to
-             * decrease the iterator by one to compensate the future increment of 
-             * the for loop, since, after the deletion of the element, all the elements in the vector whose position was after the one of the removed element are shifted by one position, and so we are already pointing to the next element, even without the future increment of the for loop */
+            // Remove discovered DS from the vector undiscovered DSs
+            undiscovered_ds.erase(it);
             
-//            it--;
-            // to be sure to start from the beginning
+            // Since it seems that erase() makes the iterator invalid, it is better to stop the loop and retry later from the beginning of the vector with a new and aclean iterator //TODO or we could "clean" the current one, although it seems that Valgrind complains...
             break;
             
         } else
-            ; //ROS_DEBUG("ds%d has not been discovered yet", (*it).id);
-        
+            ROS_DEBUG_COND(false, "ds%d has not been discovered yet", (*it).id);        
     }
 }
 
