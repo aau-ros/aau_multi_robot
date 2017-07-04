@@ -318,7 +318,7 @@ void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr &msg)
 
 void battery_simulate::run() {
     while(ros::ok()) {
-        ros::Duration(5).sleep(); //TODO(minor) rates???
+        ros::Duration(1).sleep(); //TODO(minor) rates???
         ros::spinOnce();
         
         // compute new battery state
