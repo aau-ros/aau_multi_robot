@@ -274,6 +274,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     has_to_free_target_ds = false;
     id_ds_to_be_freed = -1;
     already_printed_matching_error = false;
+    wait_for_ds = 0;
 
     /* Function calls */
     preload_docking_stations();
@@ -1966,7 +1967,15 @@ void docking::start_new_auction()
     {
         log_major_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
-        compute_and_publish_path_on_ds_graph_to_home();
+//        compute_and_publish_path_on_ds_graph_to_home();
+        wait_for_ds++;
+        if(wait_for_ds < 10) {
+            timer_restart_auction.stop(); //reduntant?
+            timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
+            timer_restart_auction.start();
+        }
+        else
+            log_major_error("robot will go home since it seems there are no reachable DS...");
         return;
     }
 
