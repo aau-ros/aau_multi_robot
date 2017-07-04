@@ -1277,7 +1277,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 //        costmap_global_ros_->getCostmap()->worldToMap(wx, wy, mx, my);
 //        double world_x = (mx - costmap_global_ros_->getCostmap()->getSizeInCellsX() / 2) * costmap_global_ros_->getCostmap()->getResolution();
 //        double world_y = (my - costmap_global_ros_->getCostmap()->getSizeInCellsY() / 2) * costmap_global_ros_->getCostmap()->getResolution();
-        ROS_ERROR("makePlan() failed for goal (%.1f, %.1f) from start (%.1f, %.1f) (Stage coord.s); returning -1...", goalPointSimulated.pose.position.x + robot_home_world_x,  goalPointSimulated.pose.position.y + robot_home_world_y, startPointSimulated.pose.position.x + robot_home_world_x, startPointSimulated.pose.position.y + robot_home_world_y);
+        ROS_WARN("makePlan() failed for goal (%.1f, %.1f) from start (%.1f, %.1f) (Stage coord.s); returning -1...", goalPointSimulated.pose.position.x + robot_home_world_x,  goalPointSimulated.pose.position.y + robot_home_world_y, startPointSimulated.pose.position.x + robot_home_world_x, startPointSimulated.pose.position.y + robot_home_world_y);
         
 //        ROS_ERROR("makePlan() failed for goal (%.1f, %.1f) from start (%.1f, %.1f) (Stage coord.s); returning -1...", goalPointSimulated.pose.position.x,  goalPointSimulated.pose.position.y, startPointSimulated.pose.position.x, startPointSimulated.pose.position.y);
         return -1;
@@ -4692,7 +4692,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         
         distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate); //TODO safety coefficient is missing
         if(distance < 0){
-            ROS_ERROR("Failed to compute distance!");
+            ROS_WARN("Failed to compute distance!");
             *error = true;
             continue;
         }
@@ -4936,7 +4936,7 @@ double ExplorationPlanner::distance(double x1, double y1, double x2, double y2) 
     //return trajectory_plan(x1, y1, x2, y2) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough) distance in meters
     double dist = trajectory_plan_meters(x1, y1, x2, y2); //return a (very very rough) distance in meters
     if(dist<0)
-        ROS_ERROR("failed distance");
+        ROS_WARN("failed distance");
     return dist;
 }
 
