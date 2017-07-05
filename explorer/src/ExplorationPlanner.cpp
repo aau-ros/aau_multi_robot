@@ -1096,7 +1096,7 @@ double ExplorationPlanner::trajectory_plan_meters(double target_x, double target
     //ROS_ERROR("%f", costmap_global_ros_->getCostmap()->getResolution());
     double dist = trajectory_plan_meters(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), target_x, target_y);
     if(dist < 0) {
-        ROS_ERROR("failed distance");
+        ROS_WARN("failed distance");
     }
     return dist;
 }
@@ -4926,7 +4926,7 @@ double ExplorationPlanner::distance_from_robot(double x, double y) {
     //return trajectory_plan(x, y) * costmap_ros_->getCostmap()->getResolution(); //return a (very very rough, since it is computed as resolution * number_of_grid_cells_between_the_two_points) distance in meters
     double dist = trajectory_plan_meters(x, y);
     if(dist < 0)
-        ROS_ERROR("failed dist");
+        ROS_WARN("failed dist");
     return dist;
         
 }

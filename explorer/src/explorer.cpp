@@ -3997,6 +3997,7 @@ class Explorer
                             //abort();
                             if(!robot_is_moving())
                                 log_major_error("robot has to be stopped even if it is not moving!");
+                                
                             log_stopped();
                         //}
                     } 

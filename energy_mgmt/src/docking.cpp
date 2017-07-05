@@ -517,23 +517,25 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         else if (ds_selection_policy == 1)
         {
             /* Check if there are vacant DSs that are currently reachable. If there are, check also which one is the closest to the robot */
-            bool found_vacant_ds = false;
+            bool found_reachable_vacant_ds = false, found_vacant_ds = false;
             double min_dist = numeric_limits<int>::max();
             for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
             {
                 if ((*it).vacant)
                 {
+                    found_vacant_ds = true;
+                    
                     double dist = distance_from_robot((*it).x, (*it).y);
                     if (dist < 0)
                         continue;
-                    if(dist < conservative_remaining_distance_with_return() ) {
+                    if(dist < conservative_remaining_distance_one_way() ) {
                         /* We have just found a vacant DS that is reachable (possibly the one already selected as optimal DS before calling
                          * this function).
                          *
                          * Notice that is is important to consider also the already selected optimal DS when we loop on all
                          *the DSs, since we have to update variable 'found_vacant_ds' to avoid falling back to "closest"
                          *policy, i.e., we cannot use a check like best_ds->id != (*it).id here */
-                        found_vacant_ds = true;
+                        found_reachable_vacant_ds = true;
 
                         /* Check if that DS is also the closest one */
                         double dist = distance_from_robot((*it).x, (*it).y);
@@ -552,9 +554,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
             /* If no DS is vacant at the moment, use "closest" policy to update the
              * optimal DS */
-            if (!found_vacant_ds)
+            if (!found_reachable_vacant_ds)
             {
-                ROS_DEBUG("No vacant DS found: fall back to 'closest' policy");
+                if(found_vacant_ds)
+                    ROS_DEBUG("All the vacant DSs are currently unreachable: fall back to 'closest' policy");
+                else
+                    ROS_DEBUG("No vacant DS found: fall back to 'closest' policy");
                 compute_closest_ds();
             }
         }
@@ -2904,6 +2909,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                 // Store new DS in the vector of known DSs
                 ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
                          (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
+                it->vacant = true; //TODO probably reduntant
                 discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
 
                 // Inform other robots about the "new" DS
