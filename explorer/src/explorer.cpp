@@ -114,6 +114,7 @@ class Explorer
     double next_available_distance;
     double moving_time;
     bool received_battery_info;
+    ros::Publisher pub_next_ds;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -224,6 +225,7 @@ class Explorer
         
         pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
         pub_finished_exploration_id = nh2.advertise<adhoc_communication::EmRobot>("finished_exploration_id", 10);
+        pub_next_ds = nh2.advertise<std_msgs::Empty>("next_ds", 1);
 
         ros::NodeHandle n;
         //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -488,7 +490,6 @@ class Explorer
         ros::Subscriber sub_moving_along_path =
             nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
             
-        ros::Publisher pub_next_ds = nh.advertise<std_msgs::Empty>("next_ds", 1);
         //ROS_ERROR("%s", pub_next_ds.getTopic().c_str());
 
         ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
@@ -1231,7 +1232,8 @@ class Explorer
                             }
                     
                     }
-                    else
+
+
                     {
                         // TODO(minor) do those sorting works correclty?
                         /* Sort frontiers, firstly from nearest to farthest and then by
@@ -1717,7 +1719,10 @@ class Explorer
             
             
             if(robot_state == exploring) //happens when the robot lost the auction for the negotiation of the frontier
+            {
+                ROS_INFO("continue in state 'exploring'");
                 continue;
+            }
             
             
             if (robot_state == moving_to_frontier ||
@@ -2180,6 +2185,9 @@ class Explorer
             //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
+                moving_along_path = false;
+                std_msgs::Empty msg;
+                pub_next_ds.publish(msg);
             //}
         }
 
