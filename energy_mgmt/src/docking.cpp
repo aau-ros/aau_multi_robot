@@ -275,6 +275,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     id_ds_to_be_freed = -1;
     already_printed_matching_error = false;
     wait_for_ds = 0;
+    index_of_ds_in_path = -1;
 
     /* Function calls */
     preload_docking_stations();
@@ -3026,10 +3027,19 @@ void docking::debug_timer_callback_2(const ros::TimerEvent &event)
 void docking::next_ds_callback(const std_msgs::Empty &msg)
 {
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    if(path.size() == 0)
+        log_major_error("path.size() == 0");
+    
+    if(index_of_ds_in_path < 0) {
+        log_major_error("index_of_ds_in_path");
+        return;
+    }
+    
     if ((unsigned int)index_of_ds_in_path < path.size() - 1)
     {
         ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
         index_of_ds_in_path++;
+        ROS_DEBUG("%d", index_of_ds_in_path);
         for (unsigned int i = 0; i < ds.size(); i++)
             if (path[index_of_ds_in_path] == ds[i].id)
             {   
@@ -3040,8 +3050,13 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
             }
     }
     else {
-        ROS_INFO("We have reached the final DS and charged at it");
-        moving_along_path = false;
+        if(moving_along_path) {
+            ROS_INFO("We have reached the final DS and charged at it");
+            moving_along_path = false;
+        }
+        else {
+            log_major_error("we are not moving along path!!!");
+        }
     }
 }
 

@@ -2185,9 +2185,12 @@ class Explorer
             //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
-                moving_along_path = false;
-                std_msgs::Empty msg;
-                pub_next_ds.publish(msg);
+                if(moving_along_path) {
+                    ROS_INFO("pub_next_ds");
+                    moving_along_path = false;
+                    std_msgs::Empty msg;
+                    pub_next_ds.publish(msg);
+                }
             //}
         }
 
