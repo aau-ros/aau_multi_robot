@@ -1653,15 +1653,15 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     ds_mutex.lock();
     
     // Safety check on the received DS
-    if(msg.get()->id < 0) {
+    if(msg.get()->id < 0 || msg.get()->id > num_ds) {
         log_major_error("Invalid DS id");
-        ROS_ERROR("%d", msg.get()->id);
+        ROS_DEBUG("%d", msg.get()->id);
         return;
     }
 
     /* Check if DS is in list already */
     bool new_ds = true;
-    for (unsigned int i = 0; i < ds.size(); ++i)
+    for (unsigned int i = 0; i < ds.size(); i++)
     {
         if (ds[i].id == msg.get()->id)
         {
@@ -1712,26 +1712,36 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     /* If the DS is new, add it */
     if (new_ds)
     {
-        //TODO(minor) use a function...
-        ds_t s;
-        s.id = msg.get()->id;
-        
-        if(s.id < 0 || s.id >= num_ds)
-            log_major_error("invalid ds id 3!!!");
-        
-        abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
-        
-        s.vacant = msg.get()->vacant;
-        discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
-        ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
-
-        /* Remove DS from the vector of undiscovered DSs */
-        for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
-            if ((*it).id == s.id)
-            {
-                undiscovered_ds.erase(it);
-                break;
+        // check that DS is not already in the list of discovered (but possibly not reachable DSs)
+        bool already_discovered = false;
+         for (unsigned int i = 0; i < discovered_ds.size() && !already_discovered; i++)
+            if (discovered_ds[i].id == msg.get()->id) {
+                ROS_INFO("The received DS (%d) has been already discovered, even if at the moment the robot does not know how to reach it", msg.get()->id);
+                already_discovered = true;
             }
+            
+        if(!already_discovered) {
+            //TODO(minor) use a function...
+            ds_t s;
+            s.id = msg.get()->id;
+            
+            if(s.id < 0 || s.id >= num_ds)
+                log_major_error("invalid ds id 3!!!");
+            
+            abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
+            
+            s.vacant = msg.get()->vacant;
+            discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
+            ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
+
+            /* Remove DS from the vector of undiscovered DSs */
+            for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++)
+                if ((*it).id == s.id)
+                {
+                    undiscovered_ds.erase(it);
+                    break;
+                }
+        }
     }
     
     ds_mutex.unlock();
@@ -3570,8 +3580,19 @@ void docking::runtime_checks() {
     if(num_ds > 0)          
         if(!invalid_ds_count_printed && (ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds) ){
             log_major_error("invalid number of DS!");
-            ROS_DEBUG("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
             invalid_ds_count_printed = true;
+            
+            ROS_DEBUG("ds.size(): %lu; content:", ds.size());
+            for(unsigned int i=0; i < ds.size(); i++)
+                ROS_DEBUG("%d", ds.at(i).id);
+                
+            ROS_DEBUG("undiscovered_ds.size(): %lu; content:", undiscovered_ds.size());
+            for(unsigned int i=0; i < undiscovered_ds.size(); i++)
+                ROS_DEBUG("%d", undiscovered_ds.at(i).id);
+                
+            ROS_DEBUG("discovered_ds.size(): %lu; content: ", discovered_ds.size());
+            for(unsigned int i=0; i < discovered_ds.size(); i++)
+                ROS_DEBUG("%d", discovered_ds.at(i).id);
         }
     
     if(!ds_appears_twice_printed)
