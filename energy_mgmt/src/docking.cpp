@@ -569,7 +569,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         /* "Opportune" policy */
         else if (ds_selection_policy == 2)
         {
-            if (!moving_along_path)
+            if (!moving_along_path) //TODO reduntant
             {
                 /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery life) with EOs */
                 double min_dist = numeric_limits<int>::max();

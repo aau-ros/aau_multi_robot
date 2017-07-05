@@ -1214,20 +1214,21 @@ class Explorer
                                     pub_next_ds.publish(msg);
                                     update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
                                 }
-                            }
-                            else {
-                                ROS_INFO("Finished path traversal");
-                                moving_along_path = false;
-                                std_msgs::Empty msg;
-                                pub_next_ds.publish(msg);
                                 
+                                continue;
+                                
+                            }
+                            else 
+                            {
                                 if(going_home) {
+                                    ROS_INFO("Finished path traversal");
+                                    moving_along_path = false;
+                                    std_msgs::Empty msg;
+                                    pub_next_ds.publish(msg);
                                     //move_home_if_possible();
                                     move_home();
                                 }
-                            } 
-                    
-                        continue;
+                            }
                     
                     }
                     else
@@ -1313,6 +1314,14 @@ class Explorer
                         /* Check if the robot has found a reachable frontier */
                         if (goal_determined == true)
                         {
+                        
+                            if(moving_along_path) {
+                                ROS_INFO("Finished path traversal");
+                                moving_along_path = false;
+                                std_msgs::Empty msg;
+                                pub_next_ds.publish(msg);
+                            }
+                        
                             /* The robot has found a reachable frontier: it can move toward it */
                             
                             //update_robot_state_2(coordinated_exploration); //TODO
@@ -1376,6 +1385,7 @@ class Explorer
 
                         else
                         {
+                        
                             if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
                                 ROS_ERROR("Goal not found due to some computation failure, trying to recompute goal...");
                                 ROS_INFO("Goal not found due to some computation failure, trying to recompute goal...");
@@ -1389,6 +1399,15 @@ class Explorer
                                 print_mutex_info("explore()", "unlock");
 //                                update_robot_state_2(auctioning);
                                 continue;                             
+                            }
+                            
+                            if(moving_along_path) {
+                                ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
+                                counter++;
+                                move_robot_away(counter);
+                                update_robot_state_2(auctioning);
+                                std_msgs::Empty msg;
+                                pub_next_ds.publish(msg);
                             }
                             
                             if(retries >= 4)
@@ -1436,11 +1455,17 @@ class Explorer
                                         }
                                         else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
                                             ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
+                                            
+//                                            std_msgs::Empty msg;
+//                                            pub_next_ds.publish(msg);
+//                                            ros::Duration(3).sleep();
+                                            
                                             int result = -1;
                                             exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
                                             if(result == 0) //TODO very very orrible idea, using result...
                                             {
                                                 ROS_INFO("path successfully found");
+                                                
                                                 counter++;
                                                 move_robot_away(counter);
                                                 update_robot_state_2(auctioning_2);
