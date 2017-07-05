@@ -526,6 +526,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             {
                 if ((*it).vacant)
                 {
+                    ROS_DEBUG("ds%d is vacant", it->id);
                     found_vacant_ds = true;
                     
                     double dist = distance_from_robot((*it).x, (*it).y);
@@ -552,7 +553,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                             next_optimal_ds_id = it->id;
                         }
                     }
-                }
+                } else
+                    ROS_DEBUG("ds%d is occupied", it->id);
             }
 
             /* If no DS is vacant at the moment, use "closest" policy to update the
@@ -2911,22 +2913,32 @@ void docking::discover_docking_stations() //TODO(minor) comments
             }
             else {
             
-                // Store new DS in the vector of known DSs
-                ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
-                         (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
-                it->vacant = true; //TODO probably reduntant
-                discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
+                // safety check: checks that DS is not already present in discovered_ds
+                bool already_inserted = false;
+                for(unsigned int i=0; i < discovered_ds.size() && !already_inserted; i++)
+                    if(ds.at(i).id == it->id) {
+                        log_major_error("this DS has been already inserted!!!"); //this should not happen!!!
+                        already_inserted = true;
+                    }
+                        
+                if(!already_inserted) {
+                    // Store new DS in the vector of known DSs
+                    ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
+                             (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
+                    it->vacant = true; //TODO probably reduntant
+                    discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
 
-                // Inform other robots about the "new" DS
-                adhoc_communication::SendEmDockingStation send_ds_srv_msg;
-                send_ds_srv_msg.request.topic = "docking_stations";
-                send_ds_srv_msg.request.docking_station.id = (*it).id;
-                double x, y;
-                rel_to_abs((*it).x, (*it).y, &x, &y);
-                send_ds_srv_msg.request.docking_station.x = x;
-                send_ds_srv_msg.request.docking_station.y = y;
-                send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
-                sc_send_docking_station.call(send_ds_srv_msg);
+                    // Inform other robots about the "new" DS
+                    adhoc_communication::SendEmDockingStation send_ds_srv_msg;
+                    send_ds_srv_msg.request.topic = "docking_stations";
+                    send_ds_srv_msg.request.docking_station.id = (*it).id;
+                    double x, y;
+                    rel_to_abs((*it).x, (*it).y, &x, &y);
+                    send_ds_srv_msg.request.docking_station.x = x;
+                    send_ds_srv_msg.request.docking_station.y = y;
+                    send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
+                    sc_send_docking_station.call(send_ds_srv_msg);
+                }
 
                 // Remove discovered DS from the vector undiscovered DSs
                 undiscovered_ds.erase(it);
@@ -3121,7 +3133,20 @@ void docking::check_reachable_ds()
 //            new_ds.y = it->y;
 //            new_ds.vacant = it->vacant;
             
-            ds.push_back(*it);
+            bool already_inserted = false;
+            for(unsigned int i2=0; i2 < discovered_ds.size() && !already_inserted; i2++)
+                if(ds.at(i2).id == it->id) {
+                    log_major_error("this DS has been already inserted!!!"); //this should not happen!!!
+                    already_inserted = true;
+                }
+                    
+            if(!already_inserted) {
+            
+                ds.push_back(*it);
+            
+            }
+            
+            
 //            ds.push_back(new_ds);
             
 //            int id1 = ds[ds.size()-1].id;
@@ -3535,6 +3560,9 @@ void docking::runtime_checks() {
         for(unsigned int j=i+1; j<robots.size(); j++)
             if(robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging)
                 log_major_error("two robots recharging at the same DS!!!");
+                
+    if(ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds)
+        log_major_error("invalid number of DS!");
 }
 
 void docking::path_callback(const std_msgs::String msg) {

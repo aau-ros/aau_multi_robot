@@ -92,6 +92,7 @@ class docking
     void send_robot();
     void send_fake_msg();
     void check_reachable_ds();
+    void runtime_checks();
 
   private:
     /**
@@ -598,7 +599,7 @@ class docking
     std::fstream major_errors_fstream;
     
     
-    void runtime_checks();
+    
     void log_major_error(std::string text);
     void log_minor_error(std::string text);
     void path_callback(const std_msgs::String msg);
