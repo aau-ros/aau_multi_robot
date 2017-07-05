@@ -4646,7 +4646,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     if(closest_ds->id == min_ds->id) {
         ROS_INFO("closest_ds->id == min_ds->id");
         *result = 3;
-        return false;
+//        return false; //DO NOT RETURN!!! we can still find a path...
     }
 
     adhoc_communication::EmDockingStation msg;

@@ -562,6 +562,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                     ROS_DEBUG("No vacant DS found: fall back to 'closest' policy");
                 compute_closest_ds();
             }
+            else
+                ROS_DEBUG("'vacant' policy found an optimal DS");
         }
 
         /* "Opportune" policy */
@@ -1373,7 +1375,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
         
-    if (has_to_free_target_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds)
+    if (has_to_free_target_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
      {
             has_to_free_target_ds = false;
             free_ds(id_ds_to_be_freed);

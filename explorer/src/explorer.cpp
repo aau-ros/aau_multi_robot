@@ -1770,7 +1770,7 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if(auctioning_counter >= 60) {
+                if((robot_state == auctioning && auctioning_counter >= 60) || auctioning_counter >= 180) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
                     continue;   
