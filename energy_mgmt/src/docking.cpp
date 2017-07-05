@@ -1655,7 +1655,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     // Safety check on the received DS
     if(msg.get()->id < 0 || msg.get()->id > num_ds) {
         log_major_error("Invalid DS id");
-        ROS_DEBUG("%d", msg.get()->id);
+        ROS_ERROR("%d", msg.get()->id);
         return;
     }
 
@@ -3573,7 +3573,7 @@ void docking::runtime_checks() {
         for(unsigned int j=i+1; j<robots.size(); j++)
             if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging) {
                 log_major_error("two robots recharging at the same DS!!!");
-                ROS_DEBUG("%d, %d", robots.at(i).id, robots.at(j).id);
+                ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
                 two_robots_at_same_ds_printed = true;
             }
     
@@ -3600,7 +3600,7 @@ void docking::runtime_checks() {
             for(unsigned int j=i+1; j < ds.size(); j++)
                 if(ds.at(i).id == ds.at(j).id) {
                     log_major_error("invalid number of DS!");
-                    ROS_DEBUG("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
+                    ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
 }
