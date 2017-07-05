@@ -646,6 +646,7 @@ class docking
     int old_target_ds_id_for_log;
     bool already_printed_matching_error;
     unsigned int wait_for_ds;
+    void finished_exploration_callback(const std_msgs::Empty msg);
 
 };
 

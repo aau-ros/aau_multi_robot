@@ -3300,7 +3300,7 @@ void docking::spin()
     ROS_INFO("Start thread to receive callbacks"); //TODO(minor) remove spin in other points of the code
     double rate = 10.0; // Hz
     ros::Rate loop_rate(rate);
-    while (ros::ok())
+    while (ros::ok() && !finished_bool)
     {
         ros::spinOnce();   
         loop_rate.sleep();  // sleep for 1/rate seconds
@@ -4060,4 +4060,8 @@ void docking::free_ds(int id) {
     ROS_INFO("Updated own information about ds%d state", id);
 
     update_l1();
+}
+
+void docking::finished_exploration_callback(const std_msgs::Empty msg) {
+    finished_bool = true;
 }
