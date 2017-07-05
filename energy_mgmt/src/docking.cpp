@@ -2916,7 +2916,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                 // safety check: checks that DS is not already present in discovered_ds
                 bool already_inserted = false;
                 for(unsigned int i=0; i < discovered_ds.size() && !already_inserted; i++)
-                    if(ds.at(i).id == it->id) {
+                    if(discovered_ds.at(i).id == it->id) {
                         log_major_error("this DS has been already inserted!!!"); //this should not happen!!!
                         already_inserted = true;
                     }
@@ -3134,7 +3134,7 @@ void docking::check_reachable_ds()
 //            new_ds.vacant = it->vacant;
             
             bool already_inserted = false;
-            for(unsigned int i2=0; i2 < discovered_ds.size() && !already_inserted; i2++)
+            for(unsigned int i2=0; i2 < ds.size() && !already_inserted; i2++)
                 if(ds.at(i2).id == it->id) {
                     log_major_error("this DS has been already inserted!!!"); //this should not happen!!!
                     already_inserted = true;
