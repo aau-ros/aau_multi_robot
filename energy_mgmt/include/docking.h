@@ -647,6 +647,7 @@ class docking
     bool already_printed_matching_error;
     unsigned int wait_for_ds;
     void finished_exploration_callback(const std_msgs::Empty msg);
+    ros::Subscriber sub_finished_exploration;
 
 };
 

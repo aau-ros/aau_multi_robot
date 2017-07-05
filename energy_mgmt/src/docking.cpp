@@ -301,6 +301,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
     
+    sub_finished_exploration = nh.subscribe("finished_exploration", 10 , &docking::finished_exploration_callback, this);
+    
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
     //mygraph.print();
