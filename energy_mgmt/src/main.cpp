@@ -66,8 +66,6 @@ int main(int argc, char** argv)
         
 //        doc.test();
         
-        ros::spinOnce();
-        
 //        bat.compute(); //force computation and publishing...
 //        bat.publish();
 //        bat.log();
@@ -89,6 +87,8 @@ int main(int argc, char** argv)
         doc.update_reamining_distance();
         
         doc.log_optimal_and_target_ds();
+        
+        ros::spinOnce();
         
         doc.runtime_checks();
         

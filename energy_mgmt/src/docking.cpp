@@ -1412,7 +1412,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ; //ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         need_to_charge = false;  // TODO(minor) useless
 
-        set_target_ds_vacant(false);
+        set_target_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
     else if (msg.get()->state == going_checking_vacancy)
     {
@@ -1545,7 +1545,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
-    //ROS_DEBUG("Received information from robot %d", msg.get()->id);
+//    ROS_DEBUG("Received information from robot %d", msg.get()->id);
+    
     //ROS_ERROR("(%.1f, %.1f)", msg.get()->x, msg.get()->y);
     if (DEBUG) //TODO(minor) move away...
     {
@@ -1554,6 +1555,8 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         debug_timers[msg.get()->id].start();
         return;
     }
+    
+    robot_mutex.lock();
 
     /* Log information */ //TODO(minor) better log file...
     ros::Duration time = ros::Time::now() - time_start;
@@ -1608,9 +1611,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             count++;
         num_robots = count;  // TODO(minor) also works for real exp?
     }
+    
+    robot_mutex.unlock();
 
     /* Update parameter l1 of charging likelihood function */
     update_l1();
+    
 }
 
 void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)

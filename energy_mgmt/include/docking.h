@@ -633,7 +633,7 @@ class docking
   	void start_periodic_auction();
     int next_optimal_ds_id;
     double next_remaining_distance, current_remaining_distance;
-    boost::mutex jobs_mutex;
+    boost::mutex jobs_mutex, robot_mutex;
     boost::shared_mutex ds_mutex;
     ros::Subscriber sub_goal_ds_for_path_navigation;
     unsigned int  path_navigation_tries;

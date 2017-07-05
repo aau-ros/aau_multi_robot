@@ -1156,7 +1156,7 @@ class Explorer
                                 moving_along_path = false;
                                 update_robot_state_2(leaving_ds);
                             }
-                        else
+                        else {
                             if(ds_path_counter < ds_path_size - 1)
                             {
                                 ros::spinOnce();
@@ -1230,7 +1230,7 @@ class Explorer
                                     move_home();
                                 }
                             }
-                    
+                        }
                     }
 
 
@@ -1812,6 +1812,11 @@ class Explorer
             // TODO(minor) hmm... here??
             if (robot_state == in_queue)
             {
+                if(moving_along_path) {
+                    // it could be interesting to try to move to the next DS... but when moving toward it the robot could consume a lot of energy, and if when it reaches the next DS it has to go in queue because there are many robots with a lower battery life, it could be "dangerous"
+                
+                }
+            
                 int i = 0;
                 while (robot_state == in_queue && i < 10)  // TODO(minor) better management of the while loop
                 {
