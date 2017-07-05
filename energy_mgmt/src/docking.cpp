@@ -276,6 +276,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     already_printed_matching_error = false;
     wait_for_ds = 0;
     index_of_ds_in_path = -1;
+    two_robots_at_same_ds_printed = false;
+    invalid_ds_count_printed = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -3558,11 +3560,17 @@ void docking::test_2(const std_msgs::Empty &msg) {
 void docking::runtime_checks() {
     for(unsigned int i=0; i<robots.size()-1; i++)
         for(unsigned int j=i+1; j<robots.size(); j++)
-            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging)
+            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging) {
                 log_major_error("two robots recharging at the same DS!!!");
-                
-    if(ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds)
-        log_major_error("invalid number of DS!");
+                two_robots_at_same_ds_printed = true;
+            }
+    
+    if(num_ds > 0)          
+        if(!invalid_ds_count_printed && (ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds) ){
+            log_major_error("invalid number of DS!");
+            ROS_DEBUG("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
+            invalid_ds_count_printed = true;
+        }
 }
 
 void docking::path_callback(const std_msgs::String msg) {

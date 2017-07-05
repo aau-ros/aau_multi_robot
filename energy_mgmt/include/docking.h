@@ -649,6 +649,7 @@ class docking
     unsigned int wait_for_ds;
     void finished_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finished_exploration;
+    bool two_robots_at_same_ds_printed, invalid_ds_count_printed;
 
 };
 
