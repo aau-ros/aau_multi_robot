@@ -1998,7 +1998,7 @@ void docking::start_new_auction()
 {
     if (!optimal_ds_is_set())
     {
-        ROS_WARN("The robot needs to recharge, but it doesn't know about any "
+        log_minor_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
 //        compute_and_publish_path_on_ds_graph_to_home();
         wait_for_ds++;
