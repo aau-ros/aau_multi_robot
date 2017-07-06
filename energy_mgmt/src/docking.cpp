@@ -3225,9 +3225,8 @@ void docking::check_reachable_ds()
 //                log_major_error("ERROR");
             
         }
-        else {
-            //ROS_DEBUG("ds%d is not reachable at the moment: ", (*it).id);
-        }
+        else
+            ROS_DEBUG("ds%d is not reachable at the moment: ", (*it).id);
     }
 
     if (new_ds_discovered || recompute_graph)
