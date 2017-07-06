@@ -486,8 +486,8 @@ class Explorer
         ros::Subscriber my_sub =
             nh.subscribe("charging_completed", 10, &Explorer::battery_charging_completed_callback, this);
 
-        ros::Subscriber sub_new_target_ds = nh.subscribe("new_target_docking_station_selected", 10,
-                                                         &Explorer::new_target_docking_station_selected_callback, this);
+        ros::Subscriber sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
+                                                         &Explorer::new_optimal_docking_station_selected_callback, this);
 
         ros::Subscriber sub_moving_along_path =
             nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
@@ -700,7 +700,7 @@ class Explorer
 //                    double distance = -1;
 //                    int i = 0;
 //                    while(i < 10) {
-//                        exploration->distance_from_robot(target_ds_x, target_ds_y);
+//                        exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
 //                        i++;
 //                        if(distance > 0)
 //                            break;
@@ -1148,8 +1148,8 @@ class Explorer
                         if(OPP_ONLY_TWO_DS)
                             if (ds_path_counter < 2)
                             {
-                                target_ds_x = path[ds_path_counter][0];
-                                target_ds_y = path[ds_path_counter][1];
+                                optimal_ds_x = path[ds_path_counter][0];
+                                optimal_ds_y = path[ds_path_counter][1];
                                 ds_path_counter++;
                                 update_robot_state_2(going_checking_vacancy);
                             }
@@ -1211,11 +1211,11 @@ class Explorer
                                     ROS_INFO("Going to next DS in path");
                                     retry_recharging_current_ds = 0;
                                     ds_path_counter++;
-                                    target_ds_x = complex_path[ds_path_counter].x; 
-                                    target_ds_y = complex_path[ds_path_counter].y; 
+                                    optimal_ds_x = complex_path[ds_path_counter].x; 
+                                    optimal_ds_y = complex_path[ds_path_counter].y; 
                                     std_msgs::Empty msg;
                                     pub_next_ds.publish(msg);
-                                    update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last target_ds (in fact target_ds is the next one)
+                                    update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
                                 }
                                 
                                 continue;
@@ -1771,7 +1771,7 @@ class Explorer
 //                double distance = -1;
 //                int i = 0;
 //                while(distance < 0 && i < 10) {
-//                    exploration->distance_from_robot(target_ds_x, target_ds_y);
+//                    exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
 //                    i++;
 //                    ros::Duration(2).sleep();
 //                }
@@ -1827,7 +1827,7 @@ class Explorer
                                                  // corrent sleep time???
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
-                    if (exploration->distance_from_robot(target_ds_x, target_ds_y) < min_distance_queue_ds) {
+                    if (exploration->distance_from_robot(optimal_ds_x, optimal_ds_y) < min_distance_queue_ds) {
                         ROS_INFO("robot too close to DS for being in queue...");
                         counter++;
                         move_robot_away(counter);
@@ -1879,7 +1879,7 @@ class Explorer
             if (robot_state == going_in_queue || robot_state == going_checking_vacancy || robot_state == going_charging)
             {
                 if (robot_state == going_checking_vacancy)
-                    ROS_INFO("Approaching ds%d (%f, %f) to check if it is free", -1, target_ds_x, target_ds_y);
+                    ROS_INFO("Approaching ds%d (%f, %f) to check if it is free", -1, optimal_ds_x, optimal_ds_y);
                 else if (robot_state == going_in_queue)
                     ROS_INFO("Travelling to DS to go in queue");
                 else
@@ -1890,7 +1890,7 @@ class Explorer
 
                 counter++;
                 moving_to_ds = true;          
-                navigate_to_goal = move_robot(counter, target_ds_x, target_ds_y);
+                navigate_to_goal = move_robot(counter, optimal_ds_x, optimal_ds_y);
                 moving_to_ds = false;
             }
 
@@ -1927,7 +1927,7 @@ class Explorer
                     update_robot_state_2(charging);
 
                     // do not store travelled distance here... the move_robot called at the previous iteration has done it...
-                    //exploration->trajectory_plan_store(target_ds_x, target_ds_y);
+                    //exploration->trajectory_plan_store(optimal_ds_x, optimal_ds_y);
                 }
 
                 else if (robot_state == moving_to_frontier || robot_state == moving_to_frontier_before_going_charging)
@@ -1955,8 +1955,8 @@ class Explorer
             {                       
                 if (robot_state == going_charging)
                 {
-                    ROS_ERROR("Robot cannot reach DS at (%.1f, %.1f) for recharging!", target_ds_x, target_ds_y);
-                    ROS_INFO("Robot cannot reach DS at (%.1f, %.1f) for recharging!", target_ds_x, target_ds_y);
+                    ROS_ERROR("Robot cannot reach DS at (%.1f, %.1f) for recharging!", optimal_ds_x, optimal_ds_y);
+                    ROS_INFO("Robot cannot reach DS at (%.1f, %.1f) for recharging!", optimal_ds_x, optimal_ds_y);
                     failures_going_to_DS++;
                     if(failures_going_to_DS > 5) {
                         log_major_error("tried too many times to reach DS... terminating exploration...");
@@ -2122,8 +2122,8 @@ class Explorer
                 if(OPP_ONLY_TWO_DS)
                     if (ds_path_counter < 2)
                     {
-                        target_ds_x = path[ds_path_counter][0];
-                        target_ds_y = path[ds_path_counter][1];
+                        optimal_ds_x = path[ds_path_counter][0];
+                        optimal_ds_y = path[ds_path_counter][1];
                         ds_path_counter++;
                         update_robot_state_2(going_checking_vacancy);
                     }
@@ -2136,8 +2136,8 @@ class Explorer
                 else
                     if(ds_path_counter < ds_path_size)
                     {
-                        target_ds_x = path[ds_path_counter][0];
-                        target_ds_y = path[ds_path_counter][1];
+                        optimal_ds_x = path[ds_path_counter][0];
+                        optimal_ds_y = path[ds_path_counter][1];
                         ds_path_counter++;
                         update_robot_state_2(going_checking_vacancy);
                     }
@@ -2165,8 +2165,8 @@ class Explorer
                 if(OPP_ONLY_TWO_DS)
                     if (ds_path_counter < 2)
                     {
-                        target_ds_x = path[ds_path_counter][0];
-                        target_ds_y = path[ds_path_counter][1];
+                        optimal_ds_x = path[ds_path_counter][0];
+                        optimal_ds_y = path[ds_path_counter][1];
                         ds_path_counter++;
                         update_robot_state_2(going_checking_vacancy);
                     }
@@ -2178,8 +2178,8 @@ class Explorer
                     }
                 else
                     if(ds_path_counter < ds_path_size) {
-                        target_ds_x = path[ds_path_counter][0];
-                        target_ds_y = path[ds_path_counter][1];
+                        optimal_ds_x = path[ds_path_counter][0];
+                        optimal_ds_y = path[ds_path_counter][1];
                         ds_path_counter++;
                         update_robot_state_2(going_checking_vacancy);
                     }
@@ -2287,8 +2287,8 @@ class Explorer
                             available_distance) 
                         {
                             ds_path_counter++;
-                            target_ds_x = path[ds_path_counter][0];
-                            target_ds_y = path[ds_path_counter][1];
+                            optimal_ds_x = path[ds_path_counter][0];
+                            optimal_ds_y = path[ds_path_counter][1];
                             update_robot_state_2(going_checking_vacancy);
                         }
                         else
@@ -3372,7 +3372,7 @@ class Explorer
         //    ROS_ERROR("Failed to get RobotPose");  // TODO(minor) so what???
         //}
         
-        double remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
+        double remaining_distance = exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
         
         if(remaining_distance > queue_distance / 2.0 || exploration->distance_from_robot(home_point_x, home_point_y) < 1 ) {
         
@@ -3465,7 +3465,7 @@ class Explorer
                 prev_pose_angle = pose_angle;
             }
 
-            remaining_distance = exploration->distance_from_robot(target_ds_x, target_ds_y);
+            remaining_distance = exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
 
             /* Print remaining distance to be travelled to reach goal if the goal is a DS */
             if (remaining_distance > queue_distance / 2.0) {
@@ -3628,19 +3628,19 @@ class Explorer
             robot_state_next = fully_charged_next;
     }
 
-    void new_target_docking_station_selected_callback(const geometry_msgs::PointStamped::ConstPtr &msg)
+    void new_optimal_docking_station_selected_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-        if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
-                robot_state != checking_vacancy) {
-            ROS_INFO("Storing new target DS position");
-            target_ds_x = msg.get()->point.x;
-            target_ds_y = msg.get()->point.y;
-            ROS_DEBUG("New target DS is placed at (%f, %f)", target_ds_x, target_ds_y);
-            exploration->new_target_ds(target_ds_x, target_ds_y);
-        } else {
-            //it could happen that the node is moving to a DS for checking if it is vacant, and that meanwhile it wins an auction for another DS, but the robot should ignore this other auction (in fact, even if it won the auction, we cannot be sure that the auctioned DS is really vacant, so there is no point in changing the target DS)
-             ROS_INFO("The robot is already approaching a DS, so I cannot change it now...");
-        }
+//        if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
+//                robot_state != checking_vacancy) {
+//            optimal_ds_id = msg.get()->id;
+            optimal_ds_x = msg.get()->x;
+            optimal_ds_y = msg.get()->y;
+            ROS_DEBUG("Storing new optimal DS position, which is placed at (%f, %f)", optimal_ds_x, optimal_ds_y);
+//            exploration->new_optimal_ds(optimal_ds_x, optimal_ds_y);
+//        } else {
+//            //it could happen that the node is moving to a DS for checking if it is vacant, and that meanwhile it wins an auction for another DS, but the robot should ignore this other auction (in fact, even if it won the auction, we cannot be sure that the auctioned DS is really vacant, so there is no point in changing the target DS)
+//             ROS_INFO("The robot is already approaching a DS, so I cannot change it now...");
+//        }
        
 
         // TODO(minor)
@@ -3652,8 +3652,8 @@ class Explorer
             point.request.point.src_robot = "robot_1";
         else
             ;  // ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        point.request.point.x = target_ds_x;
-        point.request.point.y = target_ds_y;
+        point.request.point.x = optimal_ds_x;
+        point.request.point.y = optimal_ds_y;
 
         ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
         if (!sc_trasform.call(point))
@@ -4381,7 +4381,7 @@ class Explorer
 
     double pose_x, pose_y, pose_angle, prev_pose_x, prev_pose_y, prev_pose_angle, last_printed_pose_x, last_printed_pose_y, starting_x, starting_y;
 
-    double x_val, y_val, home_point_x, home_point_y, target_ds_x, target_ds_y;
+    double x_val, y_val, home_point_x, home_point_y, optimal_ds_x, optimal_ds_y;
     int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
     int counter;
     bool recharging;

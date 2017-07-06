@@ -354,7 +354,7 @@ namespace explorationPlanner
             ros::ServiceClient sc_distance_frontier_robot;
             void new_ds_on_graph_callback(const adhoc_communication::EmDockingStation msg);
             ros::Subscriber sub_new_ds_on_graph;
-            float new_target_ds(float new_target_ds_x, float new_target_ds_y);
+            float new_optimal_ds(int id, float new_optimal_ds_x, float new_optimal_ds_y);
             void set_auction_timeout(int timeout);
             float sort_time, selection_time;
             unsigned int number_of_frontiers;

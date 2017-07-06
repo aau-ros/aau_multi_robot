@@ -176,7 +176,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     optimal_ds_y = 0;
     num_ds = -1;
     recompute_ds_graph = false;
-    target_ds_set = false;
+    optimal_ds_set = false;
     retrying_searching_frontiers = 0;
     received_scan = false;
     errors = 0;
@@ -2758,8 +2758,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         if(euclidean_distance(x, y, robot_x, robot_y) < 2) 
             distance = euclidean_distance(x, y, robot_x, robot_y); 
         else {
-            ROS_ERROR("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
-            ROS_INFO("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
+            ROS_WARN("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
             total_distance = fallback_distance_computation(x, y);
             if(errors == 0)
                 my_error_counter++;
@@ -2782,8 +2781,7 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         if(euclidean_distance(target_x, target_y, x, y) < 2)
             distance = euclidean_distance(target_x, target_y, x, y);
         else {
-            ROS_ERROR("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
-            ROS_INFO("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
+            ROS_WARN("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
             if(optimal_ds_set)
                 distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
             else
@@ -4546,8 +4544,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
             // distance DS-frontier
             total_distance = trajectory_plan_meters(x_ds, y_ds, x_f, y_f);
             if(total_distance < 0){
-                ROS_ERROR("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
-                ROS_INFO("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
+                ROS_WARN("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
 //                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
 //                if(errors == 0)
 //                    my_error_counter++;
@@ -4580,7 +4577,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
             {
                 double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
                 if (dist < 0) {
-                    ROS_ERROR("Distance computation failed");
+                    ROS_WARN("Distance computation failed");
                     continue;
                 }
 
@@ -4588,7 +4585,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
                 {
                     double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
                     if (dist2 < 0) {
-                        ROS_ERROR("Distance computation failed");
+                        ROS_WARN("Distance computation failed");
                         continue;
                     }
 
@@ -4623,7 +4620,7 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
         {
             double dist = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
             if (dist < 0) {
-                ROS_ERROR("Distance computation failed");
+                ROS_WARN("Distance computation failed");
                 continue;
             }
 
@@ -4711,6 +4708,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
 }
 
 void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_INFO("Storing new optimal DS position");
     optimal_ds_id = msg.get()->id;
     optimal_ds_x = msg.get()->x;
     optimal_ds_y = msg.get()->y;
@@ -8840,12 +8838,12 @@ double ExplorationPlanner::euclidean_distance(float x1, float y1, float x2, floa
     return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) );
 }
 
-float ExplorationPlanner::new_target_ds(float new_target_ds_x, float new_target_ds_y) {
-    //these variables are actually unused (since this class only needs the optimal ds)
-    target_ds_x = new_target_ds_x; 
-    target_ds_y = new_target_ds_y;
-    target_ds_set = true;
-}
+//float ExplorationPlanner::new_optimal_ds(int id, float new_optimal_ds_x, float new_optimal_ds_y) {
+//    optimal_ds_id = id;
+//    optimal_ds_x = new_optimal_ds_x; 
+//    optimal_ds_y = new_optimal_ds_y;
+//    optimal_ds_set = true;
+//}
 
 /* Try to acquire (lock) the mutex passed as argument */
 void ExplorationPlanner::acquire_mutex(boost::mutex *mutex, std::string function_name) {

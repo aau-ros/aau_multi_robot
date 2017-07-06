@@ -38,6 +38,7 @@
 #include <visualization_msgs/Marker.h>
 #include "fake_network/RobotPositionSrv.h"
 #include "fake_network/RobotPosition.h"
+#include <mutex>          // std::mutex
 
 
 #define PI 3.14159265
@@ -81,7 +82,7 @@ class docking
     
     ros::Publisher pub_test, pub_new_ds_on_graph, pub_ds_count;
     ros::Subscriber sub_test;
-    void log_optimal_and_target_ds();
+    void log_optimal_ds();
     
     /**
      * @brief Check if there are docking stations close enough to the robot to be considered discovered 
@@ -324,7 +325,7 @@ class docking
     double w1, w2, w3, w4, w5;
 
     // F
-    ros::Publisher pub_ds, pub_new_target_ds, pub_finish;
+    ros::Publisher pub_ds, pub_new_optimal_ds, pub_finish;
     
     /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
 //    ds_t *best_ds;
@@ -444,7 +445,7 @@ class docking
 
     void start_new_auction();
 
-    void set_target_ds_vacant(bool vacant);
+    void set_optimal_ds_vacant(bool vacant);
 
     void compute_MST();
     void compute_MST_2(int root);
@@ -570,7 +571,7 @@ class docking
     
     void wait_for_explorer_callback(const std_msgs::Empty &msg);
     
-    ros::Publisher pub_wait, pub_new_optimal_ds;
+    ros::Publisher pub_wait;
     ros::Subscriber sub_wait, sub_path;
     
     std::string group_name;
@@ -635,13 +636,14 @@ class docking
     int next_optimal_ds_id;
     double next_remaining_distance, current_remaining_distance;
     boost::mutex jobs_mutex, robot_mutex;
+    std::mutex optimal_ds_mutex;
     boost::shared_mutex ds_mutex;
     ros::Subscriber sub_goal_ds_for_path_navigation;
     unsigned int  path_navigation_tries;
     void simple_compute_and_publish_path_on_ds_graph();
     void goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     int goal_ds_path_id;
-    bool has_to_free_target_ds;
+    bool has_to_free_optimal_ds;
     int id_ds_to_be_freed;
     void free_ds(int id);
     int old_optimal_ds_id_for_log;
@@ -652,6 +654,7 @@ class docking
     ros::Subscriber sub_finished_exploration;
     bool two_robots_at_same_ds_printed, invalid_ds_count_printed, ds_appears_twice_printed;
     ros::Publisher pub_force_in_queue;
+    int old_target_ds_id;
 
 };
 

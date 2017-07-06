@@ -207,8 +207,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 10);
-    pub_new_target_ds =
-        nh.advertise<geometry_msgs::PointStamped>("new_target_docking_station_selected", 10);  // to tell explorer...
     pub_adhoc_new_best_ds =
         nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
     pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 10);
@@ -254,7 +252,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     going_to_ds = false;
     explorer_ready = false;
     optimal_ds_set = false;
-    target_ds_set = false;
+//    target_ds_set = false;
     finished_bool = false;
     no_jobs_received_yet = true;
     group_name = "mc_robot_0";
@@ -265,15 +263,16 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     participating_to_auction = 0;
     maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
+//    old_target_ds_id = -200;
     next_optimal_ds_id = old_optimal_ds_id;
     old_optimal_ds_id_for_log = old_optimal_ds_id;
-    old_target_ds_id_for_log = -1;
-    target_ds_id = -1;
+//    old_target_ds_id_for_log = -1;
+//    target_ds_id = -1;
     time_start = ros::Time::now();
-    id_next_target_ds = -1;
+//    id_next_target_ds = -1;
     path_navigation_tries = 0;
     next_remaining_distance = 0, current_remaining_distance = 0;
-    has_to_free_target_ds = false;
+    has_to_free_optimal_ds = false;
     id_ds_to_be_freed = -1;
     already_printed_matching_error = false;
     wait_for_ds = 0;
@@ -478,8 +477,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
+    bool lock_acquired = optimal_ds_mutex.try_lock();
+
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && participating_to_auction == 0) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && lock_acquired && participating_to_auction == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
@@ -513,6 +514,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         if (moving_along_path) {
             ROS_INFO("Robot is moving along DS path...");
+            optimal_ds_mutex.unlock();
             return;
         }
 
@@ -660,8 +662,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                     }
                                 }
                             }
-                            if (min_ds == NULL)
+                            if (min_ds == NULL) {
+                                optimal_ds_mutex.unlock();
                                 return;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+                            }
 
                             // compute closest DS
                             min_dist = numeric_limits<int>::max();
@@ -712,8 +716,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                     {
                                         //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                                         next_optimal_ds_id = ds.at(j).id;
-                                        set_target_ds_given_index(j);
-                                        ROS_INFO("target_ds: %d", get_target_ds_id());
+//                                        set_target_ds_given_index(j);
+//                                        ROS_INFO("target_ds: %d", get_target_ds_id());
                                     }
                             }
                             else
@@ -836,7 +840,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 int count = 0;
                 for (unsigned int i = 0; i < robots.size(); i++)
                     if (optimal_ds_is_set() &&
-                        robots.at(i).selected_ds == get_optimal_ds_id())  // TODO(minor) best_ds or target_ds??? optimal_ds_is_set()?
+                        robots.at(i).selected_ds == get_optimal_ds_id())
                         count++;
                 double n_r = (double)count / (double)num_robots;
 
@@ -869,20 +873,20 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double swarm_direction_x = 0, swarm_direction_y = 0;
                 for (unsigned int i = 0; i < robots.size(); i++)
                 {
-                    double robot_i_target_ds_x = -1, robot_i_target_ds_y = -1;
+                    double robot_i_optimal_ds_x = -1, robot_i_optimal_ds_y = -1;
 
                     for (unsigned int k = 0; k < ds.size(); k++)
                         if (robots.at(i).selected_ds == ds.at(k).id)
                         {
-                            robot_i_target_ds_x = ds.at(k).x;
-                            robot_i_target_ds_y = ds.at(k).y;
+                            robot_i_optimal_ds_x = ds.at(k).x;
+                            robot_i_optimal_ds_y = ds.at(k).y;
                         }
                         
-                    if(robot_i_target_ds_x < 0 || robot_i_target_ds_y < 0)
+                    if(robot_i_optimal_ds_x < 0 || robot_i_optimal_ds_y < 0)
                         ROS_ERROR("Invalid index(es)!");
 
-                    swarm_direction_x += robot_i_target_ds_x - robots.at(i).x;
-                    swarm_direction_y += robot_i_target_ds_y - robots.at(i).y;
+                    swarm_direction_x += robot_i_optimal_ds_x - robots.at(i).x;
+                    swarm_direction_y += robot_i_optimal_ds_y - robots.at(i).y;
                 }
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
@@ -917,79 +921,95 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             }
         }
 
-        bool changed = false;
+//        bool changed = false;
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
 //        if (!optimal_ds_is_set())
 //            ROS_DEBUG("No optimal DS has been selected yet");
         if (old_optimal_ds_id != next_optimal_ds_id)
         {
-            finished_bool = false; //TODO(minor) find better place...
-            changed = true;
-            set_optimal_ds(next_optimal_ds_id);
+        
+            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue) {
             
-            /* Debug output */
-            if (old_optimal_ds_id >= 0) //TODO bad way to check if a ds has been already selected...
-                ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, next_optimal_ds_id);
-            else
-                ROS_INFO("Change optimal DS: (none) -> ds%d", next_optimal_ds_id);
-            if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
-                log_major_error("OH NO!!!!!!!!!!!!");
-
-            old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
-            robot->selected_ds = get_optimal_ds_id();
-
-            /* Update parameter l4 */
-            update_l4();
             
-            /* Notify explorer about the optimal DS change */
-            adhoc_communication::EmDockingStation msg_optimal;
-            msg_optimal.id = get_optimal_ds_id();
-            msg_optimal.x = get_optimal_ds_x();
-            msg_optimal.y = get_optimal_ds_y();
-            pub_new_optimal_ds.publish(msg_optimal);
+                finished_bool = false; //TODO(minor) find better place...
+//                changed = true;
+                set_optimal_ds(next_optimal_ds_id);
+                
+                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
+                    log_major_error("OH NO!!!!!!!!!!!!");
+
+                old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+
+                /* Update parameter l4 */
+                update_l4();
+                
+                /* Notify explorer about the optimal DS change */
+                adhoc_communication::EmDockingStation msg_optimal;
+                msg_optimal.id = get_optimal_ds_id();
+                msg_optimal.x = get_optimal_ds_x();
+                msg_optimal.y = get_optimal_ds_y();
+                pub_new_optimal_ds.publish(msg_optimal);
+            
+            }
 
         }
         else
             ROS_INFO("Optimal DS unchanged");
             
-        if(get_optimal_ds_id() != get_target_ds_id()) {
-            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging)
-            {   
-                changed = true;
-                ROS_INFO("Update target DS, and inform explorer");
-                set_target_ds(get_optimal_ds_id());
+//        if(get_optimal_ds_id() != get_target_ds_id())  {
+//            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue) //TODO exclude also in_queue???
+//            {   
+//                changed = true;
+//                ROS_INFO("Update target DS, and inform explorer");
+//                set_target_ds(get_optimal_ds_id());
 
-                // If we inform explorer here, we are sure that it will know the target DS even if it loses an auction, so it knows where to go in_queue
-                geometry_msgs::PointStamped msg1;
-                msg1.point.x = get_target_ds_x();
-                msg1.point.y = get_target_ds_y();
-                pub_new_target_ds.publish(msg1);
-                
-            }
-            else
-                ROS_INFO("Target DS cannot be updated at the moment");
-        }
-        
-        if(changed) {
+//                // If we inform explorer here, we are sure that it will know the target DS even if it loses an auction, so it knows where to go in_queue
+//                geometry_msgs::PointStamped msg1;
+//                msg1.point.x = get_target_ds_x();
+//                msg1.point.y = get_target_ds_y();
+//                pub_new_target_ds.publish(msg1);
+//                
+//            }
+//            else
+//                ROS_INFO("Target DS cannot be updated at the moment");
+//        }
+//        
+//        if(changed) {
 
-        }
+//        }
             
     }
-    else
-        ROS_DEBUG("No DS has been discovered for the moment: optimal DS has not "
-                  "been computed");             
+    else {
+        if (ds.size() <= 0)
+            ROS_DEBUG("No DS"); 
+        else if(participating_to_auction > 0)
+            ROS_DEBUG("Robot is participating to auction: optimal DS cannot be updated at the moment"); 
+        else if(auction_winner)
+            ROS_DEBUG("Robot has just won an auction, so maybe it will go to recharge: optimal DS cannot be updated at the moment"); 
+        else if(going_to_ds) 
+            ROS_DEBUG("Robot is going to recharge: optimal DS cannot be updated at the moment"); 
+        else if(!lock_acquired)
+            ROS_DEBUG("Cannot acquire lock: optimal DS cannot be updated at the moment");
+        else
+            ROS_WARN("This should be impossibile...");
+    }
+                  
+    optimal_ds_mutex.unlock();            
 }
 
-void docking::log_optimal_and_target_ds() {
+void docking::log_optimal_ds() {
     /* Keep track of the optimal and target DSs in log file */
-    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
+//    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
+    if(old_optimal_ds_id_for_log != get_optimal_ds_id() ) {
         ros::Duration time = ros::Time::now() - time_start;
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        ROS_DEBUG("%d", target_ds_id);
-        fs_csv << time.toSec() << "," << get_optimal_ds_id() << "," << get_target_ds_id() << "," << std::endl; //TODO target_ds_id could be wrong here...
+//        ROS_DEBUG("%d", target_ds_id);
+        fs_csv << time.toSec() << "," << get_optimal_ds_id() 
+//            << "," << get_target_ds_id() 
+            << std::endl; //TODO target_ds_id could be wrong here...
         fs_csv.close();
         old_optimal_ds_id_for_log = get_optimal_ds_id();
-        old_target_ds_id_for_log = get_target_ds_id();
+//        old_target_ds_id_for_log = get_target_ds_id();
     }
 }
 
@@ -1385,10 +1405,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
         
-    if (has_to_free_target_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
+    if (has_to_free_optimal_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
      {
-            has_to_free_target_ds = false;
-            free_ds(id_ds_to_be_freed);
+            has_to_free_optimal_ds = false;
+            set_optimal_ds_vacant(true);
         }
 
     if (msg.get()->state == in_queue)
@@ -1414,7 +1434,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ; //ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         need_to_charge = false;  // TODO(minor) useless
 
-        set_target_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
+        set_optimal_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
     else if (msg.get()->state == going_checking_vacancy)
     {
@@ -1422,16 +1442,17 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == checking_vacancy)
     {
-        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
-            log_major_error("sending invalid DS id 5!!!");
-            ROS_ERROR("%d",  get_target_ds_id());  
-        }
+//        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
+//            log_major_error("sending invalid DS id 5!!!");
+//            ROS_ERROR("%d",  get_target_ds_id());  
+//        }
     
         ;  // ROS_ERROR("\n\t\e[1;34m checking vacancy!!!\e[0m");
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/check_vacancy";
         srv_msg.request.dst_robot = group_name;
-        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
+//        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
+        srv_msg.request.docking_station.id = get_optimal_ds_id();  // target_ds, not best_ds!!!!!
         sc_send_docking_station.call(srv_msg);
     }
     else if (msg.get()->state == auctioning)
@@ -1456,7 +1477,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 		        if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
 		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
 		        {
-		            ros::Duration(10).sleep();
+		            ros::Duration(1).sleep();
 		            start_new_auction();
 		        }
 			}
@@ -1509,8 +1530,9 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
-        has_to_free_target_ds = true;
-        id_ds_to_be_freed = get_target_ds_id();
+        has_to_free_optimal_ds = true;
+//        id_ds_to_be_freed = get_target_ds_id();
+        id_ds_to_be_freed = get_optimal_ds_id();
         going_to_ds = false;
     }
     else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
@@ -1704,7 +1726,12 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                           
                 // if the ds is now vacant and it's robot's target ds and the robot is in queue, the robot can start already start a new auction
                 //TODO but in this way we start an auction when the DS has become vacant because the robot that was previously recharging at that DS was forced to leave because it has just lost an auction, which means that we have already a winner for the DS...
-                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
+                
+                //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
+                
+//                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { 
+                if(ds[i].vacant && ds[i].id == get_optimal_ds_id() && robot_state == in_queue) { 
+
                     ROS_INFO("Anticipate periodic re-auctioning");
                     timer_restart_auction.stop();
                     start_periodic_auction(); //notice that if the robot is already under auction (maybe started by itself), no new auction will be started, so no problem
@@ -1807,6 +1834,10 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     /* Check if the robot has some interested in participating to this auction,
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
+     
+     
+    optimal_ds_mutex.lock();
+     
     if (!optimal_ds_is_set() || (int)msg.get()->docking_station != get_optimal_ds_id())
     {
         /* Robot received a bid of an auction whose auctioned docking station is not
@@ -1853,6 +1884,9 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
                      "this auction");
         }
     }
+    
+    optimal_ds_mutex.unlock();
+    
 }
 
 void docking::cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -1934,7 +1968,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
         ROS_INFO("Winner of the auction");  // TODO(minor) specify which auction
 
         auction_winner = true;
-        id_next_target_ds = id_auctioned_ds; 
+//        id_next_target_ds = id_auctioned_ds; 
         timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the
                                        // idea in the paper... jsut put a
                                        // check in the timer callback...
@@ -1945,6 +1979,9 @@ void docking::timerCallback(const ros::TimerEvent &event)
         ROS_INFO("Robot lost its own auction");
         auction_winner = false;
     }
+    
+    if(get_optimal_ds_id() != id_auctioned_ds)
+        log_major_error("get_optimal_ds_id() != id_auctioned_ds");
 
     ROS_DEBUG("Send auction results to other robots");
     adhoc_communication::SendEmAuction srv_msg;
@@ -1952,7 +1989,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     srv_msg.request.dst_robot = group_name;
     srv_msg.request.auction.auction = auction_id;
     srv_msg.request.auction.robot = winner;
-    srv_msg.request.auction.docking_station = id_auctioned_ds;
+    srv_msg.request.auction.docking_station = get_optimal_ds_id();
     srv_msg.request.auction.bid = get_llh(); //TODO wrong, although unused (?) because maybe meanwhile
 
     // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
@@ -2021,6 +2058,9 @@ void docking::start_new_auction()
     }
 
     ROS_INFO("Starting new auction");
+    
+    optimal_ds_mutex.lock();
+    
     id_auctioned_ds = get_optimal_ds_id();
     
     /* Keep track of robot bid */
@@ -2040,6 +2080,8 @@ void docking::start_new_auction()
     update_state_required = true;
     participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
 
+    optimal_ds_mutex.unlock();
+
     /* Start auction timer to be notified of auction conclusion */
     timer_finish_auction.stop();
     timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
@@ -2055,6 +2097,8 @@ void docking::start_new_auction()
     srv.request.auction.bid = get_llh();
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
+    
+    
 
 }
 
@@ -2125,7 +2169,12 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                                            // this is needed otherwise when i have many pendning auction and with a
                                            // timeout enough high, i could have an inifite loop of restarting
                                            // auctions... or I could but a control in the timer_callback!!!
-            id_next_target_ds = (int)msg.get()->docking_station;
+//            id_next_optimal_ds = (int)msg.get()->docking_station;
+
+            // Sanity check
+            if((int)msg.get()->docking_station != get_optimal_ds_id())
+                log_major_error("ID of the won auctioned DS != ID of the optimal DS");
+
         }
         else
         {
@@ -2141,6 +2190,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 //    else
 //        ROS_DEBUG("Received result of an auction the robot was not interested in: "
 //                  "ignoring");
+
 }
 
 //DONE++
@@ -2183,7 +2233,8 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
     /* If the request for vacancy check is not about the target DS of the robot,
      * for sure the robot is not occupying it
      */
-    if (target_ds_is_set() && msg.get()->id == get_target_ds_id())
+//    if (target_ds_is_set() && msg.get()->id == get_target_ds_id())
+    if (optimal_ds_is_set() && msg.get()->id == get_optimal_ds_id())
 
         /* If the robot is going to or already charging, or if it is going to check
          * already checking for vacancy, it is
@@ -2206,7 +2257,8 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
             srv_msg.request.dst_robot = group_name;
-            srv_msg.request.docking_station.id = get_target_ds_id();
+//            srv_msg.request.docking_station.id = get_target_ds_id();
+            srv_msg.request.docking_station.id = get_optimal_ds_id();
             srv_msg.request.docking_station.used_by_robot_id = robot_id;
             sc_send_docking_station.call(srv_msg);
             ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
@@ -2311,21 +2363,22 @@ void docking::update_robot_state()  // TODO(minor) simplify
                  * to the other robot that the DS that is currently targettting is now
                  * vacant/occupied. */
                 
-                bool found_ds = false;
-                if(id_next_target_ds < 0 || id_next_target_ds >= num_ds) {
-                    log_major_error("Invalid id_next_target_ds");
-                    ROS_DEBUG("id_next_target_ds: %d", id_next_target_ds);
-                }
-//                boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
-                for(unsigned int i=0; i < ds.size(); i++)
-                    if(ds[i].id == id_next_target_ds) {
-//                        best_ds = &ds[i];
-                        set_target_ds_given_index(i); //necessary because we need to set the DS with ID 'id_next_target_ds' as the target DS, since it could be different from the current target DS
-                        found_ds = true;
-                        break;
-                    }
-                if(!found_ds)
-                    ROS_FATAL("this should not happen!!");
+//                bool found_ds = false;
+////                if(id_next_optimal_ds < 0 || id_next_optimal_ds >= num_ds) {
+////                    log_major_error("Invalid id_next_optimal_ds");
+////                    ROS_DEBUG("id_next_target_ds: %d", id_optimal_target_ds);
+////                }
+////                boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+//                for(unsigned int i=0; i < ds.size(); i++)
+//                    if(ds[i].id == id_next_optimal_ds && id_next_optimal_ds != get_optimal_ds_id()) {
+////                        best_ds = &ds[i];
+////                        set_target_ds_given_index(i); //necessary because we need to set the DS with ID 'id_next_target_ds' as the target DS, since it could be different from the current target DS //TODO should we do the same also with the ID of the optimal DS?
+//                        set_optimal_ds_given_index(i);
+//                        found_ds = true;
+//                        break;
+//                    }
+//                if(!found_ds)
+//                    ROS_FATAL("this should not happen!!");
                     
 //                geometry_msgs::PointStamped msg1;
 //                msg1.point.x = get_target_ds_x();
@@ -2335,7 +2388,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
                 /* Notify explorer node about the victory */
                 pub_won_auction.publish(msg);  // TODO(minor) it is important that this is after the other pub!!!! can we do better? //TODO probably is reduntant to publish also info about the target ds
                 ROS_INFO("pub_won_auction");
-                ROS_DEBUG("target_ds: %d", get_target_ds_id());
+//                ROS_DEBUG("target_ds: %d", get_target_ds_id());
+
             }
             else
                 ROS_INFO("The robot has already won an auction: ignore the result of "
@@ -2427,20 +2481,22 @@ void docking::create_log_files()
     fs_info.close();
 }
 
-void docking::set_target_ds_vacant(bool vacant)
+void docking::set_optimal_ds_vacant(bool vacant)
 {
-    if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
-        log_major_error("invalid target_ds in set_vacant!");
-        return;
-    }
+//    if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
+//        log_major_error("invalid target_ds in set_vacant!");
+//        return;
+//    }
 
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
-    srv_msg.request.docking_station.id = get_target_ds_id();
+//    srv_msg.request.docking_station.id = get_target_ds_id();
+    srv_msg.request.docking_station.id = get_optimal_ds_id();
     double x, y;
     
-    rel_to_abs(get_target_ds_x(), get_target_ds_y(), &x, &y);
+//    rel_to_abs(get_target_ds_x(), get_target_ds_y(), &x, &y);
+    rel_to_abs(get_optimal_ds_x(), get_optimal_ds_y(), &x, &y);
     
     srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a DS is
                                             // received, robots perform checks on the coordinates
@@ -2449,10 +2505,12 @@ void docking::set_target_ds_vacant(bool vacant)
     sc_send_docking_station.call(srv_msg);
 
     for(unsigned int i=0; i < ds.size(); i++)
-        if(ds.at(i).id == get_target_ds_id())
+//        if(ds.at(i).id == get_target_ds_id())
+        if(ds.at(i).id == get_optimal_ds_id())
             ds.at(i).vacant = vacant;
 
-    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
+//    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
+    ROS_INFO("Updated own information about ds%d state", get_optimal_ds_id());
 
     update_l1();
 }
@@ -3038,15 +3096,15 @@ void docking::send_robot()
 
 void docking::send_fake_msg()
 {
-    adhoc_communication::SendEmRobot robot_msg;
-    robot_msg.request.topic = "robots";
-    robot_msg.request.dst_robot = group_name;
-    robot_msg.request.robot.id = robot_id;
-    robot_msg.request.robot.x = robot_id;
-    robot_msg.request.robot.y = robot_id;
-    robot_msg.request.robot.state = robot->state;
-    robot_msg.request.robot.selected_ds = robot_id;
-    sc_send_robot.call(robot_msg);
+//    adhoc_communication::SendEmRobot robot_msg;
+//    robot_msg.request.topic = "robots";
+//    robot_msg.request.dst_robot = group_name;
+//    robot_msg.request.robot.id = robot_id;
+//    robot_msg.request.robot.x = robot_id;
+//    robot_msg.request.robot.y = robot_id;
+//    robot_msg.request.robot.state = robot->state;
+//    robot_msg.request.robot.selected_ds = robot_id;
+//    sc_send_robot.call(robot_msg);
 }
 
 void docking::debug_timer_callback_0(const ros::TimerEvent &event)
@@ -3085,7 +3143,7 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
             if (path[index_of_ds_in_path] == ds[i].id)
             {   
                 ROS_INFO("Next DS on path: ds%d", ds[i].id);
-                set_target_ds_given_index(i);  // TODO(minor) probably ok...
+//                set_target_ds_given_index(i);  // TODO(minor) probably ok...
                 set_optimal_ds_given_index(i);    // TODO(minor) VERY BAD!!!!
                 break;
             }
@@ -3511,9 +3569,9 @@ bool docking::optimal_ds_is_set() {
     return optimal_ds_set;
 }
 
-bool docking::target_ds_is_set() {
-    return target_ds_set;
-}
+//bool docking::target_ds_is_set() {
+//    return target_ds_set;
+//}
 
 void docking::wait_battery_info() {
     while(maximum_travelling_distance <= 0) {
@@ -3546,13 +3604,13 @@ bool docking::set_optimal_ds_given_index(int index) {
     return set_optimal_ds(ds[index].id);
 }
 
-bool docking::set_target_ds_given_index(int index) {
-    if((unsigned int)index < 0 || (unsigned int)index >= ds.size()) {
-        ROS_ERROR("Invalid index");
-        return false;
-    }
-    return set_target_ds(ds[index].id);
-}
+//bool docking::set_target_ds_given_index(int index) {
+//    if((unsigned int)index < 0 || (unsigned int)index >= ds.size()) {
+//        ROS_ERROR("Invalid index");
+//        return false;
+//    }
+//    return set_target_ds(ds[index].id);
+//}
 
 void docking::test_2(const std_msgs::Empty &msg) {
     ROS_ERROR("Test 2");
@@ -3847,8 +3905,8 @@ void docking::compute_and_publish_path_on_ds_graph() {
             {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                 set_optimal_ds_given_index(j);
-                set_target_ds_given_index(j);
-                ROS_INFO("target_ds: %d", get_target_ds_id());
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
                 break;
             }
     }
@@ -3949,8 +4007,8 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
             {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                 set_optimal_ds_given_index(j);
-                set_target_ds_given_index(j);
-                ROS_INFO("target_ds: %d", get_target_ds_id());
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
                 break;
             }
     }
@@ -4071,8 +4129,8 @@ double min_dist = numeric_limits<int>::max();
             {
                 //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
                 set_optimal_ds_given_index(j);
-                set_target_ds_given_index(j);
-                ROS_INFO("target_ds: %d", get_target_ds_id());
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
                 break;
             }
     }
@@ -4084,13 +4142,22 @@ double min_dist = numeric_limits<int>::max();
 
 bool docking::set_optimal_ds(int id) {
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+
+    old_optimal_ds_id = optimal_ds_id;
     optimal_ds_id = id;
+    
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
             optimal_ds_x = ds.at(i).x;
             optimal_ds_y = ds.at(i).y;
             break;
         }
+        
+    if (optimal_ds_set)
+        ROS_ERROR("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, optimal_ds_id);
+    else
+        ROS_ERROR("Change optimal DS: (none) -> ds%d", optimal_ds_id);
+        
     optimal_ds_set = true;
     return true;
 }
@@ -4107,30 +4174,39 @@ double docking::get_optimal_ds_y() {
     return optimal_ds_y;
 }
 
-bool docking::set_target_ds(int id) {
-//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
-    target_ds_id = id;
-    for(unsigned int i=0; i < ds.size(); i++)
-        if(ds.at(i).id == id) {
-            target_ds_x = ds.at(i).x;
-            target_ds_y = ds.at(i).y;
-            break;
-        }
-    target_ds_set = true;
-    return true;
-}
+//bool docking::set_target_ds(int id) {
+////    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
-int docking::get_target_ds_id() {
-    return target_ds_id;
-}
+//    old_target_ds_id = target_ds_id;
+//    target_ds_id = id;
+//    
+//    for(unsigned int i=0; i < ds.size(); i++)
+//        if(ds.at(i).id == id) {
+//            target_ds_x = ds.at(i).x;
+//            target_ds_y = ds.at(i).y;
+//            break;
+//        }
+//        
+//    if (target_ds_set)
+//        ROS_INFO("Change target DS: ds%d -> ds%d", old_target_ds_id, target_ds_id);
+//    else
+//        ROS_INFO("Change target DS: (none) -> ds%d", target_ds_id);
+//        
+//    target_ds_set = true;
+//    return true;
+//}
 
-double docking::get_target_ds_x() {
-    return target_ds_x;
-}
+//int docking::get_target_ds_id() {
+//    return target_ds_id;
+//}
 
-double docking::get_target_ds_y() {
-    return target_ds_y;
-}
+//double docking::get_target_ds_x() {
+//    return target_ds_x;
+//}
+
+//double docking::get_target_ds_y() {
+//    return target_ds_y;
+//}
 
 void docking::free_ds(int id) {
     if(id < 0 || id >= num_ds) {

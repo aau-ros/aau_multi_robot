@@ -90,7 +90,7 @@ int main(int argc, char** argv)
         
         doc.update_reamining_distance();
         
-        doc.log_optimal_and_target_ds();
+        doc.log_optimal_ds();
         
 //        ros::spinOnce();
         
