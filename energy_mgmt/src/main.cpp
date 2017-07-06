@@ -60,6 +60,10 @@ int main(int argc, char** argv)
     ros::Rate loop_rate(rate);
     ros::NodeHandle nh;
     //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+    
+    ros::AsyncSpinner spinner(20);
+    spinner.start();
+    
     while(ros::ok() && !doc.finished_bool){
         // get updates from subscriptions
 //        ros::spinOnce();
@@ -88,7 +92,7 @@ int main(int argc, char** argv)
         
         doc.log_optimal_and_target_ds();
         
-        ros::spinOnce();
+//        ros::spinOnce();
         
         doc.runtime_checks();
         
@@ -123,6 +127,8 @@ int main(int argc, char** argv)
     thr_battery.join();
     thr_spin.interrupt();
     thr_spin.join();
+    
+    spinner.stop();
     
     ros::shutdown();
     

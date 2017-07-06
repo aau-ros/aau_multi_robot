@@ -3022,7 +3022,7 @@ void docking::send_robot()
     if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = get_optimal_ds_id();
     else
-        robot_msg.request.robot.selected_ds = -1;
+        robot_msg.request.robot.selected_ds = -10;
     sc_send_robot.call(robot_msg);
     
     adhoc_communication::EmRobot robot_msg_2;

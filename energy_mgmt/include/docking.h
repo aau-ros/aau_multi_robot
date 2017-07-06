@@ -2,6 +2,7 @@
 #define DOCKING_H
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <ros/topic.h>
 #include <navfn/navfn_ros.h>
 #include <costmap_2d/costmap_2d_ros.h>

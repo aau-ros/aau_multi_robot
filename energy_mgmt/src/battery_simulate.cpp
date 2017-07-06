@@ -16,7 +16,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     nh.getParam("energy_mgmt/power_idle", power_idle);         // W
     nh.getParam("energy_mgmt/power_basic_computations", power_basic_computations);  // W
     nh.getParam("energy_mgmt/power_advanced_computations", power_advanced_computation);  // W
-    nh.getParam("energy_mgmt/charge_max", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
+    nh.getParam("energy_mgmt/max_charge", charge_max);         // Wh (i.e, watt-hour) //TODO(minor) which value is good in the YAML file?
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
     nh.getParam("energy_mgmt/mass", mass); // kg
     advanced_computations_bool = true;

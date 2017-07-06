@@ -170,8 +170,8 @@ void MapMerger::waitForRobotInformation()
             (robot_prefix+"/adhoc_communication/get_neighbors");
     adhoc_communication::GetNeighbors getNeighbors;
     ros::Duration(0.1).sleep();
-    //ros::AsyncSpinner spinner(10);
-    //spinner.start();
+    ros::AsyncSpinner spinner(10);
+    spinner.start();
     ros::Duration(3).sleep();
     if(getNeighborsClient.call(getNeighbors))
     {
