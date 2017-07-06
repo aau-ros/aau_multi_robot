@@ -84,7 +84,7 @@ class Explorer
     bool ready, moving_along_path, explorer_ready;
     int my_counter, ds_path_counter, ds_path_size;
     ros::Publisher pub_robot, pub_wait, pub_finished_exploration, pub_finished_exploration_id;
-    ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count;
+    ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count, sub_force_in_queue;
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
@@ -222,6 +222,8 @@ class Explorer
         
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
+        
+        sub_force_in_queue = nh.subscribe("force_in_queue", 10, &Explorer::force_in_queue_callback, this);
         
         pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
         pub_finished_exploration_id = nh2.advertise<adhoc_communication::EmRobot>("finished_exploration_id", 10);
@@ -4217,6 +4219,11 @@ class Explorer
         ROS_INFO("Stored");
         starting_x = pose_x;
         starting_y = pose_y;
+    }
+    
+    void force_in_queue_callback(const std_msgs::Empty msg) {
+        ROS_INFO("forced to go idle by another node");
+        update_robot_state_2(in_queue);
     }
 
     /********************

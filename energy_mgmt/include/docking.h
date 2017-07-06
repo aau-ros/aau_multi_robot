@@ -650,6 +650,7 @@ class docking
     void finished_exploration_callback(const std_msgs::Empty msg);
     ros::Subscriber sub_finished_exploration;
     bool two_robots_at_same_ds_printed, invalid_ds_count_printed, ds_appears_twice_printed;
+    ros::Publisher pub_force_in_queue;
 
 };
 

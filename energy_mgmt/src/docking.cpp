@@ -232,6 +232,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
 	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
 	
+	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
+	
 	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 10, &docking::goal_ds_for_path_navigation_callback, this);
 
     /* Timers */
@@ -1996,17 +1998,22 @@ void docking::start_new_auction()
 {
     if (!optimal_ds_is_set())
     {
-        log_major_error("The robot needs to recharge, but it doesn't know about any "
+        ROS_WARN("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
 //        compute_and_publish_path_on_ds_graph_to_home();
         wait_for_ds++;
-        if(wait_for_ds < 10) {
+        if(wait_for_ds < 100) {
             timer_restart_auction.stop(); //reduntant?
             timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
             timer_restart_auction.start();
         }
         else
             log_major_error("robot will go home since it seems there are no reachable DS...");
+            
+        // Force explorer in queue
+        std_msgs::Empty msg;
+        pub_force_in_queue.publish(msg);
+            
         return;
     }
 
@@ -2070,7 +2077,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
 {
     if (!optimal_ds_is_set())
     {
-        log_major_error("The robot does not know about any existing DS!");  // TODO(minor) it
+        ROS_INFO("The robot does not know about any existing DS!");  // TODO(minor) it
                                                                       // means that
                                                                       // it missed
                                                                       // some
