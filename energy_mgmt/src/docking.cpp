@@ -1543,6 +1543,9 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 
     robot_state = static_cast<state_t>(msg.get()->state);
     robot->state = robot_state;
+    
+    send_robot();
+    
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -3581,13 +3584,13 @@ void docking::test_2(const std_msgs::Empty &msg) {
 //}
 
 void docking::runtime_checks() {
-    for(unsigned int i=0; i<robots.size()-1; i++)
-        for(unsigned int j=i+1; j<robots.size(); j++)
-            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging) {
-                log_major_error("two robots recharging at the same DS!!!");
-                ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
-                two_robots_at_same_ds_printed = true;
-            }
+//    for(unsigned int i=0; i<robots.size()-1; i++)
+//        for(unsigned int j=i+1; j<robots.size(); j++)
+//            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging) {
+//                log_major_error("two robots recharging at the same DS!!!");
+//                ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
+//                two_robots_at_same_ds_printed = true;
+//            }
     
     if(num_ds > 0)          
         if(!invalid_ds_count_printed && (ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds) ){

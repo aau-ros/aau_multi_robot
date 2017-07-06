@@ -7,7 +7,6 @@
 //#include <adhoc_communication/EmRobot.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
-#define RESOLUTION 0.05
 
 float wifi_range;
 ros::Publisher pub;
@@ -29,7 +28,7 @@ int num_robots;
 ros::Timer timer;
 
 double euclidean_distance(double x1, double y1, double x2, double y2) {
-    return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) ) * RESOLUTION; //TODO bad...
+    return sqrt( (x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) ) ; //TODO bad...
 }
 
 bool reachable(int src, int dst) {
