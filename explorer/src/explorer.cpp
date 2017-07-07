@@ -1404,9 +1404,10 @@ class Explorer
 ////                                update_robot_state_2(auctioning);
 //                                continue;                             
 //                            }
+                            ROS_INFO("goal not determined: selecting next action...");
                             
                             if(moving_along_path) {
-                                ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
+                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
                                 counter++;
                                 move_robot_away(counter);
                                 update_robot_state_2(auctioning);
@@ -1426,7 +1427,8 @@ class Explorer
 //                            } 
                             
                             //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-                            if(retries2 < 4 && retries3 < 5 && retries5 < 10) {
+//                            if(retries2 < 4 && retries3 < 5 && retries5 < 10) {
+                            if(retries2 < 1 && retries3 < 5 && retries5 < 10) {
 //                                retries5++;
                                 bool error = false;
                                 ros::spinOnce(); //to udpate available_distance
@@ -1503,6 +1505,7 @@ class Explorer
                                                     retries2++;
                                                     costmap_mutex.unlock();
                                                     print_mutex_info("explore()", "unlock");
+                                                    update_robot_state_2(exploring);
                                                     continue;
                                             }
                                             else {
@@ -1511,6 +1514,7 @@ class Explorer
                                                     ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
                                                     costmap_mutex.unlock();
                                                     print_mutex_info("explore()", "unlock");
+                                                    update_robot_state_2(exploring);
                                                     continue;
                                                 }
                                                 else
@@ -3913,7 +3917,8 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = TIMEOUT_CHECK_1 * 60; //seconds
-        int starting_value_countdown_2 = 3 * TIMEOUT_CHECK_1 * 60; //seconds
+//        int starting_value_countdown_2 = 3 * TIMEOUT_CHECK_1 * 60; //seconds
+        int starting_value_countdown_2 = 30 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
         
@@ -4010,7 +4015,8 @@ class Explorer
             }
             
             else if( robot_state != in_queue && robot_state != charging) {
-                if( fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 ) {
+                if( fabs(pose_x - prev_robot_x_2) < 0.1 && fabs(pose_y - prev_robot_y_2) < 0.1 )
+                {
                     countdown_2 -= ros::Time::now() - prev_time;
                     
                     if(countdown_2 < ros::Duration(0)) {
@@ -4044,12 +4050,21 @@ class Explorer
                                 
                             log_stopped();
                         //}
-                    } 
-                    else if(countdown_2 < ros::Duration(5*50) && prints_count == 1) {
+                    }
+//                    starting_value_countdown_2 - 20*60
+                    else if(countdown_2 < ros::Duration(starting_value_countdown_2 - 20*60) && prints_count == 2)
+                    {
+                        prints_count++;
+                        ROS_ERROR("Robot is not moving from 20 minutes!");
+                    }
+                    else if(countdown_2 < ros::Duration(starting_value_countdown_2 - 10*60) && prints_count == 1)
+                    {
                         prints_count++;
                         ROS_ERROR("Robot is not moving from 10 minutes!");
-                    } else if(countdown_2 < ros::Duration(10*60) && prints_count == 0) {
-//                        ROS_ERROR("Robot is not moving from 5 minutes!");
+                    } 
+                    else if(countdown_2 < ros::Duration(starting_value_countdown_2 -  5*60) && prints_count == 0)
+                    {
+                        ROS_ERROR("Robot is not moving from 5 minutes!");
                         prints_count++;   
                     }
                 }
