@@ -2036,7 +2036,10 @@ void docking::start_periodic_auction() {
 
 void docking::start_new_auction()
 {
-    if (!optimal_ds_is_set())
+    if(wait_for_ds >= 100)
+        return;
+
+    if (!optimal_ds_is_set() && need_to_charge)
     {
         log_minor_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
@@ -2046,13 +2049,17 @@ void docking::start_new_auction()
             timer_restart_auction.stop(); //reduntant?
             timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
             timer_restart_auction.start();
-        }
-        else
-            log_major_error("robot will go home since it seems there are no reachable DS...");
             
-        // Force explorer in queue
-        std_msgs::Empty msg;
-        pub_force_in_queue.publish(msg);
+            // Force explorer in queue
+            std_msgs::Empty msg;
+            pub_force_in_queue.publish(msg);
+            
+        }
+        else {
+            log_major_error("robot cannot recharge: stopping...");
+            std_msgs::Empty msg;
+            pub_finish.publish(msg);
+        }
             
         return;
     }
@@ -4154,9 +4161,9 @@ bool docking::set_optimal_ds(int id) {
         }
         
     if (optimal_ds_set)
-        ROS_ERROR("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, optimal_ds_id);
+        ROS_INFO("Change optimal DS: ds%d -> ds%d", old_optimal_ds_id, optimal_ds_id);
     else
-        ROS_ERROR("Change optimal DS: (none) -> ds%d", optimal_ds_id);
+        ROS_INFO("Change optimal DS: (none) -> ds%d", optimal_ds_id);
         
     optimal_ds_set = true;
     return true;

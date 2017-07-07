@@ -234,6 +234,8 @@ private:
     bool do_not_consume_battery;
     TimeManagerInterface *time_manager;
     double elapsed_time;
+    bool initializing;
+    unsigned int counter_moving_to_frontier;
     
 };
 

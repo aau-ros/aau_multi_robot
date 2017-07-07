@@ -31,8 +31,10 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     perc_standing = 0.5; //TODO(minor) useless?
     output_shown = false; //TODO(minor) useless?
     speed_avg = speed_avg_init;
-    idle_mode = false;
-    do_not_consume_battery = false;
+    idle_mode = false; 
+    do_not_consume_battery = true; //important, since at the beginning we have a lot of unsused time...
+    initializing = true;
+    counter_moving_to_frontier = 0;
     
     charge = charge_max;
     total_energy = charge_max * 3600; // J (i.e, joule)       
@@ -124,6 +126,21 @@ void battery_simulate::initializeSimulationTime() {
 
 void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
 {
+    if(initializing && msg.get()->state == moving_to_frontier) {
+        if(counter_moving_to_frontier == 0)
+            counter_moving_to_frontier++;
+        else {
+            do_not_consume_battery = false;
+            initializing = false;
+            ROS_INFO("Finished initialization procedure");
+        }
+        return;   
+    } 
+    
+    if(initializing)
+        return;
+
+
     if (msg.get()->state == charging)
     {
         ROS_DEBUG("Start recharging");
@@ -258,7 +275,9 @@ void battery_simulate::compute()
 void battery_simulate::log()
 {
     std::string state_std;
-    if(idle_mode)
+    if(initializing)
+        state_std = "initializing";
+    else if(idle_mode)
         state_std = "idle";
     else if(state.charging) 
         state_std = "charging";
@@ -266,6 +285,8 @@ void battery_simulate::log()
         state_std = "computing";
     else if(speed_linear > 0 || speed_angular > 0)
         state_std = "moving";
+    else if(do_not_consume_battery)
+        state_std = "at_ds_for_computation";
     else
         state_std = "standing";
         
