@@ -1390,20 +1390,20 @@ class Explorer
                         else
                         {
                         
-                            if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
-                                ROS_ERROR("Goal not found due to some computation failure, trying to recompute goal...");
-                                ROS_INFO("Goal not found due to some computation failure, trying to recompute goal...");
-//                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
-//                                ROS_INFO("Goal not found due to some computation failure, start auction...");
-                                retries++;
-                                ROS_DEBUG("%d", retries);
-                                
-                                ros::Duration(3).sleep();
-                                costmap_mutex.unlock();
-                                print_mutex_info("explore()", "unlock");
-//                                update_robot_state_2(auctioning);
-                                continue;                             
-                            }
+//                            if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
+//                                ROS_ERROR("Goal not found due to some computation failure, trying to recompute goal...");
+//                                ROS_INFO("Goal not found due to some computation failure, trying to recompute goal...");
+////                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
+////                                ROS_INFO("Goal not found due to some computation failure, start auction...");
+//                                retries++;
+//                                ROS_DEBUG("%d", retries);
+//                                
+//                                ros::Duration(3).sleep();
+//                                costmap_mutex.unlock();
+//                                print_mutex_info("explore()", "unlock");
+////                                update_robot_state_2(auctioning);
+//                                continue;                             
+//                            }
                             
                             if(moving_along_path) {
                                 ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");

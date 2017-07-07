@@ -304,9 +304,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     sub_path = nh.subscribe("error_path", 10, &docking::path_callback, this);
     
-    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
-    
-    sub_finished_exploration = nh.subscribe("finished_exploration", 10 , &docking::finished_exploration_callback, this);
+//    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
     
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
@@ -326,9 +324,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
 }
 
-void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
-    finished_bool = true;
-}
+//void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
+//    ROS_INFO("finalize_exploration_callback");
+//    finished_bool = true;
+//}
 
 void docking::test() {
     std_msgs::Empty msg;
@@ -480,7 +479,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     bool lock_acquired = optimal_ds_mutex.try_lock();
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && lock_acquired && participating_to_auction == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && !moving_along_path && lock_acquired && participating_to_auction == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
@@ -511,12 +510,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         if(old_optimal_ds_id > 10000) //can happen sometimes... why? segmentation fault?
             log_major_error("WHAT?????????????????????????");
-
-        if (moving_along_path) {
-            ROS_INFO("Robot is moving along DS path...");
-            optimal_ds_mutex.unlock();
-            return;
-        }
 
         // TODO(minor) functions
         /* "Closest" policy */
@@ -663,66 +656,66 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                 }
                             }
                             if (min_ds == NULL) {
-                                optimal_ds_mutex.unlock();
-                                return;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
-                            }
+                                ;  // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+                            } else {
 
-                            // compute closest DS
-                            min_dist = numeric_limits<int>::max();
-                            ds_t *closest_ds = NULL;
-                            for (unsigned int i = 0; i < ds.size(); i++)
-                            {
-                                double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
-                                if (dist < 0)
-                                    continue;
-
-                                if (dist < min_dist)
+                                // compute closest DS
+                                min_dist = numeric_limits<int>::max();
+                                ds_t *closest_ds = NULL;
+                                for (unsigned int i = 0; i < ds.size(); i++)
                                 {
-                                    min_dist = dist;
-                                    closest_ds = &ds.at(i);
-                                }
-                            }
+                                    double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                                    if (dist < 0)
+                                        continue;
 
-                            path.clear();
-                            index_of_ds_in_path = 0;
-                            if(closest_ds == NULL)
-                                ROS_ERROR("NO CLOSEST DS HAS BEEN FOUND!!!");
-                            ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
-
-                            if (ds_found_with_mst)
-                            {
-//                                int closest_ds_id;
-
-                                moving_along_path = true;
-
-                                adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
-                                                                               // maybe I can
-                                                                               // pass directly
-                                                                               // msg_path to
-                                                                               // find_path...
-                                for (unsigned int i = 0; i < path.size(); i++)
-                                    for (unsigned int j = 0; j < ds.size(); j++)
-                                        if (ds[j].id == path[i])
-                                        {
-                                            adhoc_communication::MmPoint point;
-                                            point.x = ds[j].x, point.y = ds[j].y;
-                                            msg_path.positions.push_back(point);
-                                        }
-
-                                pub_moving_along_path.publish(msg_path);
-
-                                for (unsigned int j = 0; j < ds.size(); j++)
-                                    if (path[0] == ds[j].id)
+                                    if (dist < min_dist)
                                     {
-                                        //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
-                                        next_optimal_ds_id = ds.at(j).id;
-//                                        set_target_ds_given_index(j);
-//                                        ROS_INFO("target_ds: %d", get_target_ds_id());
+                                        min_dist = dist;
+                                        closest_ds = &ds.at(i);
                                     }
+                                }
+
+                                path.clear();
+                                index_of_ds_in_path = 0;
+                                if(closest_ds == NULL)
+                                    ROS_ERROR("NO CLOSEST DS HAS BEEN FOUND!!!");
+                                ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+
+                                if (ds_found_with_mst)
+                                {
+    //                                int closest_ds_id;
+
+                                    moving_along_path = true;
+
+                                    adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                                                   // maybe I can
+                                                                                   // pass directly
+                                                                                   // msg_path to
+                                                                                   // find_path...
+                                    for (unsigned int i = 0; i < path.size(); i++)
+                                        for (unsigned int j = 0; j < ds.size(); j++)
+                                            if (ds[j].id == path[i])
+                                            {
+                                                adhoc_communication::MmPoint point;
+                                                point.x = ds[j].x, point.y = ds[j].y;
+                                                msg_path.positions.push_back(point);
+                                            }
+
+                                    pub_moving_along_path.publish(msg_path);
+
+                                    for (unsigned int j = 0; j < ds.size(); j++)
+                                        if (path[0] == ds[j].id)
+                                        {
+                                            //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                                            next_optimal_ds_id = ds.at(j).id;
+    //                                        set_target_ds_given_index(j);
+    //                                        ROS_INFO("target_ds: %d", get_target_ds_id());
+                                        }
+                                }
+                                else
+                                    // closest policy //TODO(minor) when could this happen?
+                                    compute_closest_ds();
                             }
-                            else
-                                // closest policy //TODO(minor) when could this happen?
-                                compute_closest_ds();
                         }
 
                         /*
@@ -788,8 +781,11 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 	                        compute_closest_ds();  // TODO(minor) although probably the robot will think
 	                                               // that the exploration is over given how
 	                                               // explorer works for the moment...
-						else 
-                        	finished_bool = true;
+						else {
+						    ROS_INFO("finished_bool = true");
+//                        	finished_bool = true;
+                            finalize();
+                        }
                 }
             }
             else
@@ -990,6 +986,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             ROS_DEBUG("Robot is going to recharge: optimal DS cannot be updated at the moment"); 
         else if(!lock_acquired)
             ROS_DEBUG("Cannot acquire lock: optimal DS cannot be updated at the moment");
+        else if(moving_along_path)
+            ROS_DEBUG("robot is moving along path, cannot compute optimal DS");
         else
             ROS_WARN("This should be impossibile...");
     }
@@ -3099,6 +3097,8 @@ void docking::send_robot()
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs2_csv << time.toSec() << "," << robot->x << "," << robot->y << std::endl;
     fs2_csv.close();
+    
+    ROS_INFO("robot sent");
 }
 
 void docking::send_fake_msg()
@@ -3170,7 +3170,9 @@ void docking::check_reachable_ds()
 {
     ROS_INFO("check_reachable_ds");
 //    boost::unique_lock< boost::shared_mutex > lock(ds_mutex);
+
     ds_mutex.lock();
+    
     bool new_ds_discovered = false;
     unsigned int i=0;
     for (std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end() && i < discovered_ds.size() && discovered_ds.size() > 0; it++, i++)
@@ -3193,7 +3195,7 @@ void docking::check_reachable_ds()
         else
         {
             ROS_ERROR("Unable to check if ds%d is reachable, retrying later...", (*it).id);
-            return;
+            break;
         }
 
         if (reachable)
@@ -3410,7 +3412,12 @@ void docking::finalize() //TODO(minor) do better
 
     // exit(0); //TODO(minor)
     
+    ROS_INFO("finished_bool = true");
     finished_bool = true;
+    
+    std_msgs::Empty msg;
+    pub_finish.publish(msg);
+    
 }
 
 //DONE++
@@ -3875,7 +3882,9 @@ void docking::compute_and_publish_path_on_ds_graph() {
     
     if(path_navigation_tries > 4) {
         log_major_error("Too many times closest_ds->id == min_ds->id in a row");
-        finished_bool = true;
+        ROS_INFO("finished_bool = true");
+//        finished_bool = true;
+        finalize();
         return;
     }
          
@@ -3977,7 +3986,9 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
     
     if(path_navigation_tries > 4) {
         log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
-        finished_bool = true;
+        ROS_INFO("finished_bool = true");
+//        finished_bool = true;
+        finalize();
         return;
     }
          
@@ -4143,7 +4154,9 @@ double min_dist = numeric_limits<int>::max();
     }
     else {
         log_major_error("no path found to reach home!!!");
-        finished_bool = true;
+        ROS_INFO("finished_bool = true");
+        finalize();        
+//        finished_bool = true;
     }
 }
 
@@ -4245,6 +4258,7 @@ void docking::free_ds(int id) {
     update_l1();
 }
 
-void docking::finished_exploration_callback(const std_msgs::Empty msg) {
-    finished_bool = true;
-}
+//void docking::finished_exploration_callback(const std_msgs::Empty msg) {
+//    ROS_INFO("finished_exploration_callback");
+//    finished_bool = true;
+//}
