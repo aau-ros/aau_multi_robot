@@ -85,6 +85,7 @@ TEST(TestSuite, testCase3)
     double time = 30;
     mtm.addTime(time);
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.set_last_time();
     EXPECT_EQ(bat.last_time_secs(), time);
@@ -93,6 +94,7 @@ TEST(TestSuite, testCase3)
 TEST(TestSuite, testCase4)
 {  
     battery_simulate bat;
+    bat.initializing = false;
     double test_total_energy = charge_max * 3600;
     double total_energy = bat.getRemainingEnergy();
     EXPECT_EQ(total_energy, test_total_energy);
@@ -107,6 +109,7 @@ TEST(TestSuite, testCase5)
     mtm.addTime(time3);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     
@@ -126,6 +129,7 @@ TEST(TestSuite, testCase6)
     mtm.addTime(100);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     bat.compute();
@@ -144,6 +148,7 @@ TEST(TestSuite, testCase7)
     mtm.addTime(time5);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     
@@ -190,6 +195,7 @@ TEST(TestSuite, testCase8)
     mtm.addTime(time5);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     
@@ -242,6 +248,7 @@ TEST(TestSuite, testCase9)
     mtm.addTime(time5);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     
@@ -292,6 +299,7 @@ TEST(TestSuite, testCase10)
     mtm.addTime(time3);
     
     battery_simulate bat;
+    bat.initializing = false;
     bat.setTimeManager(&mtm);
     bat.initializeSimulationTime();
     

@@ -95,6 +95,7 @@ class docking
     void send_fake_msg();
     void check_reachable_ds();
     void runtime_checks();
+    void spinOnce();
 
   private:
     /**

@@ -4262,3 +4262,7 @@ void docking::free_ds(int id) {
 //    ROS_INFO("finished_exploration_callback");
 //    finished_bool = true;
 //}
+
+void docking::spinOnce() {
+    spinOnce();
+}
