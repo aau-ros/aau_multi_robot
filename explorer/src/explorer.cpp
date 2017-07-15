@@ -1126,7 +1126,7 @@ class Explorer
                             else
                             {
                                 cluster_element = int(exploration->clusters.size() * rand() / (RAND_MAX));
-                                ROS_INFO("Random cluster_element: %d  from available %u clusters", cluster_element,
+                                ROS_INFO("Random cluster_element: %d  from available %lu clusters", cluster_element,
                                          exploration->clusters.size());
                             }
                             count++;
@@ -1287,7 +1287,13 @@ class Explorer
                             print_mutex_info("explore()", "acquiring");
                             costmap_mutex.lock();
                             print_mutex_info("explore()", "lock");
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            
+                            if(exploration->updateRobotPose())
+                                goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            else {
+                                log_major_error("robot pose not updated");
+                                goal_determined = false;
+                            }
 //                        }
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
@@ -1742,7 +1748,7 @@ class Explorer
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
-                    ROS_INFO("final_goal size: %u", final_goal.size());
+//                    ROS_INFO("final_goal size: %lu", final_goal.size());
                     if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
                                                       &backoffGoal))
                     {
@@ -2989,7 +2995,7 @@ class Explorer
         else
         {
             rotation_counter++;
-            ROS_INFO("In navigation .... cluster_available: %u     counter: %d", exploration->clusters.size(),
+            ROS_INFO("In navigation .... cluster_available: %lu     counter: %d", exploration->clusters.size(),
                      counter_waiting_for_clusters);
 
             // ???

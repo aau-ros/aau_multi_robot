@@ -170,6 +170,7 @@ bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlan
 
 ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, std::string robot_name_parameter) : costmap_ros_(0), occupancy_grid_array_(0), exploration_trans_array_(0), obstacle_trans_array_(0), frontier_map_array_(0), is_goal_array_(0), map_width_(0), map_height_(0), num_map_cells_(0), initialized_(false), last_mode_(FRONTIER_EXPLORE), p_alpha_(0), p_dist_for_goal_reached_(1), p_goal_angle_penalty_(0), p_min_frontier_size_(0), p_min_obstacle_dist_(0), p_plan_in_unknown_(true), p_same_frontier_dist_(0), p_use_inflated_obs_(false), previous_goal_(0), inflated(0), lethal(0), free(0), threshold_free(127), threshold_inflated(252), threshold_lethal(253),frontier_id_count(0), exploration_travel_path_global(0), exploration_travel_path_global_meters(0), cluster_id(0), initialized_planner(false), auction_is_running(false), auction_start(false), auction_finished(true), start_thr_auction(false), auction_id_number(1), next_auction_position_x(0), next_auction_position_y(0), other_robots_position_x(0), other_robots_position_y(0), number_of_completed_auctions(0), number_of_uncompleted_auctions(0), first_run(true), first_negotiation_run(true), robot_prefix_empty_param(false){
 
+    _f2 = 100.0;
     my_selected_frontier = new frontier_t;
     winner_of_auction = true;
     my_error_counter = 0;
@@ -183,6 +184,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     errors = 0;
     optimal_ds_set = false;
     robot_x = 0, robot_y = 0;
+    test_mode = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -1222,8 +1224,37 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 
     //acquire_mutex(&costmap_mutex, __FUNCTION__);
 //    ROS_INFO("computing path");
+    
+    
+    //TODO bery bad way of testing... but use  abtter way would requires some refactoring (also of already existing code...)
+    if(test_mode) {
+        for(unsigned int i = 0; i < distance_list.size(); i++) {
+            std::vector<double> distance = distance_list.at(i);
+            if(
+                (
+                    distance.at(0) == goalPointSimulated.pose.position.x &&
+                    distance.at(1) == goalPointSimulated.pose.position.y &&
+                    distance.at(2) == startPointSimulated.pose.position.x &&
+                    distance.at(3) == startPointSimulated.pose.position.y
+                )
+                ||
+                (
+                    distance.at(0) == startPointSimulated.pose.position.x &&
+                    distance.at(1) == startPointSimulated.pose.position.y && 
+                    distance.at(2) == goalPointSimulated.pose.position.x && 
+                    distance.at(3) == goalPointSimulated.pose.position.y
+                )
+            )
+                    return distance.at(4);
+        }
+        return -1;      
+    }
+        
+        
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
+        
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+    
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap_global_ros_->getCostmap()->getMutex()));
 //    ROS_INFO("path computed");
     //release_mutex(&costmap_mutex, __FUNCTION__);
@@ -2706,14 +2737,21 @@ bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_dist
     double x = frontier->x_coordinate;
     double y = frontier->y_coordinate;
     
+    _f1 = x, _f2 = y;
+    _f3 = robot_x, _f4 = robot_y;
+    _f5 = optimal_ds_x, _f6 = optimal_ds_y;
+    _b1 = optimal_ds_set;
+    
     //check euclidean distances
     if(optimal_ds_set)
         total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+//        total_distance_eu = 1000000000000000000;
     else
-        total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, 0, 0);
-    //ROS_INFO("Euclidean distance to frontier and then home: %.2f",total_distance);
+//        total_distance_eu = 1000000000000000000;
+        total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, robot_home_x, robot_home_y);
+    //ROS_INFO("Euclidean distance to frontier and then to optimal DS: %.2f",total_distance);
+    _f7 = total_distance_eu;
     return total_distance_eu < available_distance;
-
 }
 
 
@@ -2740,17 +2778,18 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         return false;
     
     // distance to robot
-    total_distance = trajectory_plan_meters(x, y);
+    total_distance = trajectory_plan_meters(x, y, robot_x, robot_y);
     if(total_distance < 0) {
         // if the distance between robot and target is less than a certain small value, consider the target reachable... this is necessary because sometimes goals too close to the robot are considered unreachable, which is a problem when the robot is starting the exploration, since it very often (almost every time) selects as first goal its starting position
         if(euclidean_distance(x, y, robot_x, robot_y) < 2) 
             distance = euclidean_distance(x, y, robot_x, robot_y); 
         else {
             ROS_WARN("Failed to compute distance! frontier at (%.1f, %.1f)", x, y);
-            total_distance = fallback_distance_computation(x, y);
+//            total_distance = fallback_distance_computation(x, y);
             if(errors == 0)
                 my_error_counter++;
             errors++;
+            return false;
         }
     }
     frontier->my_distance_to_robot = total_distance;
@@ -2770,13 +2809,14 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
             distance = euclidean_distance(target_x, target_y, x, y);
         else {
             ROS_WARN("Failed to compute distance! (%.2f, %.2f), %d", target_x, target_y, optimal_ds_set);
-            if(optimal_ds_set)
-                distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
-            else
-                distance = fallback_distance_computation(x, y, optimal_ds_x, optimal_ds_y);
+//            if(optimal_ds_set)
+//                distance = fallback_distance_computation(x, y, robot_home_x, robot_home_y);
+//            else
+//                distance = fallback_distance_computation(x, y, optimal_ds_x, optimal_ds_y);
             if(errors == 0)
                 my_error_counter++;
             errors++;
+            return false;
         }
     }
     frontier->my_distance_to_optimal_ds = distance;
@@ -4960,6 +5000,8 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 //TODO(IMPORTANT) safety coefficients
 bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 {
+    _i1 = (int) frontiers.size();
+    _f7 = 400;
     errors = 0;
     ros::Time start_time;
     selection_time = 0;
@@ -4978,24 +5020,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     if (available_distance <=0 ) {
         ROS_INFO("available_distance is negative");
         return false;
-    }
-    
-    int tries = 0;
-    acquire_mutex(&costmap_mutex, __FUNCTION__);
-    while (!costmap_ros_->getRobotPose(robotPose))
-    {
-        ROS_ERROR("Failed to get RobotPose");
-        if(tries < 5) {
-            tries++;
-            ros::Duration(2).sleep();
-        }
-        else
-            return false;
-    }
-    release_mutex(&costmap_mutex, __FUNCTION__);
-    
-    robot_x = robotPose.getOrigin().getX();
-    robot_y = robotPose.getOrigin().getY();   
+    } 
     
 //    ROS_ERROR("%.2f, %.2f", robot_x, robot_y);
 //    ROS_ERROR("%u", costmap_ros_->getCostmap()->getSizeInCellsX());
@@ -5061,6 +5086,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         my_error_counter = 0;
         return false;
     }
+    
+//    return true;
 
     if(frontier_selected || APPROACH == 0) {
         frontier_selected = false;
@@ -5108,7 +5135,8 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 
             negotiation_list.frontier_element.push_back(negotiation_element);
 
-            my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
+            if(!test_mode)
+                my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
             
             frontier_selected = true;            
             break;
@@ -9327,7 +9355,7 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
 
 void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-
+    
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     
     my_energy_above_th = energy_above_th;
@@ -9494,20 +9522,84 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
  
 }
 
-double ExplorationPlanner::fallback_distance_computation(double end_x, double end_y) {
-    //return euclidean_distance(robot_x, robot_y, end_x, end_y);
-    return 10000000000;
-}
+//double ExplorationPlanner::fallback_distance_computation(double end_x, double end_y) {
+//    //return euclidean_distance(robot_x, robot_y, end_x, end_y);
+//    return 10000000000;
+//}
 
-double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
-    //return euclidean_distance(start_x, start_y, end_x, end_y);
-    return 10000000000;
-}
+//double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
+//    //return euclidean_distance(start_x, start_y, end_x, end_y);
+//    return 10000000000;
+//}
 
 void ExplorationPlanner::pushFrontier(frontier_t frontier) {
     frontiers.push_back(frontier);
+    _f7 = 200;
 }
 
 std::vector<frontier_t> ExplorationPlanner::getFrontierList() {
     return frontiers;
+}
+
+void ExplorationPlanner::setTestMode(bool test_mode) {
+    this->test_mode = test_mode;
+}
+
+void ExplorationPlanner::addDistance(double x1, double y1, double x2, double y2, double distance) {
+    std::vector<double> d;
+    d.push_back(x1);
+    d.push_back(y1);
+    d.push_back(x2);
+    d.push_back(y2);
+    d.push_back(distance);
+    distance_list.push_back(d);
+}
+
+void ExplorationPlanner::setRobotPosition(double x, double y) {
+    robot_x = x;
+    robot_y = y;
+}
+
+void ExplorationPlanner::setOptimalDs(unsigned int id, double x, double y) {
+    optimal_ds_id = id;
+    optimal_ds_x = x;
+    optimal_ds_y = y;
+    optimal_ds_set = true;
+}
+
+bool ExplorationPlanner::updateRobotPose()
+{
+    int tries = 0;
+    acquire_mutex(&costmap_mutex, __FUNCTION__);
+    while (!costmap_ros_->getRobotPose(robotPose))
+    {
+        ROS_ERROR("Failed to get RobotPose");
+        if(tries < 5) {
+            tries++;
+            ros::Duration(2).sleep();
+        }
+        else {
+            release_mutex(&costmap_mutex, __FUNCTION__);
+            return false;
+        }
+    }
+    
+    robot_x = robotPose.getOrigin().getX();
+    robot_y = robotPose.getOrigin().getY();
+    
+    release_mutex(&costmap_mutex, __FUNCTION__);
+    return true;
+}
+
+//double ExplorationPlanner::get1() {
+//    
+//}
+
+
+double ExplorationPlanner::getOptimalDsX() {
+    _f1 = optimal_ds_x;
+    _f5 = optimal_ds_x, _f6 = optimal_ds_y;
+    _i1 = (int) frontiers.size();
+    _f7 = 300;
+    return optimal_ds_x;
 }

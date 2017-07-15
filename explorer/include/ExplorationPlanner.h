@@ -365,10 +365,20 @@ namespace explorationPlanner
             bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
             void logRemainingFrontiers(std::string csv_file);
             bool discovered_new_frontier;
+            bool updateRobotPose();
 
             // Debugging
+            void setTestMode(bool test_mode);
             void pushFrontier(frontier_t frontier);
             std::vector<frontier_t> getFrontierList();
+            std::vector<std::vector<double> > distance_list;
+            void addDistance(double x1, double y1, double x2, double y2, double distance);
+            void setRobotPosition(double x, double y);
+            void setOptimalDs(unsigned int id, double x, double y);
+            double _f1, _f2, _f3, _f4, _f5, _f6, _f7;
+            bool _b1;
+            int _i1, _i2, _i3;
+            double getOptimalDsX();
 
         private:
             bool auction_running;
@@ -489,6 +499,8 @@ namespace explorationPlanner
             ros::Time time_start;
             ros::Publisher publish_goal_ds_for_path_navigation;
             std::fstream fs_csv;
+            
+            bool test_mode;
             
     };
 }
