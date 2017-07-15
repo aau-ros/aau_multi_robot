@@ -197,9 +197,26 @@ target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_L
 
 ## Add gtest based cpp test target and link libraries
 # catkin_add_gtest(${PROJECT_NAME}-test test/test_explorer.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+## Add gtest based cpp test target and link libraries
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+
+  add_rostest_gtest(explorer_test
+    test/test.launch
+    test/utest.cpp
+  )
+  target_link_libraries(explorer_test
+    exploration_planner
+    hungarian
+    munkres
+    ${catkin_LIBRARIES}
+  )
+  add_dependencies(explorer_test
+    adhoc_communication_generate_messages_cpp
+    ${PROJECT_NAME}_generate_messages_cpp
+    ${catkin_EXPORTED_TARGETS}
+  )
+endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

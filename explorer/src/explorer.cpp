@@ -1126,7 +1126,7 @@ class Explorer
                             else
                             {
                                 cluster_element = int(exploration->clusters.size() * rand() / (RAND_MAX));
-                                ROS_INFO("Random cluster_element: %d  from available %lu clusters", cluster_element,
+                                ROS_INFO("Random cluster_element: %d  from available %u clusters", cluster_element,
                                          exploration->clusters.size());
                             }
                             count++;
@@ -1742,7 +1742,7 @@ class Explorer
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
-                    ROS_INFO("final_goal size: %lu", final_goal.size());
+                    ROS_INFO("final_goal size: %u", final_goal.size());
                     if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
                                                       &backoffGoal))
                     {
@@ -2989,7 +2989,7 @@ class Explorer
         else
         {
             rotation_counter++;
-            ROS_INFO("In navigation .... cluster_available: %lu     counter: %d", exploration->clusters.size(),
+            ROS_INFO("In navigation .... cluster_available: %u     counter: %d", exploration->clusters.size(),
                      counter_waiting_for_clusters);
 
             // ???

@@ -64,31 +64,31 @@
 
 namespace explorationPlanner
 {
+    struct frontier_t
+    {
+        int id;
+        int detected_by_robot;
+        std::string detected_by_robot_str;
+        double robot_home_x;
+        double robot_home_y;
+        double x_coordinate; //world coordinate
+        double y_coordinate; //world coordinate
+        double smart_x_coordinate; //world coordinate
+        double smart_y_coordinate; //world coordinate
+        bool smart_goal_set;
+        int distance_to_robot;
+        int dist_to_robot;
+        double my_distance_to_robot;
+        double my_distance_to_optimal_ds;
+        float cost;
+        int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
+        ros::Time timestamp;
+    } frontier, unreachable_frontier;
+
+
     class ExplorationPlanner
     {
         public:
-            
-        
-            struct frontier_t
-            {
-                int id;
-                int detected_by_robot;
-                std::string detected_by_robot_str;
-                double robot_home_x;
-                double robot_home_y;
-                double x_coordinate; //world coordinate
-                double y_coordinate; //world coordinate
-                double smart_x_coordinate; //world coordinate
-                double smart_y_coordinate; //world coordinate
-                bool smart_goal_set;
-                int distance_to_robot;
-                int dist_to_robot;
-                double my_distance_to_robot;
-                double my_distance_to_optimal_ds;
-                float cost;
-                int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
-                ros::Time timestamp;
-            } frontier, unreachable_frontier;
 
             struct responded_t
             {
@@ -365,6 +365,10 @@ namespace explorationPlanner
             bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
             void logRemainingFrontiers(std::string csv_file);
             bool discovered_new_frontier;
+
+            // Debugging
+            void pushFrontier(frontier_t frontier);
+            std::vector<frontier_t> getFrontierList();
 
         private:
             bool auction_running;

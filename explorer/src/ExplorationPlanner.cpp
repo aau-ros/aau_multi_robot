@@ -59,6 +59,7 @@ int limit_search = 10000;
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wreturn-type"
+#pragma GCC diagnostic ignored "-Wformat"
 
 // A utility function to find the vertex with minimum distance value, from
 // the set of vertices not yet included in shortest path tree
@@ -207,6 +208,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
         robo_name = "";
         robot_str = robot_name_parameter;
     }
+
+    
     std::string sendFrontier_msgs = robo_name +"/adhoc_communication/send_frontier";
     std::string sendAuction_msgs  = robo_name +"/adhoc_communication/send_auction";
 
@@ -333,6 +336,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     srand((unsigned)time(0));
     
     time_start = ros::Time::now();
+    
 }
 
 void ExplorationPlanner::this_robot_callback(const adhoc_communication::EmRobot::ConstPtr &msg) {
@@ -441,7 +445,7 @@ void ExplorationPlanner::clusterFrontiers()
 
     for(unsigned int i = 0; i < frontiers.size(); i++)
     {
-        ROS_DEBUG("Frontier at: %u   and cluster size: %lu",i, clusters.size());
+        ROS_DEBUG("Frontier at: %u   and cluster size: %u",i, clusters.size());
         
         //F
         /* If the frontier has been already inserted in a cluster, move to next frontier */
@@ -454,7 +458,7 @@ void ExplorationPlanner::clusterFrontiers()
 
         for(unsigned int j = 0; j < clusters.size(); j++)
         {
-            ROS_DEBUG("cluster %u contains %lu elements", j, clusters.at(j).cluster_element.size());
+            ROS_DEBUG("cluster %u contains %u elements", j, clusters.at(j).cluster_element.size());
             for(unsigned int n = 0; n < clusters.at(j).cluster_element.size(); n++)
             {
                ROS_DEBUG("accessing cluster %u   and element: %d", j, n);
@@ -1870,7 +1874,7 @@ void ExplorationPlanner::negotiationCallback(const adhoc_communication::ExpFront
             }
             if(entry_found == false)
             {
-                ROS_DEBUG("Negotiation frontier with ID: %ld", frontier_element.id);
+                ROS_DEBUG("Negotiation frontier with ID: %d", frontier_element.id);
                 frontier_t negotiation_frontier;
                 negotiation_frontier.detected_by_robot = frontier_element.detected_by_robot;
                 negotiation_frontier.id = frontier_element.id;
@@ -1938,7 +1942,7 @@ bool ExplorationPlanner::respondToAuction(std::vector<requested_cluster_t> reque
 //            {
 //                adhoc_communication::Cluster cluster_msg_check;
 //                cluster_msg_check = auction_msgs.available_clusters.at(i);
-//                ROS_INFO("Robot %d sending BID: %f cluster elements: %lu", robot_name, cluster_msg_check.bid, cluster_msg_check.ids_contained.size());
+//                ROS_INFO("Robot %d sending BID: %f cluster elements: %u", robot_name, cluster_msg_check.bid, cluster_msg_check.ids_contained.size());
 //            }
 
             ROS_INFO("Robot %d publishes auction bids for all clusters", robot_name);
@@ -2072,7 +2076,7 @@ void ExplorationPlanner::positionCallback(const adhoc_communication::MmListOfPoi
     {
         other_robots_positions.positions.push_back(msg.get()->positions.at(i));
     }
-    //ROS_INFO("positions size: %lu", msg.get()->positions.size());
+    //ROS_INFO("positions size: %u", msg.get()->positions.size());
     position_mutex.unlock();
 }
 
@@ -2498,7 +2502,7 @@ int ExplorationPlanner::checkClustersID(adhoc_communication::ExpCluster cluster_
 void ExplorationPlanner::frontierCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
     // TODO: Allow only frontiers that are not too close to walls
-    //ROS_ERROR("frontierCallback, %lu", msg.get()->frontier_element.size());
+    //ROS_ERROR("frontierCallback, %u", msg.get()->frontier_element.size());
 
     adhoc_communication::ExpFrontierElement frontier_element;
     for(unsigned int i = 0; i < msg.get()->frontier_element.size(); i++)
@@ -2580,10 +2584,10 @@ void ExplorationPlanner::visited_frontierCallback(const adhoc_communication::Exp
         }
         if (result == true)
         {
-            ROS_DEBUG("Received New Visited Frontier of Robot %ld with ID %ld", frontier_element.detected_by_robot, frontier_element.id);
+            ROS_DEBUG("Received New Visited Frontier of Robot %d with ID %d", frontier_element.detected_by_robot, frontier_element.id);
             if(robot_prefix_empty_param == true)
             {
-                ROS_DEBUG("Storing Visited Frontier ID: %ld  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
+                ROS_DEBUG("Storing Visited Frontier ID: %d  Robot: %s", frontier_element.id, frontier_element.detected_by_robot_str.c_str());
                 storeVisitedFrontier(frontier_element.x_coordinate, frontier_element.y_coordinate, frontier_element.detected_by_robot, frontier_element.detected_by_robot_str, frontier_element.id);
             }else
             {
@@ -2603,7 +2607,7 @@ bool ExplorationPlanner::publish_frontier_list()
     publish_subscribe_mutex.lock();
 
     adhoc_communication::ExpFrontier frontier_msg;
-    //ROS_ERROR("%lu", frontiers.size());
+    //ROS_ERROR("%u", frontiers.size());
     for(unsigned int i = 0; i<frontiers.size(); i++)
     {
         /* Send only frontiers detected by this robot (to avoid creating very huge message, which would require a lot of time to be completely analyzed) */
@@ -3042,7 +3046,7 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
 
             neighbours = getMapNeighbours(mx, my, 6);
 
-//            ROS_INFO("Neighbours: %lu", neighbours.size());
+//            ROS_INFO("Neighbours: %u", neighbours.size());
             for (unsigned int j = 0; j < neighbours.size()/2; j++)
             {
 
@@ -3103,7 +3107,7 @@ void ExplorationPlanner::clearSeenFrontiers(costmap_2d::Costmap2DROS *global_cos
         }
     }
     
-    ROS_DEBUG("frontiers.size() after cleaning: %lu", frontiers.size());
+    ROS_DEBUG("frontiers.size() after cleaning: %u", frontiers.size());
 }
 
 /**
@@ -3233,7 +3237,7 @@ void ExplorationPlanner::findFrontiers()
             allFrontiers.push_back(new_frontier_point);
         }
     }
-    ROS_INFO("Found %lu frontier cells which are transformed into frontiers points. Starting transformation...", allFrontiers.size());
+    ROS_INFO("Found %u frontier cells which are transformed into frontiers points. Starting transformation...", allFrontiers.size());
 
     /*
      * Iterate over all frontiers. The frontiers stored in allFrontiers are
@@ -3381,7 +3385,7 @@ void ExplorationPlanner::findFrontiers()
     
     //F
     release_mutex(&store_frontier_mutex, __FUNCTION__);
-    ROS_INFO("Size of all frontiers in the list: %lu", frontiers.size());
+    ROS_INFO("Size of all frontiers in the list: %u", frontiers.size());
 }
 
 bool ExplorationPlanner::auctioning(std::vector<double> *final_goal, std::vector<int> *clusters_available_in_pool, std::vector<std::string> *robot_str_name)
@@ -3698,7 +3702,7 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
      * Calculate my own auction BIDs to all my clusters
      * and store them in the auction vector
      */
-    ROS_INFO("Cluster Size: %lu", clusters.size());
+    ROS_INFO("Cluster Size: %u", clusters.size());
     for(int i = 0; i < clusters.size(); i++)
     {
         ROS_INFO("Calculate cluster with ID: %d", clusters.at(i).id);
@@ -3811,10 +3815,10 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
     for(int i = 0; i < row; i++)
     {
         ROS_INFO("                 ");
-        ROS_INFO("****** i: %d   auction size: %lu ******", i, auction.size());
+        ROS_INFO("****** i: %d   auction size: %u ******", i, auction.size());
         for(int j = 0; j < col; j++)
         {
-            ROS_INFO("j: %d   cluster size: %lu", j, clusters.size());
+            ROS_INFO("j: %d   cluster size: %u", j, clusters.size());
             bool found_a_bid = false;
             bool cluster_valid_flag = false;
 
@@ -3825,7 +3829,7 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
                     cluster_valid_flag = true;
 //                    if(j < clusters.size())
 //                    {
-//                        ROS_INFO("j: %d    smaller then clusters.size(): %lu", j, clusters.size());
+//                        ROS_INFO("j: %d    smaller then clusters.size(): %u", j, clusters.size());
                         if(clusters.at(j).id == auction.at(i).auction_element.at(n).cluster_id && auction.at(i).auction_element.at(n).bid_value >= 0)
                         {
         //                    /*
@@ -3884,7 +3888,7 @@ bool ExplorationPlanner::selectClusterBasedOnAuction(std::vector<double> *goal, 
                 other_robots_position_x = -1;
                 other_robots_position_y = -1;
 
-                ROS_INFO("---- clusters: %lu element size: %lu  robots positions: %lu ----", clusters.size(), clusters.at(j).cluster_element.size(), other_robots_positions.positions.size());
+                ROS_INFO("---- clusters: %u element size: %u  robots positions: %u ----", clusters.size(), clusters.at(j).cluster_element.size(), other_robots_positions.positions.size());
                 for(int d = 0; d < clusters.at(j).cluster_element.size(); d++)
                 {
                     ROS_INFO("Access clusters.at(%d).cluster_element.at(%d)", j, d);
@@ -4524,7 +4528,7 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max_available_distance, bool *error) {
     ROS_INFO("existReachableFrontiersWithDsGraphNavigation");
-    ROS_DEBUG("frontiers.size(): %lu", frontiers.size());
+    ROS_DEBUG("frontiers.size(): %u", frontiers.size());
     bool found_reachable_frontier = false;
     bool exit = false;
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -4562,7 +4566,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 
 bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance, int *result) {
     //just compute the goal ds for the moment //TODO complete
-    ROS_DEBUG("Searching path on DS graph; %lu frontiers exist", frontiers.size());
+    ROS_DEBUG("Searching path on DS graph; %u frontiers exist", frontiers.size());
     double min_dist = std::numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
@@ -5048,7 +5052,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     sorted_frontiers.clear();
     
     //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
-    ROS_DEBUG("frontiers size: %lu", frontiers.size());
+    ROS_DEBUG("frontiers size: %u", frontiers.size());
     if(APPROACH == 0)
         my_sort_cost_0(energy_above_th, w1, w2, w3, w4);
 //    else if(APPROACH == 1)
@@ -5068,7 +5072,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     start_time = ros::Time::now();
     number_of_frontiers = frontiers.size();
     
-    ROS_DEBUG("sorted_frontiers size: %lu", sorted_frontiers.size());
+    ROS_DEBUG("sorted_frontiers size: %u", sorted_frontiers.size());
     if(sorted_frontiers.size() == 0) {
         my_error_counter = 0;
         return false;
@@ -5153,7 +5157,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 //    sorted_frontiers.clear();
 //    
 //    //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
-//    ROS_DEBUG("frontiers size: %lu", frontiers.size());
+//    ROS_DEBUG("frontiers size: %u", frontiers.size());
 //    if(APPROACH == 0)
 //        sorted_frontiers = frontiers;
 //    else if(APPROACH == 1)
@@ -6279,7 +6283,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
                 int nothing_found_in_actual_cluster = 0;
                 int visited_clusters = 0;
 
-//                    ROS_INFO("position: %lu", (cluster_vector_position +count) % (clusters.size()));
+//                    ROS_INFO("position: %u", (cluster_vector_position +count) % (clusters.size()));
                     int position = (cluster_vector_position +count) % (clusters.size());
                     for (unsigned int j = 0; j < clusters.at(position).cluster_element.size(); j++)
                     {
@@ -6347,7 +6351,7 @@ bool ExplorationPlanner::determine_goal(int strategy, std::vector<double> *final
 //    
 //    if(frontiers.size() > 0)
 //    {
-//        //ROS_ERROR("%lu", frontiers.size());
+//        //ROS_ERROR("%u", frontiers.size());
 //        double robot_x, robot_y;
 
 //        //continue_bool = false;
@@ -6477,7 +6481,7 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
     }
     
     frontier_selected = true;
-    ROS_DEBUG("sorted_frontiers size: %lu", sorted_frontiers.size());
+    ROS_DEBUG("sorted_frontiers size: %u", sorted_frontiers.size());
         
     robot_last_x = robot_x;
     robot_last_y = robot_y;
@@ -6547,8 +6551,8 @@ void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, in
         }
         
         if(index_optimal_ds >= ds_graph.size() || index_closest_ds_to_robot >= ds_graph[index_optimal_ds].size() || index_closest_ds_to_robot < 0 || index_optimal_ds < 0 || index_closest_ds_to_frontier < 0)
-            ROS_ERROR("invalid index(-ces)"); //: %d, %d, %lu", index_optimal_ds, index_closest_ds_to_robot, ds_graph.size());
-            //ROS_ERROR("index_optimal_ds is too high; ds_graph size: %lu; index_optimal_ds: %d", ds_graph.size(), index_optimal_ds);
+            ROS_ERROR("invalid index(-ces)"); //: %d, %d, %u", index_optimal_ds, index_closest_ds_to_robot, ds_graph.size());
+            //ROS_ERROR("index_optimal_ds is too high; ds_graph size: %u; index_optimal_ds: %d", ds_graph.size(), index_optimal_ds);
         
         //double d_gbe = dijkstra(ds_graph, index_optimal_ds, index_closest_ds_to_robot);
         double d_gbe = ds_graph[index_optimal_ds][index_closest_ds_to_robot];
@@ -6595,7 +6599,7 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
     
     if(frontiers.size() > 0)
     {
-        ROS_INFO("%lu", frontiers.size());
+        ROS_INFO("%u", frontiers.size());
         
         double min_cost = std::numeric_limits<double>::max();    
         
@@ -6681,7 +6685,7 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
 
 //    if(frontiers.size() > 0)
 //    {
-//        //ROS_ERROR("%lu", frontiers.size());
+//        //ROS_ERROR("%u", frontiers.size());
 //        double robot_x, robot_y;
 //        
 //        for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
@@ -6818,7 +6822,7 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
         }
         else {
             if(ds_list[i].id >= ds_graph.size() || ds.id >= ds_graph.size() || ds_list[i].id >= ds_graph[ds_list[i].id].size() || ds.id >= ds_graph[ds.id].size()) {
-                ROS_FATAL("!!!OUT OF RANGE!!! %d, %d, %lu", ds_list[i].id, ds.id, ds_graph.size());
+                ROS_FATAL("!!!OUT OF RANGE!!! %d, %d, %u", ds_list[i].id, ds.id, ds_graph.size());
                 return;   
             }
             ds_graph[ds_list[i].id][ds.id] = dist;
@@ -6891,7 +6895,7 @@ void ExplorationPlanner::ds_count_callback(const std_msgs::Int32 msg) {
 
 //    if(frontiers.size() > 0)
 //    {
-//        //ROS_ERROR("%lu", frontiers.size());
+//        //ROS_ERROR("%u", frontiers.size());
 //        double robot_x, robot_y;
 //        
 //        for(int i = frontiers.size()-1; i >= 0 && i > frontiers.size() - max_front; --i)
@@ -7008,7 +7012,7 @@ void ExplorationPlanner::sort_cost_reserve(bool energy_above_th, int w1, int w2,
 
 //    if(sorted_frontiers.size() > 0)
 //    {
-//        //ROS_ERROR("%lu", sorted_frontiers.size());
+//        //ROS_ERROR("%u", sorted_frontiers.size());
 //        double robot_x, robot_y;
 //        
 //        //for(int i = sorted_frontiers.size(); i >= 0 && i > sorted_frontiers.size() - max_front; --i)
@@ -7215,7 +7219,7 @@ void ExplorationPlanner::sort(int strategy)
         {
             if (clusters.at(cluster_number).cluster_element.size() > 0)
             {
-                ROS_DEBUG("Cluster %d  size: %lu",cluster_number, clusters.at(cluster_number).cluster_element.size());
+                ROS_DEBUG("Cluster %d  size: %u",cluster_number, clusters.at(cluster_number).cluster_element.size());
                 for (int i = clusters.at(cluster_number).cluster_element.size(); i > 0; i--)
                 {
                     ROS_DEBUG("Cluster element size: %d", i);
@@ -7503,7 +7507,7 @@ void ExplorationPlanner::sort(int strategy)
 //        {
 //            if (clusters.at(cluster_number).cluster_element.size() > 0)
 //            {
-//                ROS_DEBUG("Cluster %d  size: %lu",cluster_number, clusters.at(cluster_number).cluster_element.size());
+//                ROS_DEBUG("Cluster %d  size: %u",cluster_number, clusters.at(cluster_number).cluster_element.size());
 //                for (int i = clusters.at(cluster_number).cluster_element.size(); i > 0; i--)
 //                {
 //                    ROS_DEBUG("Cluster element size: %d", i);
@@ -8975,7 +8979,7 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
 //    number_of_frontiers = frontiers.size();
 //    
 //    //TODO move to a separate function that is called by explorer, since in case of error (when my_... is recalled by itself), this code otherwise is re-executed every time...
-//    ROS_DEBUG("frontiers size: %lu", frontiers.size());
+//    ROS_DEBUG("frontiers size: %u", frontiers.size());
 //    if(APPROACH == 0)
 //        sorted_frontiers = frontiers;
 //    else if(APPROACH == 1)
@@ -9037,7 +9041,7 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
 //    if (mode == 1)
 //    {
 //        //for (int i = 0 + count; i < sorted_frontiers.size(); i++)
-//        ROS_DEBUG("sorted_frontiers size: %lu", sorted_frontiers.size());
+//        ROS_DEBUG("sorted_frontiers size: %u", sorted_frontiers.size());
 //        for (int i = 0; i < sorted_frontiers.size(); i++)
 //        {
 //            //we only check the first 9 frontiers, because we only sorted the first 9 frontiers by efficiency.
@@ -9191,7 +9195,7 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
 //                    frontiers_under_auction.clear();
 //                    release_mutex(&store_frontier_mutex, __FUNCTION__);
 //                    my_error_counter = 0;
-//                    //ROS_INFO("final_goal size before return: %lu", final_goal->size());
+//                    //ROS_INFO("final_goal size before return: %u", final_goal->size());
 //                    frontier_selected=true;
 //                    selection_time = (ros::Time::now() - start_time).toSec();
 //                    return true;
@@ -9514,4 +9518,12 @@ double ExplorationPlanner::fallback_distance_computation(double end_x, double en
 double ExplorationPlanner::fallback_distance_computation(double start_x, double start_y, double end_x, double end_y) {
     //return euclidean_distance(start_x, start_y, end_x, end_y);
     return 10000000000;
+}
+
+void ExplorationPlanner::pushFrontier(frontier_t frontier) {
+    frontiers.push_back(frontier);
+}
+
+std::vector<frontier_t> ExplorationPlanner::getFrontierList() {
+    return frontiers;
 }
