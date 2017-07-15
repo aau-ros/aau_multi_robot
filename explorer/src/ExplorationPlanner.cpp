@@ -2737,20 +2737,12 @@ bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_dist
     double x = frontier->x_coordinate;
     double y = frontier->y_coordinate;
     
-    _f1 = x, _f2 = y;
-    _f3 = robot_x, _f4 = robot_y;
-    _f5 = optimal_ds_x, _f6 = optimal_ds_y;
-    _b1 = optimal_ds_set;
-    
     //check euclidean distances
     if(optimal_ds_set)
         total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
-//        total_distance_eu = 1000000000000000000;
     else
-//        total_distance_eu = 1000000000000000000;
         total_distance_eu = euclidean_distance(x, y, robot_x, robot_y) + euclidean_distance(x, y, robot_home_x, robot_home_y);
     //ROS_INFO("Euclidean distance to frontier and then to optimal DS: %.2f",total_distance);
-    _f7 = total_distance_eu;
     return total_distance_eu < available_distance;
 }
 
@@ -5000,8 +4992,6 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 //TODO(IMPORTANT) safety coefficients
 bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 {
-    _i1 = (int) frontiers.size();
-    _f7 = 400;
     errors = 0;
     ros::Time start_time;
     selection_time = 0;
@@ -9534,7 +9524,6 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
 
 void ExplorationPlanner::pushFrontier(frontier_t frontier) {
     frontiers.push_back(frontier);
-    _f7 = 200;
 }
 
 std::vector<frontier_t> ExplorationPlanner::getFrontierList() {
@@ -9597,9 +9586,5 @@ bool ExplorationPlanner::updateRobotPose()
 
 
 double ExplorationPlanner::getOptimalDsX() {
-    _f1 = optimal_ds_x;
-    _f5 = optimal_ds_x, _f6 = optimal_ds_y;
-    _i1 = (int) frontiers.size();
-    _f7 = 300;
     return optimal_ds_x;
 }
