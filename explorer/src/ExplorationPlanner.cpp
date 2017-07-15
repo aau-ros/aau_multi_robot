@@ -204,7 +204,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 
     if(robot_prefix_empty_param == true)
     {
-        /*NO SIMULATION*/
+        // NO SIMULATION*
         robo_name = "";
         robot_str = robot_name_parameter;
     }
@@ -1045,8 +1045,6 @@ void ExplorationPlanner::trajectory_plan_10_frontiers()
  */
 void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
 {
-    //F
-    //int distance = trajectory_plan(target_x, target_y);
     double distance = trajectory_plan_meters(target_x, target_y);
 
     if(distance >= 0) {
@@ -1061,20 +1059,6 @@ void ExplorationPlanner::trajectory_plan_store(double target_x, double target_y)
         //exploration_travel_path_global_meters += euclidean_distance(target_x, target_y);
     }
 }
-
-/**
- * Compute the length of the trajectory from the robots current position to a given target
- */
-//int ExplorationPlanner::reserve_trajectory_plan(double target_x, double target_y)
-//{
-//    if (!costmap_global_ros_->getRobotPose(robotPose))
-//    {
-//        ROS_ERROR("Failed to get RobotPose");
-//        return -1;
-//    }
-//    //ROS_ERROR("%f", costmap_global_ros_->getCostmap()->getResolution());
-//    return trajectory_plan(robotPose.getOrigin().getX(), robotPose.getOrigin().getY(), target_x, target_y);
-//}
 
 /**
  * Compute the length of the trajectory from the robots current position to a given target

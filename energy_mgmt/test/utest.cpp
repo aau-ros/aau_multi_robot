@@ -4,6 +4,8 @@
 #include <ros/ros.h>
 #include <gtest/gtest.h>
 
+#define SENDING_SLEEP_TIME
+
 double const charge_max = 200;
 double const power_standing = 37;
 double const power_moving = 19;
@@ -164,7 +166,7 @@ TEST(TestSuite, testCase7)
     robot_state_msg.state = exploring;
     robot_pub.publish(robot_state_msg);
     
-    ros::Duration(1).sleep();
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
     bat.spinOnce();
     
     double total_energy, remaining_energy, test_remaining_energy;
@@ -211,7 +213,7 @@ TEST(TestSuite, testCase8)
     robot_state_msg.state = moving_to_frontier;
     robot_pub.publish(robot_state_msg);
     
-    ros::Duration(1).sleep(); // necessary, or the messages are not received in time by the battery manager
+    ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
     double total_energy, remaining_energy, test_remaining_energy;
@@ -226,7 +228,7 @@ TEST(TestSuite, testCase8)
     cmd_vel_msg.linear.x = 10;
     cmd_vel_pub.publish(cmd_vel_msg);
     
-    ros::Duration(1).sleep();
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
     bat.spinOnce();
     
     bat.compute();
@@ -264,7 +266,7 @@ TEST(TestSuite, testCase9)
     robot_state_msg.state = exploring;
     robot_pub.publish(robot_state_msg);
     
-    ros::Duration(1).sleep(); // necessary, or the messages are not received in time by the battery manager
+    ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
     double total_energy, remaining_energy, test_remaining_energy;
@@ -279,7 +281,7 @@ TEST(TestSuite, testCase9)
     robot_state_msg.state = charging;
     robot_pub.publish(robot_state_msg);
     
-    ros::Duration(1).sleep();
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
     bat.spinOnce();
     
     bat.compute();
@@ -315,7 +317,7 @@ TEST(TestSuite, testCase10)
     robot_state_msg.state = in_queue;
     robot_pub.publish(robot_state_msg);
     
-    ros::Duration(1).sleep(); // necessary, or the messages are not received in time by the battery manager
+    ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
     double total_energy, remaining_energy, test_remaining_energy;
