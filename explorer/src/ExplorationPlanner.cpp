@@ -1175,6 +1175,30 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 {
     ROS_INFO("trajectory_plan_meters");
 
+    //TODO very bad way of testing... but using a better way would requires some refactoring (also of already existing code...)
+    if(test_mode) {
+        for(unsigned int i = 0; i < distance_list.size(); i++) {
+            std::vector<double> distance = distance_list.at(i);
+            if(
+                (
+                    distance.at(0) == start_x &&
+                    distance.at(1) == start_y &&
+                    distance.at(2) == target_x &&
+                    distance.at(3) == target_y
+                )
+                ||
+                (
+                    distance.at(0) == target_x &&
+                    distance.at(1) == target_y && 
+                    distance.at(2) == start_x && 
+                    distance.at(3) == start_y
+                )
+            )
+                    return distance.at(4);
+        }
+        return -1;      
+    }
+
     geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
     double distance;
 
@@ -1223,33 +1247,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     std::vector<geometry_msgs::PoseStamped> global_plan;
 
     //acquire_mutex(&costmap_mutex, __FUNCTION__);
-//    ROS_INFO("computing path");
-    
-    
-    //TODO bery bad way of testing... but use  abtter way would requires some refactoring (also of already existing code...)
-    if(test_mode) {
-        for(unsigned int i = 0; i < distance_list.size(); i++) {
-            std::vector<double> distance = distance_list.at(i);
-            if(
-                (
-                    distance.at(0) == goalPointSimulated.pose.position.x &&
-                    distance.at(1) == goalPointSimulated.pose.position.y &&
-                    distance.at(2) == startPointSimulated.pose.position.x &&
-                    distance.at(3) == startPointSimulated.pose.position.y
-                )
-                ||
-                (
-                    distance.at(0) == startPointSimulated.pose.position.x &&
-                    distance.at(1) == startPointSimulated.pose.position.y && 
-                    distance.at(2) == goalPointSimulated.pose.position.x && 
-                    distance.at(3) == goalPointSimulated.pose.position.y
-                )
-            )
-                    return distance.at(4);
-        }
-        return -1;      
-    }
-        
+//    ROS_INFO("computing path");   
         
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
         
@@ -5076,8 +5074,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         my_error_counter = 0;
         return false;
     }
-    
-//    return true;
 
     if(frontier_selected || APPROACH == 0) {
         frontier_selected = false;
@@ -5089,45 +5085,48 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                     continue;
                 }
 
-            //start auction
             my_selected_frontier = &sorted_frontiers.at(i);
-            my_bid = sorted_frontiers.at(i).cost;
-            ROS_INFO("start frontier negotiation!");
-            my_negotiate();
-     
-            for(int j = 0; j < auction_timeout/0.1; j++) {
-                ros::Duration(0.1).sleep();
-                ros::spinOnce();
+
+            if(!test_mode) {
+
+                //start auction
+                my_bid = sorted_frontiers.at(i).cost;
+                ROS_INFO("start frontier negotiation!");
+                my_negotiate();
+         
+                for(int j = 0; j < auction_timeout/0.1; j++) {
+                    ros::Duration(0.1).sleep();
+                    ros::spinOnce();
+                }
+                
+                if(!winner_of_auction) {
+                    ROS_INFO("frontier under auction: skip");
+                    continue;
+                }
+                
+                frontiers_under_auction.clear();
+                
+                adhoc_communication::ExpFrontier negotiation_list;
+                adhoc_communication::ExpFrontierElement negotiation_element;
+                negotiation_element.detected_by_robot = robot_name;
+                negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
+                negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
+                negotiation_element.id = my_selected_frontier->id;
+                    
+                negotiation_list.frontier_element.push_back(negotiation_element);
+            
+                my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
             }
             
-            if(!winner_of_auction) {
-                ROS_INFO("frontier under auction: skip");
-                continue;
-            }
-
             ROS_INFO("selected goal: %.2f, %.2f", my_selected_frontier->x_coordinate, my_selected_frontier->y_coordinate);
             final_goal->push_back(my_selected_frontier->x_coordinate);
             final_goal->push_back(my_selected_frontier->y_coordinate);            
             final_goal->push_back(my_selected_frontier->detected_by_robot);
             final_goal->push_back(my_selected_frontier->id);
-            
-            robot_str_name->push_back(robot_name_str); 
-            
-            frontiers_under_auction.clear();
-            my_error_counter = 0;
-            
-            adhoc_communication::ExpFrontier negotiation_list;
-            adhoc_communication::ExpFrontierElement negotiation_element;
-            negotiation_element.detected_by_robot = robot_name;
-            negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
-            negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
-            negotiation_element.id = my_selected_frontier->id;
-                
-            negotiation_list.frontier_element.push_back(negotiation_element);
 
-            if(!test_mode)
-                my_sendToMulticast("mc_", negotiation_list, "send_next_robot_goal");
-            
+            robot_str_name->push_back(robot_name_str); 
+
+            my_error_counter = 0;
             frontier_selected = true;            
             break;
         }

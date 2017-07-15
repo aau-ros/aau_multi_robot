@@ -115,8 +115,8 @@ TEST(TestSuite, testCase3)
 //    TEST_COUT << std::to_string(ep->_i1) << std::endl;
     
     EXPECT_TRUE(success);
-//    EXPECT_EQ(final_goal.at(0), f.x_coordinate);
-//    EXPECT_EQ(final_goal.at(1), f.y_coordinate);
+    EXPECT_EQ(final_goal.at(0), f.x_coordinate);
+    EXPECT_EQ(final_goal.at(1), f.y_coordinate);
 }
 
 int main(int argc, char **argv){
