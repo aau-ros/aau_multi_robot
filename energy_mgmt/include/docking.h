@@ -656,6 +656,7 @@ class docking
     bool two_robots_at_same_ds_printed, invalid_ds_count_printed, ds_appears_twice_printed;
     ros::Publisher pub_force_in_queue;
     int old_target_ds_id;
+    bool waiting_to_discover_a_ds;
 
 };
 

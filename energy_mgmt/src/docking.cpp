@@ -280,6 +280,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     two_robots_at_same_ds_printed = false;
     invalid_ds_count_printed = false;
     ds_appears_twice_printed = false;
+    waiting_to_discover_a_ds = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -924,8 +925,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         if (old_optimal_ds_id != next_optimal_ds_id)
         {
         
-            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue) {
-            
+            if(
+                (robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue)
+            ||
+                (waiting_to_discover_a_ds)
+            )
+            {
             
                 finished_bool = false; //TODO(minor) find better place...
 //                changed = true;
@@ -2039,6 +2044,7 @@ void docking::start_new_auction()
 
     if (!optimal_ds_is_set() && need_to_charge)
     {
+        waiting_to_discover_a_ds = true;
         log_minor_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
 //        compute_and_publish_path_on_ds_graph_to_home();
