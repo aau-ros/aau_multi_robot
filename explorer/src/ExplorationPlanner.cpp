@@ -185,6 +185,8 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     optimal_ds_set = false;
     robot_x = 0, robot_y = 0;
     test_mode = false;
+//    update_distances_index = 0;
+    erased = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -1301,6 +1303,19 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     }
 }
 
+double ExplorationPlanner::distanceFromDs(unsigned int ds_index, unsigned int frontier_index) {
+    if(frontiers.size() <= frontier_index)
+        ROS_FATAL("invalid index");
+        
+    if(ds_index >= frontiers.at(frontier_index).list_distance_from_ds.size() || frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < 0)
+        return trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate); //TODO allow user to select if in this case we should use the real distance or not
+        
+    acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
+    double distance = frontiers.at(frontier_index).list_distance_from_ds.at(ds_index);
+    release_mutex(&mutex_erase_frontier, __FUNCTION__);
+    return distance;
+}
+
 //double ExplorationPlanner::trajectory_plan_print(double start_x, double start_y, double target_x, double target_y)
 //{
 //    geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
@@ -1468,27 +1483,35 @@ bool ExplorationPlanner::removeStoredFrontier(int id, std::string detected_by_ro
                 
                 //store_frontier_mutex.lock();
                 acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+                acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
                 frontiers.erase(frontiers.begin()+i);
 //                if(i > 0)
 //                {
 //                    i --;
 //                }
+                erased = true;
                 release_mutex(&store_frontier_mutex, __FUNCTION__);
+                release_mutex(&mutex_erase_frontier, __FUNCTION__);
+                
                 //break; //FIXME ... only a test
             }
-        }else
+        }
+        else
         {
             if(frontiers.at(i).id == id)
             {
             
                 //store_frontier_mutex.lock();
                 acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+                acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
+                erased = true;
                 frontiers.erase(frontiers.begin()+i);
                 if(i > 0)
                 {
                     i --;
                 }
                 release_mutex(&store_frontier_mutex, __FUNCTION__);
+                release_mutex(&mutex_erase_frontier, __FUNCTION__);
                 break;
             }
         }
@@ -4560,7 +4583,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
                 continue;
             
             // distance DS-frontier
-            total_distance = trajectory_plan_meters(x_ds, y_ds, x_f, y_f);
+            total_distance = distanceFromDs(j, i);
             if(total_distance < 0){
                 ROS_WARN("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
 //                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
@@ -4699,6 +4722,14 @@ void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {
     ROS_INFO("existFrontiersReachableWithFullBattery");
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    
+    unsigned int ds_index = -1;
+    for(unsigned int i=0; i < ds_list.size(); i++)
+        if(ds_list.at(i).id == optimal_ds_id) {
+            ds_index = i;
+            break;
+        }
+    
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
         double distance;
@@ -4708,7 +4739,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         if(distance * 2 > max_available_distance)
             continue;
         
-        distance = trajectory_plan_meters(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate); //TODO safety coefficient is missing
+        distance = distanceFromDs(ds_index, i);
         if(distance < 0){
             ROS_WARN("Failed to compute distance!");
             *error = true;
@@ -4727,10 +4758,20 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
 
 void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
     ROS_INFO("Storing new optimal DS position");
-    optimal_ds_id = msg.get()->id;
-    optimal_ds_x = msg.get()->x;
-    optimal_ds_y = msg.get()->y;
+    acquire_mutex(&mutex_optimal_ds, __FUNCTION__);
+    next_optimal_ds_id = msg.get()->id;
+    next_optimal_ds_x = msg.get()->x;
+    next_optimal_ds_y = msg.get()->y;
+    release_mutex(&mutex_optimal_ds, __FUNCTION__);
+}
+
+void ExplorationPlanner::updateOptimalDs() {
+    acquire_mutex(&mutex_optimal_ds, __FUNCTION__);
+    optimal_ds_id = next_optimal_ds_id;
+    optimal_ds_x = next_optimal_ds_x;
+    optimal_ds_y = next_optimal_ds_y;
     optimal_ds_set = true;
+    release_mutex(&mutex_optimal_ds, __FUNCTION__);
 }
 
 bool ExplorationPlanner::my_negotiate()
@@ -9586,4 +9627,88 @@ bool ExplorationPlanner::updateRobotPose()
 
 double ExplorationPlanner::getOptimalDsX() {
     return optimal_ds_x;
+}
+
+void ExplorationPlanner::updateDistances() {
+//    std::vector<frontier_t> list_frontiers_local_copy;
+//    
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    std::vector<frontier_t>::const_iterator last;
+//    if(update_distances_index + 10 > frontiers.size())
+//        last = frontiers.size();
+//    else
+//        last = update_distances_index + 10;
+//    std::copy ( frontiers + update_distances_index, frontiers + last, list_frontiers_local_copy.begin() );
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+
+//    for(unsigned int i=0; i < list_frontiers_local_copy.size(); i++)
+//        for(unsigned int j=0; j < ds_list.size(); j++) {
+//            double distance = trajectory_plan_meters(ds_list.at(j).x, ds_list.at(j).y, list_frontiers_local_copy.at(i).x_coordinate, list_frontiers_local_copy.at(i).y_coordinate);
+//            if(distance < 0)
+//                continue;
+//            if(list_frontiers_local_copy.at(i).list_distance_from_ds.size() <= j)
+//                list_frontiers_local_copy.at(i).list_distance_from_ds.push(distance);
+//            else
+//                list_frontiers_local_copy.at(i).list_distance_from_ds.at(j) = distance;
+                ;
+//        }
+    
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    update_distances_index += 10;
+//    if(update_distances_index > frontiers.size())
+//        update_distances_index = 0;
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+
+
+    bool finished = false;
+    double f_x, f_y;
+    unsigned int index = 0;
+    std::vector<ds_t> list_ds_local_copy;
+    std::vector<frontier_t> list_frontiers_local_copy;
+    
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    std::copy(list_ds_local_copy.begin(), list_ds_local_copy.end(), ds_list.begin()); //TODO inefficient with many ds... and is it really necessary? we are not even using a mutex...
+    std::copy(list_frontiers_local_copy.begin(), list_frontiers_local_copy.end(), frontiers.begin());
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
+    
+    while(!finished) {
+        
+        //TODO this code is not very good, since it assumes that functions like size(), etc., are atomic or that at least they do not return strange values if another thread is modifying the vector on which size() (or another function) is called... it should be improved using more mutexes (or with a better use of the already existing ones), etc.
+        
+        acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
+        if( (index < frontiers.size() && index >= list_frontiers_local_copy.size()) || list_frontiers_local_copy.at(index).id != frontiers.at(index).id ) { //meanwhile this function is executed, a frontier could have been erased an another pushed, so in this case we have to re-copy the vector of frontiers
+            acquire_mutex(&store_frontier_mutex, __FUNCTION__);    
+            std::copy(list_frontiers_local_copy.begin(), list_frontiers_local_copy.end(), frontiers.begin());
+            erased = false;
+            release_mutex(&store_frontier_mutex, __FUNCTION__);
+        }
+        release_mutex(&mutex_erase_frontier, __FUNCTION__);
+        
+        if(index >= frontiers.size() || index >= list_frontiers_local_copy.size()) //// frontiers meanwhile could be filled with new elements, so we have to check that (with the second condition) to avoid an out of range and also to consider the new frontiers (if we restarted from the beginning, the last frontiers would have a lower update rate and would be penalized. 
+            finished = true;
+        else {
+        
+            f_x = list_frontiers_local_copy.at(index).x_coordinate;
+            f_y = list_frontiers_local_copy.at(index).y_coordinate;
+        
+            for(unsigned int i=0; i < list_ds_local_copy.size(); i++) {
+                double distance = trajectory_plan_meters(list_ds_local_copy.at(i).x, list_ds_local_copy.at(i).y, f_x, f_y);
+                if(distance < 0)
+                    continue;
+                    
+                acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
+                if(index >= frontiers.size() || list_frontiers_local_copy.at(index).id != frontiers.at(index).id) //this could happen if a frontier has been deleted and another has been added at the same place of the old one while permorming our computations in this function
+                    continue;
+                else {
+                    while(i >= frontiers.at(index).list_distance_from_ds.size()) //we don't know how many elements are missing...
+                        frontiers.at(index).list_distance_from_ds.push_back(-1); 
+                    frontiers.at(index).list_distance_from_ds.at(i) = distance;
+                }
+                index++;
+                release_mutex(&mutex_erase_frontier, __FUNCTION__);
+            }
+        }  
+        
+    }
+    
 }

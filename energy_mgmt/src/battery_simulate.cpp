@@ -32,7 +32,8 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     output_shown = false; //TODO(minor) useless?
     speed_avg = speed_avg_init;
     idle_mode = false; 
-    do_not_consume_battery = true; //important, since at the beginning we have a lot of unsused time...
+//    do_not_consume_battery = true; //important, since at the beginning we have a lot of unsused time...
+    do_not_consume_battery = false;
     initializing = true;
     counter_moving_to_frontier = 0;
     
@@ -156,10 +157,10 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         }
     }
     
-    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
-        do_not_consume_battery = true;
-    else
-        do_not_consume_battery = false;
+//    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
+//        do_not_consume_battery = true;
+//    else
+//        do_not_consume_battery = false;
     
     if(msg.get()->state == fully_charged || msg.get()->state == exploring)
         advanced_computations_bool = true;
@@ -223,16 +224,12 @@ void battery_simulate::compute()
             }
     }
     else if(idle_mode) {
-        remaining_energy -= power_idle * time_diff_sec; // J
-        
-        state.soc = remaining_energy / total_energy;
-        
-        //state.remaining_time_run = state.soc * total_energy; // NO!!!
-        //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
-
-        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
-        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
-        state.remaining_distance = state.remaining_time_run * speed_avg;
+//        remaining_energy -= power_idle * time_diff_sec; // J
+//        
+//        state.soc = remaining_energy / total_energy;
+//        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
+//        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+//        state.remaining_distance = state.remaining_time_run * speed_avg;
         
     } else {
     
@@ -242,23 +239,26 @@ void battery_simulate::compute()
          * interval of time: moreover, since we do not know the exact speed profile during this interval of time, we
          * overestimate the consumed energy by assuming that the robot moved at the maximum speed for the whole period.
          */
-        int mult; //TODO check better
-        if(advanced_computations_bool)
-            mult = 1;
-        else
-            mult = 0;
+//        int mult; //TODO check better
+//        if(advanced_computations_bool)
+//            mult = 1;
+//        else
+//            mult = 0;
         //if (speed_linear > 0 || speed_angular > 0) //in the foruma speed_angular is not used, so...
+//        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...)
+//            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
+//        else
+//            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
+
         if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...)
-            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
-        else
-            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
+            remaining_energy -= (power_moving * max_speed_linear) * time_diff_sec; // J
 
         //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */
         state.soc = remaining_energy / total_energy;
         
         //state.remaining_time_run = state.soc * total_energy; // NO!!!
-        //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2
+        //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2... but it's still wrong...
 
         state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
         state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  

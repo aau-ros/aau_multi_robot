@@ -693,8 +693,8 @@ class Explorer
                 } else
                     available_distance = next_available_distance;
                    
-//                if(robot_state == leaving_ds || robot_state == fully_charged )
-                if(robot_state == leaving_ds)
+                if(robot_state == leaving_ds || robot_state == fully_charged )
+//                if(robot_state == leaving_ds)
                 {
                     //TODO
 //                    double distance = -1;
@@ -1288,8 +1288,10 @@ class Explorer
                             costmap_mutex.lock();
                             print_mutex_info("explore()", "lock");
                             
-                            if(exploration->updateRobotPose())
+                            if(exploration->updateRobotPose()) {
+                                exploration->updateOptimalDs();
                                 goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            }
                             else {
                                 log_major_error("robot pose not updated");
                                 goal_determined = false;
@@ -4247,6 +4249,16 @@ class Explorer
         ROS_INFO("forced to go idle by another node");
         update_robot_state_2(in_queue);
     }
+    
+    void update_distances() {
+        while(!explorer_ready)
+            ros::Duration(10).sleep();
+            
+        while(!exploration_finished) {
+            exploration->updateDistances();
+            ros::Duration(1).sleep();
+        }
+    }
 
     /********************
      * CLASS ATTRIBUTES *
@@ -4455,6 +4467,8 @@ int main(int argc, char **argv)
     boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &explorer));
     
     boost::thread thr_safety_checks(boost::bind(&Explorer::safety_checks, &explorer));
+    
+    boost::thread thr_update_distances(boost::bind(&Explorer::update_distances, &explorer));
 
     /*
      * FIXME
@@ -4484,6 +4498,12 @@ int main(int argc, char **argv)
     thr_map.join();
     thr_log_map.interrupt();
     thr_log_map.join();
+    thr_update_distances.interrupt();
+    thr_update_distances.join();
+    thr_safety_checks.interrupt();
+    thr_safety_checks.join();
+    thr_frontiers.interrupt();
+    thr_frontiers.join();
     // TODO thr_frontiers...
 
 #ifdef PROFILE

@@ -83,6 +83,7 @@ namespace explorationPlanner
         float cost;
         int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
         ros::Time timestamp;
+        std::vector<double> list_distance_from_ds;
     } frontier, unreachable_frontier;
 
 
@@ -137,7 +138,7 @@ namespace explorationPlanner
             
 
 
-            boost::mutex store_frontier_mutex, store_visited_mutex, store_negotiation_mutex;
+            boost::mutex store_frontier_mutex, store_visited_mutex, store_negotiation_mutex, mutex_optimal_ds, mutex_erase_frontier;
             boost::mutex publish_subscribe_mutex, callback_mutex, negotiation_mutex, negotiation_callback_mutex;
             boost::mutex position_mutex, auction_mutex;
             boost::mutex cluster_mutex;
@@ -347,8 +348,9 @@ namespace explorationPlanner
             void clean_frontiers_under_auction();
             int my_error_counter;
             bool recomputeGoal();
-            int optimal_ds_id;
+            int optimal_ds_id, next_optimal_ds_id;
             float optimal_ds_x, optimal_ds_y;
+            float next_optimal_ds_x, next_optimal_ds_y;
             ros::Subscriber sub_new_optimal_ds;
             void new_optimal_ds_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
             ros::ServiceClient sc_distance_frontier_robot;
@@ -366,6 +368,9 @@ namespace explorationPlanner
             void logRemainingFrontiers(std::string csv_file);
             bool discovered_new_frontier;
             bool updateRobotPose();
+            void updateOptimalDs();
+            void updateDistances();
+//            std::vector<frontier_t>::const_iterator update_distances_index;
 
             // Debugging
             void setTestMode(bool test_mode);
@@ -499,7 +504,10 @@ namespace explorationPlanner
             ros::Time time_start;
             ros::Publisher publish_goal_ds_for_path_navigation;
             std::fstream fs_csv;
+            double distanceFromDs(unsigned int ds_index, unsigned int frontier_index);
+            bool erased;
             
+            // Debugging
             bool test_mode;
             
     };
