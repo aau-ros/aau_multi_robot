@@ -1204,7 +1204,20 @@ class Explorer
                                     if(full_battery)
                                     {
                                         log_major_error("ERROR WITH DS GRAPH");
-                                        finalize_exploration();
+                                        
+                                        // we force to move to next ds
+                                        retry_recharging_current_ds = 0;
+                                        ds_path_counter++;
+                                        optimal_ds_x = complex_path[ds_path_counter].x; 
+                                        optimal_ds_y = complex_path[ds_path_counter].y; 
+    //                                    double world_x, world_y;
+    //                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
+    //                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
+                                        ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
+                                        std_msgs::Empty msg;
+                                        pub_next_ds.publish(msg);
+                                        update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
+                                        
                                     }
                                     else {
                                         ROS_INFO("Cannot reach next DS on the path: reauction for current one");
