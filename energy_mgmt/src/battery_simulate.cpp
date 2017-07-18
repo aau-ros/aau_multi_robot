@@ -251,8 +251,17 @@ void battery_simulate::compute()
 //            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
 
         
-        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
-            remaining_energy_A -= (power_moving * max_speed_linear) * time_diff_sec; // J
+        if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
+            if(remaining_energy_A > 0) {
+                remaining_energy_A -= (power_moving * max_speed_linear) * time_diff_sec; // J
+                if (remaining_energy_A < 0) {
+                    consumed_energy_B -= remaining_energy_A; // we have two minus signs, so we are adding
+                    remaining_energy_A = 0; //TODO really necessary?
+                }
+            }
+            else
+                consumed_energy_B += (power_moving * max_speed_linear) * time_diff_sec; // J
+        }
             
         consumed_energy_B += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
 

@@ -933,6 +933,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             )
             {
             
+                waiting_to_discover_a_ds = false;
                 finished_bool = false; //TODO(minor) find better place...
 //                changed = true;
                 set_optimal_ds(next_optimal_ds_id);

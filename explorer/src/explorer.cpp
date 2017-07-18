@@ -2080,10 +2080,11 @@ class Explorer
         
         if(robot_state == fully_charged)
             full_battery = true;
-        else
+            
+        if(robot_state == moving_to_frontier || robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == in_queue)
             full_battery = false;
 
-        if(robot_state == moving_to_frontier)
+        if(robot_state == moving_to_frontier) 
             already_navigated_DS_graph = false;
             
         //robot_state::GetRobotState srv;
