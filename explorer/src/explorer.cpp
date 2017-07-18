@@ -115,6 +115,7 @@ class Explorer
     double moving_time;
     bool received_battery_info;
     ros::Publisher pub_next_ds;
+    bool full_battery;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -189,6 +190,7 @@ class Explorer
         coeff_a = COEFF_A;
         coeff_b = COEFF_B;
         received_battery_info = false;
+        full_battery = false;
 
         /* Initial robot state */
         robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
@@ -328,7 +330,7 @@ class Explorer
         computation_time_log =  log_path + std::string("computation_times.log");
          
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv_state << "#time,robot_state" << std::endl;
+        fs_csv_state << "#time,robot_state,moving_along_path" << std::endl;
         fs_csv_state.close();
         
         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -446,6 +448,7 @@ class Explorer
         enum_string.push_back("moving_away_from_ds");
         enum_string.push_back("auctioning_3");
         enum_string.push_back("stopped");
+        enum_string.push_back("exploring_for_graph_navigation");
         
         checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
 
@@ -1145,20 +1148,20 @@ class Explorer
                     
                     if(moving_along_path) {
                         ROS_INFO("moving along DS path");
-                        if(OPP_ONLY_TWO_DS)
-                            if (ds_path_counter < 2)
-                            {
-                                optimal_ds_x = path[ds_path_counter][0];
-                                optimal_ds_y = path[ds_path_counter][1];
-                                ds_path_counter++;
-                                update_robot_state_2(going_checking_vacancy);
-                            }
-                            else
-                            {
-                                moving_along_path = false;
-                                update_robot_state_2(leaving_ds);
-                            }
-                        else {
+//                        if(OPP_ONLY_TWO_DS)
+//                            if (ds_path_counter < 2)
+//                            {
+//                                optimal_ds_x = path[ds_path_counter][0];
+//                                optimal_ds_y = path[ds_path_counter][1];
+//                                ds_path_counter++;
+//                                update_robot_state_2(going_checking_vacancy);
+//                            }
+//                            else
+//                            {
+//                                moving_along_path = false;
+//                                update_robot_state_2(leaving_ds);
+//                            }
+//                        else {
                             if(ds_path_counter < ds_path_size - 1)
                             {
                                 ros::spinOnce();
@@ -1197,7 +1200,9 @@ class Explorer
 //                                else if(dist > available_distance * safety_coeff) 
                                 else if(dist > conservative_available_distance(available_distance) )  {
                                     //robot cannot reach next next DS, it must recharge at current one
-                                    if(robot_state == fully_charged) {
+//                                    if(robot_state == fully_charged)
+                                    if(full_battery)
+                                    {
                                         log_major_error("ERROR WITH DS GRAPH");
                                         finalize_exploration();
                                     }
@@ -1208,11 +1213,14 @@ class Explorer
                                         update_robot_state_2(auctioning);
                                     }
                                 } else {
-                                    ROS_INFO("Going to next DS in path");
                                     retry_recharging_current_ds = 0;
                                     ds_path_counter++;
                                     optimal_ds_x = complex_path[ds_path_counter].x; 
                                     optimal_ds_y = complex_path[ds_path_counter].y; 
+//                                    double world_x, world_y;
+//                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
+//                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
+                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
                                     std_msgs::Empty msg;
                                     pub_next_ds.publish(msg);
                                     update_robot_state_2(going_checking_vacancy); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
@@ -1223,16 +1231,19 @@ class Explorer
                             }
                             else 
                             {
+                                ROS_INFO("Finished path traversal");
+                                moving_along_path = false;
+                                std_msgs::Empty msg;
+                                pub_next_ds.publish(msg);
+                                
                                 if(going_home) {
-                                    ROS_INFO("Finished path traversal");
-                                    moving_along_path = false;
-                                    std_msgs::Empty msg;
-                                    pub_next_ds.publish(msg);
                                     //move_home_if_possible();
                                     move_home();
-                                }
+                                } else
+                                    continue;
+                                
                             }
-                        }
+//                        }
                     }
 
 
@@ -1327,12 +1338,13 @@ class Explorer
                         if (goal_determined == true)
                         {
                         
-                            if(moving_along_path) {
-                                ROS_INFO("Finished path traversal");
-                                moving_along_path = false;
-                                std_msgs::Empty msg;
-                                pub_next_ds.publish(msg);
-                            }
+                            //this can be true if we are at the end of the DS path (i.e., we have reached the last DS and we have 
+//                            if(moving_along_path) {
+//                                ROS_INFO("Finished path traversal");
+//                                moving_along_path = false;
+//                                std_msgs::Empty msg;
+//                                pub_next_ds.publish(msg);
+//                            }
                         
                             /* The robot has found a reachable frontier: it can move toward it */
                             
@@ -1414,14 +1426,14 @@ class Explorer
 //                            }
                             ROS_INFO("goal not determined: selecting next action...");
                             
-                            if(moving_along_path) {
-                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
-                                counter++;
-                                move_robot_away(counter);
-                                update_robot_state_2(auctioning);
-                                std_msgs::Empty msg;
-                                pub_next_ds.publish(msg);
-                            }
+//                            if(moving_along_path) {
+//                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
+//                                counter++;
+//                                move_robot_away(counter);
+//                                update_robot_state_2(auctioning);
+//                                std_msgs::Empty msg;
+//                                pub_next_ds.publish(msg);
+//                            }
                             
                             if(retries >= 4)
                                 log_major_error("too many retries, this shouldn't happend");
@@ -1445,7 +1457,8 @@ class Explorer
                                     move_home_if_possible();
                                 
                                 //TODO use 0.99 as coefficient?
-                                } else
+                                } 
+                                else
                                 {
                                     if(exploration->discovered_new_frontier)
                                         retries6 = 0;
@@ -1460,75 +1473,81 @@ class Explorer
                                     {
                                         exploration->discovered_new_frontier = false;
 
-                                        if( exploration->existFrontiersReachableWithFullBattery(0.999*conservative_maximum_available_distance, &error) ) {
+                                        if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
                                             move_robot_away(counter);
                                             update_robot_state_2(auctioning);
                                             retries4 = 0;
                                         }
-                                        else if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
-                                            ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                            
-//                                            std_msgs::Empty msg;
-//                                            pub_next_ds.publish(msg);
-//                                            ros::Duration(3).sleep();
-                                            
-                                            int result = -1;
-                                            exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
-                                            if(result == 0) //TODO very very orrible idea, using result...
-                                            {
-                                                ROS_INFO("path successfully found");
+                                        else {
+                                        
+                                            update_robot_state_2(exploring_for_graph_navigation);
+                                            ros::Duration(1).sleep();
+                                        
+                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
+                                                ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                 
-                                                counter++;
-                                                move_robot_away(counter);
-                                                update_robot_state_2(auctioning_2);
-                                                retries2 = 0;
-                                                retries4 = 0;
-                                            }
-                                            else {
-                                                retries2++;
+    //                                            std_msgs::Empty msg;
+    //                                            pub_next_ds.publish(msg);
+    //                                            ros::Duration(3).sleep();
                                                 
-                                                if(result == 1)
-                                                    log_major_error("No DS with EOs was found");
-                                                else if(result == 2)
-                                                    log_major_error("impossible, no closest ds found...");
-                                                else if(result == 3) {
-                                                    log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                int result = -1;
+                                                exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                                if(result == 0) //TODO very very orrible idea, using result...
+                                                {
+                                                    ROS_INFO("path successfully found");
+                                                    
                                                     counter++;
                                                     move_robot_away(counter);
                                                     update_robot_state_2(auctioning_2);
-                                                    retries3++;
+                                                    retries2 = 0;
+                                                    retries4 = 0;
                                                 }
-                                                else
-                                                    log_major_error("invalid result value");
-                                            }
-                                        }
-                                        else {
-                                            ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
-                                            if(error) {
-                                                    ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
-                                                    ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
-                                                    ros::Duration(3).sleep();
+                                                else {
                                                     retries2++;
-                                                    costmap_mutex.unlock();
-                                                    print_mutex_info("explore()", "unlock");
-                                                    update_robot_state_2(exploring);
-                                                    continue;
+                                                    
+                                                    if(result == 1)
+                                                        log_major_error("No DS with EOs was found");
+                                                    else if(result == 2)
+                                                        log_major_error("impossible, no closest ds found...");
+                                                    else if(result == 3) {
+                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                        counter++;
+                                                        move_robot_away(counter);
+                                                        update_robot_state_2(auctioning_2);
+                                                        retries3++;
+                                                    }
+                                                    else
+                                                        log_major_error("invalid result value");
+                                                }
                                             }
                                             else {
-                                                retries4++;
-                                                if(retries4 < 3) {
-                                                    ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
-                                                    costmap_mutex.unlock();
-                                                    print_mutex_info("explore()", "unlock");
-                                                    update_robot_state_2(exploring);
-                                                    continue;
+                                                ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
+                                                if(error) {
+                                                        ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
+                                                        ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
+                                                        ros::Duration(3).sleep();
+                                                        retries2++;
+                                                        costmap_mutex.unlock();
+                                                        print_mutex_info("explore()", "unlock");
+                                                        update_robot_state_2(exploring);
+                                                        continue;
                                                 }
-                                                else
-                                                {
-                                                    log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                                    move_home_if_possible();
+                                                else {
+                                                    retries4++;
+                                                    if(retries4 < 3) {
+                                                        ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
+                                                        costmap_mutex.unlock();
+                                                        print_mutex_info("explore()", "unlock");
+                                                        update_robot_state_2(exploring);
+                                                        continue;
+                                                    }
+                                                    else
+                                                    {
+                                                        log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
+                                                        move_home_if_possible();
+                                                    }
                                                 }
                                             }
                                         }
@@ -2056,6 +2075,11 @@ class Explorer
             ROS_INFO("setting need_to_recharge to false");   
             need_to_recharge = false;
         }
+        
+        if(robot_state == fully_charged)
+            full_battery = true;
+        else
+            full_battery = false;
 
         if(robot_state == moving_to_frontier)
             already_navigated_DS_graph = false;
@@ -2066,7 +2090,7 @@ class Explorer
         ros::Duration time = ros::Time::now() - time_start;
 
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << std::endl;
+        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << std::endl;
         fs_csv_state.close();
         
         if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || robot_state == auctioning_3) )
@@ -2205,12 +2229,12 @@ class Explorer
             //{
                 ROS_DEBUG("prearing for fully_charged");
                 update_robot_state_2(fully_charged);
-                if(moving_along_path) {
-                    ROS_INFO("pub_next_ds");
-                    moving_along_path = false;
-                    std_msgs::Empty msg;
-                    pub_next_ds.publish(msg);
-                }
+//                if(moving_along_path) {
+//                    ROS_INFO("pub_next_ds");
+////                    moving_along_path = false;
+//                    std_msgs::Empty msg;
+//                    pub_next_ds.publish(msg);
+//                }
             //}
         }
 
@@ -4255,7 +4279,7 @@ class Explorer
             ros::Duration(10).sleep();
             
         while(!exploration_finished) {
-            exploration->updateDistances();
+            exploration->updateDistances(conservative_maximum_available_distance);
             ros::Duration(1).sleep();
         }
     }
@@ -4352,7 +4376,8 @@ class Explorer
         dead,
         moving_away_from_ds,
         auctioning_3,
-        stopped
+        stopped,
+        exploring_for_graph_navigation
     };
     state_t robot_state, previous_state;
 

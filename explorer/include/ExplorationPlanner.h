@@ -369,7 +369,7 @@ namespace explorationPlanner
             bool discovered_new_frontier;
             bool updateRobotPose();
             void updateOptimalDs();
-            void updateDistances();
+            void updateDistances(double max_available_distance);
 //            std::vector<frontier_t>::const_iterator update_distances_index;
 
             // Debugging
@@ -504,8 +504,9 @@ namespace explorationPlanner
             ros::Time time_start;
             ros::Publisher publish_goal_ds_for_path_navigation;
             std::fstream fs_csv;
-            double distanceFromDs(unsigned int ds_index, unsigned int frontier_index);
+            double simplifiedDistanceFromDs(unsigned int ds_index, unsigned int frontier_index);
             bool erased;
+            ds_t *min_ds_for_path_traversal;
             
             // Debugging
             bool test_mode;

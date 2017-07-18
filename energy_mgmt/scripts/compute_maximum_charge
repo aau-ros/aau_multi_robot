@@ -2,10 +2,13 @@
 
 square_root_of_2 = 1.41421
 
-distance_between_ds = 25 *  square_root_of_2                  # m
+distance_between_ds = 25                  # m
 safety_coefficient = 1.0                    # (adimensional)
 pessimistic_speed = 0.333                   # m/s
 hour_to_seconds_conversion_coeff = 3600     # s
 max_speed = 0.8                             # m/s
 
-print (distance_between_ds * 2 * safety_coefficient / pessimistic_speed) * (13.7 + 18*max_speed + 8+3) / hour_to_seconds_conversion_coeff
+power_moving = 18                           # W/(m/s)
+
+#print (distance_between_ds * 2 * safety_coefficient / pessimistic_speed) * (13.7 + 18*max_speed + 8+3) / hour_to_seconds_conversion_coeff
+print (distance_between_ds * 2 * safety_coefficient / pessimistic_speed) * (power_moving * max_speed) / hour_to_seconds_conversion_coeff

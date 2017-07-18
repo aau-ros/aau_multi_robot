@@ -163,7 +163,7 @@ private:
     // Maximum speed of the robot
     double max_speed_linear;
     
-    double remaining_energy, total_energy, maximum_running_time;
+    double remaining_energy_A, total_energy_A, maximum_running_time, consumed_energy_B;
     
     ros::Publisher pub_charging_completed;
     ros::Subscriber sub_robot;
@@ -215,7 +215,9 @@ private:
         leaving_ds,          // the robot was recharging, but another robot stopped
         dead,
         moving_away_from_ds,
-        auctioning_3
+        auctioning_3,
+        stopped,
+        exploring_for_graph_navigation
     };
     
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);

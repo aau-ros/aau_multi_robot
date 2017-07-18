@@ -36,18 +36,19 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     do_not_consume_battery = false;
     initializing = true;
     counter_moving_to_frontier = 0;
+    consumed_energy_B = 0;
     
     charge = charge_max;
-    total_energy = charge_max * 3600; // J (i.e, joule)       
-    remaining_energy = total_energy;
+    total_energy_A = charge_max * 3600; // J (i.e, joule)       
+    remaining_energy_A = total_energy_A;
     speed_linear = max_speed_linear;
-    maximum_running_time = total_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation); // s //TODO power_advanced_computation is missing a final 's'
+    maximum_running_time = total_energy_A / (power_moving * max_speed_linear); // s //TODO power_advanced_computation is missing a final 's'
     
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
     if(INFINITE_ENERGY) {
-        total_energy = 10000;
-        remaining_energy = 10000;
+        total_energy_A = 10000;
+        remaining_energy_A = 10000;
         power_standing = 0.0;  
         power_moving   = 0.0;  
         power_charging = 100.0;
@@ -65,7 +66,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
     pub_charging_completed = nh.advertise<std_msgs::Empty>("charging_completed", 1);
     
-    pub_full_battery_info = nh.advertise<explorer::battery_state>("full_battery_info", 1);
+    pub_full_battery_info = nh.advertise<explorer::battery_state>("full_battery_info", 1, true);
 
     // subscribe to topics
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
@@ -131,7 +132,6 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         if(counter_moving_to_frontier == 0)
             counter_moving_to_frontier++;
         else {
-            do_not_consume_battery = false;
             initializing = false;
             ROS_INFO("Finished initialization procedure");
         }
@@ -140,7 +140,6 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
     
     if(initializing)
         return;
-
 
     if (msg.get()->state == charging)
     {
@@ -157,12 +156,12 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         }
     }
     
-//    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
-//        do_not_consume_battery = true;
-//    else
-//        do_not_consume_battery = false;
+    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
+        do_not_consume_battery = true;
+    else
+        do_not_consume_battery = false;
     
-    if(msg.get()->state == fully_charged || msg.get()->state == exploring)
+    if(msg.get()->state == fully_charged || msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
         advanced_computations_bool = true;
     else
         advanced_computations_bool = false;
@@ -185,18 +184,14 @@ void battery_simulate::compute()
     /* If there is no time difference to last computation, there is nothing to do */
     if (time_diff_sec <= 0)
         return;
-    
-    // If the robot is in fully
-    if(do_not_consume_battery) {
-        time_last = time_manager->simulationTimeNow();
-        return;
-    }   
 
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
-        remaining_energy += power_charging * time_diff_sec;
-        state.soc = remaining_energy / total_energy;
+        double ratio = (total_energy_A - remaining_energy_A) / consumed_energy_B;
+        remaining_energy_A += ratio * power_charging * time_diff_sec;
+        consumed_energy_B -= (1.0 / ratio) * power_charging * time_diff_sec;
+        state.soc = remaining_energy_A / total_energy_A;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
@@ -208,7 +203,8 @@ void battery_simulate::compute()
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
             state.remaining_time_charge = 0;
-            remaining_energy = total_energy;
+            remaining_energy_A = total_energy_A;
+            consumed_energy_B = 0;
             state.remaining_time_run = maximum_running_time;
             state.remaining_distance = maximum_running_time * speed_avg;
             
@@ -218,13 +214,17 @@ void battery_simulate::compute()
         }
         else {
             ROS_DEBUG("Recharging...");
-            state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
-            state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+            state.remaining_time_charge = ( (total_energy_A - remaining_energy_A) + consumed_energy_B ) / power_charging ;
+            state.remaining_time_run = remaining_energy_A / (power_moving * max_speed_linear);  
             state.remaining_distance = state.remaining_time_run * speed_avg; 
             }
     }
+    else if (do_not_consume_battery) {
+        time_last = time_manager->simulationTimeNow();
+        return;
+    } 
     else if(idle_mode) {
-//        remaining_energy -= power_idle * time_diff_sec; // J
+        consumed_energy_B += power_idle * time_diff_sec; // J
 //        
 //        state.soc = remaining_energy / total_energy;
 //        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
@@ -250,18 +250,22 @@ void battery_simulate::compute()
 //        else
 //            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
 
-        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...)
-            remaining_energy -= (power_moving * max_speed_linear) * time_diff_sec; // J
+        
+        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
+            remaining_energy_A -= (power_moving * max_speed_linear) * time_diff_sec; // J
+            
+        consumed_energy_B += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
 
         //ROS_ERROR("%f", remaining_energy);
         /* Update battery state */
-        state.soc = remaining_energy / total_energy;
+        
         
         //state.remaining_time_run = state.soc * total_energy; // NO!!!
         //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2... but it's still wrong...
 
-        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
-        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+        state.remaining_time_charge = ( (total_energy_A - remaining_energy_A) + consumed_energy_B ) / power_charging ;
+//        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
+        state.remaining_time_run = remaining_energy_A / (power_moving * max_speed_linear);  
         state.remaining_distance = state.remaining_time_run * speed_avg; 
 
     }
@@ -407,8 +411,7 @@ void battery_simulate::createLogFiles() {
 
 /*************************
  ** Debugging functions **
- *************************
- */
+ *************************/
 void battery_simulate::set_last_time() {
     time_last = time_manager->simulationTimeNow();
 }
@@ -422,7 +425,7 @@ double battery_simulate::getChargeMax() {
 }
 
 double battery_simulate::getRemainingEnergy() {
-    return remaining_energy;
+    return remaining_energy_A;
 }
 
 double battery_simulate::getElapsedTime() {

@@ -1264,16 +1264,17 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     
     if(successful == true)
     {
-        //ROS_ERROR("Path from (%f, %f) to (%f, %f)", startPointSimulated.pose.position.x, startPointSimulated.pose.position.y, goalPointSimulated.pose.position.x, goalPointSimulated.pose.position.y);
-        //distance =  global_plan.size();
-        //for(int i=0; i < global_plan.size(); i++)
-            //ROS_ERROR("(%f, %f)", global_plan[i].pose.position.x, global_plan[i].pose.position.y);
+//        ROS_ERROR("Path from (%f, %f) to (%f, %f)", startPointSimulated.pose.position.x, startPointSimulated.pose.position.y, goalPointSimulated.pose.position.x, goalPointSimulated.pose.position.y);
+//        //distance =  global_plan.size();
+//        for(int i=0; i < global_plan.size(); i++)
+//            ROS_ERROR("(%f, %f)", global_plan[i].pose.position.x, global_plan[i].pose.position.y);
         
         distance = 0;
         std::vector<geometry_msgs::PoseStamped>::iterator it = global_plan.begin();
         geometry_msgs::PoseStamped prev_point = (*it);
         it++;
         for(; it != global_plan.end(); it++) {
+//            distance += euclidean_distance(prev_point.pose.position.x, prev_point.pose.position.y, (*it).pose.position.x, (*it).pose.position.y); //it should be correct, but instead it seems to cause the robot to fail more frequently the selection of a backoff goal...
             distance += sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) ); //* costmap_global_ros_->getCostmap()->getResolution();
             prev_point = (*it);
         }
@@ -1303,7 +1304,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     }
 }
 
-double ExplorationPlanner::distanceFromDs(unsigned int ds_index, unsigned int frontier_index) {
+double ExplorationPlanner::simplifiedDistanceFromDs(unsigned int ds_index, unsigned int frontier_index) {
     if(frontiers.size() <= frontier_index)
         ROS_FATAL("invalid index");
         
@@ -4565,38 +4566,149 @@ bool ExplorationPlanner::existFrontiers() {
 
 bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max_available_distance, bool *error) {
     ROS_INFO("existReachableFrontiersWithDsGraphNavigation");
-    ROS_DEBUG("frontiers.size(): %u", frontiers.size());
+    ROS_DEBUG("frontiers.size(): %u", frontiers.size());  
     bool found_reachable_frontier = false;
-    bool exit = false;
+    
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    for(unsigned int i=0; i < frontiers.size() && !exit; i++)
-        for(unsigned int j=0; j < ds_list.size() && !exit; j++) {
-            double total_distance;
-            double x_f = frontiers[i].x_coordinate;
-            double y_f = frontiers[i].y_coordinate;
-            double x_ds = ds_list[j].x;
-            double y_ds = ds_list[j].y;
-            
-            //check euclidean distances
-            total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f);
-            if(total_distance * 2 > max_available_distance) //todo reduce the value from the one used by existFrontiersReachableWithFullBattery
-                continue;
-            
-            // distance DS-frontier
-            total_distance = distanceFromDs(j, i);
-            if(total_distance < 0){
-                ROS_WARN("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
-//                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
-//                if(errors == 0)
-//                    my_error_counter++;
-//                errors++;
-                *error = true;
+
+    
+    
+//    bool exit = false;
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    for(unsigned int i=0; i < frontiers.size() && !exit; i++)
+//        for(unsigned int j=0; j < ds_list.size() && !exit; j++) {
+//            double total_distance;
+//            double x_f = frontiers[i].x_coordinate;
+//            double y_f = frontiers[i].y_coordinate;
+//            double x_ds = ds_list[j].x;
+//            double y_ds = ds_list[j].y;
+//            
+//            //check euclidean distances
+//            total_distance = euclidean_distance(x_ds, y_ds, x_f, y_f);
+//            if(total_distance * 2 > max_available_distance) //todo reduce the value from the one used by existFrontiersReachableWithFullBattery
+//                continue;
+//            
+//            // distance DS-frontier
+//            total_distance = simplifiedDistanceFromDs(j, i);
+//            if(total_distance < 0){
+//                ROS_WARN("Failed to compute distance! (%.2f, %.2f), (%.2f, %.2f)", x_f, y_f, x_ds, y_ds);
+////                total_distance = fallback_distance_computation(x_f, y_f, x_ds, y_ds) * 2;
+////                if(errors == 0)
+////                    my_error_counter++;
+////                errors++;
+//                *error = true;
+//            }
+//            if(total_distance * 2 < max_available_distance) {
+//                found_reachable_frontier = true;
+//                exit = true;
+//            }
+//        }
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+//    return found_reachable_frontier;
+    
+
+
+//    double min_dist = std::numeric_limits<int>::max();
+//    ds_t *min_ds = NULL;
+//    int retry = 0;
+//    // search for the closest DS with EOs
+////    while (min_ds == NULL && retry < 5) {
+//    while (min_ds == NULL) {
+//        for (unsigned int i = 0; i < ds_list.size(); i++)
+//        {
+//            for (unsigned int j = 0; j < frontiers.size(); j++)
+//            {
+//                // check if the DS has EOs
+////                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+//                double dist = simplifiedDistanceFromDs(i, j);
+//                if (dist < 0) {
+//                    ROS_WARN("Distance computation failed");
+//                    continue;
+//                }
+//                if (dist * 2 < max_available_distance)
+//                {
+//                    // the DS has EOS
+//                    found_reachable_frontier = true;
+//                    
+//                    // check if this DS is the closest DS with EOs
+//                    double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+//                    if (dist2 < 0) {
+//                        ROS_WARN("Distance computation failed");
+//                        continue;
+//                    }
+//                    if (dist2 < min_dist)
+//                    {
+//                        min_dist = dist2;
+//                        min_ds = &ds_list.at(i);
+//                    }
+//                    
+//                    break;
+//                }
+//            }
+//        }
+////        retry++;
+////        if(min_ds == NULL)
+////            ros::Duration(3).sleep();
+//    }
+//    min_ds_for_path_traversal = min_ds;
+    
+    
+    
+    double min_dist = std::numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    int retry = 0;
+    // search for the closest DS with EOs
+//    while (min_ds == NULL && retry < 5) {
+//    while (min_ds == NULL) 
+    {
+    
+        unsigned int index = rand() % ds_list.size(); // the index used to access ds_list; we do in this way to (more or less) randomly select a DS with EOs
+    
+        for (unsigned int count = 0; count < ds_list.size() && min_ds == NULL; count++)   // to loop through all ds_list
+        {
+            for (unsigned int j = 0; j < frontiers.size(); j++)
+            {
+                // check if the DS has EOs
+//                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+                double dist = simplifiedDistanceFromDs(index, j);
+                if (dist < 0) {
+                    ROS_WARN("Distance computation failed");
+                    continue;
+                }
+                if (dist * 2 < max_available_distance)
+                {
+                    // the DS has EOS
+                    found_reachable_frontier = true;
+                    
+//                    // check if this DS is the closest DS with EOs
+//                    double dist2 = distance_from_robot(ds_list.at(index).x, ds_list.at(index).y);
+//                    if (dist2 < 0) {
+//                        ROS_WARN("Distance computation failed");
+//                        continue;
+//                    }
+//                    if (dist2 < min_dist)
+//                    {
+//                        min_dist = dist2;
+                        min_ds = &ds_list.at(index);
+//                    }
+                    
+                    break;
+                }
             }
-            if(total_distance * 2 < max_available_distance) {
-                found_reachable_frontier = true;
-                exit = true;
-            }
+            
+            index++;
+            if(index == ds_list.size())
+                index = 0;
+
         }
+//        retry++;
+//        if(min_ds == NULL)
+//            ros::Duration(3).sleep();
+    }
+    min_ds_for_path_traversal = min_ds;
+    
+    
+    
     release_mutex(&store_frontier_mutex, __FUNCTION__);
     return found_reachable_frontier;
 }
@@ -4611,39 +4723,42 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     // "safety" initialization (if the caller gets -1 as a value, something went wrong)
     *result = -1;
     
-    while (min_ds == NULL && retry < 5) {
-        for (unsigned int i = 0; i < ds_list.size(); i++)
-        {
-            for (unsigned int j = 0; j < frontiers.size(); j++)
-            {
-                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
-                if (dist < 0) {
-                    ROS_WARN("Distance computation failed");
-                    continue;
-                }
+    // search for the closest DS with EOs
+//    while (min_ds == NULL && retry < 5) {
+//        for (unsigned int i = 0; i < ds_list.size(); i++)
+//        {
+//            for (unsigned int j = 0; j < frontiers.size(); j++)
+//            {
+//                // check if the DS has EOs
+//                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+//                if (dist < 0) {
+//                    ROS_WARN("Distance computation failed");
+//                    continue;
+//                }
+//                if (dist * 2 < max_available_distance)
+//                {
+//                    // the DS has EOS: check if it is the closest DS with EOs
+//                    double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+//                    if (dist2 < 0) {
+//                        ROS_WARN("Distance computation failed");
+//                        continue;
+//                    }
+//                    if (dist2 < min_dist)
+//                    {
+//                        min_dist = dist2;
+//                        min_ds = &ds_list.at(i);
+//                    }
+//                    
+//                    break;
+//                }
+//            }
+//        }
+//        retry++;
+//        if(min_ds == NULL)
+//            ros::Duration(3).sleep();
+//    }
 
-                if (dist * 2 < max_available_distance)
-                {
-                    double dist2 = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
-                    if (dist2 < 0) {
-                        ROS_WARN("Distance computation failed");
-                        continue;
-                    }
-
-                    if (dist2 < min_dist)
-                    {
-                        min_dist = dist2;
-                        min_ds = &ds_list.at(i);
-                    }
-                    
-                    break;
-                }
-            }
-        }
-        retry++;
-        if(min_ds == NULL)
-            ros::Duration(3).sleep();
-    }
+    min_ds = min_ds_for_path_traversal;
     
     if (min_ds == NULL) {
         ROS_INFO("min_ds == NULL");
@@ -4739,7 +4854,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         if(distance * 2 > max_available_distance)
             continue;
         
-        distance = distanceFromDs(ds_index, i);
+        distance = simplifiedDistanceFromDs(ds_index, i);
         if(distance < 0){
             ROS_WARN("Failed to compute distance!");
             *error = true;
@@ -5039,6 +5154,13 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     start_time = ros::Time::now();
     winner_of_auction = true;
     this->available_distance = available_distance;
+    
+//    unsigned int index;
+//    if(ds_list.size() != 0)
+//        index = rand() % ds_list.size();
+//    else
+//        index = rand() % 10;
+//    ROS_ERROR("%u", index);
 
     if (frontiers.size() <= 0 && clusters.size() <= 0)
     {
@@ -9629,7 +9751,7 @@ double ExplorationPlanner::getOptimalDsX() {
     return optimal_ds_x;
 }
 
-void ExplorationPlanner::updateDistances() {
+void ExplorationPlanner::updateDistances(double max_available_distance) {
 //    std::vector<frontier_t> list_frontiers_local_copy;
 //    
 //    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -9692,6 +9814,11 @@ void ExplorationPlanner::updateDistances() {
             f_y = list_frontiers_local_copy.at(index).y_coordinate;
         
             for(unsigned int i=0; i < list_ds_local_copy.size(); i++) {
+            
+                // since we don't need the real distance, but we just need to know if a frontier is reachable or not from a DS, if the already computed distance is less then the maximum travelling distance, we don't need to recompute it (maybe we would discover that it is even less than what we though, but we don't care)
+                if(frontiers.at(index).list_distance_from_ds.at(i) < max_available_distance)
+                    continue;
+            
                 double distance = trajectory_plan_meters(list_ds_local_copy.at(i).x, list_ds_local_copy.at(i).y, f_x, f_y);
                 if(distance < 0)
                     continue;

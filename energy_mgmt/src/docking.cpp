@@ -283,8 +283,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     waiting_to_discover_a_ds = false;
 
     /* Function calls */
-    preload_docking_stations();
     create_log_files();
+    preload_docking_stations();
 
     if (DEBUG)
     {
@@ -322,6 +322,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_this_robot = nh.advertise<adhoc_communication::EmRobot>("this_robot", 10, true);
     
     major_errors = 0, minor_errors = 0;
+    
+    timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, false, true); //TODO(minor) timeout
     
 }
 
@@ -445,8 +447,7 @@ void docking::preload_docking_stations()
 
     /* Print loaded DSs with their coordinates relative to the local reference system of the robot, and also store them on file
      */  // TODO(minor) or better in global system?
-    std::vector<ds_t>::iterator it;
-    for (it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++) {
+    for (std::vector<ds_t>::iterator it = undiscovered_ds.begin(); it != undiscovered_ds.end(); it++) {
         ROS_DEBUG("ds%d: (%f, %f)", (*it).id, (*it).x, (*it).y);
         ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         ds_fs << it->id << "," << it->x << "," << it->y << std::endl;
@@ -1560,6 +1561,14 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         ;
     }
+    else if (msg.get()->state == stopped)
+    {
+        ;
+    }
+    else if (msg.get()->state == exploring_for_graph_navigation)
+    {
+        ;
+    }
     else
     {
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");
@@ -1795,9 +1804,15 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
+    
     if(msg.get()->docking_station < 0 || (int)msg.get()->docking_station >= num_ds) {
         log_major_error("Invalid id for an auction! Ignoring...");
         ROS_ERROR("%d", msg.get()->docking_station);
+        return;
+    }
+    
+    if(robot->state == exploring_for_graph_navigation) {
+        ROS_INFO("robot is searching for a path on graph: ignore auction"); //this is done because the search of a path on the DS graph can take a lot of time (at least with the version that is in used at the time of writing these lines of code), so a robot could basically "stall" a DS, since it could gain access to it, but since it's making computations it cannot used it (and it is not safe to stop the computations, since if we stop them every time that a robot wins an auction, it won't be able to find a path on the graph since it usually takes some time and so it is very likely that the robot will win an auction at some point)
         return;
     }
     
@@ -2045,7 +2060,7 @@ void docking::start_new_auction()
     if (!optimal_ds_is_set() && need_to_charge)
     {
         waiting_to_discover_a_ds = true;
-        log_minor_error("The robot needs to recharge, but it doesn't know about any "
+        log_major_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
 //        compute_and_publish_path_on_ds_graph_to_home();
         wait_for_ds++;
@@ -2483,6 +2498,10 @@ void docking::create_log_files()
     fs3_csv.open(csv_file_3.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs3_csv << "#time,sender_robot_id" << std::endl;
     fs3_csv.close();
+    
+    ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    ds_fs << "#id,x,y" << std::endl;
+    ds_fs.close();
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
@@ -3305,31 +3324,32 @@ void docking::check_reachable_ds()
             ROS_DEBUG("ds%d is not reachable at the moment: ", (*it).id);
     }
 
-    if (new_ds_discovered || recompute_graph)
-    {
+//    if (new_ds_discovered || recompute_graph)
+    if (new_ds_discovered)
+//    {
         update_ds_graph();
-        
-//        int start = ds.at(0).id;
-//        int end = ds.at(ds.size()-1).id;
-//        find_path_2(start, end, path);
+//        
+////        int start = ds.at(0).id;
+////        int end = ds.at(ds.size()-1).id;
+////        find_path_2(start, end, path);
 
-        // construct MST starting from ds graph
-        //compute_MST_2(1);
-        
-        //timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, true, false); //TODO(minor) timeout
-    }
+//        // construct MST starting from ds graph
+//        //compute_MST_2(1);
+//        
+//    }
     
     ds_mutex.unlock();
     
 }
 
 void docking::update_ds_graph() {
-//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
-    for (unsigned int i = 0; i < ds.size() && !recompute_graph; i++) {
-        for (unsigned int j = 0; j < ds.size() && !recompute_graph; j++) {
+
+    mutex_ds_graph.lock();
+    for (unsigned int i = 0; i < ds.size(); i++) {
+        for (unsigned int j = i; j < ds.size(); j++) {
             //safety checks   
             if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
-                ROS_FATAL("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
+                log_major_error("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
             if (i == j)
                 ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
             else
@@ -3350,7 +3370,8 @@ void docking::update_ds_graph() {
                 if (dist < conservative_maximum_distance_one_way())
                 {
                     //update distance only if it is better than the one already stored (which can happen if a new shorter path between two ds is found)
-                    if (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id]) {
+//                    if (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id])
+                    {
                         ds_graph[ds[i].id][ds[j].id] = dist;
                         ds_graph[ds[j].id][ds[i].id] = dist;
                     }
@@ -3364,23 +3385,48 @@ void docking::update_ds_graph() {
         }
     }
     recompute_graph = false;
+    mutex_ds_graph.unlock();
     
     graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
-    for(unsigned int k=0; k < ds.size(); k++) {
-        for(unsigned int i=0; i < ds.size(); i++)
-            if((unsigned int)ds.at(i).id == k)
-                for(unsigned int h=0; h < ds.size(); h++)
-                    for(unsigned int j=0; j < ds.size(); j++)
-                        if((unsigned int)ds.at(j).id == h)
-                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+    
+    graph_fs << "#sort according to DS ID" << std::endl;
+//    for(int k=0; k < num_ds; k++) {
+//        bool ok1 = false;
+//        for(unsigned int i=0; i < ds.size(); i++)
+//            if(ds.at(i).id == k) {
+//                ok1 = true;
+//                for(int h=0; h < num_ds; h++) {
+//                    bool ok2 = false;
+//                    for(unsigned int j=0; j < ds.size(); j++)
+//                        if(ds.at(j).id == h) {
+//                            ok2 = true;
+//                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+//                        }
+//                    if(!ok2)
+//                        log_major_error("not ok2");
+//                }
+//            }
+//        graph_fs << std::endl;
+//        if(!ok1)
+//            log_major_error("not ok1");
+//    }
+    for(int i=0; i < num_ds; i++) {
+        graph_fs << std::setw(5);
+        for(int j=0; j < num_ds; j++)
+            graph_fs << (int)ds_graph[i][j] << "   ";
         graph_fs << std::endl;
     }
+    
     graph_fs << std::endl;
+    
+    graph_fs << "#sort according to discovery order" << std::endl;
     for(unsigned int i=0; i < ds.size(); i++) {
+        graph_fs << std::setw(5);
         for(unsigned int j=0; j < ds.size(); j++)
-            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+            graph_fs << (int)ds_graph[ds[i].id][ds[j].id] << "   ";
         graph_fs << std::endl;
     }
+    
     graph_fs.close();
     
 }
@@ -3699,7 +3745,7 @@ void docking::runtime_checks() {
 }
 
 void docking::path_callback(const std_msgs::String msg) {
-    ROS_DEBUG("received path");
+//    ROS_DEBUG("received path");
     ros_package_path = msg.data;
 }
 
@@ -3796,7 +3842,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
-    while (min_ds == NULL && retry < 5) {
+//    while (min_ds == NULL && retry < 5) { //OMG no!!! in this way we will never select the closest ds with eos, but just the first ds found with eos!!!
         for (unsigned int i = 0; i < ds.size(); i++)
         {
             for (unsigned int j = 0; j < jobs_local_list.size(); j++)
@@ -3828,7 +3874,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
         retry++;
         if(min_ds == NULL)
             ros::Duration(3).sleep();
-    }
+//    }
     
     
     if (min_ds == NULL) {
@@ -3933,8 +3979,9 @@ void docking::compute_and_publish_path_on_ds_graph() {
             }
     }
     else {
-        log_major_error("No path found on DS graph");
-        ROS_INFO("No path found on DS graph: this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
     }
 }
 
@@ -3978,6 +4025,7 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
     path.clear();
     index_of_ds_in_path = 0;
     
+    mutex_ds_graph.lock();
     bool ds_found_with_mst = false;
     if(closest_ds->id == goal_ds_path_id) {
         log_minor_error("closest_ds->id == goal_ds_path_id, this should not happen...");
@@ -3989,6 +4037,7 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
          ds_found_with_mst = find_path_2(closest_ds->id, goal_ds_path_id, path);
         path_navigation_tries = 0;    
     }
+    mutex_ds_graph.unlock();
     
     if(path_navigation_tries > 4) {
         log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
@@ -4037,8 +4086,9 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
             }
     }
     else {
-        log_major_error("No path found on DS graph");
-        ROS_INFO("No path found on DS graph: this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+//        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+//        std_msgs::Empty msg;
+//        pub_finish.publish(msg);
     }
 }
 
@@ -4071,7 +4121,7 @@ double min_dist = numeric_limits<int>::max();
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     
-    while (min_ds == NULL && retry < 5) {
+//    while (min_ds == NULL && retry < 5) {
         for (unsigned int i = 0; i < ds.size(); i++)
         {
                 double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0); //TODO use robot_home_x
@@ -4086,7 +4136,7 @@ double min_dist = numeric_limits<int>::max();
                     
         }
         retry++;
-    }
+//    }
     
     if (min_ds == NULL) {
         std_msgs::Empty msg;
