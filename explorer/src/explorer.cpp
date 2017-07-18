@@ -46,7 +46,7 @@
 #endif
 
 #define OPERATE_ON_GLOBAL_MAP true
-#define OPERATE_WITH_GOAL_BACKOFF true
+#define OPERATE_WITH_GOAL_BACKOFF false
 //#define EXIT_COUNTDOWN 5
 #define EXIT_COUNTDOWN 50  // F
 //#define STUCK_COUNTDOWN 10
@@ -1791,6 +1791,8 @@ class Explorer
                 }
                 else
                 {
+                    if (!exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global, &backoffGoal))
+                        ROS_ERROR("Failed to find backoff goal for goal (%.2f,%.2f)", final_goal.at(0), final_goal.at(1));
                     ROS_INFO("Navigate to goal");
                     navigate_to_goal = navigate(final_goal);
                 }
@@ -3013,8 +3015,6 @@ class Explorer
             completed_navigation = move_robot(counter, goal.at(0), goal.at(1));
             rotation_counter = 0;
 
-            // F
-            // publish goal position
         }
 
         // no valid goal found

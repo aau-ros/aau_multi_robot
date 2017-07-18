@@ -1274,7 +1274,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
         geometry_msgs::PoseStamped prev_point = (*it);
         it++;
         for(; it != global_plan.end(); it++) {
-//            distance += euclidean_distance(prev_point.pose.position.x, prev_point.pose.position.y, (*it).pose.position.x, (*it).pose.position.y); //it should be correct, but instead it seems to cause the robot to fail more frequently the selection of a backoff goal...
+//            distance += euclidean_distance(prev_point.pose.position.x, prev_point.pose.position.y, (*it).pose.position.x, (*it).pose.position.y);
             distance += sqrt( (prev_point.pose.position.x - (*it).pose.position.x) * (prev_point.pose.position.x - (*it).pose.position.x) + (prev_point.pose.position.y - (*it).pose.position.y) * (prev_point.pose.position.y - (*it).pose.position.y) ); //* costmap_global_ros_->getCostmap()->getResolution();
             prev_point = (*it);
         }
