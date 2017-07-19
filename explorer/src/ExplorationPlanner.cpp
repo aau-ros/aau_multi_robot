@@ -9757,7 +9757,7 @@ void ExplorationPlanner::setOptimalDs(unsigned int id, double x, double y) {
     optimal_ds_x = x;
     optimal_ds_y = y;
     if(!optimal_ds_set)
-        ROS_ERROR("optimal ds found");
+        ROS_INFO("optimal ds found");
     optimal_ds_set = true;
     release_mutex(&mutex_optimal_ds, __FUNCTION__);
 }

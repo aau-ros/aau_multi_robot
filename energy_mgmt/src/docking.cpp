@@ -484,10 +484,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     if (ds.size() > 0 && !moving_along_path && lock_acquired && participating_to_auction == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
     
-        ds_mutex.lock();
-        if(ds.size() == 1)
-            next_optimal_ds_id = ds.at(0).id;
-        ds_mutex.unlock();
+//        ds_mutex.lock();
+//        if(ds.size() == 1)
+//            next_optimal_ds_id = ds.at(0).id;
+//        ds_mutex.unlock();
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
         jobs_mutex.lock();
