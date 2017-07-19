@@ -10,7 +10,9 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
 {
     // read parameters
     nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
+//    ROS_INFO("speed_avg_init: %.2f", speed_avg_init);    
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
+//    ROS_INFO("power_charging: %.2f", power_charging);
     nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
     nh.getParam("energy_mgmt/power_standing", power_standing); // W
     nh.getParam("energy_mgmt/power_idle", power_idle);         // W
@@ -21,7 +23,8 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     nh.getParam("energy_mgmt/mass", mass); // kg
     advanced_computations_bool = true;
     
-    //ROS_ERROR("%f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max);
+//    ROS_ERROR("%.1f", power_moving);    
+//    ROS_ERROR("%f, %f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max, speed_avg_init);
 
     // initialize private variables
     speed_angular = 0;
@@ -41,7 +44,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     charge = charge_max;
     total_energy_A = charge_max * 3600; // J (i.e, joule)       
     remaining_energy_A = total_energy_A;
-    speed_linear = max_speed_linear;
+    speed_linear = 0;
     maximum_running_time = total_energy_A / (power_moving * max_speed_linear); // s //TODO power_advanced_computation is missing a final 's'
     
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
@@ -233,6 +236,7 @@ void battery_simulate::compute()
         
     } else {
     
+    
         /* If the robot is moving, than we have to consider also the energy consumed for moving, otherwise it is
          * sufficient to consider the fixed power cost.
          * Notice that this is clearly an approximation, since we are not sure that the robot was moving for the whole
@@ -272,14 +276,17 @@ void battery_simulate::compute()
         //state.remaining_time_run = state.soc * total_energy; // NO!!!
         //state.remaining_time_run = mass * speed_avg / total_energy; // in s, since J = kg*m/s^2... but it's still wrong...
 
+        state.soc = remaining_energy_A / total_energy_A;
         state.remaining_time_charge = ( (total_energy_A - remaining_energy_A) + consumed_energy_B ) / power_charging ;
 //        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
         state.remaining_time_run = remaining_energy_A / (power_moving * max_speed_linear);  
-        state.remaining_distance = state.remaining_time_run * speed_avg; 
+//        state.remaining_distance = state.remaining_time_run * speed_avg; 
+        state.remaining_distance = state.remaining_time_run * max_speed_linear; 
+
 
     }
 
-    //ROS_ERROR("Battery: %.0f%%  ---  remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
+//    ROS_ERROR("SOC: %.0f%%; remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
     /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
     time_last = time_manager->simulationTimeNow();

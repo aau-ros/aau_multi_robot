@@ -187,6 +187,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     test_mode = false;
 //    update_distances_index = 0;
     erased = false;
+    next_optimal_ds_id = -1;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -1305,14 +1306,30 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
 }
 
 double ExplorationPlanner::simplifiedDistanceFromDs(unsigned int ds_index, unsigned int frontier_index) {
-    if(frontiers.size() <= frontier_index)
-        ROS_FATAL("invalid index");
-        
-    if(ds_index >= frontiers.at(frontier_index).list_distance_from_ds.size() || frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < 0)
-        return trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate); //TODO allow user to select if in this case we should use the real distance or not
-        
+    
     acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
-    double distance = frontiers.at(frontier_index).list_distance_from_ds.at(ds_index);
+    mutex_ds.lock();
+    if(frontiers.size() <= frontier_index || ds_list.size() <= ds_index) {
+        ROS_FATAL("invalid index in simplifiedDistanceFromDs()");
+        ROS_FATAL("frontiers: size: %u, index: %u", frontiers.size(), frontier_index);
+        ROS_FATAL("ds: size: %u; index: %u", ds_list.size(), ds_index);
+    }
+    mutex_ds.unlock();    
+    
+    
+    double distance;
+    if(ds_index >= frontiers.at(frontier_index).list_distance_from_ds.size() || frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < 0)
+    {
+        double ds_x, ds_y, f_x, f_y;
+        ds_x = ds_list.at(ds_index).x;
+        ds_y = ds_list.at(ds_index).y;
+        f_x = frontiers.at(frontier_index).x_coordinate;
+        f_y = frontiers.at(frontier_index).y_coordinate;
+        distance = trajectory_plan_meters(ds_x, ds_y, f_x, f_y); //TODO allow user to select if in this case we should use the real distance or not
+    } 
+    else
+        distance = frontiers.at(frontier_index).list_distance_from_ds.at(ds_index);
+    
     release_mutex(&mutex_erase_frontier, __FUNCTION__);
     return distance;
 }
@@ -4662,14 +4679,22 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 //    while (min_ds == NULL) 
     {
     
-        unsigned int index = rand() % ds_list.size(); // the index used to access ds_list; we do in this way to (more or less) randomly select a DS with EOs
+        mutex_ds.lock();
+        unsigned int ds_size = ds_list.size();
+        mutex_ds.unlock();
+        
+        unsigned int index = rand() % ds_size; // the index used to access ds_list; we do in this way to (more or less) randomly select a DS with EOs
     
-        for (unsigned int count = 0; count < ds_list.size() && min_ds == NULL; count++)   // to loop through all ds_list
+        for (unsigned int count = 0; count < ds_size && min_ds == NULL; count++)   // to loop through all ds_list
         {
             for (unsigned int j = 0; j < frontiers.size(); j++)
             {
                 // check if the DS has EOs
 //                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+
+                if(index < 0 || index >= ds_size)
+                    ROS_FATAL("orrible values");
+
                 double dist = simplifiedDistanceFromDs(index, j);
                 if (dist < 0) {
                     ROS_WARN("Distance computation failed");
@@ -4689,7 +4714,9 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 //                    if (dist2 < min_dist)
 //                    {
 //                        min_dist = dist2;
+                        mutex_ds.lock();
                         min_ds = &ds_list.at(index);
+                        mutex_ds.unlock();
 //                    }
                     
                     break;
@@ -4697,7 +4724,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
             }
             
             index++;
-            if(index == ds_list.size())
+            if(index == ds_size)
                 index = 0;
 
         }
@@ -4836,15 +4863,28 @@ void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {
     ROS_INFO("existFrontiersReachableWithFullBattery");
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     
+    if(!optimal_ds_set)
+        return false;
+        
+    if(ds_list.size() == 0)
+        ROS_FATAL("ds_list.size() == 0, which should be impossible here, or nothing will work...");
+    
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     unsigned int ds_index = -1;
+    mutex_ds.lock();
+    
+        
     for(unsigned int i=0; i < ds_list.size(); i++)
         if(ds_list.at(i).id == optimal_ds_id) {
             ds_index = i;
             break;
         }
-    
+    if(ds_index < 0 || ds_index > 100)
+        ROS_FATAL("orrible values");
+        
+    mutex_ds.unlock();
+
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
         double distance;
@@ -4881,12 +4921,8 @@ void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDo
 }
 
 void ExplorationPlanner::updateOptimalDs() {
-    acquire_mutex(&mutex_optimal_ds, __FUNCTION__);
-    optimal_ds_id = next_optimal_ds_id;
-    optimal_ds_x = next_optimal_ds_x;
-    optimal_ds_y = next_optimal_ds_y;
-    optimal_ds_set = true;
-    release_mutex(&mutex_optimal_ds, __FUNCTION__);
+    if(next_optimal_ds_id > 0)
+        setOptimalDs(next_optimal_ds_id, next_optimal_ds_x, next_optimal_ds_y);
 }
 
 bool ExplorationPlanner::my_negotiate()
@@ -5154,6 +5190,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
     start_time = ros::Time::now();
     winner_of_auction = true;
     this->available_distance = available_distance;
+//    ROS_ERROR("%u", ds_list.size());
     
 //    unsigned int index;
 //    if(ds_list.size() != 0)
@@ -6997,8 +7034,11 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
     for(int i=0; i < ds_list.size(); i++)
         for(int j=0; j < ds_list.size(); j++)
             ; //ROS_ERROR("%f", ds_graph[i][j]);
-            
+    
+    mutex_ds.lock();       
     ds_list.push_back(ds);
+//    ROS_ERROR("%u", ds_list.size());
+    mutex_ds.unlock();
 }
 
 void ExplorationPlanner::ds_count_callback(const std_msgs::Int32 msg) {
@@ -9712,10 +9752,14 @@ void ExplorationPlanner::setRobotPosition(double x, double y) {
 }
 
 void ExplorationPlanner::setOptimalDs(unsigned int id, double x, double y) {
+    acquire_mutex(&mutex_optimal_ds, __FUNCTION__);
     optimal_ds_id = id;
     optimal_ds_x = x;
     optimal_ds_y = y;
+    if(!optimal_ds_set)
+        ROS_ERROR("optimal ds found");
     optimal_ds_set = true;
+    release_mutex(&mutex_optimal_ds, __FUNCTION__);
 }
 
 bool ExplorationPlanner::updateRobotPose()
@@ -9789,16 +9833,17 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
     std::vector<frontier_t> list_frontiers_local_copy;
     
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+    acquire_mutex(&mutex_ds, __FUNCTION__);
     std::copy(list_ds_local_copy.begin(), list_ds_local_copy.end(), ds_list.begin()); //TODO inefficient with many ds... and is it really necessary? we are not even using a mutex...
     std::copy(list_frontiers_local_copy.begin(), list_frontiers_local_copy.end(), frontiers.begin());
+    release_mutex(&mutex_ds, __FUNCTION__);
     release_mutex(&store_frontier_mutex, __FUNCTION__);
-    
     while(!finished) {
         
         //TODO this code is not very good, since it assumes that functions like size(), etc., are atomic or that at least they do not return strange values if another thread is modifying the vector on which size() (or another function) is called... it should be improved using more mutexes (or with a better use of the already existing ones), etc.
         
         acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
-        if( (index < frontiers.size() && index >= list_frontiers_local_copy.size()) || list_frontiers_local_copy.at(index).id != frontiers.at(index).id ) { //meanwhile this function is executed, a frontier could have been erased an another pushed, so in this case we have to re-copy the vector of frontiers
+        if( (index < frontiers.size() && index >= list_frontiers_local_copy.size()) || list_frontiers_local_copy.at(index).id != frontiers.at(index).id ) { //meanwhile this function is executed, a frontier could have been erased and another pushed, so in this case we have to re-copy the vector of frontiers
             acquire_mutex(&store_frontier_mutex, __FUNCTION__);    
             std::copy(list_frontiers_local_copy.begin(), list_frontiers_local_copy.end(), frontiers.begin());
             erased = false;
@@ -9813,13 +9858,13 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
             f_x = list_frontiers_local_copy.at(index).x_coordinate;
             f_y = list_frontiers_local_copy.at(index).y_coordinate;
         
-            for(unsigned int i=0; i < list_ds_local_copy.size(); i++) {
+            for(unsigned int ds_index=0; ds_index < list_ds_local_copy.size(); ds_index++) {
             
                 // since we don't need the real distance, but we just need to know if a frontier is reachable or not from a DS, if the already computed distance is less then the maximum travelling distance, we don't need to recompute it (maybe we would discover that it is even less than what we though, but we don't care)
-                if(frontiers.at(index).list_distance_from_ds.at(i) < max_available_distance)
+                if(frontiers.at(index).list_distance_from_ds.at(ds_index) < max_available_distance)
                     continue;
             
-                double distance = trajectory_plan_meters(list_ds_local_copy.at(i).x, list_ds_local_copy.at(i).y, f_x, f_y);
+                double distance = trajectory_plan_meters(list_ds_local_copy.at(ds_index).x, list_ds_local_copy.at(ds_index).y, f_x, f_y);
                 if(distance < 0)
                     continue;
                     
@@ -9827,9 +9872,9 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
                 if(index >= frontiers.size() || list_frontiers_local_copy.at(index).id != frontiers.at(index).id) //this could happen if a frontier has been deleted and another has been added at the same place of the old one while permorming our computations in this function
                     continue;
                 else {
-                    while(i >= frontiers.at(index).list_distance_from_ds.size()) //we don't know how many elements are missing...
+                    while(ds_index >= frontiers.at(index).list_distance_from_ds.size()) //we don't know how many elements are missing...
                         frontiers.at(index).list_distance_from_ds.push_back(-1); 
-                    frontiers.at(index).list_distance_from_ds.at(i) = distance;
+                    frontiers.at(index).list_distance_from_ds.at(ds_index) = distance;
                 }
                 index++;
                 release_mutex(&mutex_erase_frontier, __FUNCTION__);

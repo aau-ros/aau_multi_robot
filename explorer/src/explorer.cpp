@@ -115,7 +115,7 @@ class Explorer
     double moving_time;
     bool received_battery_info;
     ros::Publisher pub_next_ds;
-    bool full_battery;
+    bool full_battery, frontiers_found;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -191,6 +191,7 @@ class Explorer
         coeff_b = COEFF_B;
         received_battery_info = false;
         full_battery = false;
+        frontiers_found = false;
 
         /* Initial robot state */
         robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
@@ -550,60 +551,63 @@ class Explorer
                  * FRONTIER DETERMINATION *
                  **************************/
 
-                ROS_INFO("****************** FRONTIER DETERMINATION ******************");
+                if(!frontiers_found) {
+                    ROS_INFO("****************** FRONTIER DETERMINATION ******************");
 
-                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                fs_exp_se_log << "0" << ": " << "Start new explore() loop iteration" << std::endl;
-                fs_exp_se_log.close();
+    //                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    //                fs_exp_se_log << "0" << ": " << "Start new explore() loop iteration" << std::endl;
+    //                fs_exp_se_log.close();
 
-                /*
-                * Use mutex to lock the critical section (access to the costmap)
-                * since rosspin tries to update the costmap continuously
-                */
-                ROS_DEBUG("COSTMAP STUFF");
-                print_mutex_info("explore()", "acquiring");
-                costmap_mutex.lock();
-                ROS_DEBUG("COSTMAP STUFF, lock aquired");
-                print_mutex_info("explore()", "lock");
+                    /*
+                    * Use mutex to lock the critical section (access to the costmap)
+                    * since rosspin tries to update the costmap continuously
+                    */
+                    ROS_DEBUG("COSTMAP STUFF");
+                    print_mutex_info("explore()", "acquiring");
+                    costmap_mutex.lock();
+                    ROS_DEBUG("COSTMAP STUFF, lock aquired");
+                    print_mutex_info("explore()", "lock");
 
-                exploration->transformToOwnCoordinates_frontiers();
-                exploration->transformToOwnCoordinates_visited_frontiers();
+                    exploration->transformToOwnCoordinates_frontiers();
+                    exploration->transformToOwnCoordinates_visited_frontiers();
 
-                //ROS_ERROR("initialize planner");
-                exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
-                //ROS_ERROR("planner initialized");
-             
-        //                if(skip_findFrontiers) {
-        //                    ROS_INFO("skipping findFrontiers");
-        //                } else {
-                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-                fs_exp_se_log.close();
+                    //ROS_ERROR("initialize planner");
+                    exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
+                    //ROS_ERROR("planner initialized");
+                 
+            //                if(skip_findFrontiers) {
+            //                    ROS_INFO("skipping findFrontiers");
+            //                } else {
+    //                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    //                fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
+    //                fs_exp_se_log.close();
+                        
+                    exploration->transformToOwnCoordinates_frontiers();
+                    exploration->transformToOwnCoordinates_visited_frontiers();
+                      
+                    exploration->findFrontiers();
+                    exploration->clearVisitedFrontiers();
+                    exploration->clearUnreachableFrontiers();
+                    exploration->clearSeenFrontiers(costmap2d_global);
                     
-                exploration->transformToOwnCoordinates_frontiers();
-                exploration->transformToOwnCoordinates_visited_frontiers();
-                  
-                exploration->findFrontiers();
-                exploration->clearVisitedFrontiers();
-                exploration->clearUnreachableFrontiers();
-                exploration->clearSeenFrontiers(costmap2d_global);
-                
-        //                }   
-        //            fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        //            fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
-        //            fs_exp_se_log.close();
+//                            }  
+ 
+//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//                        fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
+//                        fs_exp_se_log.close();
 
-        //                if(skip_findFrontiers)
-//                    exploration->clearVisitedFrontiers();
-//                exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
-        //                if(skip_findFrontiers)
-//                    exploration->clearSeenFrontiers(costmap2d_global);
+                    if(skip_findFrontiers)
+                        exploration->clearVisitedFrontiers();
+                    exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
+                    if(skip_findFrontiers)
+                        exploration->clearSeenFrontiers(costmap2d_global);
 
-                costmap_mutex.unlock();
-                print_mutex_info("explore()", "unlock");
-                ROS_DEBUG("COSTMAP STUFF, lock released");
+                    costmap_mutex.unlock();
+                    print_mutex_info("explore()", "unlock");
+                    ROS_DEBUG("COSTMAP STUFF, lock released");
                 
                 //tf::Stamped<tf::Pose> robotPose;
+                }
                 
                 if(!created) {
                     while(!exploration->getRobotPose(robotPose)) {
@@ -635,7 +639,7 @@ class Explorer
             
             }
 
-            
+            ROS_INFO("****************** ACTING ACCORDING TO STATE ******************");
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -1485,7 +1489,7 @@ class Explorer
                                     else
                                     {
                                         exploration->discovered_new_frontier = false;
-
+                                        exploration->updateOptimalDs();
                                         if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
@@ -2398,6 +2402,8 @@ class Explorer
             
             exploration->transformToOwnCoordinates_frontiers();
             exploration->transformToOwnCoordinates_visited_frontiers();
+            
+            exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
 
             exploration->findFrontiers();
             exploration->clearVisitedFrontiers();
@@ -2417,6 +2423,8 @@ class Explorer
             costmap_mutex.unlock();
             //ROS_DEBUG("frontiers(): lock released");
             print_mutex_info("frontiers()", "unlock");
+            
+            frontiers_found = true;
 
         }
     }
@@ -3657,10 +3665,12 @@ class Explorer
 
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-        ROS_INFO("Target DS is (going to be) occupied by robot %d", msg.get()->used_by_robot_id);
-        //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
-        if(robot_state == checking_vacancy) //TODO this check should be already in update_robot_state() probably...
+        if(robot_state == checking_vacancy) { //TODO is it possible to received a message about vacancy when not performing vacancy checks? probably yes due to broadcasting
+            ROS_INFO("Target DS is (going to be) occupied by robot %d", msg.get()->used_by_robot_id);
+            //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
+             //TODO this check should be already in update_robot_state() probably...
             robot_state_next = going_queue_next;
+        }
     }
     
     void vacancy_callback(const ros::TimerEvent &event) {
@@ -3743,7 +3753,7 @@ class Explorer
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
         next_available_distance = msg->remaining_distance;
-        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
+        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, next_available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
 
         if (msg->charging == false && battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...

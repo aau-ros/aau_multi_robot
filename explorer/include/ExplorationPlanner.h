@@ -138,7 +138,7 @@ namespace explorationPlanner
             
 
 
-            boost::mutex store_frontier_mutex, store_visited_mutex, store_negotiation_mutex, mutex_optimal_ds, mutex_erase_frontier;
+            boost::mutex store_frontier_mutex, store_visited_mutex, store_negotiation_mutex, mutex_optimal_ds, mutex_erase_frontier, mutex_ds;
             boost::mutex publish_subscribe_mutex, callback_mutex, negotiation_mutex, negotiation_callback_mutex;
             boost::mutex position_mutex, auction_mutex;
             boost::mutex cluster_mutex;
