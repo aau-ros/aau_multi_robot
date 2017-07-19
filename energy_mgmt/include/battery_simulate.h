@@ -55,7 +55,9 @@ public:
     void createLogDirectory();
     void createLogFiles();
     
-    /* For debugging */
+    /*************************
+     ** Debugging functions **
+     *************************/
     double getChargeMax();
     void setTimeManager(TimeManagerInterface *time_manager);
     double last_time_secs();
@@ -65,6 +67,7 @@ public:
     double getElapsedTime();
     void spinOnce();
     bool initializing;
+    double getConsumedEnergyB();
 
 private:
     /**

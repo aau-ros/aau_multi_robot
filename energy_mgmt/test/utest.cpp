@@ -273,7 +273,7 @@ TEST(TestSuite, testCase9)
     total_energy  = bat.getRemainingEnergy();
     bat.compute();
     remaining_energy = bat.getRemainingEnergy();
-    test_remaining_energy = total_energy - (power_moving * max_linear_speed + power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    test_remaining_energy = total_energy - (power_moving * max_linear_speed) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(test_remaining_energy, remaining_energy);
@@ -314,20 +314,23 @@ TEST(TestSuite, testCase10)
     
     ros::Publisher robot_pub = nh.advertise<adhoc_communication::EmRobot>("explorer/robot", 10, true);
     adhoc_communication::EmRobot robot_state_msg;
+    
+    robot_state_msg.state = exploring;
+    robot_pub.publish(robot_state_msg);
+    
     robot_state_msg.state = in_queue;
     robot_pub.publish(robot_state_msg);
     
     ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
-    double total_energy, remaining_energy, test_remaining_energy;
-    total_energy  = bat.getRemainingEnergy();
+    double consumed_energy_B, test_consumed_energy_B;
     bat.compute();
-    remaining_energy = bat.getRemainingEnergy();
-    test_remaining_energy = total_energy - (power_idle) * (time2 - time1);
+    consumed_energy_B = bat.getConsumedEnergyB();
+    test_consumed_energy_B = power_idle * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
-    EXPECT_EQ(test_remaining_energy, remaining_energy);
+    EXPECT_EQ(test_consumed_energy_B, consumed_energy_B);
 }
 
 int main(int argc, char **argv){

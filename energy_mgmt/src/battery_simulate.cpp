@@ -280,9 +280,8 @@ void battery_simulate::compute()
         state.remaining_time_charge = ( (total_energy_A - remaining_energy_A) + consumed_energy_B ) / power_charging ;
 //        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
         state.remaining_time_run = remaining_energy_A / (power_moving * max_speed_linear);  
-//        state.remaining_distance = state.remaining_time_run * speed_avg; 
-        state.remaining_distance = state.remaining_time_run * max_speed_linear; 
-
+        state.remaining_distance = state.remaining_time_run * speed_avg; 
+//        state.remaining_distance = state.remaining_time_run * max_speed_linear; 
 
     }
 
@@ -450,4 +449,8 @@ double battery_simulate::getElapsedTime() {
 
 void battery_simulate::spinOnce() {
     ros::spinOnce();
+}
+
+double battery_simulate::getConsumedEnergyB() {
+    return consumed_energy_B;
 }
