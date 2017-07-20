@@ -189,6 +189,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     erased = false;
     next_optimal_ds_id = -1;
     _f1 = -1.0;
+    use_theta = false;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -9064,7 +9065,6 @@ inline int ExplorationPlanner::down(int point) {
 		return point + map_width_;
 	}
 	return -1;
-
 }
 
 inline int ExplorationPlanner::downleft(int point) {
@@ -9073,7 +9073,6 @@ inline int ExplorationPlanner::downleft(int point) {
 		return point + map_width_ - 1;
 	}
 	return -1;
-
 }
 
 unsigned char ExplorationPlanner::getCost(costmap_2d::Costmap2DROS *costmap, unsigned int cell_x, unsigned int cell_y) {
@@ -9610,6 +9609,7 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
         }
         robot_last_x = robot_x;
         robot_last_y = robot_y;
+        use_theta = true;
     }
     else
     {
@@ -9690,10 +9690,11 @@ double ExplorationPlanner::frontier_cost_0(frontier_t *frontier) {
     d_r = -d_r;    
 
     // calculate theta
-//    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-//    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-//    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI)); //it seems complex, but it's just to keep into account the sign of the angle (which would be lost with just the fabs calls)
-    double theta = computeTheta(frontier_x, frontier_y);
+    double theta;
+    if(use_theta)
+        theta = computeTheta(frontier_x, frontier_y);
+    else
+        theta = 0;
     //DEBUGGING
     frontier->_theta = theta;
 
@@ -9750,9 +9751,13 @@ double ExplorationPlanner::frontier_cost_1(frontier_t *frontier) {
     d_r = -d_r;
 
     // calculate theta
-    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
+    double theta;
+    if(use_theta)
+        theta = computeTheta(frontier_x, frontier_y);
+    else
+        theta = 0;
+    //DEBUGGING
+    frontier->_theta = theta;
 
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;

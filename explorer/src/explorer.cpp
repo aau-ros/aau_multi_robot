@@ -2098,6 +2098,12 @@ class Explorer
             need_to_recharge = false;
         }
         
+        if(robot_state != exploring || robot_state != moving_to_frontier)
+            if(exploration != NULL) {
+                ROS_DEBUG("Setting 'use_theta' to false");
+                exploration->use_theta = false;
+            }
+        
         if(robot_state == fully_charged)
             full_battery = true;
             

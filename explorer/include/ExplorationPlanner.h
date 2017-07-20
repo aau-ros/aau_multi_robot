@@ -371,6 +371,7 @@ namespace explorationPlanner
             void updateOptimalDs();
             void updateDistances(double max_available_distance);
 //            std::vector<frontier_t>::const_iterator update_distances_index;
+            bool use_theta;
 
             /***************
              ** Debugging **
