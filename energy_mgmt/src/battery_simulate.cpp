@@ -196,7 +196,8 @@ void battery_simulate::compute()
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
-        if (state.soc >= 1)
+//        if (state.soc >= 1)
+        if(consumed_energy <= 0)
         {
             ROS_INFO("Recharging completed");
             
