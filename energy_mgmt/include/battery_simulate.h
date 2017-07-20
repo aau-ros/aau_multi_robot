@@ -241,6 +241,7 @@ private:
     TimeManagerInterface *time_manager;
     double elapsed_time;
     unsigned int counter_moving_to_frontier;
+    double ratio;
     
 };
 

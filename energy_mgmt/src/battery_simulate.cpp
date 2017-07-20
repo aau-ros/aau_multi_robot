@@ -148,6 +148,7 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
     {
         ROS_DEBUG("Start recharging");
         state.charging = true;
+        ratio = (total_energy_A - remaining_energy_A) / consumed_energy_B;
     }
     else {
         /* The robot is not charging; if the battery was previously under charging, it means that the robot aborted the
@@ -191,7 +192,6 @@ void battery_simulate::compute()
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
-        double ratio = (total_energy_A - remaining_energy_A) / consumed_energy_B;
         remaining_energy_A += ratio * power_charging * time_diff_sec;
         consumed_energy_B -= (1.0 / ratio) * power_charging * time_diff_sec;
         state.soc = remaining_energy_A / total_energy_A;
