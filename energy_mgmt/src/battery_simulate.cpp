@@ -218,7 +218,7 @@ void battery_simulate::compute()
             
             mutex_traveled_distance.lock();
             state.remaining_distance -= traveled_distance;
-            ROS_ERROR("%.2f", traveled_distance);
+//            ROS_ERROR("%.2f", traveled_distance);
             traveled_distance = 0;
             mutex_traveled_distance.unlock();
             
@@ -269,7 +269,7 @@ void battery_simulate::compute()
         
         mutex_traveled_distance.lock();
         state.remaining_distance -= traveled_distance;
-        ROS_ERROR("%.2f", traveled_distance);
+//        ROS_ERROR("%.2f", traveled_distance);
         traveled_distance = 0;
         mutex_traveled_distance.unlock();
         

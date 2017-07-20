@@ -2328,11 +2328,18 @@ class Explorer
                 ROS_INFO("discovered that the DS is occupied!");
                 update_robot_state_2(going_in_queue);
             }
+
+            // this should not happen, since to discover that a DS is occupied, the robot should be in 'checking_vacancy' state            
+//            else if( moving_along_path == true && robot_state == exploring) {
+//                ROS_INFO("robot cannot go to next DS in path because it is occupied: going in queue");
+//                update_robot_state_2(going_in_queue);
+//            }
             
             /* Otherwise, something strange happened */
             else {
                 log_major_error("robot would like to go in queue even if it should not!");
                 ROS_DEBUG("robot state in fact is: %s", get_text_for_enum(robot_state).c_str());
+                ROS_DEBUG("moving_along_path: %s", moving_along_path ? "true" : "false");
                 ROS_INFO("ignoring going_queue_next");
             }
         }
