@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <fstream>
 #include "time_manager_interface.h"
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <boost/thread/mutex.hpp>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
@@ -78,7 +80,7 @@ private:
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_charge, sub_cmd_vel, sub_speed, sub_soc, sub_time, sub_robot_state;
+    ros::Subscriber sub_charge, sub_cmd_vel, sub_speed, sub_soc, sub_time, sub_robot_state, pose_sub;
 
     /**
      * Publishers.
@@ -166,7 +168,7 @@ private:
     // Maximum speed of the robot
     double max_speed_linear;
     
-    double remaining_energy_A, total_energy_A, maximum_running_time, consumed_energy_B;
+    double maximum_traveling_distance, traveled_distance, consumed_energy, consumed_energy_due_to_motion;
     
     ros::Publisher pub_charging_completed;
     ros::Subscriber sub_robot;
@@ -242,6 +244,9 @@ private:
     double elapsed_time;
     unsigned int counter_moving_to_frontier;
     double ratio;
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
+    double pose_x, pose_y, last_x, last_y;
+    boost::mutex mutex_traveled_distance;
     
 };
 

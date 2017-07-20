@@ -39,8 +39,7 @@ public:
 TEST(TestSuite, testCase1)
 {
     int i = 10;
-    EXPECT_NE(i, 1);
-    ; //<test things here, calling EXPECT_* and/or ASSERT_* macros as needed>
+    EXPECT_EQ(i, 10); // 1st arg.: expected value; 2nd arg.: actual value (i.e., value returned from the tested code, which should be equal to the expected one)
 }
 
 TEST(TestSuite, testCase2)
@@ -114,9 +113,64 @@ TEST(TestSuite, testCase3)
     TEST_COUT << ep->_f7 << std::endl;
 //    TEST_COUT << std::to_string(ep->_i1) << std::endl;
     
-    EXPECT_TRUE(success);
+    ASSERT_TRUE(success);
     EXPECT_EQ(final_goal.at(0), f.x_coordinate);
     EXPECT_EQ(final_goal.at(1), f.y_coordinate);
+}
+
+TEST(TestSuite, testCase4)
+{
+    std::string robot_name = "robot";
+    explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
+    
+    ep->setTestMode(true);
+    ep->setRobotPosition(0, 0); //to later set the last robot position
+    ep->setRobotPosition(1, 1);
+    ep->setOptimalDs(0, -1, -1);
+
+    explorationPlanner::frontier_t f1, f2;
+    f1.x_coordinate = 10;
+    f1.y_coordinate = 20;
+    f2.x_coordinate = -10;
+    f2.y_coordinate = -20;
+    ep->pushFrontier(f2);
+    ep->pushFrontier(f1);
+    
+    std::vector<double> final_goal;
+    
+    ep->addDistance(10, 20, 1, 1, euclidean_distance(10,20,1,1));
+    ep->addDistance(10, 20, -1, -1, euclidean_distance(10,20,-1,-1));
+    ep->addDistance(-10, -20, 1, 1, euclidean_distance(-10,-20,1,1));
+    ep->addDistance(-10, -20, -1, -1, euclidean_distance(-10,-20,-1,-1));
+    
+    EXPECT_EQ(ep->getOptimalDsX(), -1);
+    
+    int w1 = 1;
+    int w2 = 1;
+    int w3 = 1;
+    int w4 = 1;
+    double available_distance = euclidean_distance(10,20,1,1) + euclidean_distance(10,20,-1,-1) + 10;
+    unsigned int battery_charge = 60;
+    std::vector<std::string> name;
+    
+    bool success = ep->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, 1, &name, -1, battery_charge > 50, w1, w2, w3, w4);
+    
+    ASSERT_TRUE(success);
+    EXPECT_EQ(10, final_goal.at(0));
+    EXPECT_EQ(20, final_goal.at(1));
+    EXPECT_EQ(1/M_PI * (M_PI - fabs(fabs(atan2(0-1,0-1) - atan2(1-20, 1-10)) - M_PI)), final_goal.at(4));
+    EXPECT_NEAR(1/M_PI * (atan2(20-1, 10-1) - atan2(1-0,1-0)), final_goal.at(4), 0.001);
+    
+    
+    TEST_COUT << ep->_f1 << std::endl;
+    TEST_COUT << ep->_f2 << std::endl;
+    TEST_COUT << ep->_f3 << std::endl;
+    TEST_COUT << ep->_f4 << std::endl;
+    TEST_COUT << ep->_f5 << std::endl;
+    TEST_COUT << ep->_f6 << std::endl;
+    TEST_COUT << available_distance << std::endl;
+    TEST_COUT << ep->_f7 << std::endl;
+    
 }
 
 int main(int argc, char **argv){

@@ -188,6 +188,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 //    update_distances_index = 0;
     erased = false;
     next_optimal_ds_id = -1;
+    _f1 = -1.0;
 
     trajectory_strategy = "euclidean";
     robot_prefix_empty_param = robot_prefix_empty;
@@ -397,8 +398,42 @@ void ExplorationPlanner::Callbacks()
     }
 }
 
+//void ExplorationPlanner::initialize_planner(std::string name,
+//		costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global) {
+
+//    ROS_INFO("Initializing the planner");
+
+//	//copy the pointed costmap to be available in ExplorationPlanner
+
+//	this->costmap_ros_ = costmap;
+//        this->costmap_global_ros_ = costmap_global;
+
+//        if(initialized_planner == false)
+//        {
+//                nav.initialize("navigation_path", costmap_global_ros_);
+//                initialized_planner = true;
+//        }
+//    int dim = costmap_global_ros_->getCostmap()->getSizeInCellsY() * costmap_global_ros_->getCostmap()->getSizeInCellsY();
+//    float dim_meters = costmap_global_ros_->getCostmap()->getSizeInMetersY() * costmap_global_ros_->getCostmap()->getSizeInMetersY();
+//    //ROS_ERROR("%d, %.0f, %.0f", dim, dim_meters, (float) dim * 0.05 * 0.05 );
+//	//Occupancy_grid_array is updated here
+//	this->setupMapData();
+
+//	last_mode_ = FRONTIER_EXPLORE;
+//	this->initialized_ = true;
+//	
+//	//ROS_ERROR("Initialized");
+
+//	/*
+//	 * reset all counter variables, used to count the number of according blocks
+//	 * within the occupancy grid.
+//	 */
+//	unknown = 0, free = 0, lethal = 0, inflated = 0;
+
+//}
+
 void ExplorationPlanner::initialize_planner(std::string name,
-		costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global) {
+		costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global, DistanceComputerInterface *distance_computer) {
 
     ROS_INFO("Initializing the planner");
 
@@ -411,6 +446,7 @@ void ExplorationPlanner::initialize_planner(std::string name,
         {
                 nav.initialize("navigation_path", costmap_global_ros_);
                 initialized_planner = true;
+//                this->distance_computer = distance_computer;
         }
     int dim = costmap_global_ros_->getCostmap()->getSizeInCellsY() * costmap_global_ros_->getCostmap()->getSizeInCellsY();
     float dim_meters = costmap_global_ros_->getCostmap()->getSizeInMetersY() * costmap_global_ros_->getCostmap()->getSizeInMetersY();
@@ -430,6 +466,7 @@ void ExplorationPlanner::initialize_planner(std::string name,
 	unknown = 0, free = 0, lethal = 0, inflated = 0;
 
 }
+
 
 void ExplorationPlanner::clusterFrontiers()
 {
@@ -1255,6 +1292,7 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap_global_ros_->getCostmap()->getMutex()));
         
     bool successful = nav.makePlan(startPointSimulated, goalPointSimulated, global_plan);
+//    distance_computer->computeDistance(1,2,3,4); //TODO use this for execution and testing...
     
     boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap_global_ros_->getCostmap()->getMutex()));
 //    ROS_INFO("path computed");
@@ -5323,11 +5361,15 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
             final_goal->push_back(my_selected_frontier->y_coordinate);            
             final_goal->push_back(my_selected_frontier->detected_by_robot);
             final_goal->push_back(my_selected_frontier->id);
+            
+            // DEBUGGING
+            final_goal->push_back(my_selected_frontier->_theta);
 
             robot_str_name->push_back(robot_name_str); 
 
             my_error_counter = 0;
-            frontier_selected = true;            
+            frontier_selected = true;
+                      
             break;
         }
     }
@@ -6818,7 +6860,7 @@ void ExplorationPlanner::my_select_4(double available_distance, bool energy_abov
             if(under_auction)
                 continue;
             
-            frontiers.at(j).cost = frontier_cost(frontiers.at(j));
+            frontiers.at(j).cost = frontier_cost(&frontiers.at(j));
             add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));
             
             if(frontiers.at(j).cost < min_cost) {
@@ -9563,7 +9605,7 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
             if(!my_quick_check_efficiency_of_goal(this->available_distance, &frontiers.at(j)))
                 continue;
             // calculate cost function
-            frontiers.at(j).cost = frontier_cost_0(frontiers.at(j));
+            frontiers.at(j).cost = frontier_cost_0(&frontiers.at(j));
             add_to_sorted_fontiers_list_if_convinient(frontiers.at(j));        
         }
         robot_last_x = robot_x;
@@ -9586,11 +9628,11 @@ bool ExplorationPlanner::home_is_reachable(double available_distance) {
     return available_distance > dist; //TODO safety coefficient
 }
 
-double ExplorationPlanner::frontier_cost(frontier_t frontier) {
+double ExplorationPlanner::frontier_cost(frontier_t *frontier) {
     return frontier_cost_0(frontier); //TODO
 }
 
-double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
+double ExplorationPlanner::frontier_cost_0(frontier_t *frontier) {
     /*
      * cost function
      * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
@@ -9605,8 +9647,8 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
      */
 
     // frontier position
-    double frontier_x = frontier.x_coordinate;
-    double frontier_y = frontier.y_coordinate;
+    double frontier_x = frontier->x_coordinate;
+    double frontier_y = frontier->y_coordinate;
 
     // calculate d_g
     double d_g = euclidean_distance(frontier_x, frontier_y, robot_x, robot_y);
@@ -9645,19 +9687,22 @@ double ExplorationPlanner::frontier_cost_0(frontier_t frontier) {
                 d_r = distance;        
         }
     }
-    d_r = -d_r;
+    d_r = -d_r;    
 
     // calculate theta
-    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
-    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
-    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI)); //it seems complex, but it's just to keep into account the sign of the angle (which would be lost with just the fabs calls)
+//    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+//    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+//    double theta = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI)); //it seems complex, but it's just to keep into account the sign of the angle (which would be lost with just the fabs calls)
+    double theta = computeTheta(frontier_x, frontier_y);
+    //DEBUGGING
+    frontier->_theta = theta;
 
     // calculate cost function
     return w1 * d_g + w2 * d_gbe + w3 * d_r + w4 * theta;
  
 }
 
-double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
+double ExplorationPlanner::frontier_cost_1(frontier_t *frontier) {
     /*
      * cost function
      * f = w1 · d_g   +   w2 · d_gb   +   w3 · d_gbe   +   w4 · theta
@@ -9672,15 +9717,15 @@ double ExplorationPlanner::frontier_cost_1(frontier_t frontier) {
      */
 
     // frontier position
-    double frontier_x = frontier.x_coordinate;
-    double frontier_y = frontier.y_coordinate;
+    double frontier_x = frontier->x_coordinate;
+    double frontier_y = frontier->y_coordinate;
 
     // calculate d_g
-    double d_g = frontier.my_distance_to_robot;
+    double d_g = frontier->my_distance_to_robot;
 
     // calculate d_gbe
     double d_gb;
-    d_gb = frontier.my_distance_to_optimal_ds;
+    d_gb = frontier->my_distance_to_optimal_ds;
     double d_gbe;
     if(my_energy_above_th)
     {
@@ -9747,7 +9792,9 @@ void ExplorationPlanner::addDistance(double x1, double y1, double x2, double y2,
 }
 
 void ExplorationPlanner::setRobotPosition(double x, double y) {
+    robot_last_x = robot_x;
     robot_x = x;
+    robot_last_y = robot_y;
     robot_y = y;
 }
 
@@ -9883,4 +9930,20 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
         
     }
     
+}
+double ExplorationPlanner::computeTheta(double frontier_x, double frontier_y) {
+    ROS_INFO("%.1f, %.1f, %.1f, %.1f, %.1f, %.1f", robot_last_y, robot_y, robot_last_x, robot_x, frontier_y, frontier_x);
+    double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);
+    double theta_g = atan2(robot_y - frontier_y, robot_x - frontier_x);
+    if(_f1 < 0) {
+        _f1 = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
+        _f2 = frontier_x;
+        _f3 = frontier_y;
+    }
+    else {
+        _f4 = 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI));
+        _f5 = frontier_x;
+        _f6 = frontier_y;
+    }
+    return 1/M_PI * (M_PI - fabs(fabs(theta_s - theta_g) - M_PI)); //it seems complex, but it's just to keep into account the sign of the angle (which would be lost with just the fabs calls)
 }

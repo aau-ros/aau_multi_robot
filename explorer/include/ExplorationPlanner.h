@@ -29,8 +29,6 @@
 #include <move_base/MoveBaseConfig.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <move_base_msgs/MoveBaseActionFeedback.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/cost_values.h>
 #include <costmap_2d/costmap_2d_publisher.h>
 #include <costmap_2d/observation.h>
@@ -51,7 +49,6 @@
 #include <std_msgs/Empty.h>
 #include "nav_msgs/GetMap.h"
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <adhoc_communication/EmDockingStation.h>
 #include <fake_network/RobotPositionSrv.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
@@ -61,6 +58,7 @@
 //#include <robot_state/GetRobotState.h>
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
+#include <distance_computer_interface.h>
 
 namespace explorationPlanner
 {
@@ -84,6 +82,7 @@ namespace explorationPlanner
         int cluster_id; //the id of the cluster in which the frontiers has been inserted; -1 if it is in no cluster
         ros::Time timestamp;
         std::vector<double> list_distance_from_ds;
+        double _theta;
     } frontier, unreachable_frontier;
 
 
@@ -283,7 +282,8 @@ namespace explorationPlanner
             void visualize_visited_Frontiers();
             void visualizeClustersConsole();
             void clear_Visualized_Cluster_Cells(std::vector<int> ids);
-            void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
+//            void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
+            void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global, DistanceComputerInterface *distance_computer);
             void findFrontiers();
             bool my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
@@ -372,7 +372,9 @@ namespace explorationPlanner
             void updateDistances(double max_available_distance);
 //            std::vector<frontier_t>::const_iterator update_distances_index;
 
-            // Debugging
+            /***************
+             ** Debugging **
+             ***************/
             void setTestMode(bool test_mode);
             void pushFrontier(frontier_t frontier);
             std::vector<frontier_t> getFrontierList();
@@ -384,6 +386,7 @@ namespace explorationPlanner
             bool _b1;
             int _i1, _i2, _i3;
             double getOptimalDsX();
+            double _theta;
 
         private:
             bool auction_running;
@@ -485,9 +488,9 @@ namespace explorationPlanner
             void my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name);
             int errors;
             double robot_x, robot_y;
-            double frontier_cost(frontier_t frontier);
-            double frontier_cost_0(frontier_t frontier);
-            double frontier_cost_1(frontier_t frontier);
+            double frontier_cost(frontier_t *frontier);
+            double frontier_cost_0(frontier_t *frontier);
+            double frontier_cost_1(frontier_t *frontier);
             double available_distance;
             std::vector<frontier_t> last_robot_auctioned_frontier_list;
             void robot_next_goal_callback(const adhoc_communication::ExpFrontier::ConstPtr& msg);
@@ -507,6 +510,8 @@ namespace explorationPlanner
             double simplifiedDistanceFromDs(unsigned int ds_index, unsigned int frontier_index);
             bool erased;
             ds_t *min_ds_for_path_traversal;
+            DistanceComputerInterface *distance_computer;
+            double computeTheta(double frontier_x, double frontier_y);
             
             // Debugging
             bool test_mode;

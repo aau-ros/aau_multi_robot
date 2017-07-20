@@ -37,6 +37,7 @@
 //#include <robot_state/GetRobotState.h>
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
+#include "distance_computer.h"
 
 //#define PROFILE
 
@@ -116,6 +117,7 @@ class Explorer
     bool received_battery_info;
     ros::Publisher pub_next_ds;
     bool full_battery, frontiers_found;
+    double traveled_distance, last_x, last_y;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -158,6 +160,8 @@ class Explorer
         retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0, retries6 = 0, retries_moving = 0;
         next_available_distance = -1;
         moving_time = 0;
+        traveled_distance = 0;
+        last_x = 0, last_y = 0;
     
         // F
         test = true;
@@ -337,7 +341,6 @@ class Explorer
         fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_computation_time << "#success,number_of_frontiers,sort_time,selection_time,selection_strategy" << std::endl;
         fs_computation_time.close();
-
 
         ROS_INFO_NAMED("start", "*********************************************");
         ROS_INFO("******* Initializing Simple Navigation ******");
@@ -572,7 +575,7 @@ class Explorer
                     exploration->transformToOwnCoordinates_visited_frontiers();
 
                     //ROS_ERROR("initialize planner");
-                    exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
+                    exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global, NULL);
                     //ROS_ERROR("planner initialized");
                  
             //                if(skip_findFrontiers) {
@@ -2403,7 +2406,7 @@ class Explorer
             exploration->transformToOwnCoordinates_frontiers();
             exploration->transformToOwnCoordinates_visited_frontiers();
             
-            exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global);
+            exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global, NULL);
 
             exploration->findFrontiers();
             exploration->clearVisitedFrontiers();
@@ -2439,7 +2442,7 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "global_map_explored_cells,discovered_free_cells_count,local_map_explored_cells,total_number_of_free_cells"
+                  "traveled_distance,global_map_explored_cells,discovered_free_cells_count,local_map_explored_cells,total_number_of_free_cells"
 //                  ",battery_state,"
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << std::endl;
@@ -2490,6 +2493,7 @@ class Explorer
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << ","
+                   << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
                    << map_progress.local_freespace << "," << free_cells_count //<< "," 
 //                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b
@@ -2901,8 +2905,10 @@ class Explorer
 
         exploration->transformToOwnCoordinates_frontiers();
         exploration->transformToOwnCoordinates_visited_frontiers();
+        
+//        DistanceComputer *dc = new DistanceComputer(costmap2d_global);
 
-        exploration->initialize_planner("exploration planner", costmap2d_global, costmap2d_global);
+        exploration->initialize_planner("exploration planner", costmap2d_global, costmap2d_global, NULL);
         
         exploration->findFrontiers();
         exploration->clearVisitedFrontiers();
@@ -3919,6 +3925,11 @@ class Explorer
             ; //ROS_ERROR("x: %.1f; y: %.1f", pose_x, pose_y);
         
         print_new_position();
+        
+        traveled_distance += sqrt( (last_x-pose_x)*(last_x-pose_x) + (last_y-pose_y)*(last_y-pose_y) );
+    
+        last_x = pose_x;
+        last_y = pose_y;
     }
     
     void print_new_position() {

@@ -1,6 +1,5 @@
 speed_avg:                      0.333 # m/s, needed for the initial estimation of remaining distance
                                             # it also serves as a lower bound when estimating the remaining distance later on
-mass:                           1.0   # kg
 power_charging:               100.0   # W       - power that the power supply provides, e.g. 36 for P3DX
 power_moving:                  18.0   # W/(m/s) - ...
 power_standing:                13.7   # W       - ...
@@ -8,3 +7,4 @@ power_idle:                     5.0   # W       - ...
 power_basic_computations:       8.0   # W
 power_advanced_computations:    3.0   # W
 max_linear_speed:               0.7   # m/s     - maximum robot linear speed 
+maximum_traveling_distance:    25.0   # m

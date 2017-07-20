@@ -134,11 +134,12 @@ include_directories(include ${catkin_INCLUDE_DIRS}   ) # /usr/local/Aria/include
 add_library(exploration_planner src/ExplorationPlanner.cpp)
 add_library(hungarian src/hungarian.cpp)
 add_library(munkres src/src/munkres.cpp)
+add_library(distance_computer src/distance_computer.cpp)
 #add_library(goal_selector src/goal_selector.cpp)
 #add_library(rosaria src/rosaria.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
-add_dependencies(exploration_planner adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp hungarian munkres)
+add_dependencies(exploration_planner adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp hungarian munkres distance_computer)
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
@@ -150,7 +151,7 @@ target_link_libraries( explorer exploration_planner hungarian munkres  ${catkin_
 add_dependencies(explorer adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp energy_mgmt_gencpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(explorer exploration_planner hungarian munkres  ${catkin_LIBRARIES} )
+target_link_libraries(explorer exploration_planner hungarian munkres distance_computer ${catkin_LIBRARIES} )
 #target_link_libraries(VoltageSimulator   ${catkin_LIBRARIES} )
 #target_link_libraries(ChargeSignal    ${catkin_LIBRARIES} )
 #target_link_libraries(explorer profiler)
