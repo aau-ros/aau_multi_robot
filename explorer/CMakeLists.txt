@@ -10,14 +10,15 @@ project(explorer)
 #set(LDFLAGS "-fprofile-arcs")
 #add_definitions(${LFLAGS})
 
-set(LDFLAGS "-fprofile-arcs' CFLAGS+='-fprofile-arcs -ftest-coverage")
-set(CXXFLAGS "-fprofile-arcs -ftest-coverage")
-set(CPPFLAGS "-fprofile-arcs -ftest-coverage")
+#set(LDFLAGS "-fprofile-arcs' CFLAGS+='-fprofile-arcs -ftest-coverage")
+#set(CXXFLAGS "-fprofile-arcs -ftest-coverage")
+#set(CPPFLAGS "-fprofile-arcs -ftest-coverage")
 
 # Flags to add symbols in core dumps and to link the boost_system library
-set(GCC_COMMAND_LINE_OPTION "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
-#set(GCC_COVERAGE_COMPILE_FLAGS "-g --coverage -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov")
-add_definitions(${GCC_COMMAND_LINE_OPTION})
+#set(GCC_COMMAND_LINE_OPTION "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
+
+enable_language(CXX)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
