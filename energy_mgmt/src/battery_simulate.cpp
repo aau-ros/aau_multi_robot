@@ -194,14 +194,16 @@ void battery_simulate::compute()
     if (state.charging)
     {
         double ratio = consumed_energy_A / consumed_energy_B;
+        double prev_consumed_energy_A = consumed_energy_A;
         consumed_energy_A -= ratio * power_charging * time_diff_sec;
         consumed_energy_B -= (1.0 / ratio) * power_charging * time_diff_sec;
+        state.remaining_distance += (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * state.remaining_distance;
         state.soc = state.remaining_distance / maximum_traveling_distance;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
-//        if (state.soc >= 1)
-        if(consumed_energy_A + consumed_energy_B <= 0)
+        if (state.soc >= 1)
+//        if(consumed_energy_A + consumed_energy_B <= 0)
         {
             ROS_INFO("Recharging completed");
             
