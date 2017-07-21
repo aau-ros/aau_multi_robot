@@ -1211,6 +1211,8 @@ class Explorer
                                     if(full_battery)
                                     {
                                         log_major_error("ERROR WITH DS GRAPH");
+                                        ROS_DEBUG("distance to next DS: %.2f", dist);
+                                        ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_available_distance(available_distance));
                                         
                                         // we force to move to next ds
                                         retry_recharging_current_ds = 0;
