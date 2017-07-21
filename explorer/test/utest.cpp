@@ -127,6 +127,7 @@ TEST(TestSuite, testCase4)
     ep->setRobotPosition(0, 0); //to later set the last robot position
     ep->setRobotPosition(1, 1);
     ep->setOptimalDs(0, -1, -1);
+    ep->use_theta = true;
 
     explorationPlanner::frontier_t f1, f2;
     f1.x_coordinate = 10;
