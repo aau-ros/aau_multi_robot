@@ -9743,14 +9743,21 @@ double ExplorationPlanner::frontier_cost_1(frontier_t *frontier) {
     
     // calculate d_r
     double d_r = 0;
+    ros::Time time_now = ros::Time::now();
     for(unsigned int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
-        double distance = trajectory_plan_meters(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
-        if(distance < 0) {
-            ROS_ERROR("failed distance");
-            continue;
+        if(time_now - last_robot_auctioned_frontier_list.at(i).timestamp > ros::Duration(VALIDITY_INTERVAL)) {
+            ROS_INFO("expired");
+            last_robot_auctioned_frontier_list.erase(last_robot_auctioned_frontier_list.begin() + i);
         }
-        if(distance < d_r || d_r == 0) 
-            d_r = distance;
+        else {
+            double distance = trajectory_plan_meters(frontier_x, frontier_y, last_robot_auctioned_frontier_list.at(i).x_coordinate, last_robot_auctioned_frontier_list.at(i).y_coordinate);
+            if(distance < 0) {
+                ROS_ERROR("failed distance");
+                continue;
+            }
+            if(distance < d_r || d_r == 0) 
+                d_r = distance;
+        }
     }
     d_r = -d_r;
 
