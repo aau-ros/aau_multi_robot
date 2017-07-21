@@ -348,7 +348,7 @@ void battery_simulate::log()
     ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << consumed_energy_A + consumed_energy_B << "," << last_traveled_distance << "," << total_traveled_distance << std::endl;
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << consumed_energy_A << "," << consumed_energy_B << "," << last_traveled_distance << "," << total_traveled_distance << std::endl;
     battery_state_fs.close();
 }
 
@@ -451,7 +451,7 @@ void battery_simulate::createLogFiles() {
     fs_info.close();
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,state,last_traveled_distance,last_consumed_energy_due_to_motion" << std::endl;
+    battery_state_fs << "#sim_time,wall_time,state.remaining_time_run,state.remaining_time_charge,state.remaining_distance,state,consumed_energy_A,consumed_energy_B,last_traveled_distance,total_traveled_distance" << std::endl;
     battery_state_fs.close();
     
     sim_time_start = ros::Time::now();
