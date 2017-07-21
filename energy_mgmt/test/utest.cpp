@@ -4,7 +4,8 @@
 #include <ros/ros.h>
 #include <gtest/gtest.h>
 
-#define SENDING_SLEEP_TIME
+#define SENDING_SLEEP_TIME 1
+#define FLOAT_ABSOLUTE_ERROR 0.001
 
 double const charge_max = 200;
 double const power_standing = 37;
@@ -98,7 +99,7 @@ TEST(TestSuite, testCase4)
 {  
     battery_simulate bat;
     bat.initializing = false;
-    double consumed_energy = bat.getConsumedEnergy();
+    double consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     EXPECT_EQ(consumed_energy, 0);
 }
 
@@ -171,7 +172,7 @@ TEST(TestSuite, testCase7)
     
     double consumed_energy, test_consumed_energy;
     bat.compute();
-    consumed_energy = bat.getConsumedEnergy();
+    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     test_consumed_energy = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
@@ -181,7 +182,7 @@ TEST(TestSuite, testCase7)
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
     test_consumed_energy += (power_standing + power_basic_computations + power_advanced_computations) * (time4 - time3);
-    consumed_energy = bat.getConsumedEnergy();
+    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     EXPECT_EQ(consumed_energy, test_consumed_energy);
 }
 
@@ -218,7 +219,7 @@ TEST(TestSuite, testCase8)
     
     double consumed_energy, test_consumed_energy;
     bat.compute();
-    consumed_energy = bat.getConsumedEnergy();
+    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     test_consumed_energy = (power_standing + power_moving * speed + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
@@ -235,7 +236,7 @@ TEST(TestSuite, testCase8)
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
     test_consumed_energy += (power_standing + power_moving * speed + power_basic_computations + power_advanced_computations) * (time4 - time3);
-    consumed_energy = bat.getConsumedEnergy();
+    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     EXPECT_EQ(consumed_energy, test_consumed_energy);
 }
 
@@ -258,7 +259,8 @@ TEST(TestSuite, testCase9)
     
     ros::Publisher cmd_vel_pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10, true);
     geometry_msgs::Twist cmd_vel_msg;
-    cmd_vel_msg.linear.x = 10;
+    double speed = 15;
+    cmd_vel_msg.linear.x = speed;
     cmd_vel_pub.publish(cmd_vel_msg);
     
     ros::Publisher robot_pub = nh.advertise<adhoc_communication::EmRobot>("explorer/robot", 10, true);
@@ -269,27 +271,32 @@ TEST(TestSuite, testCase9)
     ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
-//    double total_energy, remaining_energy, test_remaining_energy;
-//    total_energy  = bat.getConsumedEnergy();
-//    bat.compute();
-//    remaining_energy = bat.getConsumedEnergy();
-//    test_remaining_energy = total_energy - (power_moving * max_linear_speed) * (time2 - time1);
-//    EXPECT_EQ(time3, bat.last_time_secs());
-//    EXPECT_EQ(time2 - time1, bat.getElapsedTime());
-//    EXPECT_EQ(test_remaining_energy, remaining_energy);
-//    
-//    robot_state_msg.state = charging;
-//    robot_pub.publish(robot_state_msg);
-//    
-//    ros::Duration(SENDING_SLEEP_TIME).sleep();
-//    bat.spinOnce();
-//    
-//    bat.compute();
-//    EXPECT_EQ(time5, bat.last_time_secs());
-//    EXPECT_EQ(time4 - time3, bat.getElapsedTime());
-//    test_remaining_energy += power_charging * (time4 - time3);
-//    remaining_energy = bat.getConsumedEnergy();
-//    EXPECT_EQ(test_remaining_energy, remaining_energy);
+    double consumed_energy_A, consumed_energy_B, test_consumed_energy_A, test_consumed_energy_B;
+    bat.compute();
+    consumed_energy_A = bat.getConsumedEnergyA();
+    consumed_energy_B = bat.getConsumedEnergyB();
+    test_consumed_energy_A = (power_moving * speed) * (time2 - time1);
+    test_consumed_energy_B = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    EXPECT_EQ(time3, bat.last_time_secs());
+    EXPECT_EQ(time2 - time1, bat.getElapsedTime());
+    EXPECT_EQ(consumed_energy_A, test_consumed_energy_A);
+    EXPECT_EQ(consumed_energy_B, test_consumed_energy_B);
+    
+    robot_state_msg.state = charging;
+    robot_pub.publish(robot_state_msg);
+    
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+    bat.spinOnce();
+    
+    bat.compute();
+    EXPECT_EQ(time5, bat.last_time_secs());
+    EXPECT_EQ(time4 - time3, bat.getElapsedTime());
+    test_consumed_energy_A -= (consumed_energy_A / consumed_energy_B) * power_charging * (time4 - time3);
+    test_consumed_energy_B -= (consumed_energy_B / consumed_energy_A) * power_charging * (time4 - time3);
+    consumed_energy_A = bat.getConsumedEnergyA();
+    consumed_energy_B = bat.getConsumedEnergyB();
+    EXPECT_NEAR(consumed_energy_A, test_consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
+    EXPECT_NEAR(consumed_energy_B, test_consumed_energy_B, FLOAT_ABSOLUTE_ERROR);
 }
 
 TEST(TestSuite, testCase10)
@@ -324,13 +331,13 @@ TEST(TestSuite, testCase10)
     ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
-//    double consumed_energy, test_consumed_energy;
-//    bat.compute();
-//    consumed_energy_B = bat.getConsumedEnergy();
-//    test_consumed_energy_B = power_idle * (time2 - time1);
-//    EXPECT_EQ(time3, bat.last_time_secs());
-//    EXPECT_EQ(time2 - time1, bat.getElapsedTime());
-//    EXPECT_EQ(test_consumed_energy, consumed_energy);
+    double consumed_energy, test_consumed_energy;
+    bat.compute();
+    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
+    test_consumed_energy = power_idle * (time2 - time1);
+    EXPECT_EQ(time3, bat.last_time_secs());
+    EXPECT_EQ(time2 - time1, bat.getElapsedTime());
+    EXPECT_EQ(consumed_energy, test_consumed_energy);
 }
 
 int main(int argc, char **argv){

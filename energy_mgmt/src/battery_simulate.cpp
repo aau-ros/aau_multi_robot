@@ -38,13 +38,13 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     do_not_consume_battery = false;
     initializing = true;
     counter_moving_to_frontier = 0;
-    consumed_energy = 0;
-    consumed_energy_due_to_motion = 0;
+    consumed_energy_A = 0;
+    consumed_energy_B = 0;
     speed_linear = 0;
     last_x = 0, last_y = 0;
     traveled_distance = 0;
     last_traveled_distance = 0;
-    last_consumed_energy_due_to_motion = 0;
+    total_traveled_distance = 0;
     
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
@@ -193,13 +193,15 @@ void battery_simulate::compute()
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
-        consumed_energy -= power_charging * time_diff_sec;
+        double ratio = consumed_energy_A / consumed_energy_B;
+        consumed_energy_A -= ratio * power_charging * time_diff_sec;
+        consumed_energy_B -= (1.0 / ratio) * power_charging * time_diff_sec;
         state.soc = state.remaining_distance / maximum_traveling_distance;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
 //        if (state.soc >= 1)
-        if(consumed_energy <= 0)
+        if(consumed_energy_A + consumed_energy_B <= 0)
         {
             ROS_INFO("Recharging completed");
             
@@ -207,7 +209,8 @@ void battery_simulate::compute()
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
             state.remaining_time_charge = 0;
-            consumed_energy = 0;
+            consumed_energy_A = 0;
+            consumed_energy_B = 0;
             state.remaining_time_run = maximum_traveling_distance * speed_avg;
             state.remaining_distance = maximum_traveling_distance;
             
@@ -217,11 +220,15 @@ void battery_simulate::compute()
         }
         else {
             ROS_DEBUG("Recharging...");
-            state.remaining_time_charge = consumed_energy / power_charging ;
+            state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
             
             mutex_traveled_distance.lock();
             state.remaining_distance -= traveled_distance;
 //            ROS_ERROR("%.2f", traveled_distance);
+
+            last_traveled_distance = traveled_distance;
+            total_traveled_distance += traveled_distance;
+
             traveled_distance = 0;
             mutex_traveled_distance.unlock();
             
@@ -233,7 +240,7 @@ void battery_simulate::compute()
         return;
     } 
     else if(idle_mode) {
-        consumed_energy += power_idle * time_diff_sec; // J
+        consumed_energy_B += power_idle * time_diff_sec; // J
 //        
 //        state.soc = remaining_energy / total_energy;
 //        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
@@ -262,20 +269,19 @@ void battery_simulate::compute()
 
         
         if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
-            consumed_energy += (power_moving * speed_linear) * time_diff_sec; // J
-            consumed_energy_due_to_motion = (power_moving * speed_linear) * time_diff_sec;
+            consumed_energy_A += (power_moving * speed_linear) * time_diff_sec; // J
         }
-        consumed_energy += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
+        consumed_energy_B += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
 
         /* Update battery state */
-        state.remaining_time_charge = consumed_energy / power_charging ;
+        state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
         
         mutex_traveled_distance.lock();
         state.remaining_distance -= traveled_distance;
 //        ROS_ERROR("%.2f", traveled_distance);
 
         last_traveled_distance = traveled_distance;
-        last_consumed_energy_due_to_motion = consumed_energy_due_to_motion;
+        total_traveled_distance += traveled_distance;
 
         traveled_distance = 0;
         mutex_traveled_distance.unlock();
@@ -312,7 +318,7 @@ void battery_simulate::log()
     ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << last_traveled_distance << "," << last_consumed_energy_due_to_motion << std::endl;
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << consumed_energy_A + consumed_energy_B << "," << last_traveled_distance << "," << total_traveled_distance << std::endl;
     battery_state_fs.close();
 }
 
@@ -454,10 +460,19 @@ void battery_simulate::spinOnce() {
     ros::spinOnce();
 }
 
-double battery_simulate::getConsumedEnergy() {
-    return consumed_energy;
+double battery_simulate::getConsumedEnergyA() {
+    return consumed_energy_A;
 }
+
+double battery_simulate::getConsumedEnergyB() {
+    return consumed_energy_B;
+}
+
 
 double battery_simulate::getMaximumTravelingDistance() {
     return maximum_traveling_distance;
+}
+
+double battery_simulate::getTotalTraveledDistance() {
+    return total_traveled_distance;
 }

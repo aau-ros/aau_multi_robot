@@ -67,8 +67,10 @@ public:
     double getElapsedTime();
     void spinOnce();
     bool initializing;
-    double getConsumedEnergy();
+    double getConsumedEnergyA();
+    double getConsumedEnergyB();
     double getMaximumTravelingDistance();
+    double getTotalTraveledDistance();
 
 private:
     /**
@@ -167,7 +169,7 @@ private:
     // Maximum speed of the robot
     double max_speed_linear;
     
-    double maximum_traveling_distance, traveled_distance, consumed_energy, consumed_energy_due_to_motion;
+    double maximum_traveling_distance, traveled_distance, consumed_energy_A, consumed_energy_B;
     
     ros::Publisher pub_charging_completed;
     ros::Subscriber sub_robot;
@@ -246,7 +248,7 @@ private:
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     double pose_x, pose_y, last_x, last_y;
     boost::mutex mutex_traveled_distance;
-    double last_traveled_distance, last_consumed_energy_due_to_motion;
+    double last_traveled_distance, total_traveled_distance;
     
 };
 
