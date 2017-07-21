@@ -193,17 +193,45 @@ void battery_simulate::compute()
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
-        double ratio = consumed_energy_A / consumed_energy_B;
+        ROS_INFO("Recharging battery");
+        double ratio_A = -1, ratio_B = -1;
+        if(consumed_energy_A < 0 && consumed_energy_B < 0)
+            ROS_FATAL("this should not happen...");
+        else if(consumed_energy_A <= 0) {
+            ratio_A = 0.0;
+            ratio_B = 1.0;
+//            consumed_energy_A = 0;
+        }   
+        else if(consumed_energy_B <= 0) {
+            ratio_A = 1.0;
+            ratio_B = 0.0;
+//            consumed_energy_B = 0;
+        }
+        else {
+            if(consumed_energy_A > consumed_energy_B) {
+                ratio_A = (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B);
+                ratio_B = 1.0 - ratio_A;
+            }
+            else {
+                ratio_B = (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B);
+                ratio_A = 1.0 - ratio_B;
+            }
+        }
+        if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1)
+            ROS_FATAL("strange ratio");
+        
+        _f1 = ratio_A;
+        
         double prev_consumed_energy_A = consumed_energy_A;
-        consumed_energy_A -= ratio * power_charging * time_diff_sec;
-        consumed_energy_B -= (1.0 / ratio) * power_charging * time_diff_sec;
+        consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
+        consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
         state.remaining_distance += (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * state.remaining_distance;
         state.soc = state.remaining_distance / maximum_traveling_distance;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
-        if (state.soc >= 1)
-//        if(consumed_energy_A + consumed_energy_B <= 0)
+//        if (state.soc >= 1)
+        if(consumed_energy_A + consumed_energy_B <= 0)
         {
             ROS_INFO("Recharging completed");
             

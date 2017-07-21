@@ -71,6 +71,7 @@ public:
     double getConsumedEnergyB();
     double getMaximumTravelingDistance();
     double getTotalTraveledDistance();
+    double _f1;
 
 private:
     /**
@@ -244,7 +245,6 @@ private:
     TimeManagerInterface *time_manager;
     double elapsed_time;
     unsigned int counter_moving_to_frontier;
-    double ratio;
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     double pose_x, pose_y, last_x, last_y;
     boost::mutex mutex_traveled_distance;
