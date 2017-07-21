@@ -5151,7 +5151,9 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
         new_goal.x_coordinate = msg.get()->frontier_element[0].x_coordinate;
         new_goal.y_coordinate = msg.get()->frontier_element[0].y_coordinate;
         new_goal.timestamp = ros::Time::now();
+        mutex_last_robot_auctioned_frontier_list.lock();
         last_robot_auctioned_frontier_list.push_back(new_goal);
+        mutex_last_robot_auctioned_frontier_list.unlock();
     }
 }
 
@@ -9672,6 +9674,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t *frontier) {
     // calculate d_r
     double d_r = 0;
     ros::Time time_now = ros::Time::now();
+    mutex_last_robot_auctioned_frontier_list.lock();
     for(unsigned int i=0; i<last_robot_auctioned_frontier_list.size(); i++) {
     
         // remove auctioned frontiers that are too old //TODO should be better doing this in another place... but it may be inefficient
@@ -9687,6 +9690,7 @@ double ExplorationPlanner::frontier_cost_0(frontier_t *frontier) {
                 d_r = distance;        
         }
     }
+    mutex_last_robot_auctioned_frontier_list.unlock();
     d_r = -d_r;    
 
     // calculate theta
