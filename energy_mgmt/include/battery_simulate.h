@@ -60,16 +60,15 @@ public:
     /*************************
      ** Debugging functions **
      *************************/
-    double getChargeMax();
     void setTimeManager(TimeManagerInterface *time_manager);
     double last_time_secs();
     void set_last_time();
     void initializeSimulationTime();
-    double getRemainingEnergy();
     double getElapsedTime();
     void spinOnce();
     bool initializing;
-    double getConsumedEnergyB();
+    double getConsumedEnergy();
+    double getMaximumTravelingDistance();
 
 private:
     /**

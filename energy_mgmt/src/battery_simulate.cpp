@@ -61,7 +61,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     state.charging = false;
     state.soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
     state.remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
-    state.remaining_distance = maximum_traveling_distance; //m //TODO(minor) explain why we use max_speed_linear and not min_speed, etc.
+    state.remaining_distance = maximum_traveling_distance;
     state.remaining_time_run = maximum_traveling_distance * speed_avg_init; //s //TODO(minor) "maximum" is misleading: use "estimated"...
     
 
@@ -262,8 +262,8 @@ void battery_simulate::compute()
 
         
         if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
-            consumed_energy += (power_moving * max_speed_linear) * time_diff_sec; // J
-            consumed_energy_due_to_motion = (power_moving * max_speed_linear) * time_diff_sec;
+            consumed_energy += (power_moving * speed_linear) * time_diff_sec; // J
+            consumed_energy_due_to_motion = (power_moving * speed_linear) * time_diff_sec;
         }
         consumed_energy += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
 
@@ -446,14 +446,6 @@ double battery_simulate::last_time_secs() {
     return time_last.toSec();
 }
 
-double battery_simulate::getChargeMax() {
-    return charge_max;
-}
-
-double battery_simulate::getRemainingEnergy() {
-    return 0;
-}
-
 double battery_simulate::getElapsedTime() {
     return elapsed_time;
 }
@@ -462,6 +454,10 @@ void battery_simulate::spinOnce() {
     ros::spinOnce();
 }
 
-double battery_simulate::getConsumedEnergyB() {
+double battery_simulate::getConsumedEnergy() {
     return consumed_energy;
+}
+
+double battery_simulate::getMaximumTravelingDistance() {
+    return maximum_traveling_distance;
 }
