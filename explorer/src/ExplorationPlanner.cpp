@@ -177,7 +177,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     optimal_ds_x = 0;
     optimal_ds_y = 0;
     num_ds = -1;
-    recompute_ds_graph = false;
+//    recompute_ds_graph = false;
     optimal_ds_set = false;
     retrying_searching_frontiers = 0;
     received_scan = false;
@@ -6739,98 +6739,98 @@ void ExplorationPlanner::my_sort_cost_2(bool energy_above_th, int w1, int w2, in
   
 }
 
-void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4)
-{
-    
-    if(ds_list.size() == 0) {
-        ROS_INFO("No DS is currently known: falling back to closest st");
-        my_sort_cost_2(energy_above_th, w1, w2, w3, w4);
-        return;   
-    }
-    
-    ROS_INFO("Using this strategy");
-    
-    // robot position
-    double robot_x = robotPose.getOrigin().getX();
-    double robot_y = robotPose.getOrigin().getY();
-
-//    if(recompute_ds_graph) {
-//        recompute_ds_graph = false;
-//        for(int i=0; i < ds_list.size(); i++)
-//            for(int j=0; j < ds_list.size(); j++)
-//                if(ds_graph[i][j] >= 0 || i == j)
-//                    continue;
-//                else {
-//                    double dist = trajectory_plan(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
-//                    if(dist < 0) {
-//                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
-//                        recompute_ds_graph = true;
-//                    }
-//                    else {
-//                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
-//                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
-//                    }
-//                }
+//void ExplorationPlanner::my_sort_cost_3(bool energy_above_th, int w1, int w2, int w3, int w4)
+//{
+//    
+//    if(ds_list.size() == 0) {
+//        ROS_INFO("No DS is currently known: falling back to closest st");
+//        my_sort_cost_2(energy_above_th, w1, w2, w3, w4);
+//        return;   
 //    }
-    
-    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
-    
-    int index_closest_ds_to_robot = -1, index_optimal_ds = -1;
-    double min_dist = std::numeric_limits<double>::max();
-    for(unsigned int i=0; i < ds_list.size(); i++) {
-        double distance = euclidean_distance(robot_x, robot_y, ds_list.at(i).x, ds_list.at(i).y);
-        if(distance < min_dist) {
-            min_dist = distance;
-            index_closest_ds_to_robot = i;
-        }
-        if(ds_list.at(i).id == optimal_ds_id)
-            index_optimal_ds = i;
-    }
-    
-    for(unsigned int i=0; i < frontiers.size(); i++) {
-        double min_dist = std::numeric_limits<double>::max();
-        int index_closest_ds_to_frontier = -1;
-        for(unsigned int j=0; j < ds_list.size(); j++) {
-            double distance = euclidean_distance(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, ds_list.at(j).x, ds_list.at(j).y);
-            if(distance < min_dist) {
-                min_dist = distance;
-                index_closest_ds_to_frontier = j;
-            }
-        }
-        
-        if(index_optimal_ds >= ds_graph.size() || index_closest_ds_to_robot >= ds_graph[index_optimal_ds].size() || index_closest_ds_to_robot < 0 || index_optimal_ds < 0 || index_closest_ds_to_frontier < 0)
-            ROS_ERROR("invalid index(-ces)"); //: %d, %d, %u", index_optimal_ds, index_closest_ds_to_robot, ds_graph.size());
-            //ROS_ERROR("index_optimal_ds is too high; ds_graph size: %u; index_optimal_ds: %d", ds_graph.size(), index_optimal_ds);
-        
-        //double d_gbe = dijkstra(ds_graph, index_optimal_ds, index_closest_ds_to_robot);
-        double d_gbe = ds_graph[index_optimal_ds][index_closest_ds_to_robot];
-        if(d_gbe < 0)
-            ROS_ERROR("Invalid value");
-        //double d_g = dijkstra(ds_graph, index_closest_ds_to_frontier, index_closest_ds_to_robot);
-        double d_g = ds_graph[index_closest_ds_to_frontier][index_closest_ds_to_robot];
-        if(d_g < 0)
-            ROS_ERROR("Invalid value");
-        double cost = d_g + d_gbe;
-        frontiers.at(i).cost = cost;
-        
-        add_to_sorted_fontiers_list_if_convinient(frontiers.at(i));
-        
-    }
-    
-    frontier_selected = true;
-    my_energy_above_th = energy_above_th;
-    this->w1 = w1;
-    this->w2 = w2;
-    this->w3 = w3;
-    this->w4 = w4;
-    
-    robot_last_x = robot_x;
-    robot_last_y = robot_y;
-    
-    ROS_INFO("finished my_sort_cost_2");
-    release_mutex(&store_frontier_mutex, __FUNCTION__);
-  
-}
+//    
+//    ROS_INFO("Using this strategy");
+//    
+//    // robot position
+//    double robot_x = robotPose.getOrigin().getX();
+//    double robot_y = robotPose.getOrigin().getY();
+
+////    if(recompute_ds_graph) {
+////        recompute_ds_graph = false;
+////        for(int i=0; i < ds_list.size(); i++)
+////            for(int j=0; j < ds_list.size(); j++)
+////                if(ds_graph[i][j] >= 0 || i == j)
+////                    continue;
+////                else {
+////                    double dist = trajectory_plan(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
+////                    if(dist < 0) {
+////                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+////                        recompute_ds_graph = true;
+////                    }
+////                    else {
+////                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
+////                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
+////                    }
+////                }
+////    }
+//    
+//    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
+//    
+//    int index_closest_ds_to_robot = -1, index_optimal_ds = -1;
+//    double min_dist = std::numeric_limits<double>::max();
+//    for(unsigned int i=0; i < ds_list.size(); i++) {
+//        double distance = euclidean_distance(robot_x, robot_y, ds_list.at(i).x, ds_list.at(i).y);
+//        if(distance < min_dist) {
+//            min_dist = distance;
+//            index_closest_ds_to_robot = i;
+//        }
+//        if(ds_list.at(i).id == optimal_ds_id)
+//            index_optimal_ds = i;
+//    }
+//    
+//    for(unsigned int i=0; i < frontiers.size(); i++) {
+//        double min_dist = std::numeric_limits<double>::max();
+//        int index_closest_ds_to_frontier = -1;
+//        for(unsigned int j=0; j < ds_list.size(); j++) {
+//            double distance = euclidean_distance(frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate, ds_list.at(j).x, ds_list.at(j).y);
+//            if(distance < min_dist) {
+//                min_dist = distance;
+//                index_closest_ds_to_frontier = j;
+//            }
+//        }
+//        
+//        if(index_optimal_ds >= ds_graph.size() || index_closest_ds_to_robot >= ds_graph[index_optimal_ds].size() || index_closest_ds_to_robot < 0 || index_optimal_ds < 0 || index_closest_ds_to_frontier < 0)
+//            ROS_ERROR("invalid index(-ces)"); //: %d, %d, %u", index_optimal_ds, index_closest_ds_to_robot, ds_graph.size());
+//            //ROS_ERROR("index_optimal_ds is too high; ds_graph size: %u; index_optimal_ds: %d", ds_graph.size(), index_optimal_ds);
+//        
+//        //double d_gbe = dijkstra(ds_graph, index_optimal_ds, index_closest_ds_to_robot);
+//        double d_gbe = ds_graph[index_optimal_ds][index_closest_ds_to_robot];
+//        if(d_gbe < 0)
+//            ROS_ERROR("Invalid value");
+//        //double d_g = dijkstra(ds_graph, index_closest_ds_to_frontier, index_closest_ds_to_robot);
+//        double d_g = ds_graph[index_closest_ds_to_frontier][index_closest_ds_to_robot];
+//        if(d_g < 0)
+//            ROS_ERROR("Invalid value");
+//        double cost = d_g + d_gbe;
+//        frontiers.at(i).cost = cost;
+//        
+//        add_to_sorted_fontiers_list_if_convinient(frontiers.at(i));
+//        
+//    }
+//    
+//    frontier_selected = true;
+//    my_energy_above_th = energy_above_th;
+//    this->w1 = w1;
+//    this->w2 = w2;
+//    this->w3 = w3;
+//    this->w4 = w4;
+//    
+//    robot_last_x = robot_x;
+//    robot_last_y = robot_y;
+//    
+//    ROS_INFO("finished my_sort_cost_2");
+//    release_mutex(&store_frontier_mutex, __FUNCTION__);
+//  
+//}
 
 void ExplorationPlanner::my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name)
 {
@@ -7048,7 +7048,7 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
             for (int j = 0; j < num_ds; j++) {
                 temp_f.push_back(-1);
             }
-            ds_graph.push_back(temp_f);
+//            ds_graph.push_back(temp_f);
         }
     }
     
@@ -7061,26 +7061,26 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
 //    double dist = trajectory_plan_meters(0, 0, ds.x, ds.y);
     //ROS_ERROR("distance between (%d, %d) and (%.1f, %.1f): %f", 0, 0, ds.x, ds.y, dist);
     
-    for(int i=0; i < ds_list.size(); i++) {
-        double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds.x, ds.y);
-        //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds.x, ds.y, dist);
-        if(dist < 0) {
-            ROS_ERROR("Unable to compute distance at the moment: retrying later...");
-            recompute_ds_graph = true;
-        }
-        else {
-            if(ds_list[i].id >= ds_graph.size() || ds.id >= ds_graph.size() || ds_list[i].id >= ds_graph[ds_list[i].id].size() || ds.id >= ds_graph[ds.id].size()) {
-                ROS_FATAL("!!!OUT OF RANGE!!! %d, %d, %u", ds_list[i].id, ds.id, ds_graph.size());
-                return;   
-            }
-            ds_graph[ds_list[i].id][ds.id] = dist;
-            ds_graph[ds.id][ds_list[i].id] = dist;
-        }
-    }
-    ds_graph[ds.id][ds.id] = 0;
-    for(int i=0; i < ds_list.size(); i++)
-        for(int j=0; j < ds_list.size(); j++)
-            ; //ROS_ERROR("%f", ds_graph[i][j]);
+//    for(int i=0; i < ds_list.size(); i++) {
+//        double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds.x, ds.y);
+//        //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds.x, ds.y, dist);
+//        if(dist < 0) {
+//            ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+//            recompute_ds_graph = true;
+//        }
+//        else {
+//            if(ds_list[i].id >= ds_graph.size() || ds.id >= ds_graph.size() || ds_list[i].id >= ds_graph[ds_list[i].id].size() || ds.id >= ds_graph[ds.id].size()) {
+//                ROS_FATAL("!!!OUT OF RANGE!!! %d, %d, %u", ds_list[i].id, ds.id, ds_graph.size());
+//                return;   
+//            }
+//            ds_graph[ds_list[i].id][ds.id] = dist;
+//            ds_graph[ds.id][ds_list[i].id] = dist;
+//        }
+//    }
+//    ds_graph[ds.id][ds.id] = 0;
+//    for(int i=0; i < ds_list.size(); i++)
+//        for(int j=0; j < ds_list.size(); j++)
+//            ; //ROS_ERROR("%f", ds_graph[i][j]);
     
     mutex_ds.lock();       
     ds_list.push_back(ds);
@@ -7099,7 +7099,7 @@ void ExplorationPlanner::ds_count_callback(const std_msgs::Int32 msg) {
             for (int j = 0; j < num_ds; j++) {
                 temp_f.push_back(-1);
             }
-            ds_graph.push_back(temp_f);
+//            ds_graph.push_back(temp_f);
         }
     }
 }
@@ -9946,25 +9946,25 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
             }
         }  
       
-//    if(recompute_ds_graph) {
-//        recompute_ds_graph = false;
-        for(int i=0; i < ds_list.size(); i++)
-            for(int j=0; j < ds_list.size(); j++)
-                if(ds_graph[i][j] >= 0 || i == j)
-                    continue;
-                else {
-                    double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
-                    //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y, dist);
-                    if(dist < 0) {
-                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
-//                        recompute_ds_graph = true;
-                    }
-                    else {
-                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
-                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
-                    }
-                }
-//    }
+////    if(recompute_ds_graph) {
+////        recompute_ds_graph = false;
+//        for(int i=0; i < ds_list.size(); i++)
+//            for(int j=0; j < ds_list.size(); j++)
+//                if(ds_graph[i][j] >= 0 || i == j)
+//                    continue;
+//                else {
+//                    double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
+//                    //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y, dist);
+//                    if(dist < 0) {
+//                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+////                        recompute_ds_graph = true;
+//                    }
+//                    else {
+//                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
+//                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
+//                    }
+//                }
+////    }
       
         
     }
