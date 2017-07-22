@@ -171,7 +171,6 @@ class Explorer
         created = false;
         exploration = NULL;
         explorer_ready = false;
-        max_av_distance = 0;
         available_distance = -1;
         already_navigated_DS_graph = false;
         need_to_recharge = false;
@@ -682,7 +681,7 @@ class Explorer
             // if (robot_state == exploring || robot_state == fully_charged)
             if (robot_state == exploring || robot_state == fully_charged || robot_state == leaving_ds)
             {
-                if(!received_battery_info && next_available_distance <= 0) {
+                if(!received_battery_info && next_available_distance <= 0 && conservative_maximum_available_distance <= 0) {
                     ROS_DEBUG("waiting battery info");
                     ros::Duration(3).sleep();
                     ros::spinOnce();
@@ -691,11 +690,11 @@ class Explorer
                    
                 received_battery_info = true;
                    
-                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < conservative_available_distance(next_available_distance)) {
-                    ROS_INFO("setting maximum distance");
-//                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance); 
-                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance);
-                }
+//                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < conservative_available_distance(next_available_distance)) {
+//                    ROS_INFO("setting maximum distance");
+////                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance); 
+//                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance);
+//                }
                    
                 if(robot_state == fully_charged) {
                     ROS_INFO("using max distance");
@@ -3808,8 +3807,7 @@ class Explorer
 //            abort();
 //        }
         
-        if(max_av_distance < available_distance)
-            max_av_distance = available_distance;
+        conservative_maximum_available_distance = msg->maximum_traveling_distance;
     }
     
     void shutdown() {

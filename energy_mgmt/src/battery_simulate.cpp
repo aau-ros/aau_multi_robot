@@ -63,7 +63,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     state.remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
     state.remaining_distance = maximum_traveling_distance;
     state.remaining_time_run = maximum_traveling_distance * speed_avg_init; //s //TODO(minor) "maximum" is misleading: use "estimated"...
-    
+    state.maximum_traveling_distance = maximum_traveling_distance;
 
     // advertise topics
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
