@@ -47,7 +47,7 @@
 #endif
 
 #define OPERATE_ON_GLOBAL_MAP true
-#define OPERATE_WITH_GOAL_BACKOFF false
+#define OPERATE_WITH_GOAL_BACKOFF true
 //#define EXIT_COUNTDOWN 5
 #define EXIT_COUNTDOWN 50  // F
 //#define STUCK_COUNTDOWN 10
@@ -1787,11 +1787,40 @@ class Explorer
                                                                           // done in the correct point... yes otherwise
             {
                 ROS_INFO("Navigating to Goal"); 
+//                if (OPERATE_WITH_GOAL_BACKOFF == true)
+//                {
+//                    ROS_INFO("Doing smartGoalBackoff");
+////                    ROS_INFO("final_goal size: %lu", final_goal.size());
+//                    if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
+//                                                      &backoffGoal))
+//                    {
+//                        ROS_INFO("Navigate to backoff goal (%.2f,%.2f) --> (%.2f,%.2f)", final_goal.at(0),
+//                                 final_goal.at(1), backoffGoal.at(0), backoffGoal.at(1));
+//                        navigate_to_goal = navigate(backoffGoal);
+//                    }
+//                    else
+//                    {
+//                        /* Failed to Failed to find backoff goal */
+//                        ROS_ERROR("Failed to find backoff goal, mark original goal "
+//                                  "(%.2f,%.2f) as unreachable",
+//                                  final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
+//                        navigate_to_goal = false;  // navigate(final_goal);
+////                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+////                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
+////                        fs_exp_se_log.close();
+//                    }
+//                }
+//                else
+//                {
+//                    if (!exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global, &backoffGoal))
+//                        ROS_ERROR("Failed to find backoff goal for goal (%.2f,%.2f)", final_goal.at(0), final_goal.at(1));
+//                    ROS_INFO("Navigate to goal");
+//                    navigate_to_goal = navigate(final_goal);
+//                }
                 // TODO(minor) what is this part???
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
-//                    ROS_INFO("final_goal size: %lu", final_goal.size());
                     if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
                                                       &backoffGoal))
                     {
@@ -1802,21 +1831,14 @@ class Explorer
                     else
                     {
                         /* Failed to Failed to find backoff goal */
-                        ROS_ERROR("Failed to find backoff goal, mark original goal "
-                                  "(%.2f,%.2f) as unreachable",
+                        ROS_ERROR("Failed to find backoff goal: move to original goal (%.2f,%.2f)",
                                   final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
-                        navigate_to_goal = false;  // navigate(final_goal);
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
 //                        fs_exp_se_log.close();
+                        ROS_INFO("Navigate to goal");
+                        navigate_to_goal = navigate(final_goal);
                     }
-                }
-                else
-                {
-                    if (!exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global, &backoffGoal))
-                        ROS_ERROR("Failed to find backoff goal for goal (%.2f,%.2f)", final_goal.at(0), final_goal.at(1));
-                    ROS_INFO("Navigate to goal");
-                    navigate_to_goal = navigate(final_goal);
                 }
             }
 
