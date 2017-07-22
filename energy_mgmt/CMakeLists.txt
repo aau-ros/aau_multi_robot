@@ -2,8 +2,11 @@ cmake_minimum_required(VERSION 2.8.3)
 project(energy_mgmt)
 
 # Flags to add symbols in core dumps and to link the boost_system library
-SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -std=c++11")
-add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+#SET(GCC_COVERAGE_COMPILE_FLAGS "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -std=c++11")
+#add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+
+enable_language(CXX)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov -std=c++11")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

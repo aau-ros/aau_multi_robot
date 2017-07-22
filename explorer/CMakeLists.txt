@@ -18,7 +18,7 @@ project(explorer)
 #set(GCC_COMMAND_LINE_OPTION "-g -rdynamic -Wall -O -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system")
 
 enable_language(CXX)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov")
+set(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov ${CMAKE_CXX_FLAGS} ")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

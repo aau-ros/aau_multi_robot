@@ -60,6 +60,8 @@
 #include <geometry_msgs/Twist.h>
 #include <distance_computer_interface.h>
 
+#include "gtest/gtest_prod.h"
+  
 namespace explorationPlanner
 {
     struct frontier_t
@@ -88,6 +90,9 @@ namespace explorationPlanner
 
     class ExplorationPlanner
     {
+        friend class ExplorationPlannerTest;
+        FRIEND_TEST(ExplorationPlannerTest, testCase5);
+        
         public:
 
             struct responded_t
@@ -512,11 +517,10 @@ namespace explorationPlanner
             bool erased;
             ds_t *min_ds_for_path_traversal;
             DistanceComputerInterface *distance_computer;
-            double computeTheta(double frontier_x, double frontier_y);
             
             // Debugging
             bool test_mode;
-            
+            double computeTheta(double frontier_x, double frontier_y);
     };
 }
 

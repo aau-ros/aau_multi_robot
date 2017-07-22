@@ -1,7 +1,11 @@
-#include "ExplorationPlanner.h"
-
 #include <ros/ros.h>
 #include <gtest/gtest.h>
+
+#define TEST_FRIENDS \
+    friend class ExplorationPlannerTest_testCase5_Test; \
+    friend class ExplorationPlannerTest_testCase1_Test;
+
+#include "ExplorationPlanner.h"
 
 double euclidean_distance(double x1, double y1, double x2, double y2) {
     return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) );
@@ -35,14 +39,19 @@ public:
 
 #define TEST_COUT  TestCout()
 
+
+namespace explorationPlanner {
+    class ExplorationPlannerTest : public ::testing::Test {
+    };
+
 // Declare a test
-TEST(TestSuite, testCase1)
+TEST_F(ExplorationPlannerTest, testCase1)
 {
     int i = 10;
     EXPECT_EQ(i, 10); // 1st arg.: expected value; 2nd arg.: actual value (i.e., value returned from the tested code, which should be equal to the expected one)
 }
 
-TEST(TestSuite, testCase2)
+TEST_F(ExplorationPlannerTest, testCase2)
 {
     std::string robot_name = "robot";
     explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
@@ -72,7 +81,7 @@ TEST(TestSuite, testCase2)
     EXPECT_FALSE(success);
 }
 
-TEST(TestSuite, testCase3)
+TEST_F(ExplorationPlannerTest, testCase3)
 {
     std::string robot_name = "robot";
     explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
@@ -118,7 +127,7 @@ TEST(TestSuite, testCase3)
     EXPECT_EQ(final_goal.at(1), f.y_coordinate);
 }
 
-TEST(TestSuite, testCase4)
+TEST_F(ExplorationPlannerTest, testCase4)
 {
     std::string robot_name = "robot";
     explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
@@ -174,8 +183,27 @@ TEST(TestSuite, testCase4)
     
 }
 
+TEST_F(ExplorationPlannerTest, testCase5)
+{
+    std::string robot_name = "robot";
+    explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
+    
+    ep->setTestMode(true);
+    ep->computeTheta(0, 0); //to later set the last robot position
+    
+}
+
+
+
+
+} /* namespace */
+
 int main(int argc, char **argv){
   ros::init(argc, argv, "energy_mgmt");
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+
+
+
