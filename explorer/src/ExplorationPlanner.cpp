@@ -1355,7 +1355,6 @@ double ExplorationPlanner::simplifiedDistanceFromDs(unsigned int ds_index, unsig
     }
     mutex_ds.unlock();    
     
-    
     double distance;
     if(ds_index >= frontiers.at(frontier_index).list_distance_from_ds.size() || frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < 0)
     {
@@ -4733,6 +4732,9 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 
                 if(index < 0 || index >= ds_size)
                     ROS_FATAL("orrible values");
+                    
+                if(2 * euclidean_distance(ds_list.at(index).x, ds_list.at(index).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate) > max_available_distance)
+                    continue;
 
                 double dist = simplifiedDistanceFromDs(index, j);
                 if (dist < 0) {
