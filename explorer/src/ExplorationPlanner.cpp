@@ -9945,6 +9945,27 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
                 release_mutex(&mutex_erase_frontier, __FUNCTION__);
             }
         }  
+      
+//    if(recompute_ds_graph) {
+//        recompute_ds_graph = false;
+        for(int i=0; i < ds_list.size(); i++)
+            for(int j=0; j < ds_list.size(); j++)
+                if(ds_graph[i][j] >= 0 || i == j)
+                    continue;
+                else {
+                    double dist = trajectory_plan_meters(ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y);
+                    //ROS_ERROR("distance between (%.1f, %.1f) and (%.1f, %.1f): %f", ds_list[i].x, ds_list[i].y, ds_list[j].x, ds_list[j].y, dist);
+                    if(dist < 0) {
+                        ROS_ERROR("Unable to compute distance at the moment: retrying later...");
+//                        recompute_ds_graph = true;
+                    }
+                    else {
+                        ds_graph[ds_list[i].id][ds_list[j].id] = dist;
+                        ds_graph[ds_list[j].id][ds_list[i].id] = dist;
+                    }
+                }
+//    }
+      
         
     }
     
