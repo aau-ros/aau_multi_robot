@@ -1209,7 +1209,10 @@ class Explorer
 //                                    if(robot_state == fully_charged)
                                     if(full_battery)
                                     {
-                                        log_major_error("ERROR WITH DS GRAPH");
+                                        if(fabs(dist - conservative_available_distance(available_distance)) > 3.0)
+                                            log_major_error("MAJOR ERROR WITH DS GRAPH");
+                                        else
+                                            log_major_error("minor error with ds graph");
                                         ROS_DEBUG("distance to next DS: %.2f", dist);
                                         ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_available_distance(available_distance));
                                         
