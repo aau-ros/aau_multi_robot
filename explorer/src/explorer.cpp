@@ -2536,6 +2536,7 @@ class Explorer
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
                    << map_progress.local_freespace << "," << free_cells_count //<< "," 
 //                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b
+                   << "," << ros::Time::now() << "," << ros::WallTime::now()
                    << std::endl;
             fs_csv.close();
 

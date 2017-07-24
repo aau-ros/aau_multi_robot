@@ -1016,7 +1016,7 @@ void docking::log_optimal_ds() {
 //        ROS_DEBUG("%d", target_ds_id);
         fs_csv << time.toSec() << "," << get_optimal_ds_id() 
 //            << "," << get_target_ds_id() 
-            << std::endl; //TODO target_ds_id could be wrong here...
+            << "," << ros::Time::now() << "," << ros::WallTime::now() << std::endl; //TODO target_ds_id could be wrong here...
         fs_csv.close();
         old_optimal_ds_id_for_log = get_optimal_ds_id();
 //        old_target_ds_id_for_log = get_target_ds_id();
@@ -1606,7 +1606,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     /* Log information */ //TODO(minor) better log file...
     ros::Duration time = ros::Time::now() - time_start;
     fs3_csv.open(csv_file_3.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs3_csv << time.toSec() << "," << msg.get()->id << std::endl;
+    fs3_csv << time.toSec() << "," << msg.get()->id << "," << ros::Time::now() << "," << ros::WallTime::now() << std::endl;
     fs3_csv.close();
 
     /* Check if robot is in list already */
@@ -2494,15 +2494,15 @@ void docking::create_log_files()
 
     /* Create and initialize files */
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << "#time,optimal_ds,target_ds" << std::endl;
+    fs_csv << "#time,optimal_ds,target_ds,sim_time,wall_time" << std::endl;
     fs_csv.close();
 
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs2_csv << "#time,x,y" << std::endl;
+    fs2_csv << "#time,x,y,sim_time,wall_time" << std::endl;
     fs2_csv.close();
 
     fs3_csv.open(csv_file_3.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs3_csv << "#time,sender_robot_id" << std::endl;
+    fs3_csv << "#time,sender_robot_id,sim_time,wall_time" << std::endl;
     fs3_csv.close();
     
     ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -3126,7 +3126,7 @@ void docking::send_robot()
 
     ros::Duration time = ros::Time::now() - time_start;
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs2_csv << time.toSec() << "," << robot->x << "," << robot->y << std::endl;
+    fs2_csv << time.toSec() << "," << robot->x << "," << robot->y << "," << ros::Time::now() << "," << ros::WallTime::now() << std::endl;
     fs2_csv.close();
     
     ROS_INFO("robot sent");
