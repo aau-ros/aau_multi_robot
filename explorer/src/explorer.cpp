@@ -2555,7 +2555,7 @@ class Explorer
 
             publisher_speed.publish(speed_msg);
 
-            ros::Duration(5.0).sleep();
+            ros::Duration(1.0).sleep();
         }
     }
     
