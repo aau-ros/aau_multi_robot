@@ -230,6 +230,8 @@ void battery_simulate::compute()
         
         consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
         consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
+        consumed_energy_B += (power_microcontroller + power_basic_computations) * time_diff_sec;
+        
         state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
         if(state.remaining_distance > maximum_traveling_distance)
             state.remaining_distance = maximum_traveling_distance;
