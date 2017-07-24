@@ -198,30 +198,31 @@ void battery_simulate::compute()
     {
         ROS_INFO("Recharging battery");
         double ratio_A = -1, ratio_B = -1;
-        if(consumed_energy_A < 0 && consumed_energy_B < 0)
+        if(consumed_energy_A < 0 && consumed_energy_B < 0) {
             ROS_FATAL("this should not happen...");
+            return;
+        }
         else if(consumed_energy_A <= 0) {
             ratio_A = 0.0;
             ratio_B = 1.0;
-//            consumed_energy_A = 0;
+            consumed_energy_A = 0;
+            ROS_ERROR("this should not happen...");
         }   
         else if(consumed_energy_B <= 0) {
             ratio_A = 1.0;
             ratio_B = 0.0;
-//            consumed_energy_B = 0;
+            consumed_energy_B = 0;
+            ROS_ERROR("this should not happen...");
         }
         else {
-            if(consumed_energy_A > consumed_energy_B) {
-                ratio_A = (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B);
-                ratio_B = 1.0 - ratio_A;
-            }
-            else {
-                ratio_B = (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B);
-                ratio_A = 1.0 - ratio_B;
-            }
+            ratio_A = consumed_energy_A / (consumed_energy_A + consumed_energy_B);
+            ratio_B = consumed_energy_B / (consumed_energy_A + consumed_energy_B);
         }
-        if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1)
+        
+        if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1 || fabs(ratio_A + ratio_B - 1.0) > 0.01 ) {
             ROS_FATAL("strange ratio");
+            return;
+        }
         
         _f1 = ratio_A;
         _f2 = ratio_B;
@@ -240,7 +241,7 @@ void battery_simulate::compute()
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
 //        if (state.soc >= 1)
-        if(consumed_energy_A + consumed_energy_B <= 0)
+        if(consumed_energy_A <=0 && consumed_energy_B <= 0)
         {
             ROS_INFO("Recharging completed");
             

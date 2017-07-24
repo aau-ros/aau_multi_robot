@@ -8,7 +8,7 @@
 #define FLOAT_ABSOLUTE_ERROR 0.001
 
 //TODO load from launch file 
-const double power_charging =              50;
+const double power_charging =             300;
 const double power_moving_fixed_cost =     10;
 const double power_per_speed =              8;
 const double power_microcontroller =       40;
@@ -318,17 +318,9 @@ TEST(TestSuite, testCase9)
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
     EXPECT_GT(consumed_energy_A, consumed_energy_B);
     
-    TEST_COUT << (      (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) << std::endl;
-    TEST_COUT << bat._f1 << std::endl;
-    TEST_COUT << (1.0 - (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) << std::endl;
-    TEST_COUT << bat._f2 << std::endl;
-    TEST_COUT << bat._f3 << std::endl;
-    TEST_COUT << power_charging << std::endl;
-    TEST_COUT << bat._f4 << std::endl;
-    TEST_COUT << time4 - time3 << std::endl;
-    
-    expected_consumed_energy_A -= (      (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
-    expected_consumed_energy_B -= (1.0 - (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
+    expected_consumed_energy_A -= consumed_energy_A / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    expected_consumed_energy_B -= consumed_energy_B / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    expected_consumed_energy_B += (power_microcontroller + power_basic_computations) * (time4 - time3);
     consumed_energy_A = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
     EXPECT_NEAR(consumed_energy_A, expected_consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
@@ -379,7 +371,7 @@ TEST(TestSuite, testCase10)
 TEST(TestSuite, testCase11)
 {
     MockTimeManager mtm;
-    double time1 = 0, time2 = 500, time3 = 800, time4 = 8000, time5 = 10000;
+    double time1 = 0, time2 = 500, time3 = 1000, time4 = 2000, time5 = 5000;
     mtm.addTime(time1);
     mtm.addTime(time2);
     mtm.addTime(time3);
@@ -418,10 +410,6 @@ TEST(TestSuite, testCase11)
     EXPECT_EQ(expected_consumed_energy_A, consumed_energy_A);
     EXPECT_EQ(expected_consumed_energy_B, consumed_energy_B);
     
-    TEST_COUT << bat._f1 << std::endl;
-    TEST_COUT << consumed_energy_A << std::endl;
-    TEST_COUT << consumed_energy_B << std::endl;
-    
     robot_state_msg.state = charging;
     robot_pub.publish(robot_state_msg);
     
@@ -429,6 +417,7 @@ TEST(TestSuite, testCase11)
     bat.spinOnce();
     
     bat.compute();
+    
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
     expected_consumed_energy_A = 0;
@@ -438,10 +427,6 @@ TEST(TestSuite, testCase11)
     
     EXPECT_NEAR(expected_consumed_energy_A, consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
     EXPECT_NEAR(expected_consumed_energy_B, consumed_energy_B, FLOAT_ABSOLUTE_ERROR);
-    
-    TEST_COUT << bat._f1 << std::endl;
-    TEST_COUT << consumed_energy_A << std::endl;
-    TEST_COUT << consumed_energy_B << std::endl;
      
 }
 
@@ -496,8 +481,9 @@ TEST(TestSuite, testCase12)
     bat.compute();
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
-    expected_consumed_energy_A -= (1.0 - (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
-    expected_consumed_energy_B -= (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    expected_consumed_energy_A -= consumed_energy_A / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    expected_consumed_energy_B -= consumed_energy_B / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    expected_consumed_energy_B += (power_microcontroller + power_basic_computations) * (time4 - time3);
     consumed_energy_A2 = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
 
