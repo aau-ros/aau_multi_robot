@@ -141,7 +141,14 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
             initializing = false;
             ROS_INFO("Finished initialization procedure");
         }
-        return;   
+        return;
+
+        //TODO use this code
+        //if(initializing) {
+        //    initializing = false;
+         //   ROS_INFO("Finished initialization procedure");
+        //}
+        //return;  
     } 
     
     if(initializing)
@@ -223,11 +230,6 @@ void battery_simulate::compute()
             ROS_FATAL("strange ratio");
             return;
         }
-        
-        _f1 = ratio_A;
-        _f2 = ratio_B;
-        _f3 = power_charging;
-        _f4 = time_diff_sec;
         
         consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
         consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
