@@ -71,7 +71,8 @@ public:
     double getConsumedEnergyB();
     double getMaximumTravelingDistance();
     double getTotalTraveledDistance();
-    double _f1;
+    double _f1, _f2, _f3, _f4, _f5, _f6;
+    double getRemainingDistance();
 
 private:
     /**
@@ -97,11 +98,9 @@ private:
 
     /**
      * The power consumption of the robot.
-     * Power_charging is the power that the robot is charged with.
-     * Power_moving is the power consumption of the robot while in motion.
-     * Power_standing is the power consumption of the robot while it is standing still.
      */
-    double power_charging, power_moving, power_standing, power_basic_computations, power_advanced_computation, power_idle;
+//    double power_charging, power_moving, power_standing, power_basic_computations, power_advanced_computation, power_idle;
+    double power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging;
 
     /**
      * Speed of the robot.
@@ -249,6 +248,7 @@ private:
     double pose_x, pose_y, last_x, last_y;
     boost::mutex mutex_traveled_distance;
     double last_traveled_distance, total_traveled_distance;
+    double prev_consumed_energy_A;
     
 };
 

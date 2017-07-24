@@ -7,14 +7,15 @@
 #define SENDING_SLEEP_TIME 1
 #define FLOAT_ABSOLUTE_ERROR 0.001
 
-double const charge_max = 200;
-double const power_standing = 37;
-double const power_moving = 19;
-double const power_basic_computations = 10;
-double const power_advanced_computations = 23;
-double const power_charging = 50;
-double const power_idle = 1;
-double const max_linear_speed = 0.5;
+//TODO load from launch file 
+const double power_charging =              50;
+const double power_moving_fixed_cost =     10;
+const double power_per_speed =              8;
+const double power_microcontroller =       40;
+const double power_sonar =                  5;
+const double power_laser =                 15;
+const double power_basic_computations =    20;
+const double power_advanced_computations = 30;
 const double maximum_traveling_distance = 100;
 
 namespace testing
@@ -94,14 +95,6 @@ enum state_t
         auctioning_3
     };
 
-// Declare a test
-TEST(TestSuite, testCase1)
-{
-    int i = 10;
-    EXPECT_NE(i, 1);
-}
-
-// Declare another test
 TEST(TestSuite, testCase2)
 {
     MockTimeManager mtm;
@@ -110,6 +103,7 @@ TEST(TestSuite, testCase2)
     EXPECT_EQ(bat.getMaximumTravelingDistance(), maximum_traveling_distance); //TODO in many places expected and actual values are inverted in EXPECT_EQ
 }
 
+// check current time
 TEST(TestSuite, testCase3)
 {
     MockTimeManager mtm;
@@ -199,18 +193,20 @@ TEST(TestSuite, testCase7)
     
     double consumed_energy, expected_consumed_energy;
     bat.compute();
-    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
-    expected_consumed_energy = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    consumed_energy = bat.getConsumedEnergyB();
+    expected_consumed_energy = (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(consumed_energy, expected_consumed_energy);
+    EXPECT_EQ(bat.getConsumedEnergyA(), 0);
     
     bat.compute();
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
-    expected_consumed_energy += (power_standing + power_basic_computations + power_advanced_computations) * (time4 - time3);
+    expected_consumed_energy += (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time4 - time3);
     consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     EXPECT_EQ(consumed_energy, expected_consumed_energy);
+    EXPECT_EQ(bat.getConsumedEnergyA(), 0);
 }
 
 TEST(TestSuite, testCase8)
@@ -246,11 +242,12 @@ TEST(TestSuite, testCase8)
     
     double consumed_energy, expected_consumed_energy;
     bat.compute();
-    consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
-    expected_consumed_energy = (power_standing + power_moving * speed + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    consumed_energy = bat.getConsumedEnergyB();
+    expected_consumed_energy = (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(consumed_energy, expected_consumed_energy);
+    EXPECT_EQ(bat.getConsumedEnergyA(), 0);
     
     speed = 10;
     cmd_vel_msg.linear.x = speed;
@@ -262,11 +259,12 @@ TEST(TestSuite, testCase8)
     bat.compute();
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
-    expected_consumed_energy += (power_standing + power_moving * speed + power_basic_computations + power_advanced_computations) * (time4 - time3);
+    expected_consumed_energy += (power_per_speed * speed + power_moving_fixed_cost + power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time4 - time3);
     consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
     EXPECT_EQ(consumed_energy, expected_consumed_energy);
 }
 
+// exploring + charging
 TEST(TestSuite, testCase9)
 {
     MockTimeManager mtm;
@@ -302,8 +300,8 @@ TEST(TestSuite, testCase9)
     bat.compute();
     consumed_energy_A = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
-    expected_consumed_energy_A = (power_moving * speed) * (time2 - time1);
-    expected_consumed_energy_B = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    expected_consumed_energy_A = (power_moving_fixed_cost + power_per_speed * speed) * (time2 - time1);
+    expected_consumed_energy_B = (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(consumed_energy_A, expected_consumed_energy_A);
@@ -318,7 +316,18 @@ TEST(TestSuite, testCase9)
     bat.compute();
     EXPECT_EQ(time5, bat.last_time_secs());
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
-    expected_consumed_energy_A -= (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
+    EXPECT_GT(consumed_energy_A, consumed_energy_B);
+    
+    TEST_COUT << (      (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) << std::endl;
+    TEST_COUT << bat._f1 << std::endl;
+    TEST_COUT << (1.0 - (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) << std::endl;
+    TEST_COUT << bat._f2 << std::endl;
+    TEST_COUT << bat._f3 << std::endl;
+    TEST_COUT << power_charging << std::endl;
+    TEST_COUT << bat._f4 << std::endl;
+    TEST_COUT << time4 - time3 << std::endl;
+    
+    expected_consumed_energy_A -= (      (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
     expected_consumed_energy_B -= (1.0 - (consumed_energy_A - consumed_energy_B) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
     consumed_energy_A = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
@@ -361,7 +370,7 @@ TEST(TestSuite, testCase10)
     double consumed_energy, expected_consumed_energy;
     bat.compute();
     consumed_energy = bat.getConsumedEnergyA() + bat.getConsumedEnergyB();
-    expected_consumed_energy = power_idle * (time2 - time1);
+    expected_consumed_energy = (power_microcontroller + power_basic_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(consumed_energy, expected_consumed_energy);
@@ -402,8 +411,8 @@ TEST(TestSuite, testCase11)
     bat.compute();
     consumed_energy_A = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
-    expected_consumed_energy_A = (power_moving * speed) * (time2 - time1);
-    expected_consumed_energy_B = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    expected_consumed_energy_A = (power_moving_fixed_cost + power_per_speed * speed) * (time2 - time1);
+    expected_consumed_energy_B = (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(expected_consumed_energy_A, consumed_energy_A);
@@ -467,12 +476,12 @@ TEST(TestSuite, testCase12)
     ros::Duration(SENDING_SLEEP_TIME).sleep(); // necessary, or the messages are not received in time by the battery manager
     bat.spinOnce();
     
-    double consumed_energy_A, consumed_energy_B, expected_consumed_energy_A, expected_consumed_energy_B;
+    double consumed_energy_A, consumed_energy_A2, consumed_energy_B, expected_consumed_energy_A, expected_consumed_energy_B;
     bat.compute();
     consumed_energy_A = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
-    expected_consumed_energy_A = (power_moving * speed) * (time2 - time1);
-    expected_consumed_energy_B = (power_standing + power_basic_computations + power_advanced_computations) * (time2 - time1);
+    expected_consumed_energy_A = (power_moving_fixed_cost + power_per_speed * speed) * (time2 - time1);
+    expected_consumed_energy_B = (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * (time2 - time1);
     EXPECT_EQ(time3, bat.last_time_secs());
     EXPECT_EQ(time2 - time1, bat.getElapsedTime());
     EXPECT_EQ(consumed_energy_A, expected_consumed_energy_A);
@@ -489,12 +498,15 @@ TEST(TestSuite, testCase12)
     EXPECT_EQ(time4 - time3, bat.getElapsedTime());
     expected_consumed_energy_A -= (1.0 - (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B)) * power_charging * (time4 - time3);
     expected_consumed_energy_B -= (consumed_energy_B - consumed_energy_A) / (consumed_energy_A + consumed_energy_B) * power_charging * (time4 - time3);
-    consumed_energy_A = bat.getConsumedEnergyA();
+    consumed_energy_A2 = bat.getConsumedEnergyA();
     consumed_energy_B = bat.getConsumedEnergyB();
-    
-    EXPECT_NEAR(consumed_energy_A, expected_consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
-    EXPECT_NEAR(consumed_energy_B, expected_consumed_energy_B, FLOAT_ABSOLUTE_ERROR);
 
+    
+    EXPECT_NEAR(consumed_energy_A2, expected_consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
+    EXPECT_NEAR(consumed_energy_B, expected_consumed_energy_B, FLOAT_ABSOLUTE_ERROR);
+    
+    double excected_remaining_distance = (consumed_energy_A - consumed_energy_A2) / consumed_energy_A * maximum_traveling_distance;
+    EXPECT_NEAR(bat.getRemainingDistance(), excected_remaining_distance, FLOAT_ABSOLUTE_ERROR);
 }
 
 int main(int argc, char **argv){

@@ -12,12 +12,13 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
 //    ROS_INFO("speed_avg_init: %.2f", speed_avg_init);    
     nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
-//    ROS_INFO("power_charging: %.2f", power_charging);
-    nh.getParam("energy_mgmt/power_moving", power_moving);     // W/(m/s)
-    nh.getParam("energy_mgmt/power_standing", power_standing); // W
-    nh.getParam("energy_mgmt/power_idle", power_idle);         // W
+    nh.getParam("energy_mgmt/power_per_speed", power_per_speed);     // W/(m/s)
+    nh.getParam("energy_mgmt/power_moving_fixed_cost", power_moving_fixed_cost);     // W/(m/s)
+    nh.getParam("energy_mgmt/power_sonar", power_sonar); // W
+    nh.getParam("energy_mgmt/power_laser", power_laser); // W
+    nh.getParam("energy_mgmt/power_microcontroller", power_microcontroller); // W
     nh.getParam("energy_mgmt/power_basic_computations", power_basic_computations);  // W
-    nh.getParam("energy_mgmt/power_advanced_computations", power_advanced_computation);  // W
+    nh.getParam("energy_mgmt/power_advanced_computations", power_advanced_computations);  // W
     nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
     nh.getParam("energy_mgmt/maximum_traveling_distance", maximum_traveling_distance); // m/s
     advanced_computations_bool = true;
@@ -150,6 +151,7 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
     {
         ROS_DEBUG("Start recharging");
         state.charging = true;
+        prev_consumed_energy_A = consumed_energy_A;
     }
     else {
         /* The robot is not charging; if the battery was previously under charging, it means that the robot aborted the
@@ -166,7 +168,8 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
     else
         do_not_consume_battery = false;
     
-    if(msg.get()->state == fully_charged || msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
+//    if(msg.get()->state == fully_charged || msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
+    if(msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
         advanced_computations_bool = true;
     else
         advanced_computations_bool = false;
@@ -221,11 +224,15 @@ void battery_simulate::compute()
             ROS_FATAL("strange ratio");
         
         _f1 = ratio_A;
+        _f2 = ratio_B;
+        _f3 = power_charging;
+        _f4 = time_diff_sec;
         
-        double prev_consumed_energy_A = consumed_energy_A;
         consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
         consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
-        state.remaining_distance += (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * state.remaining_distance;
+        state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
+        if(state.remaining_distance > maximum_traveling_distance)
+            state.remaining_distance = maximum_traveling_distance;
         state.soc = state.remaining_distance / maximum_traveling_distance;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
@@ -270,7 +277,8 @@ void battery_simulate::compute()
         return;
     } 
     else if(idle_mode) {
-        consumed_energy_B += power_idle * time_diff_sec; // J
+//        consumed_energy_B += power_idle * time_diff_sec; // J
+        consumed_energy_B += (power_microcontroller + power_basic_computations) * time_diff_sec; // J
 //        
 //        state.soc = remaining_energy / total_energy;
 //        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
@@ -299,10 +307,11 @@ void battery_simulate::compute()
 
         
         if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
-            consumed_energy_A += (power_moving * speed_linear) * time_diff_sec; // J
+            consumed_energy_A += (power_moving_fixed_cost + power_per_speed * speed_linear) * time_diff_sec; // J
         }
-        consumed_energy_B += (power_standing + power_basic_computations + power_advanced_computation) * time_diff_sec; // J
-
+        
+        consumed_energy_B += (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * time_diff_sec; // J
+        
         /* Update battery state */
         state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
         
@@ -446,8 +455,8 @@ void battery_simulate::createLogFiles() {
     battery_state_filename = log_path + std::string("battery_state.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_moving,power_standing,power_charging,charge_max,power_idle,power_basic_computations,power_advanced_computationsmax_linear_speed,initial_speed_avg" << std::endl;
-    fs_info << power_moving << "," << power_standing << "," << power_charging << "," << charge_max << "," << power_idle << "," << power_basic_computations << "," << power_advanced_computation << "," << max_speed_linear << "," << speed_avg_init << std::endl;
+    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,max_linear_speed,initial_speed_avg" << std::endl;
+    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << max_speed_linear << "," << speed_avg_init << std::endl;
     fs_info.close();
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
@@ -498,6 +507,9 @@ double battery_simulate::getConsumedEnergyB() {
     return consumed_energy_B;
 }
 
+double battery_simulate::getRemainingDistance() {
+    return state.remaining_distance;
+}
 
 double battery_simulate::getMaximumTravelingDistance() {
     return maximum_traveling_distance;

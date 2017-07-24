@@ -2145,7 +2145,7 @@ class Explorer
         ros::Duration time = ros::Time::now() - time_start;
 
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << std::endl;
+        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << "," << ros::Time::now() << "," << ros::WallTime::now() << std::endl;
         fs_csv_state.close();
         
         if(robot_state == stuck && (previous_state == auctioning || previous_state == auctioning_2 || robot_state == auctioning_3) )
@@ -2484,6 +2484,7 @@ class Explorer
                   "traveled_distance,global_map_explored_cells,discovered_free_cells_count,local_map_explored_cells,total_number_of_free_cells"
 //                  ",battery_state,"
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
+               << "sim_time,wall_time"
                << std::endl;
         fs_csv.close();
         

@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
 <launch>
     <param name="energy_mgmt/max_linear_speed" value="0.5"/>
-    <param name="energy_mgmt/power_standing" value="37"/>
-    <param name="energy_mgmt/power_moving" value="19"/>    
-    <param name="energy_mgmt/power_basic_computations" value="10"/>
-    <param name="energy_mgmt/power_advanced_computations" value="23"/>
+    <param name="energy_mgmt/power_moving_fixed_cost" value="10"/>
+    <param name="energy_mgmt/power_per_speed" value="8"/>    
+    <param name="energy_mgmt/power_microcontroller" value="40"/>
+    <param name="energy_mgmt/power_sonar" value="5"/>
+    <param name="energy_mgmt/power_laser" value="15"/>
+    <param name="energy_mgmt/power_basic_computations" value="20"/>
+    <param name="energy_mgmt/power_advanced_computations" value="30"/>;
     <param name="energy_mgmt/power_charging" value="50"/>
     <param name="energy_mgmt/power_idle" value="1"/>
     <param name="energy_mgmt/maximum_traveling_distance" value="100"/>
   <test pkg="energy_mgmt" test-name="energy_mgmt" type="utest" />
 </launch>
-
