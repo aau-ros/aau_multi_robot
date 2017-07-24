@@ -2494,15 +2494,15 @@ void docking::create_log_files()
 
     /* Create and initialize files */
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << "#time,optimal_ds,target_ds,sim_time,wall_time" << std::endl;
+    fs_csv << "#elapsed_sim_time,optimal_ds,target_ds,sim_time,wall_time" << std::endl;
     fs_csv.close();
 
     fs2_csv.open(csv_file_2.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs2_csv << "#time,x,y,sim_time,wall_time" << std::endl;
+    fs2_csv << "#elapsed_sim_time,x,y,sim_time,wall_time" << std::endl;
     fs2_csv.close();
 
     fs3_csv.open(csv_file_3.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs3_csv << "#time,sender_robot_id,sim_time,wall_time" << std::endl;
+    fs3_csv << "#elapsed_sim_time,sender_robot_id,sim_time,wall_time" << std::endl;
     fs3_csv.close();
     
     ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
