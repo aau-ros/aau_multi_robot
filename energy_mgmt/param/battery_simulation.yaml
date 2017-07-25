@@ -8,5 +8,4 @@ power_sonar:                    0.82  # W
 power_laser:                    8     # W
 power_basic_computations:       8     # W
 power_advanced_computations:    7     # W
-max_linear_speed:               1     # m/s     - maximum robot linear speed 
-maximum_traveling_distance:    50     # m
+max_linear_speed:               1     # m/s     - maximum robot linear speed

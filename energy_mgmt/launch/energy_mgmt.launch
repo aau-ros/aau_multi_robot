@@ -8,7 +8,7 @@
     <arg name="ds_yaml" />
     <arg name="ds_selection_policy" />
     <arg name="num_robots" />
-    <arg name="max_charge" />
+    <arg name="maximum_traveling_distance" />
     <arg name="use_sim_time" default="true" />
     <param name="use_sim_time"  value="$(arg use_sim_time)"/>
     <!-- <arg name="num_robots"/> -->
@@ -22,7 +22,7 @@
         <param name="y" value ="$(arg y)" />
         
         <param name="log_path" value="$(arg log_path)" />
-        <param name="max_charge" value="$(arg max_charge)" />
+        <param name="maximum_traveling_distance" value="$(arg maximum_traveling_distance)" />
         <param name="ds_selection_policy" value="$(arg ds_selection_policy)" />
         
         <param name="use_sim_time" value="$(arg use_sim_time)" />
