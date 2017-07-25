@@ -118,6 +118,7 @@ class Explorer
     ros::Publisher pub_next_ds;
     bool full_battery, frontiers_found;
     double traveled_distance, last_x, last_y;
+    bool optima_ds_set;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -195,6 +196,7 @@ class Explorer
         received_battery_info = false;
         full_battery = false;
         frontiers_found = false;
+        optima_ds_set = false;
 
         /* Initial robot state */
         robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
@@ -1450,220 +1452,227 @@ class Explorer
 //                            }
                             ROS_INFO("goal not determined: selecting next action...");
                             
-//                            if(moving_along_path) {
-//                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
-//                                counter++;
-//                                move_robot_away(counter);
-//                                update_robot_state_2(auctioning);
-//                                std_msgs::Empty msg;
-//                                pub_next_ds.publish(msg);
-//                            }
-                            
-                            if(retries >= 4)
-                                log_major_error("too many retries, this shouldn't happend");
-                            
-                            //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
-//                            if(robot_state != fully_charged) {
-//                                update_robot_state_2(auctioning);
-//                                costmap_mutex.unlock();
-//                                print_mutex_info("explore()", "unlock");
-//                                continue;
-//                            } 
-                            
-                            //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-//                            if(retries2 < 4 && retries3 < 5 && retries5 < 10) {
-                            if(retries2 < 1 && retries3 < 5 && retries5 < 10) {
-//                                retries5++;
-                                bool error = false;
-                                ros::spinOnce(); //to udpate available_distance
-                                if( !exploration->existFrontiers() ) {
-                                    ROS_INFO("No more frontiers: moving home...");
-                                    move_home_if_possible();
+                            if(!optima_ds_set) {
+                                ROS_ERROR("no optimal ds: forcing to go in queue..."); //done by energy_mgmt;
+                                update_robot_state_2(auctioning);
+                            }
+                            else {
                                 
-                                //TODO use 0.99 as coefficient?
-                                } 
-                                else
-                                {
-                                    if(exploration->discovered_new_frontier)
-                                        retries6 = 0;
-                                    else
-                                        retries6++;
-                                    ROS_INFO("retries6: %d", retries6);
-                                    if(retries6 >= 3) {
-                                        log_major_error("tried too many times to navigate graph: retries6 >= 3");
+    //                            if(moving_along_path) {
+    //                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
+    //                                counter++;
+    //                                move_robot_away(counter);
+    //                                update_robot_state_2(auctioning);
+    //                                std_msgs::Empty msg;
+    //                                pub_next_ds.publish(msg);
+    //                            }
+                                
+                                if(retries >= 4)
+                                    log_major_error("too many retries, this shouldn't happend");
+                                
+                                //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
+    //                            if(robot_state != fully_charged) {
+    //                                update_robot_state_2(auctioning);
+    //                                costmap_mutex.unlock();
+    //                                print_mutex_info("explore()", "unlock");
+    //                                continue;
+    //                            } 
+                                
+                                //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
+    //                            if(retries2 < 4 && retries3 < 5 && retries5 < 10) {
+                                if(retries2 < 1 && retries3 < 5 && retries5 < 10) {
+    //                                retries5++;
+                                    bool error = false;
+                                    ros::spinOnce(); //to udpate available_distance
+                                    if( !exploration->existFrontiers() ) {
+                                        ROS_INFO("No more frontiers: moving home...");
                                         move_home_if_possible();
-                                    }
+                                    
+                                    //TODO use 0.99 as coefficient?
+                                    } 
                                     else
                                     {
-                                        exploration->discovered_new_frontier = false;
-                                        exploration->updateOptimalDs();
-                                        if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
-                                            ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
-                                            counter++;
-                                            move_robot_away(counter);
-                                            update_robot_state_2(auctioning);
-                                            retries4 = 0;
+                                        if(exploration->discovered_new_frontier)
+                                            retries6 = 0;
+                                        else
+                                            retries6++;
+                                        ROS_INFO("retries6: %d", retries6);
+                                        if(retries6 >= 3) {
+                                            log_major_error("tried too many times to navigate graph: retries6 >= 3");
+                                            move_home_if_possible();
                                         }
-                                        else {
-                                        
-                                            update_robot_state_2(exploring_for_graph_navigation);
-                                            ros::Duration(1).sleep();
-                                        
-                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
-                                                ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                                
-    //                                            std_msgs::Empty msg;
-    //                                            pub_next_ds.publish(msg);
-    //                                            ros::Duration(3).sleep();
-                                                
-                                                int result = -1;
-                                                exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
-                                                if(result == 0) //TODO very very orrible idea, using result...
-                                                {
-                                                    ROS_INFO("path successfully found");
+                                        else
+                                        {
+                                            exploration->discovered_new_frontier = false;
+                                            exploration->updateOptimalDs();
+                                            if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
+                                                ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
+                                                counter++;
+                                                move_robot_away(counter);
+                                                update_robot_state_2(auctioning);
+                                                retries4 = 0;
+                                            }
+                                            else {
+                                            
+                                                update_robot_state_2(exploring_for_graph_navigation);
+                                                ros::Duration(1).sleep();
+                                            
+                                                if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
+                                                    ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                     
-                                                    counter++;
-                                                    move_robot_away(counter);
-                                                    update_robot_state_2(auctioning_2);
-                                                    retries2 = 0;
-                                                    retries4 = 0;
-                                                }
-                                                else {
-                                                    retries2++;
+        //                                            std_msgs::Empty msg;
+        //                                            pub_next_ds.publish(msg);
+        //                                            ros::Duration(3).sleep();
                                                     
-                                                    if(result == 1)
-                                                        log_major_error("No DS with EOs was found");
-                                                    else if(result == 2)
-                                                        log_major_error("impossible, no closest ds found...");
-                                                    else if(result == 3) {
-                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                    int result = -1;
+                                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                                    if(result == 0) //TODO very very orrible idea, using result...
+                                                    {
+                                                        ROS_INFO("path successfully found");
+                                                        
                                                         counter++;
                                                         move_robot_away(counter);
                                                         update_robot_state_2(auctioning_2);
-                                                        retries3++;
+                                                        retries2 = 0;
+                                                        retries4 = 0;
                                                     }
-                                                    else
-                                                        log_major_error("invalid result value");
-                                                }
-                                            }
-                                            else {
-                                                ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
-                                                if(error) {
-                                                        ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
-                                                        ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
-                                                        ros::Duration(3).sleep();
+                                                    else {
                                                         retries2++;
-                                                        costmap_mutex.unlock();
-                                                        print_mutex_info("explore()", "unlock");
-                                                        update_robot_state_2(exploring);
-                                                        continue;
+                                                        
+                                                        if(result == 1)
+                                                            log_major_error("No DS with EOs was found");
+                                                        else if(result == 2)
+                                                            log_major_error("impossible, no closest ds found...");
+                                                        else if(result == 3) {
+                                                            log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                            counter++;
+                                                            move_robot_away(counter);
+                                                            update_robot_state_2(auctioning_2);
+                                                            retries3++;
+                                                        }
+                                                        else
+                                                            log_major_error("invalid result value");
+                                                    }
                                                 }
                                                 else {
-                                                    retries4++;
-                                                    if(retries4 < 3) {
-                                                        ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
-                                                        costmap_mutex.unlock();
-                                                        print_mutex_info("explore()", "unlock");
-                                                        update_robot_state_2(exploring);
-                                                        continue;
+                                                    ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
+                                                    if(error) {
+                                                            ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
+                                                            ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
+                                                            ros::Duration(3).sleep();
+                                                            retries2++;
+                                                            costmap_mutex.unlock();
+                                                            print_mutex_info("explore()", "unlock");
+                                                            update_robot_state_2(exploring);
+                                                            continue;
                                                     }
-                                                    else
-                                                    {
-                                                        log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                                        move_home_if_possible();
+                                                    else {
+                                                        retries4++;
+                                                        if(retries4 < 3) {
+                                                            ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
+                                                            costmap_mutex.unlock();
+                                                            print_mutex_info("explore()", "unlock");
+                                                            update_robot_state_2(exploring);
+                                                            continue;
+                                                        }
+                                                        else
+                                                        {
+                                                            log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
+                                                            move_home_if_possible();
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
+                                         }
                                      }
-                                 }
-                            }
-                            else {
-                                if(retries2 >= 4)
-                                    log_major_error("tried too many times to navigate graph: retries2 >= 4");
-                                else if(retries3 >=5)
-                                    log_major_error("tried too many times to navigate graph: retries3 >= 5");
-                                else
-                                    log_major_error("tried too many times to navigate graph: retries5 >= 10");
-                                move_home_if_possible();
-                            }
-                                
-//                                if(!ds_graph_navigation_allowed)
-//                                    ROS_INFO("There are no more frontiers that can be reached from the current DS and Ds graph navigation is not allowed: start moving along DS graph...");
-                                
-//                            else if (robot_state == fully_charged)
-//                            {
-//                                /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
-//                                 * that it will never be able to reach a frontier: exploration is over */
-//                                // TODO(minor) we shoudl better check if there are still unvisited
-//                                // frontier and the robot is not able to reach any of them even if
-//                                // fully charged, because clearly this is a problem... which could be solved by navigating the
-//                                // ds graph to reach one of this frontiers
-//                                //if(!already_navigated_DS_graph || exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
-//                                if(exploration->existFrontiers())
-//                                {
-//                                    ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
-//                                    update_robot_state_2(auctioning_2);
-//                                    already_navigated_DS_graph = true;
-//                                    
-//                                    if(ros::Time::now() - start_time < ros::Duration(5*60)) {
-//                                        log_major_error("trying to navigate graph!!!");     
-//                                    }
-//                                        
-//                                    
-//                                }
-//                                else
-//                                {
-//                                    ROS_INFO("No more frontiers to be visited: exploration is completed");
-//                                    /* Start countdown to finalize exploration */
-//                                    // TODO(minor)
-//                                    // exit_countdown--;
-//                                    // ROS_ERROR("Shutdown in: %d", exit_countdown);
-//                                    // if (exit_countdown <= 0)
-//                                    ros::spinOnce();
-//                                    move_home_if_possible();
-//                                }                                
-//                            }
+                                }
+                                else {
+                                    if(retries2 >= 4)
+                                        log_major_error("tried too many times to navigate graph: retries2 >= 4");
+                                    else if(retries3 >=5)
+                                        log_major_error("tried too many times to navigate graph: retries3 >= 5");
+                                    else
+                                        log_major_error("tried too many times to navigate graph: retries5 >= 10");
+                                    move_home_if_possible();
+                                }
+                                    
+    //                                if(!ds_graph_navigation_allowed)
+    //                                    ROS_INFO("There are no more frontiers that can be reached from the current DS and Ds graph navigation is not allowed: start moving along DS graph...");
+                                    
+    //                            else if (robot_state == fully_charged)
+    //                            {
+    //                                /* The robot wasn't able to find a reachable frontier even if it is fully charged: this means
+    //                                 * that it will never be able to reach a frontier: exploration is over */
+    //                                // TODO(minor) we shoudl better check if there are still unvisited
+    //                                // frontier and the robot is not able to reach any of them even if
+    //                                // fully charged, because clearly this is a problem... which could be solved by navigating the
+    //                                // ds graph to reach one of this frontiers
+    //                                //if(!already_navigated_DS_graph || exploration->existFrontiers()) //TODO(minor) are we sure taht it works correctly? theoretically yes, but the "error" message below is printed too ofter...
+    //                                if(exploration->existFrontiers())
+    //                                {
+    //                                    ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //notice that it is true that the existing frontiers are unreachable with full battery at the moment, or the execution flow wouldn't be here...//TODO(minor) bad text... 
+    //                                    update_robot_state_2(auctioning_2);
+    //                                    already_navigated_DS_graph = true;
+    //                                    
+    //                                    if(ros::Time::now() - start_time < ros::Duration(5*60)) {
+    //                                        log_major_error("trying to navigate graph!!!");     
+    //                                    }
+    //                                        
+    //                                    
+    //                                }
+    //                                else
+    //                                {
+    //                                    ROS_INFO("No more frontiers to be visited: exploration is completed");
+    //                                    /* Start countdown to finalize exploration */
+    //                                    // TODO(minor)
+    //                                    // exit_countdown--;
+    //                                    // ROS_ERROR("Shutdown in: %d", exit_countdown);
+    //                                    // if (exit_countdown <= 0)
+    //                                    ros::spinOnce();
+    //                                    move_home_if_possible();
+    //                                }                                
+    //                            }
 
-//                            else if(robot_state == leaving_ds) {
-//                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
-//                                    // check the existence of reachable frontiers with full battery life
-//                                    //if(!already_navigated_DS_graph || exploration->existFrontiers()) {
-//                                    if(exploration->existFrontiers()) {
-//                                        //if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
-//                                            ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
-//                                            update_robot_state_2(auctioning_2);
-//                                            already_navigated_DS_graph = true;
-//                                         }
-//                                     else {
-//                                        ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
-//                                        ros::spinOnce();
-//                                        move_home_if_possible();
-//                                     }
-////                                    } else {
-////                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
-////                                        finalize_exploration();
-////                                    }
-//                                }
-//                            }
-//                            else
-//                            {
-//                                /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
-//                                // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
-//                                // TODO(minor) call udpate_robot_state() instead!!!
-//                                // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
-//                                // docking node knows that all the auctions have been concluded, but it has not notified the
-//                                // explorer node about it yet, which means that update_robot_state hase nothing to update at the
-//                                // moment... it could be solved using a service or using robot_state node
-//                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
-//                                {
-//                                    //ROS_ERROR("Robot cannot reach any frontier: starting auction to "
-//                                    //          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
-//                                                                                      // if the robot does not really start a
-//                                                                                      // new auction...
-//                                    update_robot_state_2(auctioning);
-//                                }
-//                            }
+    //                            else if(robot_state == leaving_ds) {
+    //                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next) {
+    //                                    // check the existence of reachable frontiers with full battery life
+    //                                    //if(!already_navigated_DS_graph || exploration->existFrontiers()) {
+    //                                    if(exploration->existFrontiers()) {
+    //                                        //if(exploration->existFrontiersReachableWithFullBattery(max_av_distance)) { //TODO(minor) really necessary?
+    //                                            ROS_INFO("There are still unvisited frontiers, but the robot cannot reach them even with full battery: try searching for a DS with EOs (if the DS selection strategy allows it...)"); //TODO(minor) bad text...
+    //                                            update_robot_state_2(auctioning_2);
+    //                                            already_navigated_DS_graph = true;
+    //                                         }
+    //                                     else {
+    //                                        ROS_ERROR("Charging was interrupted and there are still unvisited frontiers, but they cannot reach even when the robot has full battery: finalize exploration...");
+    //                                        ros::spinOnce();
+    //                                        move_home_if_possible();
+    //                                     }
+    ////                                    } else {
+    ////                                        ROS_INFO("Charging was interrupted, but there are no more frontiers that can be reached byt the robot");
+    ////                                        finalize_exploration();
+    ////                                    }
+    //                                }
+    //                            }
+    //                            else
+    //                            {
+    //                                /* Robot cannot reach any frontier but it is not fully charged, so a recharging is in order */
+    //                                // TODO(minor) check if the robot has not just won an auction meanwhile... but should be solved by docking now...
+    //                                // TODO(minor) call udpate_robot_state() instead!!!
+    //                                // TODO(minor) but also calling update_robot_state does not solve the problem, because maybe the
+    //                                // docking node knows that all the auctions have been concluded, but it has not notified the
+    //                                // explorer node about it yet, which means that update_robot_state hase nothing to update at the
+    //                                // moment... it could be solved using a service or using robot_state node
+    //                                if (robot_state_next != going_charging_next && robot_state_next != going_queue_next)
+    //                                {
+    //                                    //ROS_ERROR("Robot cannot reach any frontier: starting auction to "
+    //                                    //          "acquire access to a DS to recharge");  // TODO(minor) this message could be misleading
+    //                                                                                      // if the robot does not really start a
+    //                                                                                      // new auction...
+    //                                    update_robot_state_2(auctioning);
+    //                                }
+    //                            }
+                            }
                         }
                         
                         costmap_mutex.unlock();
@@ -3740,6 +3749,7 @@ class Explorer
 //        if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
 //                robot_state != checking_vacancy) {
 //            optimal_ds_id = msg.get()->id;
+            optima_ds_set = true;
             optimal_ds_x = msg.get()->x;
             optimal_ds_y = msg.get()->y;
             ROS_DEBUG("Storing new optimal DS position, which is placed at (%f, %f)", optimal_ds_x, optimal_ds_y);

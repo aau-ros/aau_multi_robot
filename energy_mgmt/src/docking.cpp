@@ -325,6 +325,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, false, true); //TODO(minor) timeout
     
+    starting_time = ros::Time::now();
+    
 }
 
 //void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
@@ -2066,10 +2068,14 @@ void docking::start_new_auction()
     if (!optimal_ds_is_set() && need_to_charge)
     {
         waiting_to_discover_a_ds = true;
-        log_major_error("The robot needs to recharge, but it doesn't know about any "
+        log_minor_error("The robot needs to recharge, but it doesn't know about any "
                   "existing DS!");  // TODO(minor) improve...
 //        compute_and_publish_path_on_ds_graph_to_home();
         wait_for_ds++;
+        
+        if(ros::Time::now() - starting_time > ros::Duration(5))
+            log_major_error("robot seems unable to find DSs!!");
+        
         if(wait_for_ds < 100) {
             timer_restart_auction.stop(); //reduntant?
             timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);

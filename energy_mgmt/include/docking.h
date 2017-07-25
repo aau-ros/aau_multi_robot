@@ -659,6 +659,7 @@ class docking
     ros::Publisher pub_force_in_queue;
     int old_target_ds_id;
     bool waiting_to_discover_a_ds;
+    ros::Time  starting_time;
 
 };
 
