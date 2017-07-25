@@ -1137,7 +1137,7 @@ class Explorer
                             else
                             {
                                 cluster_element = int(exploration->clusters.size() * rand() / (RAND_MAX));
-                                ROS_INFO("Random cluster_element: %d  from available %lu clusters", cluster_element,
+                                ROS_INFO("Random cluster_element: %d  from available %u clusters", cluster_element,
                                          exploration->clusters.size());
                             }
                             count++;
@@ -3099,7 +3099,7 @@ class Explorer
         else
         {
             rotation_counter++;
-            ROS_INFO("In navigation .... cluster_available: %lu     counter: %d", exploration->clusters.size(),
+            ROS_INFO("In navigation .... cluster_available: %u     counter: %d", exploration->clusters.size(),
                      counter_waiting_for_clusters);
 
             // ???

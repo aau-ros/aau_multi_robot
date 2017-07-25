@@ -9860,7 +9860,7 @@ double ExplorationPlanner::getOptimalDsX() {
     return optimal_ds_x;
 }
 
-void ExplorationPlanner::updateDistances(double max_available_distance) {
+void ExplorationPlanner::updateDistances(double max_available_distance, bool use_heuristic) {
 //    std::vector<frontier_t> list_frontiers_local_copy;
 //    
 //    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -9890,7 +9890,7 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
 //        update_distances_index = 0;
 //    release_mutex(&store_frontier_mutex, __FUNCTION__);
 
-
+    /*
     bool finished = false;
     double f_x, f_y;
     unsigned int index = 0;
@@ -9926,7 +9926,7 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
             for(unsigned int ds_index=0; ds_index < list_ds_local_copy.size(); ds_index++) {
             
                 // since we don't need the real distance, but we just need to know if a frontier is reachable or not from a DS, if the already computed distance is less then the maximum travelling distance, we don't need to recompute it (maybe we would discover that it is even less than what we though, but we don't care)
-                if(frontiers.at(index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                if(index < frontiers.at(index).list_distance_from_ds.size() && frontiers.at(index).list_distance_from_ds.at(ds_index) < max_available_distance)
                     continue;
             
                 double distance = trajectory_plan_meters(list_ds_local_copy.at(ds_index).x, list_ds_local_copy.at(ds_index).y, f_x, f_y);
@@ -9944,7 +9944,42 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
                 index++;
                 release_mutex(&mutex_erase_frontier, __FUNCTION__);
             }
-        }  
+        } 
+    } 
+    */
+
+    std::vector<ds_t> list_ds_local_copy;
+    
+    acquire_mutex(&mutex_ds, __FUNCTION__);
+    std::copy(list_ds_local_copy.begin(), list_ds_local_copy.end(), ds_list.begin()); //TODO inefficient with many ds... and is it really necessary? we are not even using a mutex...
+    release_mutex(&mutex_ds, __FUNCTION__);
+
+    //TODO it is not completely thread-safe (it is at least accoring to the current code...(?))
+    for(unsigned int frontier_index = frontiers.size() - 1; frontier_index >= 0; frontier_index--) { //start from the bottom not to penalize the newest frontiers
+        for(unsigned int ds_index=0; ds_index < list_ds_local_copy.size(); ds_index++) {
+            acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
+            
+            // in case meanwhile some frontiers have been deleted
+            if(frontier_index >= frontiers.size())
+                return;
+            
+            while(frontiers.at(frontier_index).list_distance_from_ds.size() < list_ds_local_copy.size())
+                frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
+            
+            double distance = trajectory_plan_meters(list_ds_local_copy.at(ds_index).x, list_ds_local_copy.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+            if(distance < 0)
+                continue;
+            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                    continue;
+            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
+                continue;
+            else
+                frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+            release_mutex(&mutex_erase_frontier, __FUNCTION__);
+        }
+    }
+
+    
       
 ////    if(recompute_ds_graph) {
 ////        recompute_ds_graph = false;
@@ -9965,9 +10000,6 @@ void ExplorationPlanner::updateDistances(double max_available_distance) {
 //                    }
 //                }
 ////    }
-      
-        
-    }
     
 }
 double ExplorationPlanner::computeTheta(double frontier_x, double frontier_y) {

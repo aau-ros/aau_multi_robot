@@ -3287,7 +3287,7 @@ void docking::check_reachable_ds()
 //                log_major_error("error");
 //            int id2 = it->id;
             //discovered_ds.erase(it);
-            ROS_INFO("erase at position %d; size after delete is %lu", i, discovered_ds.size() - 1);
+            ROS_INFO("erase at position %d; size after delete is %u", i, discovered_ds.size() - 1);
             discovered_ds.erase(discovered_ds.begin() + i);
             
 //            it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
@@ -3733,15 +3733,15 @@ void docking::runtime_checks() {
             log_major_error("invalid number of DS!");
             invalid_ds_count_printed = true;
             
-            ROS_DEBUG("ds.size(): %lu; content:", ds.size());
+            ROS_DEBUG("ds.size(): %u; content:", ds.size());
             for(unsigned int i=0; i < ds.size(); i++)
                 ROS_DEBUG("%d", ds.at(i).id);
                 
-            ROS_DEBUG("undiscovered_ds.size(): %lu; content:", undiscovered_ds.size());
+            ROS_DEBUG("undiscovered_ds.size(): %u; content:", undiscovered_ds.size());
             for(unsigned int i=0; i < undiscovered_ds.size(); i++)
                 ROS_DEBUG("%d", undiscovered_ds.at(i).id);
                 
-            ROS_DEBUG("discovered_ds.size(): %lu; content: ", discovered_ds.size());
+            ROS_DEBUG("discovered_ds.size(): %u; content: ", discovered_ds.size());
             for(unsigned int i=0; i < discovered_ds.size(); i++)
                 ROS_DEBUG("%d", discovered_ds.at(i).id);
         }
@@ -3751,7 +3751,7 @@ void docking::runtime_checks() {
             for(unsigned int j=i+1; j < ds.size(); j++)
                 if(ds.at(i).id == ds.at(j).id) {
                     log_major_error("invalid number of DS!");
-                    ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
+                    ROS_ERROR("ds.size(): %u, undiscovered_ds.size(): %u, discovered_ds.size(): %u", ds.size(), undiscovered_ds.size(), discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
 }
@@ -3850,7 +3850,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
-    ROS_DEBUG("%lu", jobs.size());
+    ROS_DEBUG("%u", jobs.size());
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;

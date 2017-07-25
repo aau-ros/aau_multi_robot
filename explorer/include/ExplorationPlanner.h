@@ -374,7 +374,7 @@ namespace explorationPlanner
             bool discovered_new_frontier;
             bool updateRobotPose();
             void updateOptimalDs();
-            void updateDistances(double max_available_distance);
+            void updateDistances(double max_available_distance, bool use_heuristic = true);
 //            std::vector<frontier_t>::const_iterator update_distances_index;
             bool use_theta;
 
