@@ -34,7 +34,7 @@
 #include "explorer/Distance.h"
 
 #define MAX_DISTANCE 2000           // max distance to starting point
-#define MAX_GOAL_RANGE 3.0 //0.7          // min distance between frontiers during search [meters]
+#define MAX_GOAL_RANGE 5.0 //0.7          // min distance between frontiers during search [meters]
 #define MINIMAL_FRONTIER_RANGE 0.7  // min distance between frontiers during selection [meters]
 #define INNER_DISTANCE 10 //8            // radius around backoff goal point without obstacles [cells]
 #define MAX_NEIGHBOR_DIST 1         // max distance between frontiers within a cluster
@@ -1222,20 +1222,20 @@ double ExplorationPlanner::trajectory_plan_meters(double start_x, double start_y
             std::vector<double> distance = distance_list.at(i);
             if(
                 (
-                    distance.at(0) == start_x &&
-                    distance.at(1) == start_y &&
-                    distance.at(2) == target_x &&
-                    distance.at(3) == target_y
+                    fabs(distance.at(0) - start_x)  < 0.01 &&
+                    fabs(distance.at(1) - start_y)  < 0.01 &&
+                    fabs(distance.at(2) - target_x) < 0.01 &&
+                    fabs(distance.at(3) - target_y) < 0.01
                 )
                 ||
                 (
-                    distance.at(0) == target_x &&
-                    distance.at(1) == target_y && 
-                    distance.at(2) == start_x && 
-                    distance.at(3) == start_y
+                    fabs(distance.at(0) - target_x) < 0.01 &&
+                    fabs(distance.at(1) - target_y) < 0.01 && 
+                    fabs(distance.at(2) - start_x)  < 0.01 && 
+                    fabs(distance.at(3) - start_y)  < 0.01
                 )
             )
-                    return distance.at(4);
+                return distance.at(4);
         }
         return -1;      
     }
@@ -9948,38 +9948,34 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
     } 
     */
 
-    std::vector<ds_t> list_ds_local_copy;
-    
-    acquire_mutex(&mutex_ds, __FUNCTION__);
-    std::copy(list_ds_local_copy.begin(), list_ds_local_copy.end(), ds_list.begin()); //TODO inefficient with many ds... and is it really necessary? we are not even using a mutex...
-    release_mutex(&mutex_ds, __FUNCTION__);
-
+   
     //TODO it is not completely thread-safe (it is at least accoring to the current code...(?))
     for(unsigned int frontier_index = frontiers.size() - 1; frontier_index >= 0; frontier_index--) { //start from the bottom not to penalize the newest frontiers
-        for(unsigned int ds_index=0; ds_index < list_ds_local_copy.size(); ds_index++) {
+        for(unsigned int ds_index=0; ds_index < ds_list.size(); ds_index++) {
             acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
             
             // in case meanwhile some frontiers have been deleted
-            if(frontier_index >= frontiers.size())
+            if(frontier_index >= frontiers.size()) {
+                release_mutex(&mutex_erase_frontier, __FUNCTION__);
                 return;
+            }
             
-            while(frontiers.at(frontier_index).list_distance_from_ds.size() < list_ds_local_copy.size())
+            while(frontiers.at(frontier_index).list_distance_from_ds.size() < ds_list.size())
                 frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
             
-            double distance = trajectory_plan_meters(list_ds_local_copy.at(ds_index).x, list_ds_local_copy.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+            double distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
             if(distance < 0)
-                continue;
-            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
-                    continue;
+                ;
+            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                ;
             else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
-                continue;
+                ;
             else
                 frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+
             release_mutex(&mutex_erase_frontier, __FUNCTION__);
         }
     }
-
-    
       
 ////    if(recompute_ds_graph) {
 ////        recompute_ds_graph = false;

@@ -193,6 +193,34 @@ TEST_F(ExplorationPlannerTest, testCase5)
     
 }
 
+TEST_F(ExplorationPlannerTest, testCase6)
+{
+    
+    std::string robot_name = "robot";
+    explorationPlanner::ExplorationPlanner *ep = new explorationPlanner::ExplorationPlanner(1,true,robot_name);
+    ep->setTestMode(true);
+    explorationPlanner::frontier_t f1;
+    f1.x_coordinate = 10, f1.y_coordinate = 20, ep->pushFrontier(f1);
+
+    ds_t ds1, ds2;
+    ds1.x = 0, ds1.y = 0, ep->ds_list.push_back(ds1);
+    ds2.x = 10, ds2.y = 10, ep->ds_list.push_back(ds2);
+
+    ep->addDistance(f1.x_coordinate, f1.y_coordinate, ds1.x, ds1.y, euclidean_distance(f1.x_coordinate, f1.y_coordinate, ds1.x, ds1.y));
+
+    ep->updateDistances(100);
+
+    EXPECT_EQ(euclidean_distance(f1.x_coordinate, f1.y_coordinate, ds1.x, ds1.y), ep->frontiers.at(0).list_distance_from_ds.at(0));
+
+    ep->addDistance(f1.x_coordinate, f1.y_coordinate, ds2.x, ds2.y, euclidean_distance(f1.x_coordinate, f1.y_coordinate, ds2.x, ds2.y));
+    
+    ep->updateDistances(100);
+
+    EXPECT_EQ(euclidean_distance(f1.x_coordinate, f1.y_coordinate, ds1.x, ds1.y), ep->frontiers.at(0).list_distance_from_ds.at(0));
+    EXPECT_EQ(euclidean_distance(f1.x_coordinate, f1.y_coordinate, ds2.x, ds2.y), ep->frontiers.at(0).list_distance_from_ds.at(1));
+    
+}
+
 
 
 

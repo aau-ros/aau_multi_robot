@@ -87,11 +87,20 @@ namespace explorationPlanner
         double _theta;
     } frontier, unreachable_frontier;
 
+    struct ds_t
+    {
+        int id;
+        double x;
+        double y;
+        bool vacant;
+    };
+
 
     class ExplorationPlanner
     {
         friend class ExplorationPlannerTest;
         FRIEND_TEST(ExplorationPlannerTest, testCase5);
+        FRIEND_TEST(ExplorationPlannerTest, testCase6);
         
         public:
 
@@ -467,13 +476,7 @@ namespace explorationPlanner
             int num_ds;
             void ds_count_callback(const std_msgs::Int32 msg);
             ros::Subscriber sub_ds_count;
-            struct ds_t
-            {
-                int id;
-                double x;
-                double y;
-                bool vacant;
-            };
+
             std::vector<ds_t> ds_list;
             std::vector<std::vector<float> > ds_graph;
             bool recompute_ds_graph;
