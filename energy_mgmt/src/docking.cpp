@@ -2073,7 +2073,7 @@ void docking::start_new_auction()
 //        compute_and_publish_path_on_ds_graph_to_home();
         wait_for_ds++;
         
-        if(ros::Time::now() - starting_time > ros::Duration(5))
+        if(ros::Time::now() - starting_time > ros::Duration(5*60))
             log_major_error("robot seems unable to find DSs!!");
         
         if(wait_for_ds < 100) {
