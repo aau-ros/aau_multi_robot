@@ -96,6 +96,7 @@ class docking
     void check_reachable_ds();
     void runtime_checks();
     void spinOnce();
+    void send_ds();
 
   private:
     /**
@@ -294,6 +295,7 @@ class docking
         double x, y; // coordinates of the DS in the /map frame
         double world_x, world_y; // coordinates of the DS in the /world frame (i.e., in case of a simulation, in the reference system of the simulator)
         bool vacant;
+        double timestamp;
     };
     
     vector<ds_t> ds;

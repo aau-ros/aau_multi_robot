@@ -4296,6 +4296,7 @@ double docking::get_optimal_ds_y() {
 //    return target_ds_y;
 //}
 
+/*
 void docking::free_ds(int id) {
     if(id < 0 || id >= num_ds) {
         log_major_error("invalid target_ds in free_ds!");
@@ -4325,6 +4326,7 @@ void docking::free_ds(int id) {
 
     update_l1();
 }
+*/
 
 //void docking::finished_exploration_callback(const std_msgs::Empty msg) {
 //    ROS_INFO("finished_exploration_callback");
@@ -4333,4 +4335,21 @@ void docking::free_ds(int id) {
 
 void docking::spinOnce() {
     spinOnce();
+}
+
+void docking::send_ds() {
+    adhoc_communication::SendEmDockingStation srv_msg;
+    srv_msg.request.topic = "docking_stations";
+    srv_msg.request.dst_robot = group_name;
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    for(unsigned int i=0; i < ds.size(); i++) {
+        srv_msg.request.docking_station.x = ds.at(i).x;  // it is necessary to fill also this fields because when a Ds is
+                                                // received, robots perform checks on the coordinates
+        srv_msg.request.docking_station.y = ds.at(i).y;
+        srv_msg.request.docking_station.id = ds.at(i).id;
+        srv_msg.request.docking_station.vacant = ds.at(i).vacant;
+        srv_msg.request.docking_station.timestamp = ros::Time::now().toSec(); //TODO should timestamp be part of ds_t or not ???
+        sc_send_docking_station.call(srv_msg);
+    }
 }
