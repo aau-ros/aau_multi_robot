@@ -1738,6 +1738,9 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
             new_ds = false;
 
+            if(ds.at(i).timestamp > msg.get()->timestamp)
+                continue;
+
             if (ds[i].vacant != msg.get()->vacant)
             {
                 ds[i].vacant = msg.get()->vacant;
@@ -2544,6 +2547,7 @@ void docking::set_optimal_ds_vacant(bool vacant)
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = vacant;
+    srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
     sc_send_docking_station.call(srv_msg);
 
     for(unsigned int i=0; i < ds.size(); i++)
@@ -3066,6 +3070,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                     send_ds_srv_msg.request.docking_station.x = x;
                     send_ds_srv_msg.request.docking_station.y = y;
                     send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
+                    send_ds_srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
                     sc_send_docking_station.call(send_ds_srv_msg);
                 }
 
@@ -3585,6 +3590,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
+        srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
         sc_send_docking_station.call(srv_msg);
     }
     
@@ -3603,6 +3609,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
+        srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
         sc_send_docking_station.call(srv_msg);
     }
         
