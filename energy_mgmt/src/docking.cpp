@@ -1701,6 +1701,10 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
+
+    if(!checkAndUpdateReceivedMessageId("docking_stations", msg.get()->message_id, msg.get()->updating_robot))
+        log_major_error("invalid message id!");
+
     ROS_INFO("received ds%d", msg.get()->id);
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     ds_mutex.lock();
@@ -2548,6 +2552,7 @@ void docking::set_optimal_ds_vacant(bool vacant)
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = vacant;
     srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
+    srv_msg.request.docking_station.updating_robot = robot_id;
     sc_send_docking_station.call(srv_msg);
 
     for(unsigned int i=0; i < ds.size(); i++)
@@ -3071,6 +3076,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                     send_ds_srv_msg.request.docking_station.y = y;
                     send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
                     send_ds_srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
+                    send_ds_srv_msg.request.docking_station.updating_robot = robot_id;
                     sc_send_docking_station.call(send_ds_srv_msg);
                 }
 
@@ -3591,6 +3597,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
         srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
+        srv_msg.request.docking_station.updating_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
     
@@ -3610,6 +3617,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
         srv_msg.request.docking_station.timestamp = ros::Time::now().toSec();
+        srv_msg.request.docking_station.updating_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
         
@@ -4357,6 +4365,41 @@ void docking::send_ds() {
         srv_msg.request.docking_station.id = ds.at(i).id;
         srv_msg.request.docking_station.vacant = ds.at(i).vacant;
         srv_msg.request.docking_station.timestamp = ros::Time::now().toSec(); //TODO should timestamp be part of ds_t or not ???
+        srv_msg.request.docking_station.updating_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
+}
+
+unsigned int docking::getAndUpdateMessageIdForTopic(std::string topic) {
+    auto search = topic_ids.find(topic);
+    if(search == topic_ids.end()) {
+        topic_ids.insert({topic, 1});
+        search = topic_ids.find(topic);
+    }
+    unsigned int return_value = search->second * pow(10, (ceil(log10(num_robots)))) + robot_id;
+    search->second++;
+    return return_value;
+}
+
+bool docking::checkAndUpdateReceivedMessageId(std::string topic, unsigned int message_id, unsigned int sender_robot_id) {
+    auto search = received_topic_ids.find(topic);
+    if(search == received_topic_ids.end()) {
+//        ROS_FATAL("invalid topic"); //TODO insert automatically? but in this case we cannot avoid errors due to wrong topics
+        received_topic_ids.insert({topic, {}});
+        search = received_topic_ids.find(topic);
+    }
+    else {
+        auto search2 = search->second.find(sender_robot_id);
+        if(search2 == search->second.end()) {
+//            ROS_FATAL("invalid robot");
+            search->second.insert({sender_robot_id, 0});
+            search2 = search->second.find(sender_robot_id);
+        }
+        else {
+            bool return_value = (message_id == search2->second / pow(10, (ceil(log10(num_robots)))) + 1);
+            search2->second = message_id;
+            return return_value;
+        }            
+    }
+    return false;
 }

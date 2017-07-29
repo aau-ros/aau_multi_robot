@@ -39,6 +39,7 @@
 #include "fake_network/RobotPositionSrv.h"
 #include "fake_network/RobotPosition.h"
 #include <mutex>          // std::mutex
+#include <unordered_map>
 
 
 #define PI 3.14159265
@@ -662,7 +663,10 @@ class docking
     int old_target_ds_id;
     bool waiting_to_discover_a_ds;
     ros::Time  starting_time;
-
+    std::unordered_map <std::string, unsigned int> topic_ids;
+    std::unordered_map <std::string, std::unordered_map <unsigned int, unsigned int> > received_topic_ids;
+    unsigned int getAndUpdateMessageIdForTopic(std::string topic);
+    bool checkAndUpdateReceivedMessageId(std::string topic, unsigned int message_id, unsigned int robot_id);
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

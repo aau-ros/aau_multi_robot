@@ -54,6 +54,7 @@ find_package(catkin REQUIRED COMPONENTS
  add_message_files(
    FILES
    #AuctionStatus.msg
+    Header.msg
    ExpAuction.msg
    ExpAuctionElement.msg
    ExpFrontierElement.msg
@@ -71,6 +72,7 @@ find_package(catkin REQUIRED COMPONENTS
    EmAuction.msg
    EmDockingStation.msg
    EmRobot.msg
+    
  )
 
 
