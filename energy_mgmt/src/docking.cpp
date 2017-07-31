@@ -1417,11 +1417,15 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
         
-    if (has_to_free_optimal_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
-     {
-            has_to_free_optimal_ds = false;
-            set_optimal_ds_vacant(true);
-        }
+//    if (has_to_free_optimal_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
+//     {
+//            has_to_free_optimal_ds = false;
+//            set_optimal_ds_vacant(true);
+//    }
+    if(robot_state == fully_charged || msg.get()->state != leaving_ds) {
+//        set_optimal_ds_vacant(true);
+        free_ds(id_ds_to_be_freed);
+    }
 
     if (msg.get()->state == in_queue)
     {
@@ -1445,7 +1449,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         ; //ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         need_to_charge = false;  // TODO(minor) useless
-
+        id_ds_to_be_freed = get_optimal_ds_id();
         set_optimal_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
     else if (msg.get()->state == going_checking_vacancy)
@@ -1546,7 +1550,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     {
         has_to_free_optimal_ds = true;
 //        id_ds_to_be_freed = get_target_ds_id();
-        id_ds_to_be_freed = get_optimal_ds_id();
+//        id_ds_to_be_freed = get_optimal_ds_id();
         going_to_ds = false;
     }
     else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
@@ -4323,7 +4327,6 @@ double docking::get_optimal_ds_y() {
 //    return target_ds_y;
 //}
 
-/*
 void docking::free_ds(int id) {
     if(id < 0 || id >= num_ds) {
         log_major_error("invalid target_ds in free_ds!");
@@ -4341,19 +4344,29 @@ void docking::free_ds(int id) {
         if(ds.at(i).id == id) {
             ds.at(i).vacant = vacant;
             rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
+            break;
         }
     
     srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = true;
+
+    srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+    srv_msg.request.docking_station.header.sender_robot = robot_id;
+    srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
+    
     sc_send_docking_station.call(srv_msg);
 
-    ROS_INFO("Updated own information about ds%d state", id);
+    for(unsigned int i=0; i < ds.size(); i++)
+        if(ds.at(i).id == get_optimal_ds_id())
+            ds.at(i).vacant = vacant;
+
+//    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
+    ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
 
     update_l1();
 }
-*/
 
 //void docking::finished_exploration_callback(const std_msgs::Empty msg) {
 //    ROS_INFO("finished_exploration_callback");
