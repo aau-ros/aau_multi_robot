@@ -179,34 +179,34 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
     /* Subscribers */
-    sub_battery = nh.subscribe(my_prefix + "battery_state", 10, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(my_prefix + "robots", 10, &docking::cb_robots, this);
+    sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
+    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
-    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 10, &docking::cb_robot, this);
-    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 10, &docking::cb_docking_stations, this);
+    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
+    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &docking::cb_docking_stations, this);
 
-    sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 10,
+    sub_auction_starting = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/new_auction", 1000,
                                         &docking::cb_new_auction, this);
     sub_auction_reply =
-        nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 10, &docking::cb_auction_reply, this);
+        nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/reply", 1000, &docking::cb_auction_reply, this);
     sub_auction_winner_adhoc =
-        nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 10, &docking::cb_auction_result, this);
+        nh.subscribe(my_prefix + "adhoc_communication/auction_winner", 1000, &docking::cb_auction_result, this);
 
-    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 10, &docking::adhoc_ds, this);
+    sub_adhoc_new_best_ds = nh.subscribe("adhoc_new_best_docking_station_selected", 1000, &docking::adhoc_ds, this);
 
-    sub_charging_completed = nh.subscribe("charging_completed", 10, &docking::cb_charging_completed, this);
+    sub_charging_completed = nh.subscribe("charging_completed", 1000, &docking::cb_charging_completed, this);
 
-    sub_translate = nh.subscribe("translate", 10, &docking::cb_translate, this);
-    sub_all_points = nh.subscribe("all_positions", 10, &docking::points, this);
+    sub_translate = nh.subscribe("translate", 1000, &docking::cb_translate, this);
+    sub_all_points = nh.subscribe("all_positions", 1000, &docking::points, this);
 
-    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 10, &docking::check_vacancy_callback, this);
+    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 1000, &docking::check_vacancy_callback, this);
     
-    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 10, &docking::resend_ds_list_callback, this);
-    sub_full_battery_info = nh.subscribe("full_battery_info", 10, &docking::full_battery_info_callback, this);
+    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 1000, &docking::resend_ds_list_callback, this);
+    sub_full_battery_info = nh.subscribe("full_battery_info", 1000, &docking::full_battery_info_callback, this);
     
     
     /* Publishers */
-    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 10);
+    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1000);
     pub_adhoc_new_best_ds =
         nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
     pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 10);
@@ -216,13 +216,13 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 10);
 
     pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
-    sub_next_ds = nh.subscribe("next_ds", 10, &docking::next_ds_callback, this);
+    sub_next_ds = nh.subscribe("next_ds", 1000, &docking::next_ds_callback, this);
     //ROS_ERROR("%s", sub_next_ds.getTopic().c_str());
     
     pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
     
     pub_test = nh.advertise<std_msgs::Empty>("test", 10);
-    sub_test = nh.subscribe("test", 10, &docking::test_2, this);
+    sub_test = nh.subscribe("test", 1000, &docking::test_2, this);
 	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
 	
 	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 10);
@@ -232,7 +232,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	
 	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
 	
-	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 10, &docking::goal_ds_for_path_navigation_callback, this);
+	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 1000, &docking::goal_ds_for_path_navigation_callback, this);
 
     /* Timers */
     timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
@@ -301,9 +301,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     ROS_INFO("Instance of Docking class correctly created");
     
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
-    sub_wait = nh.subscribe("explorer/im_ready", 10, &docking::wait_for_explorer_callback, this);
+    sub_wait = nh.subscribe("explorer/im_ready", 1000, &docking::wait_for_explorer_callback, this);
     
-    sub_path = nh.subscribe("error_path", 10, &docking::path_callback, this);
+    sub_path = nh.subscribe("error_path", 1000, &docking::path_callback, this);
     
 //    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
     
@@ -1702,8 +1702,10 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
 
-    if(!checkAndUpdateReceivedMessageId("docking_stations", msg.get()->header.message_id, msg.get()->header.sender_robot))
+    if(!checkAndUpdateReceivedMessageId("docking_stations", msg.get()->header.message_id, msg.get()->header.sender_robot)) {
         log_major_error("invalid message id!");
+        return;   
+    }
 
     ROS_INFO("received ds%d", msg.get()->id);
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
@@ -1729,9 +1731,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             
             if (ds[i].x != x || ds[i].y != y) {
                 if(!already_printed_matching_error) {
-                    ROS_ERROR("Coordinates of docking station %d do not match: (%.2f, "
+                    ROS_ERROR("Coordinates of docking station %d from robot %u do not match: (%.2f, "
                               "%.2f) != (%.2f, %.2f)",
-                              ds[i].id, ds[i].x, ds[i].y, x, y);
+                              ds[i].id, (unsigned int)msg.get()->header.sender_robot, ds[i].x, ds[i].y, x, y);
+                    ROS_ERROR("original coord.s: (%.2f, %.2f)", msg.get()->x, msg.get()->y);
                     log_major_error("Coordinates of docking station do not match");
                     already_printed_matching_error = true;
                 }
@@ -2557,12 +2560,11 @@ void docking::set_optimal_ds_vacant(bool vacant)
     sc_send_docking_station.call(srv_msg);
 
     for(unsigned int i=0; i < ds.size(); i++)
-//        if(ds.at(i).id == get_target_ds_id())
         if(ds.at(i).id == get_optimal_ds_id())
             ds.at(i).vacant = vacant;
 
 //    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
-    ROS_INFO("Updated own information about ds%d state", get_optimal_ds_id());
+    ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
 
     update_l1();
 }
@@ -3300,7 +3302,7 @@ void docking::check_reachable_ds()
 //                log_major_error("error");
 //            int id2 = it->id;
             //discovered_ds.erase(it);
-            ROS_INFO("erase at position %d; size after delete is %u", i, discovered_ds.size() - 1);
+            ROS_INFO("erase at position %d; size after delete is %lu", i, discovered_ds.size() - 1);
             discovered_ds.erase(discovered_ds.begin() + i);
             
 //            it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
@@ -3752,15 +3754,15 @@ void docking::runtime_checks() {
             log_major_error("invalid number of DS!");
             invalid_ds_count_printed = true;
             
-            ROS_DEBUG("ds.size(): %u; content:", ds.size());
+            ROS_DEBUG("ds.size(): %lu; content:", ds.size());
             for(unsigned int i=0; i < ds.size(); i++)
                 ROS_DEBUG("%d", ds.at(i).id);
                 
-            ROS_DEBUG("undiscovered_ds.size(): %u; content:", undiscovered_ds.size());
+            ROS_DEBUG("undiscovered_ds.size(): %lu; content:", undiscovered_ds.size());
             for(unsigned int i=0; i < undiscovered_ds.size(); i++)
                 ROS_DEBUG("%d", undiscovered_ds.at(i).id);
                 
-            ROS_DEBUG("discovered_ds.size(): %u; content: ", discovered_ds.size());
+            ROS_DEBUG("discovered_ds.size(): %lu; content: ", discovered_ds.size());
             for(unsigned int i=0; i < discovered_ds.size(); i++)
                 ROS_DEBUG("%d", discovered_ds.at(i).id);
         }
@@ -3770,7 +3772,7 @@ void docking::runtime_checks() {
             for(unsigned int j=i+1; j < ds.size(); j++)
                 if(ds.at(i).id == ds.at(j).id) {
                     log_major_error("invalid number of DS!");
-                    ROS_ERROR("ds.size(): %u, undiscovered_ds.size(): %u, discovered_ds.size(): %u", ds.size(), undiscovered_ds.size(), discovered_ds.size());
+                    ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
 }
@@ -3869,7 +3871,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
-    ROS_DEBUG("%u", jobs.size());
+    ROS_DEBUG("%lu", jobs.size());
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
@@ -4363,9 +4365,11 @@ void docking::send_ds() {
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     for(unsigned int i=0; i < ds.size(); i++) {
-        srv_msg.request.docking_station.x = ds.at(i).x;  // it is necessary to fill also this fields because when a Ds is
+        double x, y;
+        rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
+        srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
                                                 // received, robots perform checks on the coordinates
-        srv_msg.request.docking_station.y = ds.at(i).y;
+        srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.id = ds.at(i).id;
         srv_msg.request.docking_station.vacant = ds.at(i).vacant;
         srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec(); //TODO should timestamp be part of ds_t or not ???
@@ -4387,24 +4391,36 @@ unsigned int docking::getAndUpdateMessageIdForTopic(std::string topic) {
 }
 
 bool docking::checkAndUpdateReceivedMessageId(std::string topic, unsigned int message_id, unsigned int sender_robot_id) {
+    bool return_value = false;
     auto search = received_topic_ids.find(topic);
+    unsigned int local_id = (unsigned int)(floor(message_id / pow(10, (ceil(log10(num_robots))))));
     if(search == received_topic_ids.end()) {
 //        ROS_FATAL("invalid topic"); //TODO insert automatically? but in this case we cannot avoid errors due to wrong topics
         received_topic_ids.insert({topic, {}});
         search = received_topic_ids.find(topic);
+        ROS_INFO("inserted topic %s", topic.c_str());
     }
-    else {
+    if(search != received_topic_ids.end())
+    {
         auto search2 = search->second.find(sender_robot_id);
         if(search2 == search->second.end()) {
 //            ROS_FATAL("invalid robot");
-            search->second.insert({sender_robot_id, 0});
+            search->second.insert({sender_robot_id, local_id - 1});
             search2 = search->second.find(sender_robot_id);
+            ROS_INFO("inserted robot %u for topic %s", sender_robot_id, topic.c_str());
         }
-        else {
-            bool return_value = (message_id == search2->second / pow(10, (ceil(log10(num_robots)))) + 1);
-            search2->second = message_id;
-            return return_value;
+        if(search2 != search->second.end()) 
+        {
+            unsigned int expected_id = search2->second + 1;
+            return_value = (local_id == expected_id);
+            search2->second = local_id;
+            if(!return_value) {
+                ROS_DEBUG("message_id: %u", message_id);
+                ROS_DEBUG("local_id: %u", local_id);
+                ROS_DEBUG("expected_id: %u", expected_id);
+            }
         }            
     }
-    return false;
+
+    return return_value;
 }

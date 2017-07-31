@@ -4364,7 +4364,7 @@ class Explorer
             ros::Duration(10).sleep();
             
         while(!exploration_finished) {
-            exploration->updateDistances(conservative_maximum_available_distance);
+            //exploration->updateDistances(conservative_maximum_available_distance);
             ros::Duration(1).sleep();
         }
     }
