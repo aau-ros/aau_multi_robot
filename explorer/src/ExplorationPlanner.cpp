@@ -9962,21 +9962,23 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
             
             while(frontiers.at(frontier_index).list_distance_from_ds.size() < ds_list.size())
                 frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
-            
-            double distance;
-            distance = euclidean_distance(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
-            if(distance*2 > max_available_distance)
-                frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+
+            if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
+                ;
+            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                ;
             else {
-                 distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
-                if(distance < 0)
-                    ;
-                else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
-                    ;
-                else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
-                    ;
-                else
+                double distance;
+                distance = euclidean_distance(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+                if(distance*2 > max_available_distance)
                     frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+                else {
+                     distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+                    if(distance < 0)
+                        ;
+                    else
+                        frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+                }
             }
 
             release_mutex(&mutex_erase_frontier, __FUNCTION__);
