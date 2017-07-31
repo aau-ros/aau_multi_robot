@@ -4733,8 +4733,8 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
                 if(index < 0 || index >= ds_size)
                     ROS_FATAL("orrible values");
                     
-                if(2 * euclidean_distance(ds_list.at(index).x, ds_list.at(index).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate) > max_available_distance)
-                    continue;
+//                if(2 * euclidean_distance(ds_list.at(index).x, ds_list.at(index).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate) > max_available_distance)
+//                    continue;
 
                 double dist = simplifiedDistanceFromDs(index, j);
                 if (dist < 0) {
@@ -4931,9 +4931,9 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         double distance;
         
         //check euclidean distances
-        distance = euclidean_distance(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
-        if(distance * 2 > max_available_distance)
-            continue;
+//        distance = euclidean_distance(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
+//        if(distance * 2 > max_available_distance)
+//            continue;
         
         distance = simplifiedDistanceFromDs(ds_index, i);
         if(distance < 0){
@@ -9963,15 +9963,21 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
             while(frontiers.at(frontier_index).list_distance_from_ds.size() < ds_list.size())
                 frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
             
-            double distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
-            if(distance < 0)
-                ;
-            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
-                ;
-            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
-                ;
-            else
+            double distance;
+            distance = euclidean_distance(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+            if(distance*2 > max_available_distance)
                 frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+            else {
+                 distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+                if(distance < 0)
+                    ;
+                else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                    ;
+                else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
+                    ;
+                else
+                    frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+            }
 
             release_mutex(&mutex_erase_frontier, __FUNCTION__);
         }
