@@ -1465,6 +1465,8 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         srv_msg.request.dst_robot = group_name;
 //        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
         srv_msg.request.docking_station.id = get_optimal_ds_id();  // target_ds, not best_ds!!!!!
+        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("adhoc_communication/check_vacancy");
+        srv_msg.request.docking_station.header.sender_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
     else if (msg.get()->state == auctioning)
@@ -2275,6 +2277,10 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         log_major_error("received invalid DS from a robot...");
         return;
     }
+
+    if(!checkAndUpdateReceivedMessageId("check_vacancy", msg.get()->header.message_id, msg.get()->header.sender_robot))
+        log_major_error("missed a vacancy check message!!");
+        
 
     ROS_INFO("Received request for vacancy check for ds%d", msg.get()->id); //TODO(minor) complete
 
