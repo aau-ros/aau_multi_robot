@@ -4330,6 +4330,8 @@ double docking::get_optimal_ds_y() {
 //}
 
 void docking::free_ds(int id) {
+    ROS_DEBUG("freeind ds%d", id);
+
     if(id < 0 || id >= num_ds) {
         log_major_error("invalid ds in free_ds!");
         ROS_INFO("id is %d", id);
@@ -4360,10 +4362,6 @@ void docking::free_ds(int id) {
     srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
     
     sc_send_docking_station.call(srv_msg);
-
-    for(unsigned int i=0; i < ds.size(); i++)
-        if(ds.at(i).id == get_optimal_ds_id())
-            ds.at(i).vacant = vacant;
 
 //    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
