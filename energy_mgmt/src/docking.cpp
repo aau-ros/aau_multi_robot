@@ -1422,7 +1422,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 //            has_to_free_optimal_ds = false;
 //            set_optimal_ds_vacant(true);
 //    }
-    if(robot_state == fully_charged || msg.get()->state != leaving_ds) {
+    if(robot_state == fully_charged || robot_state == leaving_ds) {
 //        set_optimal_ds_vacant(true);
         free_ds(id_ds_to_be_freed);
     }
