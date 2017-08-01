@@ -1550,7 +1550,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
-        has_to_free_optimal_ds = true;
 //        id_ds_to_be_freed = get_target_ds_id();
 //        id_ds_to_be_freed = get_optimal_ds_id();
         going_to_ds = false;
