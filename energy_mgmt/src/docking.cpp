@@ -1422,9 +1422,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 //            has_to_free_optimal_ds = false;
 //            set_optimal_ds_vacant(true);
 //    }
-    if(robot_state == fully_charged || robot_state == leaving_ds) {
+    if(has_to_free_optimal_ds && (robot_state == fully_charged || robot_state == leaving_ds)) {
 //        set_optimal_ds_vacant(true);
         free_ds(id_ds_to_be_freed);
+        has_to_free_optimal_ds = false;
     }
 
     if (msg.get()->state == in_queue)
@@ -1447,9 +1448,10 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == charging)
     {
-        ; //ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
+        //ROS_ERROR("\n\t\e[1;34mRechargin!!!\e[0m");
         need_to_charge = false;  // TODO(minor) useless
         id_ds_to_be_freed = get_optimal_ds_id();
+        has_to_free_optimal_ds = true;
         set_optimal_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
     else if (msg.get()->state == going_checking_vacancy)
@@ -4329,7 +4331,8 @@ double docking::get_optimal_ds_y() {
 
 void docking::free_ds(int id) {
     if(id < 0 || id >= num_ds) {
-        log_major_error("invalid target_ds in free_ds!");
+        log_major_error("invalid ds in free_ds!");
+        ROS_INFO("id is %d", id);
         return;
     }
 

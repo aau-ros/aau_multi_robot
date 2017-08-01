@@ -1137,6 +1137,7 @@ double ExplorationPlanner::trajectory_plan_meters(double target_x, double target
  */
 int ExplorationPlanner::trajectory_plan(double start_x, double start_y, double target_x, double target_y)
 {
+    ROS_FATAL("should not be called!");
     geometry_msgs::PoseStamped goalPointSimulated, startPointSimulated;
     int distance;
 
