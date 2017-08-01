@@ -3783,7 +3783,7 @@ void docking::runtime_checks() {
         for(unsigned int i=0; i < ds.size()-1; i++)
             for(unsigned int j=i+1; j < ds.size(); j++)
                 if(ds.at(i).id == ds.at(j).id) {
-                    log_major_error("invalid number of DS!");
+                    log_major_error("a DS appears twice!!");
                     ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
