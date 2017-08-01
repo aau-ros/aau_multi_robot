@@ -1553,6 +1553,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 //        id_ds_to_be_freed = get_target_ds_id();
 //        id_ds_to_be_freed = get_optimal_ds_id();
         going_to_ds = false;
+        //free_ds(id_ds_to_be_freed); //it is better to release the DS when the robot has exited the fully_charged or leaving_ds state, but sometimes (at the moment for unknown reasones) this takes a while, even if the robot has already phisically released the DS...
     }
     else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
         ;
