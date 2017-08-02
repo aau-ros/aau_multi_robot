@@ -1638,12 +1638,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             new_robot = false;
             
             if(robots[i].state == charging && msg.get()->state != charging)
-                for (unsigned int i = 0; i < ds.size(); i++)
-                    if (ds[i].id == msg.get()->selected_ds) {
-                        if (!ds[i].vacant)
+                for (unsigned int j = 0; j < ds.size(); j++)
+                    if (ds[j].id == robots.at(i).charging_ds) {
+                        if (!ds[j].vacant)
                         {
-                            ds[i].vacant = true;
-                            ds.at(i).timestamp = msg.get()->header.timestamp;
+                            ds[j].vacant = true;
+                            ds.at(j).timestamp = msg.get()->header.timestamp;
                             ROS_INFO("ds%d is now vacant", msg.get()->id);
                             update_l1();
                         }
@@ -1661,12 +1661,13 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             robots[i].selected_ds = msg.get()->selected_ds;
             
             if(robots[i].state == charging && msg.get()->state == charging)
-                for (unsigned int i = 0; i < ds.size(); i++)
-                    if (ds[i].id == msg.get()->selected_ds) {
-                        if (ds[i].vacant)
+                for (unsigned int j = 0; j < ds.size(); j++)
+                    if (ds[j].id == msg.get()->selected_ds) {
+                        if (ds[j].vacant)
                             {
-                                ds[i].vacant = false;
-                                ds.at(i).timestamp = msg.get()->header.timestamp;
+                                robots.at(i).charging_ds = ds.at(j).id;
+                                ds[j].vacant = false;
+                                ds.at(j).timestamp = msg.get()->header.timestamp;
                                 ROS_INFO("ds%d is now occupied", msg.get()->id);
                                 update_l1();
                             }  
