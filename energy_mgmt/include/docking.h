@@ -669,6 +669,8 @@ class docking
     bool checkAndUpdateReceivedMessageId(std::string topic, unsigned int message_id, unsigned int robot_id);
     double optimal_ds_timestamp;
     double get_optimal_ds_timestamp();
+    std::vector<std::string> enum_string;
+    std::string get_text_for_enum(int enumVal);
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

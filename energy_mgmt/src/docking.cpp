@@ -1421,9 +1421,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ROS_INFO("next state: %d", msg.get()->state);
     }
     
-    if(has_to_free_optimal_ds) {
-        if(robot_state != fully_charged && robot_state != leaving_ds)
-            log_major_error("freeing ds when not in fully_charged or leaving_ds state!!!");
+    if(has_to_free_optimal_ds && (msg.get()->state == fully_charged || msg.get()->state == leaving_ds) ) {
 //        set_optimal_ds_vacant(true);
         free_ds(id_ds_to_be_freed);
         has_to_free_optimal_ds = false;
@@ -4472,4 +4470,14 @@ bool docking::checkAndUpdateReceivedMessageId(std::string topic, unsigned int me
 
 double docking::get_optimal_ds_timestamp() {
     return optimal_ds_timestamp;
+}
+
+std::string docking::get_text_for_enum(int enumVal)
+{
+    if((unsigned int)enumVal >= enum_string.size()) {
+        log_major_error("segmenv in get_text_for_enum");
+        return "";
+    }
+    else
+        return enum_string[enumVal];
 }
