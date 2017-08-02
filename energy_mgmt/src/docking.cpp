@@ -1598,9 +1598,56 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");
         return;
     }
+    
+    
+    
+    
+    if(robot->state == charging && msg.get()->state != charging)
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (ds[j].id == robot->charging_ds) {
+                ds_mutex.lock();
+                if (!ds[j].vacant)
+                {
+                    ds[j].vacant = true;
+                    ds.at(j).timestamp = ros::Time::now().toSec();
+                    ROS_INFO("ds%d is now vacant", robot->charging_ds);
+                    update_l1();
+                }
+                ds_mutex.unlock();
+                break;
+            }
+            
+            
+            
+            
 
     robot_state = static_cast<state_t>(msg.get()->state);
     robot->state = robot_state;
+    
+    
+    
+    
+    
+    if(robot->state == charging && msg.get()->state == charging)
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (ds[j].id == get_optimal_ds_id()) {
+                ds_mutex.lock();
+                if (ds[j].vacant)
+                    {
+                        robot->charging_ds = ds.at(j).id;
+                        ds[j].vacant = false;
+                        ds.at(j).timestamp = ros::Time::now().toSec();
+                        ROS_INFO("ds%d is now occupied", robot->charging_ds);
+                        update_l1();
+                    }  
+                ds_mutex.unlock();
+                break;
+            }
+    
+    
+    
+
+
     
     send_robot();
     
