@@ -1707,6 +1707,18 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
     
     robot_mutex.unlock();
+    
+    // sanity check
+    unsigned int charing_robot_counter = 0;
+    for (unsigned int i = 0; i < robots.size(); ++i)
+        if(robots.at(i).state == charging)
+            charing_robot_counter++;
+    unsigned int occupied_ds = 0;
+    for (unsigned int j = 0; j < ds.size(); j++)
+        if(!ds.at(j).vacant)
+            occupied_ds++;
+    if(charing_robot_counter != occupied_ds)
+        log_major_error("charing_robot_counter != occupied_ds");
 
     /* Update parameter l1 of charging likelihood function */
     update_l1();
@@ -3648,49 +3660,49 @@ void docking::update_robot_position()
 }
 
 void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) { //TODO(minor) do better...
-    ROS_INFO("Sending complete list of discovered (but possibly not reachable) docking stations");
-    for(std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); it++) {
-        if(it->id < 0 || it->id >= num_ds)
-         log_major_error("sending invalid DS id 2!!!");
-    
-        adhoc_communication::SendEmDockingStation srv_msg;
-        srv_msg.request.topic = "docking_stations";
-        srv_msg.request.docking_station.id = it->id;
-        srv_msg.request.dst_robot = group_name;
-        double x, y;
-        
-        rel_to_abs(it->x, it->y, &x, &y);
-        
-        srv_msg.request.docking_station.x = x;
-        srv_msg.request.docking_station.y = y;
-        srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
-        srv_msg.request.docking_station.header.timestamp = it->timestamp;
-        srv_msg.request.docking_station.header.sender_robot = robot_id;
-        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
-        sc_send_docking_station.call(srv_msg);
-    }
-    
-    for(std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++) {
-        if(it->id < 0 || it->id >= num_ds)
-         log_major_error("sending invalid DS id 3!!!");
-    
-        adhoc_communication::SendEmDockingStation srv_msg;
-        srv_msg.request.topic = "docking_stations";
-        srv_msg.request.docking_station.id = it->id;
-        srv_msg.request.dst_robot = group_name;
-        double x, y;
-        
-        rel_to_abs(it->x, it->y, &x, &y);
-        
-        srv_msg.request.docking_station.x = x;
-        srv_msg.request.docking_station.y = y;
-        srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
-        srv_msg.request.docking_station.header.timestamp = it->timestamp;
-        srv_msg.request.docking_station.header.sender_robot = robot_id;
-        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
-        sc_send_docking_station.call(srv_msg);
-    }
-        
+//    ROS_INFO("Sending complete list of discovered (but possibly not reachable) docking stations");
+//    for(std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); it++) {
+//        if(it->id < 0 || it->id >= num_ds)
+//         log_major_error("sending invalid DS id 2!!!");
+//    
+//        adhoc_communication::SendEmDockingStation srv_msg;
+//        srv_msg.request.topic = "docking_stations";
+//        srv_msg.request.docking_station.id = it->id;
+//        srv_msg.request.dst_robot = group_name;
+//        double x, y;
+//        
+//        rel_to_abs(it->x, it->y, &x, &y);
+//        
+//        srv_msg.request.docking_station.x = x;
+//        srv_msg.request.docking_station.y = y;
+//        srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
+//        srv_msg.request.docking_station.header.timestamp = it->timestamp;
+//        srv_msg.request.docking_station.header.sender_robot = robot_id;
+//        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
+//        sc_send_docking_station.call(srv_msg);
+//    }
+//    
+//    for(std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++) {
+//        if(it->id < 0 || it->id >= num_ds)
+//         log_major_error("sending invalid DS id 3!!!");
+//    
+//        adhoc_communication::SendEmDockingStation srv_msg;
+//        srv_msg.request.topic = "docking_stations";
+//        srv_msg.request.docking_station.id = it->id;
+//        srv_msg.request.dst_robot = group_name;
+//        double x, y;
+//        
+//        rel_to_abs(it->x, it->y, &x, &y);
+//        
+//        srv_msg.request.docking_station.x = x;
+//        srv_msg.request.docking_station.y = y;
+//        srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
+//        srv_msg.request.docking_station.header.timestamp = it->timestamp;
+//        srv_msg.request.docking_station.header.sender_robot = robot_id;
+//        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
+//        sc_send_docking_station.call(srv_msg);
+//    }
+//        
 }
 
 void docking::update_reamining_distance() {
