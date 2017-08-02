@@ -1414,6 +1414,20 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
                 robots[i].simple_state = idle;
         }
         
+    if(robot_state == charging && (msg.get()->state != fully_charged && msg.get()->state != leaving_ds)) {
+        log_major_error("invalid state after charging!!!");
+        ROS_INFO("current state: charging");   
+        ROS_INFO("next state: %d", msg.get()->state);
+    }
+    
+    if(has_to_free_optimal_ds) {
+        if(robot_state != fully_charged && robot_state != leaving_ds)
+            log_major_error("freeing ds when not in fully_charged or leaving_ds state!!!");
+//        set_optimal_ds_vacant(true);
+        free_ds(id_ds_to_be_freed);
+        has_to_free_optimal_ds = false;
+    }
+        
     if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
         
@@ -1422,11 +1436,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 //            has_to_free_optimal_ds = false;
 //            set_optimal_ds_vacant(true);
 //    }
-    if(has_to_free_optimal_ds && (robot_state == fully_charged || robot_state == leaving_ds)) {
-//        set_optimal_ds_vacant(true);
-        free_ds(id_ds_to_be_freed);
-        has_to_free_optimal_ds = false;
-    }
 
     if (msg.get()->state == in_queue)
     {
@@ -3146,6 +3155,10 @@ void docking::send_robot()
     robot_msg.request.robot.home_world_x = robot->home_world_x;
     robot_msg.request.robot.home_world_y = robot->home_world_y;
     robot_msg.request.robot.state = robot->state;
+    robot_msg.request.robot.header.message_id = getAndUpdateMessageIdForTopic("robots");
+    robot_msg.request.robot.header.sender_robot = robot_id;
+    robot_msg.request.robot.header.timestamp = ros::Time::now().toSec();
+    
     if (optimal_ds_is_set())
         robot_msg.request.robot.selected_ds = get_optimal_ds_id();
     else
