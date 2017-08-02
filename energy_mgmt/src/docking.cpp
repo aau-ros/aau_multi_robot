@@ -1640,6 +1640,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             if(robots[i].state == charging && msg.get()->state != charging)
                 for (unsigned int j = 0; j < ds.size(); j++)
                     if (ds[j].id == robots.at(i).charging_ds) {
+                        ds_mutex.lock();
                         if (!ds[j].vacant)
                         {
                             ds[j].vacant = true;
@@ -1647,6 +1648,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
                             ROS_INFO("ds%d is now vacant", robots.at(i).charging_ds);
                             update_l1();
                         }
+                        ds_mutex.unlock();
                         break;
                     }
 
@@ -1663,6 +1665,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             if(robots[i].state == charging && msg.get()->state == charging)
                 for (unsigned int j = 0; j < ds.size(); j++)
                     if (ds[j].id == msg.get()->selected_ds) {
+                        ds_mutex.lock();
                         if (ds[j].vacant)
                             {
                                 robots.at(i).charging_ds = ds.at(j).id;
@@ -1671,6 +1674,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
                                 ROS_INFO("ds%d is now occupied", robots.at(i).charging_ds);
                                 update_l1();
                             }  
+                        ds_mutex.unlock();
                         break;
                     }
                 
@@ -1788,6 +1792,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
             new_ds = false;
 
+            
             if(ds.at(i).timestamp > msg.get()->header.timestamp)
                 continue;
 
