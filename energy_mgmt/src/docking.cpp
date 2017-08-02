@@ -1636,6 +1636,19 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             /* The robot is not new, update its information */
 
             new_robot = false;
+            
+            if(robots[i].state == charging && msg.get()->state != charging)
+                for (unsigned int i = 0; i < ds.size(); i++)
+                    if (ds[i].id == msg.get()->selected_ds) {
+                        if (!ds[i].vacant)
+                        {
+                            ds[i].vacant = true;
+                            ds.at(i).timestamp = msg.get()->header.timestamp;
+                            ROS_INFO("ds%d is now vacant", msg.get()->id);
+                            update_l1();
+                        }
+                        break;
+                    }
 
             robots[i].state = static_cast<state_t>(msg.get()->state);
             if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
@@ -1646,7 +1659,20 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].selected_ds = msg.get()->selected_ds;
-
+            
+            if(robots[i].state == charging && msg.get()->state == charging)
+                for (unsigned int i = 0; i < ds.size(); i++)
+                    if (ds[i].id == msg.get()->selected_ds) {
+                        if (ds[i].vacant)
+                            {
+                                ds[i].vacant = false;
+                                ds.at(i).timestamp = msg.get()->header.timestamp;
+                                ROS_INFO("ds%d is now occupied", msg.get()->id);
+                                update_l1();
+                            }  
+                        break;
+                    }
+                
             break;
         }
     }
@@ -2568,24 +2594,24 @@ void docking::set_optimal_ds_vacant(bool vacant)
             ds.at(i).timestamp = ros::Time::now().toSec();   
         }
 
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "docking_stations";
-    srv_msg.request.dst_robot = group_name;
-//    srv_msg.request.docking_station.id = get_target_ds_id();
-    srv_msg.request.docking_station.id = get_optimal_ds_id();
-    double x, y;
-    
-//    rel_to_abs(get_target_ds_x(), get_target_ds_y(), &x, &y);
-    rel_to_abs(get_optimal_ds_x(), get_optimal_ds_y(), &x, &y);
-    
-    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a DS is
-                                            // received, robots perform checks on the coordinates
-    srv_msg.request.docking_station.y = y;
-    srv_msg.request.docking_station.vacant = vacant;
-    srv_msg.request.docking_station.header.timestamp = get_optimal_ds_timestamp();
-    srv_msg.request.docking_station.header.sender_robot = robot_id;
-    srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
-    sc_send_docking_station.call(srv_msg);
+//    adhoc_communication::SendEmDockingStation srv_msg;
+//    srv_msg.request.topic = "docking_stations";
+//    srv_msg.request.dst_robot = group_name;
+////    srv_msg.request.docking_station.id = get_target_ds_id();
+//    srv_msg.request.docking_station.id = get_optimal_ds_id();
+//    double x, y;
+//    
+////    rel_to_abs(get_target_ds_x(), get_target_ds_y(), &x, &y);
+//    rel_to_abs(get_optimal_ds_x(), get_optimal_ds_y(), &x, &y);
+//    
+//    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a DS is
+//                                            // received, robots perform checks on the coordinates
+//    srv_msg.request.docking_station.y = y;
+//    srv_msg.request.docking_station.vacant = vacant;
+//    srv_msg.request.docking_station.header.timestamp = get_optimal_ds_timestamp();
+//    srv_msg.request.docking_station.header.sender_robot = robot_id;
+//    srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
+//    sc_send_docking_station.call(srv_msg);
 
 //    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
@@ -3334,7 +3360,7 @@ void docking::check_reachable_ds()
 //                log_major_error("error");
 //            int id2 = it->id;
             //discovered_ds.erase(it);
-            ROS_INFO("erase at position %d; size after delete is %lu", i, discovered_ds.size() - 1);
+            ROS_INFO("erase at position %d; size after delete is %u", i, (unsigned int)(discovered_ds.size() - 1));
             discovered_ds.erase(discovered_ds.begin() + i);
             
 //            it = discovered_ds.begin(); //since it seems that the pointer is invalidated after the erase, so better restart the check... (http://www.cplusplus.com/reference/vector/vector/erase/)
@@ -4359,32 +4385,32 @@ void docking::free_ds(int id) {
         return;
     }
 
-    adhoc_communication::SendEmDockingStation srv_msg;
-    srv_msg.request.topic = "docking_stations";
-    srv_msg.request.dst_robot = group_name;
-    srv_msg.request.docking_station.id = id;
-    double x, y, timestamp;
+//    adhoc_communication::SendEmDockingStation srv_msg;
+//    srv_msg.request.topic = "docking_stations";
+//    srv_msg.request.dst_robot = group_name;
+//    srv_msg.request.docking_station.id = id;
+//    double x, y, timestamp;
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
             ds.at(i).vacant = vacant;
             ds.at(i).timestamp = ros::Time::now().toSec();
-            timestamp = ds.at(i).timestamp;
-            rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
+//            timestamp = ds.at(i).timestamp;
+//            rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
             break;
         }
     
-    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
-                                            // received, robots perform checks on the coordinates
-    srv_msg.request.docking_station.y = y;
-    srv_msg.request.docking_station.vacant = true;
+//    srv_msg.request.docking_station.x = x;  // it is necessary to fill also this fields because when a Ds is
+//                                            // received, robots perform checks on the coordinates
+//    srv_msg.request.docking_station.y = y;
+//    srv_msg.request.docking_station.vacant = true;
 
-    srv_msg.request.docking_station.header.timestamp = timestamp;
-    srv_msg.request.docking_station.header.sender_robot = robot_id;
-    srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
-    
-    sc_send_docking_station.call(srv_msg);
+//    srv_msg.request.docking_station.header.timestamp = timestamp;
+//    srv_msg.request.docking_station.header.sender_robot = robot_id;
+//    srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
+//    
+//    sc_send_docking_station.call(srv_msg);
 
 //    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), "occupied", "vacant");

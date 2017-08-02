@@ -282,6 +282,7 @@ class docking
         state_t state;
         double x, y, home_world_x, home_world_y;
         int selected_ds;
+        int charging_ds;
     };
     vector<robot_t> robots;
     robot_t *robot;
