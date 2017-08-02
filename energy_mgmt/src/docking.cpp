@@ -432,6 +432,7 @@ void docking::preload_docking_stations()
         ds_t new_ds;
         new_ds.id = index;
         new_ds.world_x = x, new_ds.world_y = y;
+        new_ds.timestamp = ros::Time::now().toSec();
         abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
         new_ds.vacant = true;  // TODO(minor) param...
         undiscovered_ds.push_back(new_ds);
@@ -1768,6 +1769,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             if (ds[i].vacant != msg.get()->vacant)
             {
                 ds[i].vacant = msg.get()->vacant;
+                ds.at(i).timestamp = msg.get()->header.timestamp;
                 ROS_INFO("ds%d is now %s", msg.get()->id,
                           (msg.get()->vacant ? "vacant" : "occupied"));
                           
@@ -1816,6 +1818,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             abs_to_rel(msg.get()->x, msg.get()->y, &s.x, &s.y);
             
             s.vacant = msg.get()->vacant;
+            s.timestamp = msg.get()->header.timestamp;
             discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
             ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
 
@@ -3100,7 +3103,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                     send_ds_srv_msg.request.docking_station.x = x;
                     send_ds_srv_msg.request.docking_station.y = y;
                     send_ds_srv_msg.request.docking_station.vacant = true;  // TODO(minor) sure???
-                    send_ds_srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+                    send_ds_srv_msg.request.docking_station.header.timestamp = it->timestamp;
                     send_ds_srv_msg.request.docking_station.header.sender_robot = robot_id;
                     send_ds_srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
                     sc_send_docking_station.call(send_ds_srv_msg);
@@ -3280,10 +3283,13 @@ void docking::check_reachable_ds()
         {
             ROS_INFO("ds%d is now reachable", (*it).id);
             
+            it->timestamp = ros::Time::now().toSec();
+            
             adhoc_communication::EmDockingStation new_ds_msg;
             new_ds_msg.id = it->id;
             new_ds_msg.x = it->x;
             new_ds_msg.y = it->y;
+            new_ds_msg.header.timestamp = it->timestamp;
             //ROS_ERROR("publishing on %s", pub_new_ds_on_graph.getTopic().c_str());
             //TODO publishing here just to avoid to publish the message too early, but of course this is not a good place, and it is not necessary to publish the message every time
             //std_msgs::Int32 ds_count_msg;
