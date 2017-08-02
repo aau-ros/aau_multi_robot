@@ -2562,6 +2562,12 @@ void docking::set_optimal_ds_vacant(bool vacant)
 //        return;
 //    }
 
+    for(unsigned int i=0; i < ds.size(); i++)
+        if(ds.at(i).id == get_optimal_ds_id()) {
+            ds.at(i).vacant = vacant;
+            ds.at(i).timestamp = ros::Time::now().toSec();   
+        }
+
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
@@ -2580,10 +2586,6 @@ void docking::set_optimal_ds_vacant(bool vacant)
     srv_msg.request.docking_station.header.sender_robot = robot_id;
     srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
     sc_send_docking_station.call(srv_msg);
-
-    for(unsigned int i=0; i < ds.size(); i++)
-        if(ds.at(i).id == get_optimal_ds_id())
-            ds.at(i).vacant = vacant;
 
 //    ROS_INFO("Updated own information about ds%d state", get_target_ds_id());
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
