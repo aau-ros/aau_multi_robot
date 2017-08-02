@@ -1644,7 +1644,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
                         {
                             ds[j].vacant = true;
                             ds.at(j).timestamp = msg.get()->header.timestamp;
-                            ROS_INFO("ds%d is now vacant", msg.get()->id);
+                            ROS_INFO("ds%d is now vacant", robots.at(i).charging_ds);
                             update_l1();
                         }
                         break;
@@ -1668,7 +1668,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
                                 robots.at(i).charging_ds = ds.at(j).id;
                                 ds[j].vacant = false;
                                 ds.at(j).timestamp = msg.get()->header.timestamp;
-                                ROS_INFO("ds%d is now occupied", msg.get()->id);
+                                ROS_INFO("ds%d is now occupied", robots.at(i).charging_ds);
                                 update_l1();
                             }  
                         break;
