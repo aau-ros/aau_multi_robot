@@ -4423,6 +4423,7 @@ void docking::send_ds() {
 }
 
 unsigned int docking::getAndUpdateMessageIdForTopic(std::string topic) {
+    mutex_message.lock();
     auto search = topic_ids.find(topic);
     if(search == topic_ids.end()) {
         topic_ids.insert({topic, 1});
@@ -4430,6 +4431,7 @@ unsigned int docking::getAndUpdateMessageIdForTopic(std::string topic) {
     }
     unsigned int return_value = search->second * pow(10, (ceil(log10(num_robots)))) + robot_id;
     search->second++;
+    mutex_message.unlock();
     return return_value;
 }
 
