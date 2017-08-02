@@ -667,6 +667,8 @@ class docking
     std::unordered_map <std::string, std::unordered_map <unsigned int, unsigned int> > received_topic_ids;
     unsigned int getAndUpdateMessageIdForTopic(std::string topic);
     bool checkAndUpdateReceivedMessageId(std::string topic, unsigned int message_id, unsigned int robot_id);
+    double optimal_ds_timestamp;
+    double get_optimal_ds_timestamp();
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

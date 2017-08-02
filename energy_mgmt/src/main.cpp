@@ -88,7 +88,7 @@ int main(int argc, char** argv)
         
         doc.send_robot();
 
-        //doc.send_ds();
+        doc.send_ds();
         
         doc.update_reamining_distance();
         

@@ -2575,7 +2575,7 @@ void docking::set_optimal_ds_vacant(bool vacant)
                                             // received, robots perform checks on the coordinates
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = vacant;
-    srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+    srv_msg.request.docking_station.header.timestamp = get_optimal_ds_timestamp();
     srv_msg.request.docking_station.header.sender_robot = robot_id;
     srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
     sc_send_docking_station.call(srv_msg);
@@ -3088,6 +3088,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                     ROS_INFO("Found new DS ds%d at (%f, %f). Currently, no path for this DS is known...", (*it).id, (*it).x,
                              (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
                     it->vacant = true; //TODO probably reduntant
+                    it->timestamp = ros::Time::now().toSec();
                     discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
 
                     // Inform other robots about the "new" DS
@@ -3625,7 +3626,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
-        srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+        srv_msg.request.docking_station.header.timestamp = it->timestamp;
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
         sc_send_docking_station.call(srv_msg);
@@ -3646,7 +3647,7 @@ void docking::resend_ds_list_callback(const adhoc_communication::EmDockingStatio
         srv_msg.request.docking_station.x = x;
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.vacant = it->vacant; //TODO(minor) notice that the robot could receive contrasting information!!!
-        srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+        srv_msg.request.docking_station.header.timestamp = it->timestamp;
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
         sc_send_docking_station.call(srv_msg);
@@ -4284,6 +4285,7 @@ bool docking::set_optimal_ds(int id) {
         if(ds.at(i).id == id) {
             optimal_ds_x = ds.at(i).x;
             optimal_ds_y = ds.at(i).y;
+            optimal_ds_timestamp = ds.at(i).timestamp;
             break;
         }
         
@@ -4355,12 +4357,14 @@ void docking::free_ds(int id) {
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
     srv_msg.request.docking_station.id = id;
-    double x, y;
+    double x, y, timestamp;
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     for(unsigned int i=0; i < ds.size(); i++)
         if(ds.at(i).id == id) {
             ds.at(i).vacant = vacant;
+            ds.at(i).timestamp = ros::Time::now().toSec();
+            timestamp = ds.at(i).timestamp;
             rel_to_abs(ds.at(i).x, ds.at(i).y, &x, &y);
             break;
         }
@@ -4370,7 +4374,7 @@ void docking::free_ds(int id) {
     srv_msg.request.docking_station.y = y;
     srv_msg.request.docking_station.vacant = true;
 
-    srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec();
+    srv_msg.request.docking_station.header.timestamp = timestamp;
     srv_msg.request.docking_station.header.sender_robot = robot_id;
     srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
     
@@ -4405,7 +4409,7 @@ void docking::send_ds() {
         srv_msg.request.docking_station.y = y;
         srv_msg.request.docking_station.id = ds.at(i).id;
         srv_msg.request.docking_station.vacant = ds.at(i).vacant;
-        srv_msg.request.docking_station.header.timestamp = ros::Time::now().toSec(); //TODO should timestamp be part of ds_t or not ???
+        srv_msg.request.docking_station.header.timestamp = ds.at(i).timestamp; //TODO should timestamp be part of ds_t or not ???
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
         sc_send_docking_station.call(srv_msg);
@@ -4456,4 +4460,8 @@ bool docking::checkAndUpdateReceivedMessageId(std::string topic, unsigned int me
     }
 
     return return_value;
+}
+
+double docking::get_optimal_ds_timestamp() {
+    return optimal_ds_timestamp;
 }
