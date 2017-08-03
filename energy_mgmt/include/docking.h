@@ -676,7 +676,7 @@ class docking
     std::string get_text_for_enum(int enumVal);
     std::vector<auction_t> auctions;
     bool robot_is_auctioning;
-    bool expired_own_auction;
+    bool expired_own_auction, discard_auction;
     ros::Time changed_state_time,  start_own_auction_time;
 };
 

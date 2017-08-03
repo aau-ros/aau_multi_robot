@@ -281,6 +281,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     waiting_to_discover_a_ds = false;
     robot_is_auctioning = false;
     expired_own_auction = false;
+    discard_auction = false;
     changed_state_time = ros::Time::now();
     start_own_auction_time= ros::Time::now();
 
@@ -2106,13 +2107,10 @@ void docking::timerCallback(const ros::TimerEvent &event)
 
     mutex_auction.lock();
     
-    if(!robot_is_auctioning) {
-        log_major_error("robot_is_auctioning is false but should be true!");
+    if(discard_auction) {
+        log_major_error("discarding auction");
+        discard_auction = false;
         mutex_auction.unlock();
-        managing_auction = false;
-        auction_winner = false;
-        robot_is_auctioning = false;
-        expired_own_auction = true;
         return;   
     }
 
@@ -2179,9 +2177,10 @@ void docking::timerCallback(const ros::TimerEvent &event)
     
     ROS_INFO("Auction completed");
 //    participating_to_auction--;
+
     if(!robot_is_auctioning)
         log_major_error("robot_is_auctioning is false but should be true!");
-        
+                
     robot_is_auctioning = false;
     expired_own_auction = true;
     
@@ -2237,9 +2236,12 @@ void docking::start_new_auction()
         robot_is_auctioning = false;
         expired_own_auction = true;
         managing_auction = false;
+        discard_auction = true;
         mutex_auction.unlock();
         return;
     }
+    else
+        discard_auction = false;
 
 
 
