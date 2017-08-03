@@ -2271,6 +2271,7 @@ void docking::start_new_auction()
     //update_state_required = true;
 //    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
     robot_is_auctioning = true;
+    start_own_auction_time = ros::Time::now();
     mutex_auction.unlock();
 
     optimal_ds_mutex.unlock();
@@ -2291,9 +2292,6 @@ void docking::start_new_auction()
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
     
-
-    start_own_auction_time = ros::Time::now();
-
 }
 
 void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr &msg)  // TODO(minor)
