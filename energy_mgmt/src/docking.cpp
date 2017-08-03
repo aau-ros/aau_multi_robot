@@ -2498,7 +2498,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     ROS_INFO("Updating robot state...");
     
     // sanity check
-    if(ros::Time::now() - start_own_auction_time > ros::Duration(1*60))
+    if(robot_is_auctioning && ros::Time::now() - start_own_auction_time > ros::Duration(1*60))
         log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
     
     // sanity check
