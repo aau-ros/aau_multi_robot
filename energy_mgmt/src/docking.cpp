@@ -283,7 +283,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     expired_own_auction = false;
     discard_auction = false;
     changed_state_time = ros::Time::now();
-    start_own_auction_time= ros::Time::now();
+    start_own_auction_time = ros::Time::now();
 
     /* Function calls */
     create_log_files();
@@ -2100,12 +2100,8 @@ void docking::end_auction_participation_timer_callback(const ros::TimerEvent &ev
 
 void docking::timerCallback(const ros::TimerEvent &event)
 {
-    /* The auction is concluded; the robot that started it has to compute who is
-     * the winner and must inform all the
-     * other robots */
-    ROS_INFO("Auction timeout: compute auction winner");
-
     mutex_auction.lock();
+    ROS_INFO("Auction timeout: compute auction winner");
     
     if(discard_auction) {
         log_major_error("discarding auction");
@@ -2113,6 +2109,18 @@ void docking::timerCallback(const ros::TimerEvent &event)
         mutex_auction.unlock();
         return;   
     }
+    mutex_auction.unlock();
+    
+    conclude_auction();
+}
+
+void docking::conclude_auction() {
+    mutex_auction.lock();
+
+    /* The auction is concluded; the robot that started it has to compute who is
+     * the winner and must inform all the
+     * other robots */
+    ROS_INFO("conclude auction");
 
     // ??? //TODO(minor)
     managing_auction = false;
@@ -2237,13 +2245,12 @@ void docking::start_new_auction()
         expired_own_auction = true;
         managing_auction = false;
         discard_auction = true;
+        timer_finish_auction.stop();
         mutex_auction.unlock();
         return;
     }
     else
         discard_auction = false;
-
-
 
     if (!optimal_ds_is_set() && need_to_charge)
     {
@@ -2531,16 +2538,22 @@ void docking::update_robot_state()  // TODO(minor) simplify
 {
     ROS_INFO("Updating robot state...");
     
+    mutex_auction.lock();
+    
     // sanity check
-    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(1*60)))
+    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(1*60))) {
         log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
+        discard_auction = true;
+        timer_finish_auction.stop();
+        conclude_auction();   
+    }
     
     // sanity check
     if(robot_state == in_queue && (changed_state_time - ros::Time::now() > ros::Duration(3*60)))
         log_major_error("robot stucked in queue!!!");
     
     // check expired auctions
-    mutex_auction.lock();
+    
     ROS_DEBUG("%f", (float)(auction_timeout + extra_time));
     for(auto it = auctions.begin(); it != auctions.end(); )
         if(ros::Time::now().toSec() - it->starting_time > (float)(auction_timeout + extra_time)) {

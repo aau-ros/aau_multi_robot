@@ -678,6 +678,9 @@ class docking
     bool robot_is_auctioning;
     bool expired_own_auction, discard_auction;
     ros::Time changed_state_time,  start_own_auction_time;
+    void conclude_auction();
+    
+    
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);
