@@ -2109,13 +2109,16 @@ void docking::timerCallback(const ros::TimerEvent &event)
         mutex_auction.unlock();
         return;   
     }
-    mutex_auction.unlock();
     
     conclude_auction();
+    
+    
+    mutex_auction.unlock();
+    
+    
 }
 
 void docking::conclude_auction() {
-    mutex_auction.lock();
 
     /* The auction is concluded; the robot that started it has to compute who is
      * the winner and must inform all the
@@ -2192,7 +2195,6 @@ void docking::conclude_auction() {
     robot_is_auctioning = false;
     expired_own_auction = true;
     
-    mutex_auction.unlock();
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -2540,15 +2542,14 @@ void docking::update_robot_state()  // TODO(minor) simplify
     mutex_auction.lock();
     
     // sanity check
-    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(1*60))) {
-        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
+    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(3*60))) {
+        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(3*60)");
         discard_auction = true;
         timer_finish_auction.stop();
         auction_winner = false;
         robot_is_auctioning = false;
         expired_own_auction = true;
         managing_auction = false;
-        discard_auction = true;
     }
 
     
