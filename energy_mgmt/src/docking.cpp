@@ -2161,6 +2161,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
     mutex_auction.lock();
     ROS_INFO("Auction completed");
     participating_to_auction--;
+    if(!robot_is_auctioning)
+        log_major_error("robot_is_auctioning is false but should be true!");
     robot_is_auctioning = false;
     expired_own_auction = true;
     mutex_auction.unlock();
@@ -2332,6 +2334,8 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
      * received */
      
     mutex_auction.lock();
+    
+    
     bool participation = false;
     unsigned int index_auction;
     for(unsigned int i=0; i < auctions.size(); i++)

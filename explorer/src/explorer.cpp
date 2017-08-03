@@ -1206,17 +1206,17 @@ class Explorer
                                 }
 
 //                                else if(dist > available_distance * safety_coeff) 
-                                else if(dist > conservative_available_distance(available_distance) )  {
+                                else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance)  {
                                     //robot cannot reach next next DS, it must recharge at current one
 //                                    if(robot_state == fully_charged)
                                     if(full_battery)
                                     {
-                                        if(fabs(dist - conservative_available_distance(available_distance)) > 5.0)
+                                        if(fabs(dist - conservative_maximum_available_distance) > 7.0)
                                             log_major_error("MAJOR ERROR WITH DS GRAPH");
                                         else
                                             log_minor_error("minor error with ds graph");
                                         ROS_DEBUG("distance to next DS: %.2f", dist);
-                                        ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_available_distance(available_distance));
+                                        ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_maximum_available_distance);
                                         
                                         // we force to move to next ds
                                         retry_recharging_current_ds = 0;
@@ -3834,6 +3834,7 @@ class Explorer
 //        }
         
         conservative_maximum_available_distance = msg->maximum_traveling_distance;
+        
     }
     
     void shutdown() {
