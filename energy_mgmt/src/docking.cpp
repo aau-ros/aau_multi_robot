@@ -2206,6 +2206,10 @@ void docking::start_periodic_auction() {
 
 void docking::start_new_auction()
 {
+    if(robot_is_auctioning) {
+        log_major_error("robot_is_auctioning is true, but shoud be false!!");
+        return;
+    }
 
     if(wait_for_ds >= 100)
         return;
