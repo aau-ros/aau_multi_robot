@@ -1960,7 +1960,8 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         if((int)msg.get()->docking_station == (*it).id) {
             already_known_ds = true;
             break;
-        }  
+        }
+        
     if(!already_known_ds) {
         adhoc_communication::SendEmDockingStation srv_msg;
         srv_msg.request.topic = "adhoc_communication/resend_ds_list";
@@ -1969,6 +1970,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         return;
     }
         
+    mutex_auction.lock();
 
     /*
     // set auction id
@@ -2001,7 +2003,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         if (get_llh() > msg.get()->bid)
         {
         
-            mutex_auction.lock();
+            
         
             /* The robot is interested in participating to the auction */
             ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
@@ -2027,7 +2029,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
 //            participating_to_auction++;
             auctions.push_back(new_auction);
             
-            mutex_auction.unlock();
+            
 
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = group_name;
@@ -2047,6 +2049,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     }
     
     optimal_ds_mutex.unlock();
+    mutex_auction.unlock();
     
 }
 
@@ -2097,7 +2100,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
      * the winner and must inform all the
      * other robots */
     ROS_INFO("Auction timeout: compute auction winner");
-    mutex_auction_result.lock();
+
+    mutex_auction.lock();
 
     // ??? //TODO(minor)
     managing_auction = false;
@@ -2159,15 +2163,16 @@ void docking::timerCallback(const ros::TimerEvent &event)
     sc_send_auction.call(srv_msg);
 
     /* Computation completed */
-    mutex_auction.lock();
+    
     ROS_INFO("Auction completed");
 //    participating_to_auction--;
     if(!robot_is_auctioning)
         log_major_error("robot_is_auctioning is false but should be true!");
+        
     robot_is_auctioning = false;
     expired_own_auction = true;
+    
     mutex_auction.unlock();
-    mutex_auction_result.unlock();
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -2207,8 +2212,9 @@ void docking::start_periodic_auction() {
 void docking::start_new_auction()
 {
     mutex_auction.lock();
+    
     if(robot_is_auctioning) {
-        log_minor_error("robot_is_auctioning is true, but shoud be false!!");
+        log_major_error("robot_is_auctioning is true, but shoud be false!!");
         return;
     }
 
@@ -2321,7 +2327,7 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
-    mutex_auction_result.lock();
+    mutex_auction.lock();
     if (!optimal_ds_is_set())
     {
         ROS_INFO("The robot does not know about any existing DS!");  // TODO(minor) it
@@ -2329,7 +2335,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                                                                       // it missed
                                                                       // some
                                                                       // messages!!
-        mutex_auction_result.unlock();
+        mutex_auction.unlock();
         return;
     }
 
@@ -2341,9 +2347,6 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
      * the auction whose result has been just
      * received */
      
-    mutex_auction.lock();
-    
-    
     bool participation = false;
     for(unsigned int i=0; i < auctions.size(); i++)
         if(msg.get()->auction == (unsigned int)auctions.at(i).auction_id) {
@@ -2416,7 +2419,6 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                   "ignoring");
     
     mutex_auction.unlock();
-    mutex_auction_result.unlock();
 
 }
 
