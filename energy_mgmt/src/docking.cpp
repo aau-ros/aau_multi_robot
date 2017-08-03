@@ -2143,7 +2143,7 @@ void docking::conclude_auction() {
         }
     }
     if(winner < 0)
-        ROS_ERROR("invalid winner");
+        log_major_error("invalid winner");
 
     ROS_DEBUG("The winner is robot_%d", winner);
 
@@ -2172,17 +2172,19 @@ void docking::conclude_auction() {
     if(get_optimal_ds_id() != id_auctioned_ds)
         log_major_error("get_optimal_ds_id() != id_auctioned_ds");
 
-    ROS_DEBUG("Send auction results to other robots");
-    adhoc_communication::SendEmAuction srv_msg;
-    srv_msg.request.topic = "adhoc_communication/auction_winner";
-    srv_msg.request.dst_robot = group_name;
-    srv_msg.request.auction.auction = auction_id;
-    srv_msg.request.auction.robot = winner;
-    srv_msg.request.auction.docking_station = get_optimal_ds_id();
-    srv_msg.request.auction.bid = get_llh(); //TODO wrong, although unused (?) because maybe meanwhile
+    if(winner >= 0) {
+        ROS_DEBUG("Send auction results to other robots");
+        adhoc_communication::SendEmAuction srv_msg;
+        srv_msg.request.topic = "adhoc_communication/auction_winner";
+        srv_msg.request.dst_robot = group_name;
+        srv_msg.request.auction.auction = auction_id;
+        srv_msg.request.auction.robot = winner;
+        srv_msg.request.auction.docking_station = get_optimal_ds_id();
+        srv_msg.request.auction.bid = get_llh(); //TODO wrong, although unused (?) because maybe meanwhile
 
-    // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
-    sc_send_auction.call(srv_msg);
+        // ROS_ERROR("\n\t\e[1;34m%s\e[0m", sc_send_auction.getService().c_str());
+        sc_send_auction.call(srv_msg);
+    }
 
     /* Computation completed */
     
