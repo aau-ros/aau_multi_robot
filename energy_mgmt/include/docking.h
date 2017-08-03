@@ -48,6 +48,11 @@
 
 #define OPP_ONLY_TWO_DS false
 #define GRAPH_NAVIGATION_ALLOWED true
+#define DEBUG false
+#define DANGEROUS_TIME_VALUE 150
+#define LOG_TRUE true
+#define LOG_FALSE false
+#define FORCE_TO_CONSIDER_REACHABLE false
 
 using namespace std;
 

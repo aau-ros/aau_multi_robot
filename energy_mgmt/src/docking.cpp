@@ -1,8 +1,4 @@
 #include <docking.h>
-#define DEBUG false
-#define DANGEROUS_TIME_VALUE 150
-#define LOG_TRUE true
-#define LOG_FALSE false
 
 //TODO(minor) ConstPtr
 
@@ -1915,7 +1911,10 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             
             s.vacant = msg.get()->vacant;
             s.timestamp = msg.get()->header.timestamp;
-            discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
+            if(FORCE_TO_CONSIDER_REACHABLE)
+                ds.push_back(s);
+            else
+                discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
             ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
 
             /* Remove DS from the vector of undiscovered DSs */
@@ -3208,7 +3207,11 @@ void docking::discover_docking_stations() //TODO(minor) comments
                              (*it).y);  // TODO(minor) index make sense only in simulation (?, not sure...)
                     it->vacant = true; //TODO probably reduntant
                     it->timestamp = ros::Time::now().toSec();
-                    discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
+                    
+                    if(FORCE_TO_CONSIDER_REACHABLE)
+                        ds.push_back(*it);
+                    else
+                        discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
 
                     // Inform other robots about the "new" DS
                     adhoc_communication::SendEmDockingStation send_ds_srv_msg;
