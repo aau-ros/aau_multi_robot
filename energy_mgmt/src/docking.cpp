@@ -2105,6 +2105,16 @@ void docking::timerCallback(const ros::TimerEvent &event)
     ROS_INFO("Auction timeout: compute auction winner");
 
     mutex_auction.lock();
+    
+    if(!robot_is_auctioning) {
+        log_major_error("robot_is_auctioning is false but should be true!");
+        mutex_auction.unlock();
+        managing_auction = false;
+        auction_winner = false;
+        robot_is_auctioning = false;
+        expired_own_auction = true;
+        return;   
+    }
 
     // ??? //TODO(minor)
     managing_auction = false;
@@ -2226,6 +2236,7 @@ void docking::start_new_auction()
         auction_winner = false;
         robot_is_auctioning = false;
         expired_own_auction = true;
+        managing_auction = false;
         mutex_auction.unlock();
         return;
     }
