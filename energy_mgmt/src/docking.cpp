@@ -2510,15 +2510,17 @@ void docking::update_robot_state()  // TODO(minor) simplify
     // check expired auctions
     mutex_auction.lock();
     ROS_DEBUG("%f", (float)(auction_timeout + extra_time));
-    for(auto it = auctions.begin(); it != auctions.end(); it++)
+    for(auto it = auctions.begin(); it != auctions.end(); )
         if(ros::Time::now().toSec() - it->starting_time > (float)(auction_timeout + extra_time)) {
             ROS_INFO("erasing auction");
             //participating_to_auction--;
             auctions.erase(it);
             it = auctions.begin(); //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
         }
-        else
+        else {
+            it++;
             ROS_DEBUG("%f",ros::Time::now().toSec() - it->starting_time);
+        }
         
     // sanity check
 //    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
