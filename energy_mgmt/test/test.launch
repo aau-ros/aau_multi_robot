@@ -10,5 +10,5 @@
     <param name="energy_mgmt/power_advanced_computations" value="30"/>;
     <param name="energy_mgmt/power_charging" value="300"/>
     <param name="energy_mgmt/maximum_traveling_distance" value="100"/>
-  <test pkg="energy_mgmt" test-name="energy_mgmt" type="utest" />
+    <test pkg="energy_mgmt" test-name="energy_mgmt" type="utest" />
 </launch>

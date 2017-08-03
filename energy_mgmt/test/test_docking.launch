@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="energy_mgmt_docking/num_robots" value="2"/>
+    <param name="energy_mgmt_docking/ds_selection_policy" value="0"/>
+    <test pkg="energy_mgmt" test-name="energy_mgmt_docking" type="utest_docking" />
+</launch>

@@ -230,6 +230,22 @@ if(CATKIN_ENABLE_TESTING)
     ${PROJECT_NAME}_generate_messages_cpp
     ${catkin_EXPORTED_TARGETS}
   )
+
+
+  add_rostest_gtest(utest_docking
+    test/test_docking.launch
+    test/utest_docking.cpp
+  )
+  target_link_libraries(utest_docking
+    docking
+    #mock_time_manager
+    ${catkin_LIBRARIES}
+  )
+  add_dependencies(utest_docking
+    adhoc_communication_generate_messages_cpp
+    ${PROJECT_NAME}_generate_messages_cpp
+    ${catkin_EXPORTED_TARGETS}
+  )
 endif()
 #if(TARGET ${PROJECT_NAME}-test)
 #  target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})

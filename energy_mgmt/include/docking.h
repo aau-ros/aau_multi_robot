@@ -41,6 +41,7 @@
 #include <mutex>          // std::mutex
 #include <unordered_map>
 
+#include "gtest/gtest_prod.h"
 
 #define PI 3.14159265
 
@@ -55,9 +56,28 @@
 #define FORCE_TO_CONSIDER_REACHABLE false
 
 using namespace std;
+/**
+ * The type for a docking station (DS for short).
+ * See http://www.ros.org/reps/rep-0105.html#base-link for more information about frames.
+ */
+struct ds_t
+{
+    int id;
+    double x, y; // coordinates of the DS in the /map frame
+    double world_x, world_y; // coordinates of the DS in the /world frame (i.e., in case of a simulation, in the reference system of the simulator)
+    bool vacant;
+    double timestamp;
+};
 
 class docking
 {
+    //friend class DockingTest;
+    FRIEND_TEST(DockingTest, testCase1);
+    FRIEND_TEST(DockingTest, testCase2);
+    FRIEND_TEST(DockingTest, testCase3);
+    FRIEND_TEST(DockingTest, testCase4);
+    FRIEND_TEST(DockingTest, testCase5);
+
   public:
     /**
      * Constructor.
@@ -103,6 +123,7 @@ class docking
     void runtime_checks();
     void spinOnce();
     void send_ds();
+    void create_log_files();
 
   private:
     /**
@@ -291,19 +312,6 @@ class docking
     };
     vector<robot_t> robots;
     robot_t *robot;
-
-    /**
-     * The type for a docking station (DS for short).
-     * See http://www.ros.org/reps/rep-0105.html#base-link for more information about frames.
-     */
-    struct ds_t
-    {
-        int id;
-        double x, y; // coordinates of the DS in the /map frame
-        double world_x, world_y; // coordinates of the DS in the /world frame (i.e., in case of a simulation, in the reference system of the simulator)
-        bool vacant;
-        double timestamp;
-    };
     
     vector<ds_t> ds;
     vector<ds_t> undiscovered_ds;
@@ -448,7 +456,7 @@ class docking
 
     string my_prefix, my_node;
 
-    void create_log_files();
+
 
     std::string log_path;
 
@@ -679,6 +687,11 @@ class docking
     bool expired_own_auction, discard_auction;
     ros::Time changed_state_time,  start_own_auction_time;
     void conclude_auction();
+
+    /* DEBUGGING */
+    std::vector<std::vector<double> > distance_list;
+    bool test_mode;
+    void addDistance(double x1, double y1, double x2, double y2, double distance);
     
     
 };

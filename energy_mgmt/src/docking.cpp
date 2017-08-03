@@ -284,9 +284,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     discard_auction = false;
     changed_state_time = ros::Time::now();
     start_own_auction_time = ros::Time::now();
+    test_mode = false;
 
     /* Function calls */
-    create_log_files();
     preload_docking_stations();
 
     if (DEBUG)
@@ -489,7 +489,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
     if (ds.size() > 0 && !moving_along_path && lock_acquired && auctions.size() == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
-    
 //        ds_mutex.lock();
 //        if(ds.size() == 1)
 //            next_optimal_ds_id = ds.at(0).id;
@@ -933,10 +932,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 //        bool changed = false;
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
 //        if (!optimal_ds_is_set())
-//            ROS_DEBUG("No optimal DS has been selected yet");
+//            ROS_DEBUG("No optimal DS has been selected yet");      
         if (old_optimal_ds_id != next_optimal_ds_id)
         {
-        
             if(
                 (robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue)
             ||
@@ -949,8 +947,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 //                changed = true;
                 set_optimal_ds(next_optimal_ds_id);
                 
-                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) //can happen sometimes... buffer overflow somewhere?
+                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
                     log_major_error("OH NO!!!!!!!!!!!!");
+                    ROS_INFO("%d", get_optimal_ds_id());
+                }
 
                 old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
 
@@ -1350,6 +1350,30 @@ double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean
 
 double docking::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)
 {
+    if(test_mode) {
+        for(unsigned int i = 0; i < distance_list.size(); i++) {
+            std::vector<double> distance = distance_list.at(i);
+            if(
+                (
+                    fabs(distance.at(0) - start_x)  < 0.01 &&
+                    fabs(distance.at(1) - start_y)  < 0.01 &&
+                    fabs(distance.at(2) - goal_x) < 0.01 &&
+                    fabs(distance.at(3) - goal_y) < 0.01
+                )
+                ||
+                (
+                    fabs(distance.at(0) - goal_x) < 0.01 &&
+                    fabs(distance.at(1) - goal_y) < 0.01 && 
+                    fabs(distance.at(2) - start_x)  < 0.01 && 
+                    fabs(distance.at(3) - start_y)  < 0.01
+                )
+            )
+                return distance.at(4);
+        }
+        ROS_ERROR("distance not found");
+        return -1; 
+    }
+
     /* Use euclidean distance if required by the caller */
     if (euclidean)
     {
@@ -3686,47 +3710,49 @@ void docking::update_ds_graph() {
     recompute_graph = false;
     mutex_ds_graph.unlock();
     
-    graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
-    
-    graph_fs << "#sort according to DS ID" << std::endl;
-//    for(int k=0; k < num_ds; k++) {
-//        bool ok1 = false;
-//        for(unsigned int i=0; i < ds.size(); i++)
-//            if(ds.at(i).id == k) {
-//                ok1 = true;
-//                for(int h=0; h < num_ds; h++) {
-//                    bool ok2 = false;
-//                    for(unsigned int j=0; j < ds.size(); j++)
-//                        if(ds.at(j).id == h) {
-//                            ok2 = true;
-//                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
-//                        }
-//                    if(!ok2)
-//                        log_major_error("not ok2");
-//                }
-//            }
-//        graph_fs << std::endl;
-//        if(!ok1)
-//            log_major_error("not ok1");
-//    }
-    for(int i=0; i < num_ds; i++) {
-        graph_fs << std::setw(5);
-        for(int j=0; j < num_ds; j++)
-            graph_fs << (int)ds_graph[i][j] << "   ";
+    if(!test_mode) {
+        graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
+        
+        graph_fs << "#sort according to DS ID" << std::endl;
+    //    for(int k=0; k < num_ds; k++) {
+    //        bool ok1 = false;
+    //        for(unsigned int i=0; i < ds.size(); i++)
+    //            if(ds.at(i).id == k) {
+    //                ok1 = true;
+    //                for(int h=0; h < num_ds; h++) {
+    //                    bool ok2 = false;
+    //                    for(unsigned int j=0; j < ds.size(); j++)
+    //                        if(ds.at(j).id == h) {
+    //                            ok2 = true;
+    //                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+    //                        }
+    //                    if(!ok2)
+    //                        log_major_error("not ok2");
+    //                }
+    //            }
+    //        graph_fs << std::endl;
+    //        if(!ok1)
+    //            log_major_error("not ok1");
+    //    }
+        for(int i=0; i < num_ds; i++) {
+            graph_fs << std::setw(5);
+            for(int j=0; j < num_ds; j++)
+                graph_fs << (int)ds_graph[i][j] << "   ";
+            graph_fs << std::endl;
+        }
+        
         graph_fs << std::endl;
+        
+        graph_fs << "#sort according to discovery order" << std::endl;
+        for(unsigned int i=0; i < ds.size(); i++) {
+            graph_fs << std::setw(5);
+            for(unsigned int j=0; j < ds.size(); j++)
+                graph_fs << (int)ds_graph[ds[i].id][ds[j].id] << "   ";
+            graph_fs << std::endl;
+        }
+        
+        graph_fs.close();
     }
-    
-    graph_fs << std::endl;
-    
-    graph_fs << "#sort according to discovery order" << std::endl;
-    for(unsigned int i=0; i < ds.size(); i++) {
-        graph_fs << std::setw(5);
-        for(unsigned int j=0; j < ds.size(); j++)
-            graph_fs << (int)ds_graph[ds[i].id][ds[j].id] << "   ";
-        graph_fs << std::endl;
-    }
-    
-    graph_fs.close();
     
 }
 
@@ -4026,15 +4052,15 @@ void docking::runtime_checks() {
             log_major_error("invalid number of DS!");
             invalid_ds_count_printed = true;
             
-            ROS_DEBUG("ds.size(): %lu; content:", ds.size());
+            ROS_DEBUG("ds.size(): %lu; content:", (long unsigned int)ds.size());
             for(unsigned int i=0; i < ds.size(); i++)
                 ROS_DEBUG("%d", ds.at(i).id);
                 
-            ROS_DEBUG("undiscovered_ds.size(): %lu; content:", undiscovered_ds.size());
+            ROS_DEBUG("undiscovered_ds.size(): %lu; content:", (long unsigned int)undiscovered_ds.size());
             for(unsigned int i=0; i < undiscovered_ds.size(); i++)
                 ROS_DEBUG("%d", undiscovered_ds.at(i).id);
                 
-            ROS_DEBUG("discovered_ds.size(): %lu; content: ", discovered_ds.size());
+            ROS_DEBUG("discovered_ds.size(): %lu; content: ", (long unsigned int)discovered_ds.size());
             for(unsigned int i=0; i < discovered_ds.size(); i++)
                 ROS_DEBUG("%d", discovered_ds.at(i).id);
         }
@@ -4044,7 +4070,7 @@ void docking::runtime_checks() {
             for(unsigned int j=i+1; j < ds.size(); j++)
                 if(ds.at(i).id == ds.at(j).id) {
                     log_major_error("a DS appears twice!!");
-                    ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", ds.size(), undiscovered_ds.size(), discovered_ds.size());
+                    ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", (long unsigned int)ds.size(), (long unsigned int)undiscovered_ds.size(), (long unsigned int)discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
 }
@@ -4143,7 +4169,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
-    ROS_DEBUG("%lu", jobs.size());
+    ROS_DEBUG("%lu", (long unsigned int)jobs.size());
     double min_dist = numeric_limits<int>::max();
     ds_t *min_ds = NULL;
     int retry = 0;
@@ -4344,13 +4370,13 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
     }
     mutex_ds_graph.unlock();
     
-    if(path_navigation_tries > 4) {
-        log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
-        ROS_INFO("finished_bool = true");
+//    if(path_navigation_tries > 4) {
+//        log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
+//        ROS_INFO("finished_bool = true");
 //        finished_bool = true;
-        finalize();
-        return;
-    }
+//        finalize();
+//        return;
+//    }
          
 //    bool ds_found_with_mst = find_path_2(0, 2, path);
 //    for (int i = 0; i < ds_mst.size(); i++)
@@ -4722,4 +4748,14 @@ std::string docking::get_text_for_enum(int enumVal)
     }
     else
         return enum_string[enumVal];
+}
+
+void docking::addDistance(double x1, double y1, double x2, double y2, double distance) {
+    std::vector<double> distance_elem;
+    distance_elem.push_back(x1);
+    distance_elem.push_back(y1);
+    distance_elem.push_back(x2);
+    distance_elem.push_back(y2);
+    distance_elem.push_back(distance);
+    distance_list.push_back(distance_elem);
 }

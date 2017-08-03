@@ -44,6 +44,7 @@ int main(int argc, char** argv)
     
     // coordinate docking of robots for recharging
     docking doc;
+    doc.create_log_files();
     doc.wait_for_explorer();
     
     //doc.wait_battery_info(); //only ok if threat thr_battery is active
