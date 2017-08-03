@@ -1,6 +1,8 @@
 #include <docking.h>
 #define DEBUG false
 #define DANGEROUS_TIME_VALUE 150
+#define LOG_TRUE true
+#define LOG_FALSE false
 
 //TODO(minor) ConstPtr
 
@@ -3232,7 +3234,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
             }
             
         } else
-            ROS_DEBUG_COND(false, "ds%d has not been discovered yet", (*it).id);        
+            ROS_DEBUG_COND(LOG_TRUE, "ds%d has not been discovered yet", (*it).id);        
     }
     ds_mutex.unlock();
 }
