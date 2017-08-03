@@ -2340,11 +2340,9 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     
     
     bool participation = false;
-    unsigned int index_auction;
     for(unsigned int i=0; i < auctions.size(); i++)
         if(msg.get()->auction == (unsigned int)auctions.at(i).auction_id) {
             participation = true;
-            index_auction = i;
             break;
         }
      
@@ -2383,9 +2381,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             // Sanity check
             if((int)msg.get()->docking_station != get_optimal_ds_id())
                 log_major_error("ID of the won auctioned DS != ID of the optimal DS");
-                
-//            participating_to_auction--;
-            auctions.erase(auctions.begin() + index_auction);
+
 
         }
         else
@@ -2398,8 +2394,14 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             auction_winner = false;
             lost_other_robot_auction = true;
             
-            auctions.erase(auctions.begin() + index_auction);
         }
+        
+//        if(auctions.begin() + index_auction >= auctions.size())
+//            log_major_error("auctions.begin() + index_auction >= auctions.size()");
+            
+//      participating_to_auction--;            
+//        auctions.erase(auctions.begin() + index_auction);
+
     }
     else
         if(participation)
@@ -2498,7 +2500,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     ROS_INFO("Updating robot state...");
     
     // sanity check
-    if(robot_is_auctioning && ros::Time::now() - start_own_auction_time > ros::Duration(1*60))
+    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(1*60)))
         log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
     
     // sanity check
@@ -2508,15 +2510,15 @@ void docking::update_robot_state()  // TODO(minor) simplify
     // check expired auctions
     mutex_auction.lock();
     ROS_DEBUG("%f", (float)(auction_timeout + extra_time));
-    for(unsigned int i; i < auctions.size(); i++)
-        if(ros::Time::now().toSec() - auctions.at(i).starting_time > (float)(auction_timeout + extra_time)) {
+    for(auto it = auctions.begin(); it != auctions.end(); it++)
+        if(ros::Time::now().toSec() - it->starting_time > (float)(auction_timeout + extra_time)) {
             ROS_INFO("erasing auction");
             //participating_to_auction--;
-            auctions.erase(auctions.begin() + i);
-            i = -1; //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
+            auctions.erase(it);
+            it = auctions.begin(); //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
         }
         else
-            ROS_DEBUG("%f",ros::Time::now().toSec() - auctions.at(i).starting_time);
+            ROS_DEBUG("%f",ros::Time::now().toSec() - it->starting_time);
         
     // sanity check
 //    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {

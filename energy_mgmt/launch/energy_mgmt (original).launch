@@ -5,9 +5,10 @@
     <arg name="x"/>
     <arg name="y"/>
     <arg name="log_path"/>
-    <arg name="ds_yaml" default="docking.yaml" />
+    <arg name="ds_yaml" />
     <arg name="ds_selection_policy" />
     <arg name="num_robots" />
+    <arg name="maximum_traveling_distance" />
     <arg name="use_sim_time" default="true" />
     <param name="use_sim_time"  value="$(arg use_sim_time)"/>
     <!-- <arg name="num_robots"/> -->
@@ -21,11 +22,12 @@
         <param name="y" value ="$(arg y)" />
         
         <param name="log_path" value="$(arg log_path)" />
+        <param name="maximum_traveling_distance" value="$(arg maximum_traveling_distance)" />
         <param name="ds_selection_policy" value="$(arg ds_selection_policy)" />
         
         <param name="use_sim_time" value="$(arg use_sim_time)" />
 
-        <rosparam file="$(find energy_mgmt)/param/$(arg ds_yaml)" command="load"/>
+        <rosparam file="$(arg ds_yaml)" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/durations.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/extra_params.yaml" command="load"/>
         <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
