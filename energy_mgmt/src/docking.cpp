@@ -2004,7 +2004,6 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         
             /* The robot is interested in participating to the auction */
             ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
-            participating_to_auction++;
 
             /* Start timer to force the robot to consider the auction concluded after
              * some time, even in case it does not
@@ -2024,7 +2023,9 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             auction_t new_auction;
             new_auction.starting_time = (double)ros::Time::now().toSec();
             new_auction.auction_id = msg.get()->auction;
+            participating_to_auction++;
             auctions.push_back(new_auction);
+            
             mutex_auction.unlock();
 
             adhoc_communication::SendEmAuction srv;
@@ -2502,7 +2503,6 @@ void docking::update_robot_state()  // TODO(minor) simplify
         }
         else
             ROS_DEBUG("%f",ros::Time::now().toSec() - auctions.at(i).starting_time);
-    mutex_auction.unlock();    
         
     // sanity check
     if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
@@ -2511,6 +2511,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
         ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
         ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
     }
+    
+    mutex_auction.unlock();  
             
     /*
      * Check if:
