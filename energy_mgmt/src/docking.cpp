@@ -1491,6 +1491,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+            ROS_INFO("calling start_new_auction()");
             start_new_auction();  
                                   // TODO(minor) only if the robot has not been just interrupted from recharging
     }
@@ -1508,6 +1509,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
 		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
 		        {
 		            ros::Duration(1).sleep();
+		            ROS_INFO("calling start_new_auction()");
 		            start_new_auction();
 		        }
 			}
@@ -1548,6 +1550,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
                                           // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
                 {
                     ros::Duration(10).sleep();
+                    ROS_INFO("calling start_new_auction()");
                     start_new_auction();
                 }
             }
@@ -2193,6 +2196,7 @@ void docking::start_periodic_auction() {
 //    if (participating_to_auction == 0)  // Notice that it is still possible that
                                         // two robots start an auction at the same
                                         // time...
+        ROS_INFO("calling start_new_auction()");                          
         start_new_auction();
 //    else
 //    {
@@ -2215,7 +2219,10 @@ void docking::start_new_auction()
     
     if(robot_is_auctioning) {
         log_major_error("robot_is_auctioning is true, but shoud be false!!");
-        return;
+        timer_restart_auction.stop();
+        auction_winner = false;
+        robot_is_auctioning = false;
+        expired_own_auction = true;
     }
 
     if(wait_for_ds >= 100)
@@ -4366,6 +4373,7 @@ void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::Em
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
         {
+            ROS_INFO("calling start_new_auction()");
             start_new_auction();
         }
         else {
