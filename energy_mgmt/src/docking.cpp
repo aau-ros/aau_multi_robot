@@ -2377,6 +2377,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             if((int)msg.get()->docking_station != get_optimal_ds_id())
                 log_major_error("ID of the won auctioned DS != ID of the optimal DS");
                 
+            participating_to_auction--;
             auctions.erase(auctions.begin() + index_auction);
 
         }
@@ -2532,7 +2533,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
      * the energy_mgmt node just informs the explorer node that something has
      *recently happened.
      */
-    if (expired_own_auction || (update_state_required && participating_to_auction == 0))
+    if (expired_own_auction || (update_state_required && participating_to_auction == 0)) //TODO we could use auctions.size() and delete participatin_to-auction
     {
         /* An update of the robot state is required and it can be performed now */
         ROS_INFO("Sending information to explorer node about the result of recent "
