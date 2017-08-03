@@ -1880,7 +1880,14 @@ class Explorer
 //                            }
                 
                 int auctioning_counter = 0;
-                while ( (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 ) && auctioning_counter < 10 * 60 * 5)  // TODO(minor) better management of the while loop
+                
+                if(moving_along_path) {
+                    log_major_error("'moving_along_path' should be false!!!");
+                    moving_along_path = false;
+                }
+                    
+                
+                while ( (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 ) && auctioning_counter < 60 * 5)  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
@@ -1890,7 +1897,7 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if((robot_state == auctioning && auctioning_counter >= 60) || auctioning_counter >= 180) {
+                if((robot_state == auctioning && auctioning_counter >= 60) || auctioning_counter >= 60 * 5) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
                     continue;   

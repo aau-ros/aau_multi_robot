@@ -415,8 +415,6 @@ class docking
         int auction_id;
     };
 
-    vector<auction_t> auctions;
-
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
 
     bool managing_auction;
@@ -672,6 +670,8 @@ class docking
     double get_optimal_ds_timestamp();
     std::vector<std::string> enum_string;
     std::string get_text_for_enum(int enumVal);
+    std::vector<double> auctions;
+    bool robot_is_auctioning;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

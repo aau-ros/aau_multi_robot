@@ -281,6 +281,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     invalid_ds_count_printed = false;
     ds_appears_twice_printed = false;
     waiting_to_discover_a_ds = false;
+    robot_is_auctioning = false;
 
     /* Function calls */
     create_log_files();
@@ -2016,6 +2017,8 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
                                               &docking::end_auction_participation_timer_callback, this, true, false);
             timer.start();
             timers.push_back(timer);
+            
+            auctions.push_back((double)ros::Time::now().toSec());
 
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = group_name;
@@ -2074,8 +2077,9 @@ void docking::end_auction_participation_timer_callback(const ros::TimerEvent &ev
                                                                                       // instead it is received a lot
                                                                                       // early?
 {
-    ROS_DEBUG("Force to consider auction concluded");
-    participating_to_auction--;
+    //FIXME it seems not to work correctly sometimes...
+    //ROS_DEBUG("Force to consider auction concluded");
+    //participating_to_auction--;
 }
 
 void docking::timerCallback(const ros::TimerEvent &event)
@@ -2147,6 +2151,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     /* Computation completed */
     ROS_INFO("Auction completed");
     participating_to_auction--;
+    robot_is_auctioning = false;
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -2240,6 +2245,7 @@ void docking::start_new_auction()
     started_own_auction = true;
     update_state_required = true;
     participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
+    robot_is_auctioning = true;
 
     optimal_ds_mutex.unlock();
 
@@ -2438,6 +2444,21 @@ void docking::update_robot_state()  // TODO(minor) simplify
 {
     ROS_INFO("Updating robot state...");
     
+    // check expired auctions
+    for(unsigned int i; i < auctions.size(); i++)
+        if(ros::Time::now().toSec() - auctions.at(i) > auction_timeout + extra_time) {
+            participating_to_auction--;
+            auctions.erase(auctions.begin() + i);
+        }
+        
+    // sanity check
+    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
+        log_major_error("participating_to_auction != auctions.size() + robot_is_auctioning");
+        ROS_INFO("participating_to_auction: %d",participating_to_auction);
+        ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
+        ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
+    }
+            
     /*
      * Check if:
      * - there are no more pending auctions: this is to avoid to communicate
@@ -2578,9 +2599,9 @@ void docking::update_robot_state()  // TODO(minor) simplify
         else if (!update_state_required)
             ROS_DEBUG("No state update required");
         else if (participating_to_auction > 0)
-            ROS_DEBUG("There are still pending auctions, cannot update robot state");
+            ROS_DEBUG("There are still pending auctions (%d), cannot update robot state", participating_to_auction);
         else {
-            ROS_FATAL("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
+            log_major_error("the number of pending auctions is negative!!!");
             ROS_DEBUG("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
         }
     }
