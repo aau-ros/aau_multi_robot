@@ -2397,6 +2397,8 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             ROS_INFO("Robot didn't win this auction started by another robot");
             auction_winner = false;
             lost_other_robot_auction = true;
+            
+            auctions.erase(auctions.begin() + index_auction);
         }
     }
     else
