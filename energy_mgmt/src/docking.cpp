@@ -2512,8 +2512,6 @@ void docking::update_robot_state()  // TODO(minor) simplify
         ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
         ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
     }
-    
-    mutex_auction.unlock();  
             
     /*
      * Check if:
@@ -2662,6 +2660,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
             ROS_DEBUG("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
         }
     }
+    
+    mutex_auction.unlock();  
 }
 
 void docking::create_log_files()
