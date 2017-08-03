@@ -2206,8 +2206,9 @@ void docking::start_periodic_auction() {
 
 void docking::start_new_auction()
 {
+    mutex_auction.lock();
     if(robot_is_auctioning) {
-        log_major_error("robot_is_auctioning is true, but shoud be false!!");
+        log_minor_error("robot_is_auctioning is true, but shoud be false!!");
         return;
     }
 
@@ -2269,14 +2270,13 @@ void docking::start_new_auction()
     auction_bids.push_back(bid);
 
     /* The robot is starting an auction */
-    mutex_auction.lock();
     managing_auction = true;  // TODO(minor) reduntant w.r.t started_own_auction???
     started_own_auction = true;
     //update_state_required = true;
 //    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
     robot_is_auctioning = true;
     start_own_auction_time = ros::Time::now();
-    mutex_auction.unlock();
+    
 
     optimal_ds_mutex.unlock();
 
@@ -2295,6 +2295,9 @@ void docking::start_new_auction()
     srv.request.auction.bid = get_llh();
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
+    
+    
+    mutex_auction.unlock();
     
 }
 
