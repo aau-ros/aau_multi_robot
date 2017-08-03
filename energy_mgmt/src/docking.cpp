@@ -2157,11 +2157,12 @@ void docking::timerCallback(const ros::TimerEvent &event)
     sc_send_auction.call(srv_msg);
 
     /* Computation completed */
+    mutex_auction.lock();
     ROS_INFO("Auction completed");
     participating_to_auction--;
     robot_is_auctioning = false;
     expired_own_auction = true;
-    
+    mutex_auction.unlock();
     mutex_auction_result.unlock();
 }
 
