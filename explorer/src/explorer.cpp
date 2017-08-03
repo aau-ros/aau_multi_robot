@@ -1137,8 +1137,8 @@ class Explorer
                             else
                             {
                                 cluster_element = int(exploration->clusters.size() * rand() / (RAND_MAX));
-                                ROS_INFO("Random cluster_element: %d  from available %u clusters", cluster_element,
-                                         exploration->clusters.size());
+                                ROS_INFO("Random cluster_element: %d  from available %lu clusters", cluster_element,
+                                         (long unsigned int)exploration->clusters.size());
                             }
                             count++;
                         }
@@ -1206,7 +1206,7 @@ class Explorer
                                 }
 
 //                                else if(dist > available_distance * safety_coeff) 
-                                else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance)  {
+                                else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance) ) {
                                     //robot cannot reach next next DS, it must recharge at current one
 //                                    if(robot_state == fully_charged)
                                     if(full_battery)
@@ -3110,7 +3110,7 @@ class Explorer
         else
         {
             rotation_counter++;
-            ROS_INFO("In navigation .... cluster_available: %u     counter: %d", exploration->clusters.size(),
+            ROS_INFO("In navigation .... cluster_available: %lu     counter: %d", (long unsigned int)exploration->clusters.size(),
                      counter_waiting_for_clusters);
 
             // ???

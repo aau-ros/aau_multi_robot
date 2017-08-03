@@ -423,7 +423,6 @@ class docking
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
 
     bool managing_auction;
-    int participating_to_auction;
 
     void check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
@@ -678,7 +677,7 @@ class docking
     std::vector<auction_t> auctions;
     bool robot_is_auctioning;
     bool expired_own_auction;
-    ros::Time changed_state_time;
+    ros::Time changed_state_time,  start_own_auction_time;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

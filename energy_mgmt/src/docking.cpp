@@ -258,7 +258,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     my_counter = 0;
     llh = 0;
     local_auction_id = 0;
-    participating_to_auction = 0;
+//    participating_to_auction = 0;
     maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
 //    old_target_ds_id = -200;
@@ -282,6 +282,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     robot_is_auctioning = false;
     expired_own_auction = false;
     changed_state_time = ros::Time::now();
+    start_own_auction_time= ros::Time::now();
 
     /* Function calls */
     create_log_files();
@@ -485,7 +486,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     bool lock_acquired = optimal_ds_mutex.try_lock();
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && !moving_along_path && lock_acquired && participating_to_auction == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && !moving_along_path && lock_acquired && auctions.size() == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
     
 //        ds_mutex.lock();
@@ -994,7 +995,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     else {
         if (ds.size() <= 0)
             ROS_DEBUG("No DS"); 
-        else if(participating_to_auction > 0)
+        else if(auctions.size() > 0)
             ROS_DEBUG("Robot is participating to auction: optimal DS cannot be updated at the moment"); 
         else if(auction_winner)
             ROS_DEBUG("Robot has just won an auction, so maybe it will go to recharge: optimal DS cannot be updated at the moment"); 
@@ -1047,7 +1048,7 @@ double docking::get_llh()
 
     /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) really
     // necessary???
-    if (participating_to_auction == 0)
+    if (auctions.size() == 0)
         llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4 + w5 * l5;
     
     return llh;
@@ -2023,7 +2024,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             auction_t new_auction;
             new_auction.starting_time = (double)ros::Time::now().toSec();
             new_auction.auction_id = msg.get()->auction;
-            participating_to_auction++;
+//            participating_to_auction++;
             auctions.push_back(new_auction);
             
             mutex_auction.unlock();
@@ -2160,7 +2161,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
     /* Computation completed */
     mutex_auction.lock();
     ROS_INFO("Auction completed");
-    participating_to_auction--;
+//    participating_to_auction--;
     if(!robot_is_auctioning)
         log_major_error("robot_is_auctioning is false but should be true!");
     robot_is_auctioning = false;
@@ -2267,8 +2268,8 @@ void docking::start_new_auction()
     mutex_auction.lock();
     managing_auction = true;  // TODO(minor) reduntant w.r.t started_own_auction???
     started_own_auction = true;
-    update_state_required = true;
-    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
+    //update_state_required = true;
+//    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
     robot_is_auctioning = true;
     mutex_auction.unlock();
 
@@ -2290,6 +2291,8 @@ void docking::start_new_auction()
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
     
+
+    start_own_auction_time = ros::Time::now();
 
 }
 
@@ -2381,7 +2384,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             if((int)msg.get()->docking_station != get_optimal_ds_id())
                 log_major_error("ID of the won auctioned DS != ID of the optimal DS");
                 
-            participating_to_auction--;
+//            participating_to_auction--;
             auctions.erase(auctions.begin() + index_auction);
 
         }
@@ -2493,6 +2496,10 @@ void docking::update_robot_state()  // TODO(minor) simplify
     ROS_INFO("Updating robot state...");
     
     // sanity check
+    if(ros::Time::now() - start_own_auction_time > ros::Duration(1*60))
+        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
+    
+    // sanity check
     if(robot_state == in_queue && (changed_state_time - ros::Time::now() > ros::Duration(3*60)))
         log_major_error("robot stucked in queue!!!");
     
@@ -2502,7 +2509,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     for(unsigned int i; i < auctions.size(); i++)
         if(ros::Time::now().toSec() - auctions.at(i).starting_time > (float)(auction_timeout + extra_time)) {
             ROS_INFO("erasing auction");
-            participating_to_auction--;
+            //participating_to_auction--;
             auctions.erase(auctions.begin() + i);
             i = -1; //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
         }
@@ -2510,12 +2517,12 @@ void docking::update_robot_state()  // TODO(minor) simplify
             ROS_DEBUG("%f",ros::Time::now().toSec() - auctions.at(i).starting_time);
         
     // sanity check
-    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
-        log_major_error("participating_to_auction != auctions.size() + robot_is_auctioning");
-        ROS_INFO("participating_to_auction: %d",participating_to_auction);
-        ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
-        ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
-    }
+//    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
+//        log_major_error("participating_to_auction != auctions.size() + robot_is_auctioning");
+//        ROS_INFO("participating_to_auction: %d",participating_to_auction);
+//        ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
+//        ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
+//    }
             
     /*
      * Check if:
@@ -2535,7 +2542,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
      * the energy_mgmt node just informs the explorer node that something has
      *recently happened.
      */
-    if (expired_own_auction || (update_state_required && participating_to_auction == 0)) //TODO we could use auctions.size() and delete participatin_to-auction
+    if (expired_own_auction || (update_state_required && auctions.size() == 0)) //TODO we could use auctions.size() and delete participatin_to-auction
     {
         /* An update of the robot state is required and it can be performed now */
         ROS_INFO("Sending information to explorer node about the result of recent "
@@ -2652,16 +2659,16 @@ void docking::update_robot_state()  // TODO(minor) simplify
     else
     {
         /* Do nothing, just print some debug text */
-        if (participating_to_auction > 0 && !update_state_required)
-            ROS_DEBUG("There are still pending auctions (%d), and moreover no update is "
-                      "necessary for the moment", participating_to_auction);
+        //if (participating_to_auction > 0 && !update_state_required)
+        if (auctions.size() == 0 && !update_state_required)
+            ROS_DEBUG("There are still pending auctions (%lu), and moreover no update is "
+                      "necessary for the moment", (long unsigned int) auctions.size());
         else if (!update_state_required)
             ROS_DEBUG("No state update required");
-        else if (participating_to_auction > 0)
-            ROS_DEBUG("There are still pending auctions (%d), cannot update robot state", participating_to_auction);
+        else if (auctions.size() > 0)
+            ROS_DEBUG("There are still pending auctions (%lu), cannot update robot state", (long unsigned int) auctions.size());
         else {
-            log_major_error("the number of pending auctions is negative!!!");
-            ROS_DEBUG("ERROR: the number of pending auctions is negative: %d", participating_to_auction);
+            log_major_error("the number of pending auctions is negative!!!"); //TODO can't happen now...
         }
     }
     
