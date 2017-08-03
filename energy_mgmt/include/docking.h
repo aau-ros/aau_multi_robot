@@ -416,8 +416,8 @@ class docking
 
     struct auction_t
     {
-        int robot_id;
         int auction_id;
+        double starting_time;
     };
 
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
@@ -646,7 +646,7 @@ class docking
     int next_optimal_ds_id;
     double next_remaining_distance, current_remaining_distance;
     boost::mutex jobs_mutex, robot_mutex, mutex_message;
-    std::mutex optimal_ds_mutex, mutex_ds_graph;
+    std::mutex optimal_ds_mutex, mutex_ds_graph, mutex_auction;
     boost::shared_mutex ds_mutex;
     ros::Subscriber sub_goal_ds_for_path_navigation;
     unsigned int  path_navigation_tries;
@@ -675,8 +675,10 @@ class docking
     double get_optimal_ds_timestamp();
     std::vector<std::string> enum_string;
     std::string get_text_for_enum(int enumVal);
-    std::vector<double> auctions;
+    std::vector<auction_t> auctions;
     bool robot_is_auctioning;
+    bool expired_own_auction;
+    ros::Time changed_state_time;
 };
 
     void establishPersistenServerConnection(ros::ServiceClient &sc, std::string service_name);

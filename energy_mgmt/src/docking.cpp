@@ -280,6 +280,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     ds_appears_twice_printed = false;
     waiting_to_discover_a_ds = false;
     robot_is_auctioning = false;
+    expired_own_auction = false;
+    changed_state_time = ros::Time::now();
 
     /* Function calls */
     create_log_files();
@@ -1645,7 +1647,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     
     
     
-
+    changed_state_time = ros::Time::now();
 
     
     send_robot();
@@ -1911,10 +1913,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
             
             s.vacant = msg.get()->vacant;
             s.timestamp = msg.get()->header.timestamp;
-            if(FORCE_TO_CONSIDER_REACHABLE)
-                ds.push_back(s);
-            else
-                discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
+            discovered_ds.push_back(s); //discovered, but not reachable, since i'm not sure if it is reachable for this robot...
             ROS_INFO("New docking station received: ds%d (%f, %f)", s.id, s.x, s.y);
 
             /* Remove DS from the vector of undiscovered DSs */
@@ -2000,6 +1999,9 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     {
         if (get_llh() > msg.get()->bid)
         {
+        
+            mutex_auction.lock();
+        
             /* The robot is interested in participating to the auction */
             ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
             participating_to_auction++;
@@ -2016,10 +2018,14 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
              * these functions... */
             ros::Timer timer = nh.createTimer(ros::Duration(auction_timeout + extra_time),
                                               &docking::end_auction_participation_timer_callback, this, true, false);
-            timer.start();
-            timers.push_back(timer);
-            
-            auctions.push_back((double)ros::Time::now().toSec());
+            //timer.start();
+            //timers.push_back(timer);
+              
+            auction_t new_auction;
+            new_auction.starting_time = (double)ros::Time::now().toSec();
+            new_auction.auction_id = msg.get()->auction;
+            auctions.push_back(new_auction);
+            mutex_auction.unlock();
 
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = group_name;
@@ -2153,6 +2159,8 @@ void docking::timerCallback(const ros::TimerEvent &event)
     ROS_INFO("Auction completed");
     participating_to_auction--;
     robot_is_auctioning = false;
+    
+    expired_own_auction = true;
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -2170,27 +2178,28 @@ void docking::start_periodic_auction() {
     ROS_INFO("Periodic re-auctioning");
     
     //start auction only if no other one for teh same ds is on going: this is to avoid an "infinite loop" of auctions"
-    if (participating_to_auction == 0)  // Notice that it is still possible that
+//    if (participating_to_auction == 0)  // Notice that it is still possible that
                                         // two robots start an auction at the same
                                         // time...
         start_new_auction();
-    else
-    {
-        update_state_required = true;
-        started_own_auction = true;  // otherwise a robot could not start the auction
-                                     // because the following if is true, then win
-                                     // another robot auction and stop the time, then
-                                     // lost another and not be reset in queue... //TODO(minor) not very clean...
-        ROS_INFO("Robot is already participating to an auction: let's wait "
-                  "instead of starting another one...");
-        timer_restart_auction.stop(); //reduntant?
-        timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
-        timer_restart_auction.start(); //TODO would be better to start the timer only when the robot losts the auction...
-    }
+//    else
+//    {
+//        update_state_required = true;
+//        started_own_auction = true;  // otherwise a robot could not start the auction
+//                                     // because the following if is true, then win
+//                                     // another robot auction and stop the time, then
+//                                     // lost another and not be reset in queue... //TODO(minor) not very clean...
+//        ROS_INFO("Robot is already participating to an auction: let's wait "
+//                  "instead of starting another one...");
+//        timer_restart_auction.stop(); //reduntant?
+//        timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
+//        timer_restart_auction.start(); //TODO would be better to start the timer only when the robot losts the auction...
+//    }
 }
 
 void docking::start_new_auction()
 {
+
     if(wait_for_ds >= 100)
         return;
 
@@ -2223,6 +2232,13 @@ void docking::start_new_auction()
             
         return;
     }
+
+    // do not use this code
+//    if (participating_to_auction > 0) {
+//        ROS_INFO("robot is already participating to some auctions... do not start new one");
+//        started_own_auction = true; //otherwise a robot won't go in queue!!!!
+//        return;
+//    }
 
     ROS_INFO("Starting new auction");
     
@@ -2266,7 +2282,6 @@ void docking::start_new_auction()
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv);
     
-    
 
 }
 
@@ -2307,6 +2322,17 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     /* Check if the robot is interested in the docking station that was object of
      * the auction whose result has been just
      * received */
+     
+    mutex_auction.lock();
+    bool participation = false;
+    unsigned int index_auction;
+    for(unsigned int i=0; i < auctions.size(); i++)
+        if(msg.get()->auction == (unsigned int)auctions.at(i).auction_id) {
+            participation = true;
+            index_auction = i;
+            break;
+        }
+     
     if ((int)msg.get()->docking_station == get_optimal_ds_id())  // TODO check if the robot already knows this DS! //TODO what if the robot changes best_ds between the start of this auction and the 
     {
         ROS_INFO("Received result of an auction to which the robot participated");  // TODO(minor)
@@ -2332,7 +2358,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             // TODO(minor) and what if best_ds is updated just a moment before starting the
             // auction??? it shoul be ok because (in the sense that it couldn't be the winner of this auction, since it didn't participate
             // the if above would be false
-            timer_restart_auction.stop();  // TODO(minor)  i'm not sure that this follows the
+            //timer_restart_auction.stop();  // TODO(minor)  i'm not sure that this follows the
                                            // idea in the paper... but probably
                                            // this is needed otherwise when i have many pendning auction and with a
                                            // timeout enough high, i could have an inifite loop of restarting
@@ -2342,6 +2368,8 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             // Sanity check
             if((int)msg.get()->docking_station != get_optimal_ds_id())
                 log_major_error("ID of the won auctioned DS != ID of the optimal DS");
+                
+            auctions.erase(auctions.begin() + index_auction);
 
         }
         else
@@ -2355,9 +2383,14 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
             lost_other_robot_auction = true;
         }
     }
-//    else
-//        ROS_DEBUG("Received result of an auction the robot was not interested in: "
-//                  "ignoring");
+    else
+        if(participation)
+            log_major_error("participation is true, but optimal_ds_id != auctioned_id!!!");
+        else
+            ROS_DEBUG("Received result of an auction the robot was not interested in: "
+                  "ignoring");
+    
+    mutex_auction.unlock();
 
 }
 
@@ -2445,13 +2478,23 @@ void docking::update_robot_state()  // TODO(minor) simplify
 {
     ROS_INFO("Updating robot state...");
     
+    // sanity check
+    if(robot_state == in_queue && (changed_state_time - ros::Time::now() > ros::Duration(3*60)))
+        log_major_error("robot stucked in queue!!!");
+    
     // check expired auctions
+    mutex_auction.lock();
+    ROS_DEBUG("%f", (float)(auction_timeout + extra_time));
     for(unsigned int i; i < auctions.size(); i++)
-        if(ros::Time::now().toSec() - auctions.at(i) > auction_timeout + extra_time) {
+        if(ros::Time::now().toSec() - auctions.at(i).starting_time > (float)(auction_timeout + extra_time)) {
+            ROS_INFO("erasing auction");
             participating_to_auction--;
             auctions.erase(auctions.begin() + i);
             i = -1; //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
         }
+        else
+            ROS_DEBUG("%f",ros::Time::now().toSec() - auctions.at(i).starting_time);
+    mutex_auction.unlock();    
         
     // sanity check
     if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
@@ -2479,7 +2522,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
      * the energy_mgmt node just informs the explorer node that something has
      *recently happened.
      */
-    if (update_state_required && participating_to_auction == 0)
+    if (expired_own_auction || (update_state_required && participating_to_auction == 0))
     {
         /* An update of the robot state is required and it can be performed now */
         ROS_INFO("Sending information to explorer node about the result of recent "
@@ -2590,7 +2633,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
         update_state_required = false;
         auction_winner = false;
         started_own_auction = false;
-        timers.clear();  // TODO(minor) inefficient!!
+        expired_own_auction = false;
+        //timers.clear();  // TODO(minor) inefficient!!
     }
     else
     {
@@ -3208,10 +3252,7 @@ void docking::discover_docking_stations() //TODO(minor) comments
                     it->vacant = true; //TODO probably reduntant
                     it->timestamp = ros::Time::now().toSec();
                     
-                    if(FORCE_TO_CONSIDER_REACHABLE)
-                        ds.push_back(*it);
-                    else
-                        discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
+                    discovered_ds.push_back(*it); //TODO(minor) change vector name, from discovered_ds to unreachable_dss
 
                     // Inform other robots about the "new" DS
                     adhoc_communication::SendEmDockingStation send_ds_srv_msg;

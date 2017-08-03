@@ -2315,6 +2315,10 @@ class Explorer
             if (robot_state != charging && robot_state != going_charging && robot_state != going_checking_vacancy &&
                 robot_state != checking_vacancy)
             {
+                if(robot_state == moving_to_frontier)
+                    ROS_INFO("robot won another robot's auction");
+                else
+                    ROS_INFO("robot won own auction");
                 ROS_INFO("preparing for going_checking_vacancy");
                 update_robot_state_2(going_checking_vacancy);
             }
