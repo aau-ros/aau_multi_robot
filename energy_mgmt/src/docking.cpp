@@ -2245,7 +2245,6 @@ void docking::start_new_auction()
         expired_own_auction = true;
         managing_auction = false;
         discard_auction = true;
-        timer_finish_auction.stop();
         mutex_auction.unlock();
         return;
     }
@@ -2545,11 +2544,13 @@ void docking::update_robot_state()  // TODO(minor) simplify
         log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(1*60)");
         discard_auction = true;
         timer_finish_auction.stop();
-        mutex_auction.unlock();
-        conclude_auction();   
+        auction_winner = false;
+        robot_is_auctioning = false;
+        expired_own_auction = true;
+        managing_auction = false;
+        discard_auction = true;
     }
-    
-    mutex_auction.lock();
+
     
     // sanity check
     if(robot_state == in_queue && (changed_state_time - ros::Time::now() > ros::Duration(3*60)))
