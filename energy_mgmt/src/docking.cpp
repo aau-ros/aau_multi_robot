@@ -2449,6 +2449,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
         if(ros::Time::now().toSec() - auctions.at(i) > auction_timeout + extra_time) {
             participating_to_auction--;
             auctions.erase(auctions.begin() + i);
+            i = -1; //TODO horrible way to restart... check iterator invalidation, etc... or invert scanning order
         }
         
     // sanity check
