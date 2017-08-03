@@ -2095,6 +2095,7 @@ void docking::timerCallback(const ros::TimerEvent &event)
      * the winner and must inform all the
      * other robots */
     ROS_INFO("Auction timeout: compute auction winner");
+    mutex_auction_result.lock();
 
     // ??? //TODO(minor)
     managing_auction = false;
@@ -2159,8 +2160,9 @@ void docking::timerCallback(const ros::TimerEvent &event)
     ROS_INFO("Auction completed");
     participating_to_auction--;
     robot_is_auctioning = false;
-    
     expired_own_auction = true;
+    
+    mutex_auction_result.unlock();
 }
 
 void docking::cb_charging_completed(const std_msgs::Empty &msg)  // TODO(minor)
@@ -2258,11 +2260,13 @@ void docking::start_new_auction()
     auction_bids.push_back(bid);
 
     /* The robot is starting an auction */
+    mutex_auction.lock();
     managing_auction = true;  // TODO(minor) reduntant w.r.t started_own_auction???
     started_own_auction = true;
     update_state_required = true;
     participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
     robot_is_auctioning = true;
+    mutex_auction.unlock();
 
     optimal_ds_mutex.unlock();
 
@@ -2305,6 +2309,7 @@ void docking::cb_translate(const adhoc_communication::EmDockingStation::ConstPtr
 
 void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
+    mutex_auction_result.lock();
     if (!optimal_ds_is_set())
     {
         ROS_INFO("The robot does not know about any existing DS!");  // TODO(minor) it
@@ -2312,6 +2317,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                                                                       // it missed
                                                                       // some
                                                                       // messages!!
+        mutex_auction_result.unlock();
         return;
     }
 
@@ -2391,6 +2397,7 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                   "ignoring");
     
     mutex_auction.unlock();
+    mutex_auction_result.unlock();
 
 }
 
