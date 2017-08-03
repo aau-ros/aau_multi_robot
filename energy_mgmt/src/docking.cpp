@@ -2215,6 +2215,9 @@ void docking::start_periodic_auction() {
 
 void docking::start_new_auction()
 {
+    if(wait_for_ds >= 100)
+        return;
+        
     mutex_auction.lock();
     
     if(robot_is_auctioning) {
@@ -2227,8 +2230,7 @@ void docking::start_new_auction()
         return;
     }
 
-    if(wait_for_ds >= 100)
-        return;
+
 
     if (!optimal_ds_is_set() && need_to_charge)
     {
@@ -2257,6 +2259,7 @@ void docking::start_new_auction()
             pub_finish.publish(msg);
         }
             
+        mutex_auction.unlock();
         return;
     }
 
