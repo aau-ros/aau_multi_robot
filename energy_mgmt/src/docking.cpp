@@ -2223,6 +2223,8 @@ void docking::start_new_auction()
         auction_winner = false;
         robot_is_auctioning = false;
         expired_own_auction = true;
+        mutex_auction.unlock();
+        return;
     }
 
     if(wait_for_ds >= 100)
