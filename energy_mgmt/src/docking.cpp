@@ -942,6 +942,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             )
             {
             
+                mutex_auction.lock();
+                
+                if(auctions.size() == 0 && !robot_is_auctioning) {
+            
                 waiting_to_discover_a_ds = false;
                 finished_bool = false; //TODO(minor) find better place...
 //                changed = true;
@@ -963,6 +967,12 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 msg_optimal.x = get_optimal_ds_x();
                 msg_optimal.y = get_optimal_ds_y();
                 pub_new_optimal_ds.publish(msg_optimal);
+                
+                }
+                else
+                    ROS_INFO("under auction");
+                    
+                mutex_auction.unlock();
             
             }
 
