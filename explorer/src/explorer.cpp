@@ -2750,7 +2750,7 @@ class Explorer
         fs << "global costmap iterations        = " << global_costmap_iteration << std::endl;
         fs << "number of recharges              = " << recharge_cycles << std::endl;
         fs << "energy_consumption               = " << energy_consumption << std::endl;
-        fs << "available_distance               = " << available_distance << std::endl;
+        fs << "maximum_available_distance       = " << conservative_maximum_available_distance << std::endl;
         fs << "w1                               = " << w1 << std::endl;
         fs << "w2                               = " << w2 << std::endl;
         fs << "w3                               = " << w3 << std::endl;

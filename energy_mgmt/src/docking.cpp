@@ -1050,7 +1050,7 @@ double docking::get_llh()
     /* The likelihood can be updated only if the robot is not participating to an auction */  // TODO(minor) really
     // necessary???
     if (auctions.size() == 0)
-        llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4 + w5 * l5;
+        llh = w1 * l1 + w2 * l2 + w3 * l3 + w4 * l4;
     
     return llh;
 }
@@ -1155,6 +1155,11 @@ void docking::update_l3()
 {
     ROS_DEBUG("Update l3");
     
+    optimal_ds_mutex.lock();
+    double optimal_ds_x = get_optimal_ds_x();
+    double optimal_ds_y = get_optimal_ds_y();
+    optimal_ds_mutex.unlock();
+    
     /* Count number of jobs: count frontiers and reachable frontiers */
     int num_jobs = 0;
     int num_jobs_close = 0;
@@ -1173,7 +1178,7 @@ void docking::update_l3()
         
         double dist2;
         if(optimal_ds_is_set())
-            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, get_optimal_ds_x(), get_optimal_ds_y(), true);
+            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, optimal_ds_x, optimal_ds_y, true);
         else
             dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, 0, 0, true); //TODO 
         if (dist2 < 0)
@@ -1226,6 +1231,11 @@ void docking::update_l4() //TODO(minor) comments
 {
     ROS_DEBUG("Update l4");
     
+    optimal_ds_mutex.lock();
+    double optimal_ds_x = get_optimal_ds_x();
+    double optimal_ds_y = get_optimal_ds_y();
+    optimal_ds_mutex.unlock();
+    
     if (!optimal_ds_is_set())
     {
         ROS_DEBUG("No optimal DS");
@@ -1243,20 +1253,12 @@ void docking::update_l4() //TODO(minor) comments
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     // get distance to docking station
     double dist_ds = -1;
-    for (unsigned int i = 0; i < ds.size() && !recompute_llh; i++)
+    dist_ds = distance_from_robot(optimal_ds_x, optimal_ds_y, true); // use euclidean distance to make it faster
+    //ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
+    if (dist_ds < 0)
     {
-//        ROS_ERROR("%d", get_optimal_ds_id());
-        if (ds[i].id == get_optimal_ds_id())
-        {
-            dist_ds = distance_from_robot(ds[i].x, ds[i].y, true); // use euclidean distance to make it faster
-            //ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
-            if (dist_ds < 0)
-            {
-                ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
-                recompute_llh = true;
-            }
-            break;
-        }
+        ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
+        recompute_llh = true;
     }
     ROS_DEBUG("Distance to optimal DS: %.2f", dist_ds);
 
@@ -1306,7 +1308,7 @@ void docking::update_l5() //TODO(minor) comments
 //    if(battery.remaining_time_run < DANGEROUS_TIME_VALUE)
 //        l5 = (DANGEROUS_TIME_VALUE - battery.remaining_time_run) / DANGEROUS_TIME_VALUE + 1.0;
 //    else
-        l5 = 0;
+//        l5 = 0;
 //    ROS_DEBUG("l5: %.1f", l5);
 }
 
@@ -1423,7 +1425,7 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 
     /* Update parameter l2 of charging likelihood function */
     update_l2();
-    update_l5();
+    //update_l5();
     
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
