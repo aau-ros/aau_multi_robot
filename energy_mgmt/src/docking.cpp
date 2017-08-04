@@ -2218,7 +2218,7 @@ void docking::conclude_auction() {
 //    participating_to_auction--;
 
     if(!robot_is_auctioning)
-        log_major_error("robot_is_auctioning is false but should be true!");
+        log_minor_error("robot_is_auctioning is false but should be true!");
                 
     robot_is_auctioning = false;
     expired_own_auction = true;
@@ -2268,7 +2268,7 @@ void docking::start_new_auction()
     mutex_auction.lock();
     
     if(robot_is_auctioning) {
-        log_major_error("robot_is_auctioning is true, but shoud be false!!");
+        log_minor_error("robot_is_auctioning is true, but shoud be false!!");
         //timer_finish_auction.stop();
         auction_winner = false;
         robot_is_auctioning = false;
