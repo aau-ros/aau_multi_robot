@@ -1897,7 +1897,7 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if((robot_state == auctioning && auctioning_counter >= 60) || auctioning_counter >= 60 * 5) {
+                if(auctioning_counter >= 60 * 5) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
                     continue;   
@@ -2501,7 +2501,9 @@ class Explorer
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
         fs_csv << "#elapsed_sim_time,elapsed_wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
-                  "traveled_distance,global_map_explored_cells,discovered_free_cells_count,local_map_explored_cells,total_number_of_free_cells"
+                  "traveled_distance,"
+                  "global_map_explored_cells,discovered_free_cells_count,"
+                  "local_map_explored_cells,total_number_of_free_cells"
 //                  ",battery_state,"
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
                << "sim_time,wall_time"
@@ -2555,9 +2557,9 @@ class Explorer
             fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << ","
                    << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
-                   << map_progress.local_freespace << "," << free_cells_count //<< "," 
-//                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << "," << frontier_selection << "," << coeff_a << "," << coeff_b
-                   << "," << ros::Time::now() << "," << ros::WallTime::now()
+                   << map_progress.local_freespace << "," << free_cells_count << "," 
+//                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << ","
+                   << ros::Time::now() << "," << ros::WallTime::now()
                    << std::endl;
             fs_csv.close();
 

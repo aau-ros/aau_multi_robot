@@ -2269,7 +2269,7 @@ void docking::start_new_auction()
     
     if(robot_is_auctioning) {
         log_major_error("robot_is_auctioning is true, but shoud be false!!");
-        timer_finish_auction.stop();
+        //timer_finish_auction.stop();
         auction_winner = false;
         robot_is_auctioning = false;
         expired_own_auction = true;
@@ -2348,9 +2348,9 @@ void docking::start_new_auction()
     optimal_ds_mutex.unlock();
 
     /* Start auction timer to be notified of auction conclusion */
-    timer_finish_auction.stop();
-    timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
-    timer_finish_auction.start();
+//    timer_finish_auction.stop();
+//    timer_finish_auction.setPeriod(ros::Duration(auction_timeout), true);
+//    timer_finish_auction.start();
 
     /* Send broadcast message to inform all robots of the new auction */
     adhoc_communication::SendEmAuction srv;
@@ -2569,16 +2569,22 @@ void docking::update_robot_state()  // TODO(minor) simplify
     
     mutex_auction.lock();
     
+    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout))) {
+        conclude_auction();
+    } else
+        ROS_INFO("auction still ongoing...");
+    
+    
     // sanity check
-    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(3*60))) {
-        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(3*60)");
-        discard_auction = true;
-        timer_finish_auction.stop();
-        auction_winner = false;
-        robot_is_auctioning = false;
-        expired_own_auction = true;
-        managing_auction = false;
-    }
+//    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(3*60))) {
+//        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(3*60)");
+//        discard_auction = true;
+//        timer_finish_auction.stop();
+//        auction_winner = false;
+//        robot_is_auctioning = false;
+//        expired_own_auction = true;
+//        managing_auction = false;
+//    }
 
     
     // sanity check
@@ -2817,7 +2823,7 @@ void docking::create_log_files()
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
-               "starting_absolute_y,w1,w2,w3,w4,auction_duration" << std::endl;
+               "starting_absolute_y,w1,w2,w3,w4,auction_duration,reauctioning_timeout,extra_time" << std::endl;
     fs_info << robot_id << "," << num_robots << "," << ds_selection_policy << "," << origin_absolute_x << ","
             << origin_absolute_y << "," << w1 << "," << w2 << "," << w3 << "," << w4 << "," << auction_timeout << "," << reauctioning_timeout << "," << extra_time << std::endl;
     fs_info.close();
