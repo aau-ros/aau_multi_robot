@@ -1014,6 +1014,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 }
 
 void docking::log_optimal_ds() {
+    ROS_INFO("logging");
+    optimal_ds_mutex.lock();
     /* Keep track of the optimal and target DSs in log file */
 //    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
     if(old_optimal_ds_id_for_log != get_optimal_ds_id() ) {
@@ -1026,6 +1028,7 @@ void docking::log_optimal_ds() {
         fs_csv.close();
         old_optimal_ds_id_for_log = get_optimal_ds_id();
 //        old_target_ds_id_for_log = get_target_ds_id();
+    optimal_ds_mutex.unlock();
     }
 }
 
@@ -1155,10 +1158,10 @@ void docking::update_l3()
 {
     ROS_DEBUG("Update l3");
     
-    optimal_ds_mutex.lock();
+    //optimal_ds_mutex.lock(); //no need, already locked
     double optimal_ds_x = get_optimal_ds_x();
     double optimal_ds_y = get_optimal_ds_y();
-    optimal_ds_mutex.unlock();
+    //optimal_ds_mutex.unlock();
     
     /* Count number of jobs: count frontiers and reachable frontiers */
     int num_jobs = 0;
@@ -1231,10 +1234,10 @@ void docking::update_l4() //TODO(minor) comments
 {
     ROS_DEBUG("Update l4");
     
-    optimal_ds_mutex.lock();
+//    optimal_ds_mutex.lock(); //no need, already locked
     double optimal_ds_x = get_optimal_ds_x();
     double optimal_ds_y = get_optimal_ds_y();
-    optimal_ds_mutex.unlock();
+//    optimal_ds_mutex.unlock();
     
     if (!optimal_ds_is_set())
     {
@@ -2000,7 +2003,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         return;
     }
         
-    mutex_auction.lock();
+    
 
     /*
     // set auction id
@@ -2018,7 +2021,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
      
-     
+    mutex_auction.lock();
     optimal_ds_mutex.lock();
      
     if (!optimal_ds_is_set() || (int)msg.get()->docking_station != get_optimal_ds_id())
@@ -2131,12 +2134,9 @@ void docking::timerCallback(const ros::TimerEvent &event)
     
     if(discard_auction) {
         log_major_error("discarding auction");
-        discard_auction = false;
-        mutex_auction.unlock();
-        return;   
-    }
-    
-    conclude_auction();
+        discard_auction = false;  
+    } else
+        conclude_auction();
     
     
     mutex_auction.unlock();
@@ -2569,9 +2569,9 @@ void docking::update_robot_state()  // TODO(minor) simplify
     
     mutex_auction.lock();
     
-    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout))) {
+    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout)))
         conclude_auction();
-    } else
+    else
         ROS_INFO("auction still ongoing...");
     
     
@@ -2763,6 +2763,8 @@ void docking::update_robot_state()  // TODO(minor) simplify
     }
     
     mutex_auction.unlock();  
+    
+    ROS_INFO("ending update_robot_state()");
 }
 
 void docking::create_log_files()
@@ -4676,6 +4678,7 @@ void docking::spinOnce() {
 }
 
 void docking::send_ds() {
+    ROS_INFO("send_ds");
     adhoc_communication::SendEmDockingStation srv_msg;
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
