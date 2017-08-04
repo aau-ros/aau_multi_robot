@@ -1882,8 +1882,6 @@ class Explorer
 //                                ROS_INFO("NOW it is ok...");
 //                            }
                 
-                int auctioning_counter = 0;
-                
                 ros::Time auction_start_time = ros::Time::now();
                 
                 if(moving_along_path) {
@@ -1892,17 +1890,16 @@ class Explorer
                 }
                     
                 
-                while ( (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 ) && auctioning_counter < 60 * 5)  // TODO(minor) better management of the while loop
+                while ( robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 )  // TODO(minor) better management of the while loop
                 {
                     
                     ROS_INFO("Auctioning...");
                     ros::Duration(1).sleep();
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
-                    auctioning_counter++;
                     update_robot_state();
                 }
                 
-                if(auctioning_counter >= 60 * 5 && (ros::Time::now() - auction_start_time >= ros::Duration(5*60))) {
+                if(ros::Time::now() - auction_start_time >= ros::Duration(5*60)) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
                     ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
