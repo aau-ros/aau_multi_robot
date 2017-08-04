@@ -80,6 +80,7 @@ class docking
     FRIEND_TEST(DockingTest, testCase6);
     FRIEND_TEST(DockingTest, testCase7);
     FRIEND_TEST(DockingTest, testCase8);
+    FRIEND_TEST(DockingTest, testCase9);
 
   public:
     /**

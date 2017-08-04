@@ -117,46 +117,47 @@ TEST(DockingTest, testCase1)
 
 }
 
-TEST(DockingTest, testCase2)
-{
-    docking *doc = new docking();
-    doc->robot_state = static_cast<docking::state_t>(exploring);
-    doc->test_mode = true;
-    doc->maximum_travelling_distance = 30;
-    double robot_x = 30, robot_y = 30;
-    doc->robot->x = robot_x;
-    doc->robot->y = robot_y;
-    doc->num_ds = 2;
-    ds_t ds0, ds1;
-    ds0.id = 0;
-    ds0.x = 10;
-    ds0.y = 10;
-    ds1.id = 1;
-    ds1.x = 20;
-    ds1.y = 20;
-    doc->ds.push_back(ds0);
-    doc->ds.push_back(ds1);
-    doc->addDistance(ds0.x, ds0.y, ds1.x, ds1.y, euclidean_distance(ds0.x, ds0.y, ds1.x, ds1.y));
-    doc->addDistance(ds0.x, ds0.y, robot_x, robot_y, euclidean_distance(ds0.x, ds0.y, robot_x, robot_y));
-    doc->addDistance(ds1.x, ds1.y, robot_x, robot_y, euclidean_distance(ds1.x, ds1.y, robot_x, robot_y));
-     for (int i = 0; i < doc->num_ds; i++)
-        {
-            std::vector<int> temp;
-            std::vector<float> temp_f;
-            for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
-                temp.push_back(-1);
-                temp_f.push_back(-1);
-            }
-            doc->ds_mst.push_back(temp);
-            doc->ds_graph.push_back(temp_f);
-        }
-    doc->update_ds_graph();
-    doc->goal_ds_path_id = 0;
-    doc->simple_compute_and_publish_path_on_ds_graph();
-    EXPECT_EQ(doc->path.at(0), ds1.id);
-    EXPECT_EQ(doc->path.at(1), ds0.id);
+//TODO some test cases are commented out because sometimes it takes too much time to run all of them altogether...
+//TEST(DockingTest, testCase2)
+//{
+//    docking *doc = new docking();
+//    doc->robot_state = static_cast<docking::state_t>(exploring);
+//    doc->test_mode = true;
+//    doc->maximum_travelling_distance = 30;
+//    double robot_x = 30, robot_y = 30;
+//    doc->robot->x = robot_x;
+//    doc->robot->y = robot_y;
+//    doc->num_ds = 2;
+//    ds_t ds0, ds1;
+//    ds0.id = 0;
+//    ds0.x = 10;
+//    ds0.y = 10;
+//    ds1.id = 1;
+//    ds1.x = 20;
+//    ds1.y = 20;
+//    doc->ds.push_back(ds0);
+//    doc->ds.push_back(ds1);
+//    doc->addDistance(ds0.x, ds0.y, ds1.x, ds1.y, euclidean_distance(ds0.x, ds0.y, ds1.x, ds1.y));
+//    doc->addDistance(ds0.x, ds0.y, robot_x, robot_y, euclidean_distance(ds0.x, ds0.y, robot_x, robot_y));
+//    doc->addDistance(ds1.x, ds1.y, robot_x, robot_y, euclidean_distance(ds1.x, ds1.y, robot_x, robot_y));
+//     for (int i = 0; i < doc->num_ds; i++)
+//        {
+//            std::vector<int> temp;
+//            std::vector<float> temp_f;
+//            for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
+//                temp.push_back(-1);
+//                temp_f.push_back(-1);
+//            }
+//            doc->ds_mst.push_back(temp);
+//            doc->ds_graph.push_back(temp_f);
+//        }
+//    doc->update_ds_graph();
+//    doc->goal_ds_path_id = 0;
+//    doc->simple_compute_and_publish_path_on_ds_graph();
+//    EXPECT_EQ(doc->path.at(0), ds1.id);
+//    EXPECT_EQ(doc->path.at(1), ds0.id);
 
-}
+//}
 
 //TEST(DockingTest, testCase3)
 //{
