@@ -2341,6 +2341,7 @@ void docking::start_new_auction()
     started_own_auction = true;
     //update_state_required = true;
 //    participating_to_auction++; //must be done after get_llh(), or the llh won't be computed correctly //TODO(minor) very bad in this way...
+
     robot_is_auctioning = true;
     start_own_auction_time = ros::Time::now();
     
@@ -2570,13 +2571,14 @@ void docking::update_robot_state()  // TODO(minor) simplify
     mutex_auction.lock();
     
     if(robot_is_auctioning) {
-        if(ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout)))
+        if(ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout))
             conclude_auction();
         else {
             ROS_INFO("auction still ongoing...");
             ROS_INFO("ros::Time::now() - start_own_auction_time: %f", (ros::Time::now() - start_own_auction_time).toSec());
         }
-    }
+    } else 
+        ROS_INFO("robot has not started its own auction");
     
     
     // sanity check
