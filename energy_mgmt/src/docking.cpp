@@ -2604,7 +2604,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
     
     // sanity check
     if(robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(3*60)))
-        log_major_error("robot stucked in queue!!!");
+        log_major_error("robot stucked in queue!!!!");
     
     // check expired auctions
     for(auto it = auctions.begin(); it != auctions.end(); )
