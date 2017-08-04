@@ -110,6 +110,8 @@ TEST(DockingTest, testCase1)
     ds1.y = 20;
     doc->ds.push_back(ds0);
     doc->ds.push_back(ds1);
+    for(unsigned int i=0; i < doc->ds.size(); i++)
+        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
     doc->compute_optimal_ds();
     EXPECT_EQ(ds1.id, doc->optimal_ds_id); //expected, actual
 
@@ -324,6 +326,8 @@ TEST(DockingTest, testCase6) {
     ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = false; doc->ds.push_back(ds1);
     ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
     double robot_x = 50, robot_y = 50;
+    for(unsigned int i=0; i < doc->ds.size(); i++)
+        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
     doc->ds_selection_policy = 1;
@@ -339,6 +343,8 @@ TEST(DockingTest, testCase7) {
     ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = false; doc->ds.push_back(ds1);
     ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = false;  doc->ds.push_back(ds2);
     double robot_x = 50, robot_y = 50;
+    for(unsigned int i=0; i < doc->ds.size(); i++)
+        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
     doc->ds_selection_policy = 1;
@@ -353,6 +359,8 @@ TEST(DockingTest, testCase8) {
     ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = true; doc->ds.push_back(ds1);
     ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
     double robot_x = 50, robot_y = 50;
+    for(unsigned int i=0; i < doc->ds.size(); i++)
+        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
     doc->ds_selection_policy = 1;
@@ -367,6 +375,8 @@ TEST(DockingTest, testCase9) {
     ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = true; doc->ds.push_back(ds1);
     ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
     double robot_x = 50, robot_y = 50;
+    for(unsigned int i=0; i < doc->ds.size(); i++)
+        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
     doc->ds_selection_policy = 1;

@@ -36,7 +36,7 @@ bool reachable(int src, int dst) {
         if(reachability_list[j] == true)
             continue;
         //ROS_ERROR("%f", euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y));
-        if(euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y) <= wifi_range) {
+        if(wifi_range < 0 || euclidean_distance(robot_list[src].x, robot_list[src].y, robot_list[j].x, robot_list[j].y) <= wifi_range) {
             if(j == dst) {
                 return true;
             }
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     
     nh.param<int>("fake_network/num_robots", num_robots, -1);
-    nh.param<float>("fake_network/wireless_range", wifi_range, 10);
+    nh.param<float>("fake_network/communication_range", wifi_range, -1);
 
     //pub = nh.advertise<std_msgs::Empty>("robot_1/test", 10);
     
@@ -166,9 +166,9 @@ int main(int argc, char** argv)
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "adhoc_communication/publish_message"));
         //sc_publish_message_list.push_back(nh.serviceClient<fake_network::SendMessage>(robot_prefix + "test"));
-        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 1000000));
+        pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10000000));
 //        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
-        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
+        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 10000000, robot_absolute_position_callback));
 //        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
         //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
         robot_t robot;

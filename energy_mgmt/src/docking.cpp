@@ -3334,7 +3334,7 @@ void docking::compute_closest_ds()
     double min_dist = numeric_limits<int>::max();
     for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
     {
-        double dist = distance_from_robot((*it).x, (*it).y, true);
+        double dist = distance_from_robot((*it).x, (*it).y, false);
         //ROS_ERROR("ds%d: %f, %f", it->id, dist, distance_from_robot((*it).x, (*it).y, true));
         if (dist < 0)
             continue; //TODO(minor) sure?
