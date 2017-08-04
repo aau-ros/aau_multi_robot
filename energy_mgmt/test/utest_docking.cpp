@@ -110,8 +110,6 @@ TEST(DockingTest, testCase1)
     ds1.y = 20;
     doc->ds.push_back(ds0);
     doc->ds.push_back(ds1);
-    doc->addDistance(ds0.x, ds0.y, robot_x, robot_y, euclidean_distance(ds0.x, ds0.y, robot_x, robot_y));
-    doc->addDistance(ds1.x, ds1.y, robot_x, robot_y, euclidean_distance(ds1.x, ds1.y, robot_x, robot_y));
     doc->compute_optimal_ds();
     EXPECT_EQ(ds1.id, doc->optimal_ds_id); //expected, actual
 
@@ -158,167 +156,212 @@ TEST(DockingTest, testCase2)
 
 }
 
-TEST(DockingTest, testCase3)
-{
+//TEST(DockingTest, testCase3)
+//{
+//    docking *doc = new docking();
+//    doc->robot_state = static_cast<docking::state_t>(exploring);
+//    doc->test_mode = true;
+//    doc->maximum_travelling_distance = 30;
+//    double robot_x = 80, robot_y = 0;
+//    doc->robot->x = robot_x;
+//    doc->robot->y = robot_y;
+//    doc->num_ds = 3;
+
+//    ds_t ds0; ds0.id = 0; ds0.x = 20; ds0.y = 0; doc->ds.push_back(ds0);
+//    ds_t ds1; ds1.id = 1; ds1.x = 40; ds1.y = 0; doc->ds.push_back(ds1);
+//    ds_t ds2; ds2.id = 2; ds2.x = 60; ds2.y = 0; doc->ds.push_back(ds2);
+
+//    for(unsigned int i=0; i < doc->ds.size(); i++) {
+//        for(unsigned int j=i; j < doc->ds.size(); j++)
+//            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
+//        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
+//    }
+//     for (int i = 0; i < doc->num_ds; i++)
+//        {
+//            std::vector<int> temp;
+//            std::vector<float> temp_f;
+//            for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
+//                temp.push_back(-1);
+//                temp_f.push_back(-1);
+//            }
+//            doc->ds_mst.push_back(temp);
+//            doc->ds_graph.push_back(temp_f);
+//        }
+//    doc->update_ds_graph();
+//    doc->goal_ds_path_id = 0;
+//    doc->simple_compute_and_publish_path_on_ds_graph();
+//    EXPECT_EQ(doc->path.at(0), ds2.id);
+//    EXPECT_EQ(doc->path.at(1), ds1.id);
+//    EXPECT_EQ(doc->path.at(2), ds0.id);
+//    EXPECT_EQ(doc->path.size(), 3);
+
+//}
+
+//TEST(DockingTest, testCase4)
+//{
+//    docking *doc = new docking();
+//    doc->robot_state = static_cast<docking::state_t>(exploring);
+//    doc->test_mode = true;
+//    doc->maximum_travelling_distance = 30;
+//    double robot_x = 50, robot_y = 50;
+//    doc->robot->x = robot_x;
+//    doc->robot->y = robot_y;
+//    doc->num_ds = 5;
+
+//    /*
+//    R: robot
+//    0: goal DS
+//    1-4: DS
+//                    R
+//                   /
+//                  /
+//                 2
+//                / 
+//               /   
+//              3
+//              |  
+//              |
+//              |  
+//        0 --- 1 --- 4
+//    */
+//    ds_t ds0; ds0.id = 0; ds0.x =  0; ds0.y =  0; doc->ds.push_back(ds0);
+//    ds_t ds1; ds1.id = 1; ds1.x = 25; ds1.y =  0; doc->ds.push_back(ds1);
+//    ds_t ds2; ds2.id = 2; ds2.x = 40; ds2.y = 40; doc->ds.push_back(ds2);
+//    ds_t ds3; ds3.id = 3; ds3.x = 25; ds3.y = 25; doc->ds.push_back(ds3);
+//    ds_t ds4; ds4.id = 4; ds4.x = 50; ds4.y =  0; doc->ds.push_back(ds4);
+
+//    for(unsigned int i=0; i < doc->ds.size(); i++) {
+//        for(unsigned int j=i; j < doc->ds.size(); j++)
+//            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
+//        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
+//    }
+//    
+//    for (int i = 0; i < doc->num_ds; i++)
+//    {
+//        std::vector<int> temp;
+//        std::vector<float> temp_f;
+//        for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
+//            temp.push_back(-1);
+//            temp_f.push_back(-1);
+//        }
+//        doc->ds_mst.push_back(temp);
+//        doc->ds_graph.push_back(temp_f);
+//    }
+//    doc->update_ds_graph();
+//    doc->goal_ds_path_id = 0;
+//    doc->simple_compute_and_publish_path_on_ds_graph();
+//    EXPECT_EQ(doc->path.at(0), ds2.id);
+//    EXPECT_EQ(doc->path.at(1), ds3.id);
+//    EXPECT_EQ(doc->path.at(2), ds1.id);
+//    EXPECT_EQ(doc->path.at(3), ds0.id);
+//    EXPECT_NE(doc->path.at(0), ds4.id); // to avoid warning on unused variable
+//    EXPECT_EQ(doc->path.size(), 4);
+
+//}
+
+//TEST(DockingTest, testCase5)
+//{
+//    docking *doc = new docking();
+//    doc->robot_state = static_cast<docking::state_t>(exploring);
+//    doc->test_mode = true;
+//    doc->maximum_travelling_distance = 30;
+//    double robot_x = 75, robot_y = 0;
+//    doc->robot->x = robot_x;
+//    doc->robot->y = robot_y;
+//    doc->num_ds = 5;
+
+//    /*
+//    R: robot
+//    0: goal DS
+//    1-4: DS
+//                 2
+//                / 
+//               /   
+//              3
+//              |  
+//              |
+//              |  
+//        0 --- 1 --- 4 --- R
+//    */
+//    ds_t ds0; ds0.id = 0; ds0.x =  0; ds0.y =  0; doc->ds.push_back(ds0);
+//    ds_t ds1; ds1.id = 1; ds1.x = 25; ds1.y =  0; doc->ds.push_back(ds1);
+//    ds_t ds2; ds2.id = 2; ds2.x = 40; ds2.y = 40; doc->ds.push_back(ds2);
+//    ds_t ds3; ds3.id = 3; ds3.x = 25; ds3.y = 25; doc->ds.push_back(ds3);
+//    ds_t ds4; ds4.id = 4; ds4.x = 50; ds4.y =  0; doc->ds.push_back(ds4);
+
+//    for(unsigned int i=0; i < doc->ds.size(); i++) {
+//        for(unsigned int j=i; j < doc->ds.size(); j++)
+//            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
+//        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
+//    }
+//    
+//    for (int i = 0; i < doc->num_ds; i++)
+//    {
+//        std::vector<int> temp;
+//        std::vector<float> temp_f;
+//        for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
+//            temp.push_back(-1);
+//            temp_f.push_back(-1);
+//        }
+//        doc->ds_mst.push_back(temp);
+//        doc->ds_graph.push_back(temp_f);
+//    }
+//    doc->update_ds_graph();
+//    doc->goal_ds_path_id = 0;
+//    doc->simple_compute_and_publish_path_on_ds_graph();
+//    EXPECT_EQ(doc->path.at(0), ds4.id);
+//    EXPECT_EQ(doc->path.at(1), ds1.id);
+//    EXPECT_EQ(doc->path.at(2), ds0.id);
+//    EXPECT_NE(doc->path.at(0), ds2.id);
+//    EXPECT_NE(doc->path.at(0), ds3.id); // to avoid warning on unused variable
+//    EXPECT_EQ(doc->path.size(), 3);
+
+//}
+
+TEST(DockingTest, testCase6) {
     docking *doc = new docking();
-    doc->robot_state = static_cast<docking::state_t>(exploring);
-    doc->test_mode = true;
-    doc->maximum_travelling_distance = 30;
-    double robot_x = 80, robot_y = 0;
-    doc->robot->x = robot_x;
-    doc->robot->y = robot_y;
-    doc->num_ds = 3;
-
-    ds_t ds0; ds0.id = 0; ds0.x = 20; ds0.y = 0; doc->ds.push_back(ds0);
-    ds_t ds1; ds1.id = 1; ds1.x = 40; ds1.y = 0; doc->ds.push_back(ds1);
-    ds_t ds2; ds2.id = 2; ds2.x = 60; ds2.y = 0; doc->ds.push_back(ds2);
-
-    for(unsigned int i=0; i < doc->ds.size(); i++) {
-        for(unsigned int j=i; j < doc->ds.size(); j++)
-            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
-        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
-    }
-     for (int i = 0; i < doc->num_ds; i++)
-        {
-            std::vector<int> temp;
-            std::vector<float> temp_f;
-            for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
-                temp.push_back(-1);
-                temp_f.push_back(-1);
-            }
-            doc->ds_mst.push_back(temp);
-            doc->ds_graph.push_back(temp_f);
-        }
-    doc->update_ds_graph();
-    doc->goal_ds_path_id = 0;
-    doc->simple_compute_and_publish_path_on_ds_graph();
-    EXPECT_EQ(doc->path.at(0), ds2.id);
-    EXPECT_EQ(doc->path.at(1), ds1.id);
-    EXPECT_EQ(doc->path.at(2), ds0.id);
-    EXPECT_EQ(doc->path.size(), 3);
-
-}
-
-TEST(DockingTest, testCase4)
-{
-    docking *doc = new docking();
-    doc->robot_state = static_cast<docking::state_t>(exploring);
-    doc->test_mode = true;
-    doc->maximum_travelling_distance = 30;
+    ds_t ds0; ds0.id = 0; ds0.x =   0; ds0.y =   0; ds0.vacant = true;  doc->ds.push_back(ds0);
+    ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = false; doc->ds.push_back(ds1);
+    ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
     double robot_x = 50, robot_y = 50;
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
-    doc->num_ds = 5;
+    doc->ds_selection_policy = 1;
 
-    /*
-    R: robot
-    0: goal DS
-    1-4: DS
-                    R
-                   /
-                  /
-                 2
-                / 
-               /   
-              3
-              |  
-              |
-              |  
-        0 --- 1 --- 4
-    */
-    ds_t ds0; ds0.id = 0; ds0.x =  0; ds0.y =  0; doc->ds.push_back(ds0);
-    ds_t ds1; ds1.id = 1; ds1.x = 25; ds1.y =  0; doc->ds.push_back(ds1);
-    ds_t ds2; ds2.id = 2; ds2.x = 40; ds2.y = 40; doc->ds.push_back(ds2);
-    ds_t ds3; ds3.id = 3; ds3.x = 25; ds3.y = 25; doc->ds.push_back(ds3);
-    ds_t ds4; ds4.id = 4; ds4.x = 50; ds4.y =  0; doc->ds.push_back(ds4);
-
-    for(unsigned int i=0; i < doc->ds.size(); i++) {
-        for(unsigned int j=i; j < doc->ds.size(); j++)
-            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
-        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
-    }
-    
-    for (int i = 0; i < doc->num_ds; i++)
-    {
-        std::vector<int> temp;
-        std::vector<float> temp_f;
-        for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
-            temp.push_back(-1);
-            temp_f.push_back(-1);
-        }
-        doc->ds_mst.push_back(temp);
-        doc->ds_graph.push_back(temp_f);
-    }
-    doc->update_ds_graph();
-    doc->goal_ds_path_id = 0;
-    doc->simple_compute_and_publish_path_on_ds_graph();
-    EXPECT_EQ(doc->path.at(0), ds2.id);
-    EXPECT_EQ(doc->path.at(1), ds3.id);
-    EXPECT_EQ(doc->path.at(2), ds1.id);
-    EXPECT_EQ(doc->path.at(3), ds0.id);
-    EXPECT_NE(doc->path.at(0), ds4.id); // to avoid warning on unused variable
-    EXPECT_EQ(doc->path.size(), 4);
+    //doc->compute_optimal_ds();
+    //EXPECT_EQ(doc->optimal_ds_id, ds0.id);
 
 }
 
-TEST(DockingTest, testCase5)
-{
+TEST(DockingTest, testCase7) {
     docking *doc = new docking();
-    doc->robot_state = static_cast<docking::state_t>(exploring);
-    doc->test_mode = true;
-    doc->maximum_travelling_distance = 30;
-    double robot_x = 75, robot_y = 0;
+    ds_t ds0; ds0.id = 0; ds0.x =   0; ds0.y =   0; ds0.vacant = false;  doc->ds.push_back(ds0);
+    ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = false; doc->ds.push_back(ds1);
+    ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = false;  doc->ds.push_back(ds2);
+    double robot_x = 50, robot_y = 50;
     doc->robot->x = robot_x;
     doc->robot->y = robot_y;
-    doc->num_ds = 5;
+    doc->ds_selection_policy = 1;
 
-    /*
-    R: robot
-    0: goal DS
-    1-4: DS
-                 2
-                / 
-               /   
-              3
-              |  
-              |
-              |  
-        0 --- 1 --- 4 --- R
-    */
-    ds_t ds0; ds0.id = 0; ds0.x =  0; ds0.y =  0; doc->ds.push_back(ds0);
-    ds_t ds1; ds1.id = 1; ds1.x = 25; ds1.y =  0; doc->ds.push_back(ds1);
-    ds_t ds2; ds2.id = 2; ds2.x = 40; ds2.y = 40; doc->ds.push_back(ds2);
-    ds_t ds3; ds3.id = 3; ds3.x = 25; ds3.y = 25; doc->ds.push_back(ds3);
-    ds_t ds4; ds4.id = 4; ds4.x = 50; ds4.y =  0; doc->ds.push_back(ds4);
-
-    for(unsigned int i=0; i < doc->ds.size(); i++) {
-        for(unsigned int j=i; j < doc->ds.size(); j++)
-            doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, doc->ds.at(j).x, doc->ds.at(j).y));
-        doc->addDistance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y, euclidean_distance(doc->ds.at(i).x, doc->ds.at(i).y, robot_x, robot_y));
-    }
-    
-    for (int i = 0; i < doc->num_ds; i++)
-    {
-        std::vector<int> temp;
-        std::vector<float> temp_f;
-        for (unsigned int j = 0; j < (unsigned int)doc->num_ds; j++) {
-            temp.push_back(-1);
-            temp_f.push_back(-1);
-        }
-        doc->ds_mst.push_back(temp);
-        doc->ds_graph.push_back(temp_f);
-    }
-    doc->update_ds_graph();
-    doc->goal_ds_path_id = 0;
-    doc->simple_compute_and_publish_path_on_ds_graph();
-    EXPECT_EQ(doc->path.at(0), ds4.id);
-    EXPECT_EQ(doc->path.at(1), ds1.id);
-    EXPECT_EQ(doc->path.at(2), ds0.id);
-    EXPECT_NE(doc->path.at(0), ds2.id);
-    EXPECT_NE(doc->path.at(0), ds3.id); // to avoid warning on unused variable
-    EXPECT_EQ(doc->path.size(), 3);
-
+    //doc->compute_optimal_ds();
+    //EXPECT_EQ(doc->optimal_ds_id, ds1.id);
 }
+
+TEST(DockingTest, testCase8) {
+    docking *doc = new docking();
+    ds_t ds0; ds0.id = 0; ds0.x =   0; ds0.y =   0; ds0.vacant = true;  doc->ds.push_back(ds0);
+    ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = true; doc->ds.push_back(ds1);
+    ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
+    double robot_x = 50, robot_y = 50;
+    doc->robot->x = robot_x;
+    doc->robot->y = robot_y;
+    doc->ds_selection_policy = 1;
+
+    //doc->compute_optimal_ds();
+    //EXPECT_EQ(doc->optimal_ds_id, ds1.id);
+}
+
+
 
 //} // end namespace dockingTest
 

@@ -195,6 +195,8 @@ void battery_simulate::compute()
     ros::Duration time_diff = time_manager->simulationTimeNow() - time_last;
     double time_diff_sec = time_diff.toSec();
     elapsed_time = time_diff_sec; //TODO for debugging, should be removed...
+
+    double power_idle = power_microcontroller + power_basic_computations;
     
     /* If there is no time difference to last computation, there is nothing to do */
     if (time_diff_sec <= 0)
@@ -233,7 +235,7 @@ void battery_simulate::compute()
         
         consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
         consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
-        consumed_energy_B += (power_microcontroller + power_basic_computations) * time_diff_sec;
+        consumed_energy_B += power_idle * time_diff_sec;
         
         state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
         if(state.remaining_distance > maximum_traveling_distance)
@@ -282,8 +284,7 @@ void battery_simulate::compute()
         return;
     } 
     else if(idle_mode) {
-//        consumed_energy_B += power_idle * time_diff_sec; // J
-        consumed_energy_B += (power_microcontroller + power_basic_computations) * time_diff_sec; // J
+        consumed_energy_B += power_idle * time_diff_sec; // J
 //        
 //        state.soc = remaining_energy / total_energy;
 //        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;

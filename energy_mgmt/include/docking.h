@@ -71,12 +71,15 @@ struct ds_t
 
 class docking
 {
-    //friend class DockingTest;
+    //friend class DockingTest; //TODO not use friend classes
     FRIEND_TEST(DockingTest, testCase1);
     FRIEND_TEST(DockingTest, testCase2);
     FRIEND_TEST(DockingTest, testCase3);
     FRIEND_TEST(DockingTest, testCase4);
     FRIEND_TEST(DockingTest, testCase5);
+    FRIEND_TEST(DockingTest, testCase6);
+    FRIEND_TEST(DockingTest, testCase7);
+    FRIEND_TEST(DockingTest, testCase8);
 
   public:
     /**

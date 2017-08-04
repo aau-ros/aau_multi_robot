@@ -525,7 +525,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
         // TODO(minor) functions
         /* "Closest" policy */
-        if (ds_selection_policy == 0)  // TODO(minor) switch-case
+        if (ds_selection_policy == 0) // TODO(minor) switch-case
             compute_closest_ds();
 
         /* "Vacant" policy */
@@ -1365,7 +1365,7 @@ double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean
 
 double docking::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)
 {
-    if(test_mode) {
+    if(test_mode && !euclidean) {
         for(unsigned int i = 0; i < distance_list.size(); i++) {
             std::vector<double> distance = distance_list.at(i);
             if(
@@ -3333,7 +3333,7 @@ void docking::compute_closest_ds()
     double min_dist = numeric_limits<int>::max();
     for (std::vector<ds_t>::iterator it = ds.begin(); it != ds.end(); it++)
     {
-        double dist = distance_from_robot((*it).x, (*it).y);
+        double dist = distance_from_robot((*it).x, (*it).y, true);
         //ROS_ERROR("ds%d: %f, %f", it->id, dist, distance_from_robot((*it).x, (*it).y, true));
         if (dist < 0)
             continue; //TODO(minor) sure?
