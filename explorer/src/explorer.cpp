@@ -1890,10 +1890,12 @@ class Explorer
                 }
                     
                 
-                while ( robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3 )  // TODO(minor) better management of the while loop
+                while ( (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3) && 
+                    ros::Time::now() - auction_start_time < ros::Duration(5*60) )  // TODO(minor) better management of the while loop
                 {
-                    
                     ROS_INFO("Auctioning...");
+                    ROS_INFO("ros::Time::now(): %f", ros::Time::now().toSec());
+                    ROS_INFO("auction_start_time: %f", auction_start_time.toSec());
                     ros::Duration(1).sleep();
                     ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
                     update_robot_state();
