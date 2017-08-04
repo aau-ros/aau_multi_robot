@@ -2199,7 +2199,7 @@ class Explorer
             checked_percentage = true;
         }
         
-        if(percentage >= 90 && ANTICIPATE_TERMINATION) {
+        if(percentage >= 95 && ANTICIPATE_TERMINATION) {
             finalize_exploration();
         }
         
