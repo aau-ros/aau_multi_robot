@@ -485,10 +485,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
-    bool lock_acquired = optimal_ds_mutex.try_lock();
-
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && !moving_along_path && lock_acquired && auctions.size() == 0 && !robot_is_auctioning && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && !moving_along_path && auctions.size() == 0 && !robot_is_auctioning && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 //        ds_mutex.lock();
 //        if(ds.size() == 1)
@@ -943,37 +941,43 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             )
             {
             
+                
                 mutex_auction.lock();
                 
                 if(auctions.size() == 0 && !robot_is_auctioning) {
             
-                waiting_to_discover_a_ds = false;
-                finished_bool = false; //TODO(minor) find better place...
-//                changed = true;
-                set_optimal_ds(next_optimal_ds_id);
-                
-                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
-                    log_major_error("OH NO!!!!!!!!!!!!");
-                    ROS_INFO("%d", get_optimal_ds_id());
-                }
+                    optimal_ds_mutex.lock();                
 
-                old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+                    waiting_to_discover_a_ds = false;
+                    finished_bool = false; //TODO(minor) find better place...
+    //                changed = true;
+                    set_optimal_ds(next_optimal_ds_id);
+                    
+                    if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
+                        log_major_error("OH NO!!!!!!!!!!!!");
+                        ROS_INFO("%d", get_optimal_ds_id());
+                    }
 
-                /* Update parameter l4 */
-                update_l4();
-                
-                /* Notify explorer about the optimal DS change */
-                adhoc_communication::EmDockingStation msg_optimal;
-                msg_optimal.id = get_optimal_ds_id();
-                msg_optimal.x = get_optimal_ds_x();
-                msg_optimal.y = get_optimal_ds_y();
-                pub_new_optimal_ds.publish(msg_optimal);
+                    old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+
+                    /* Update parameter l4 */
+                    update_l4();
+                    
+                    /* Notify explorer about the optimal DS change */
+                    adhoc_communication::EmDockingStation msg_optimal;
+                    msg_optimal.id = get_optimal_ds_id();
+                    msg_optimal.x = get_optimal_ds_x();
+                    msg_optimal.y = get_optimal_ds_y();
+                    pub_new_optimal_ds.publish(msg_optimal);
+
+                    optimal_ds_mutex.unlock(); 
                 
                 }
                 else
                     ROS_INFO("under auction");
                     
                 mutex_auction.unlock();
+                
             
             }
 
@@ -1013,15 +1017,13 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             ROS_DEBUG("Robot has just won an auction, so maybe it will go to recharge: optimal DS cannot be updated at the moment"); 
         else if(going_to_ds) 
             ROS_DEBUG("Robot is going to recharge: optimal DS cannot be updated at the moment"); 
-        else if(!lock_acquired)
-            ROS_DEBUG("Cannot acquire lock: optimal DS cannot be updated at the moment");
         else if(moving_along_path)
             ROS_DEBUG("robot is moving along path, cannot compute optimal DS");
         else
             ROS_WARN("This should be impossibile...");
     }
                   
-    optimal_ds_mutex.unlock();            
+               
 }
 
 void docking::log_optimal_ds() {
@@ -2031,9 +2033,9 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
     /* Check if the robot has some interested in participating to this auction,
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
-     
-    mutex_auction.lock();
-    optimal_ds_mutex.lock();
+    
+    //optimal_ds_mutex.lock();  //no need for this
+    mutex_auction.lock();    
      
     if (!optimal_ds_is_set() || (int)msg.get()->docking_station != get_optimal_ds_id())
     {
@@ -2092,8 +2094,8 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
         }
     }
     
-    optimal_ds_mutex.unlock();
     mutex_auction.unlock();
+    //optimal_ds_mutex.unlock();    
     
 }
 
@@ -2258,7 +2260,6 @@ void docking::start_periodic_auction() {
         start_new_auction();
 //    else
 //    {
-//        update_state_required = true;
 //        started_own_auction = true;  // otherwise a robot could not start the auction
 //                                     // because the following if is true, then win
 //                                     // another robot auction and stop the time, then
@@ -2328,7 +2329,7 @@ void docking::start_new_auction()
 
             ROS_INFO("Starting new auction");
             
-            optimal_ds_mutex.lock();
+            //optimal_ds_mutex.lock();
             
             id_auctioned_ds = get_optimal_ds_id();
             
@@ -2353,7 +2354,7 @@ void docking::start_new_auction()
             start_own_auction_time = ros::Time::now();
             
 
-            optimal_ds_mutex.unlock();
+            //optimal_ds_mutex.unlock();
 
             /* Start auction timer to be notified of auction conclusion */
         //    timer_finish_auction.stop();
@@ -2590,19 +2591,6 @@ void docking::update_robot_state()  // TODO(minor) simplify
     } else 
         ROS_INFO("robot has not started its own auction");
     
-    
-    // sanity check
-//    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(3*60))) {
-//        log_major_error("ros::Time::now() - start_own_auction_time > ros::Duration(3*60)");
-//        discard_auction = true;
-//        timer_finish_auction.stop();
-//        auction_winner = false;
-//        robot_is_auctioning = false;
-//        expired_own_auction = true;
-//        managing_auction = false;
-//    }
-
-    
     // sanity check
     if(robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(3*60))) {
         log_major_error("robot stucked in queue!!!!");
@@ -2623,14 +2611,6 @@ void docking::update_robot_state()  // TODO(minor) simplify
             it++;
             ROS_DEBUG("%f",ros::Time::now().toSec() - it->starting_time);
         }
-        
-    // sanity check
-//    if(participating_to_auction != ((int)auctions.size() + robot_is_auctioning)) {
-//        log_major_error("participating_to_auction != auctions.size() + robot_is_auctioning");
-//        ROS_INFO("participating_to_auction: %d",participating_to_auction);
-//        ROS_INFO("auctions.size(): %lu", (long unsigned int)auctions.size());
-//        ROS_INFO("robot_is_auctioning: %d", robot_is_auctioning);
-//    }
             
     /*
      * Check if:
@@ -2690,7 +2670,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
         /* Robot is the winner of at least one auction, notify explorer */
         else
         {
-            going_to_ds = true; //TODO(minor) very bas way to solve the problem of a robot that has jsut won anotehr robot auction, but the explorer node is still not aware of this fact, and so will communicate to docking that the robot is now in "auctioning" state ...
+            going_to_ds = true; //TODO(minor) very bad way to solve the problem of a robot that has jsut won anotehr robot auction, but the explorer node is still not aware of this fact, and so will communicate to docking that the robot is now in "auctioning" state ...
             
             /* If the robot is already approaching a DS to recharge, if it is already
              *charging, etc., ignore the fact
@@ -2709,7 +2689,9 @@ void docking::update_robot_state()  // TODO(minor) simplify
              *check (this is because the move_robot() function in explorer node uses
              *the coordinates of the currently
              *set target DS when the robot wants to reach a DS). */
-            if (robot_state != charging || robot_state != going_charging || robot_state != going_checking_vacancy ||
+            if (robot_state != charging || 
+                robot_state != going_charging || 
+                robot_state != going_checking_vacancy ||
                 robot_state != checking_vacancy)
             {
                 //safety check
@@ -4792,3 +4774,12 @@ void docking::addDistance(double x1, double y1, double x2, double y2, double dis
 //void docking::updateDistances() {
 //    if(ds_selection_policy != 2 && ds_selection_policy != 3)
 //}
+
+void docking::ds_management() {
+    while(ros::ok() && finished_bool){
+        discover_docking_stations();    
+        check_reachable_ds();   
+        compute_optimal_ds();
+        ros::Duration(1).sleep();
+    }
+}    

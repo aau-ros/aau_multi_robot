@@ -54,6 +54,7 @@ int main(int argc, char** argv)
     
     
     boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    boost::thread thr_ds_management(boost::bind(&docking::ds_management, &doc));
     
 
 // Frequency of loop
@@ -80,12 +81,6 @@ int main(int argc, char** argv)
         doc.update_robot_position();
         
         doc.update_robot_state();
-        
-        doc.discover_docking_stations();
-        
-        doc.check_reachable_ds();
-        
-        doc.compute_optimal_ds();
         
         doc.send_robot();
 

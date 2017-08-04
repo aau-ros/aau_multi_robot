@@ -128,6 +128,7 @@ class docking
     void spinOnce();
     void send_ds();
     void create_log_files();
+    void ds_management();
 
   private:
     /**
