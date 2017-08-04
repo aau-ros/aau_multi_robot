@@ -1322,6 +1322,7 @@ class Explorer
 //                        if(conservative_available_distance(available_distance) <= 0)
 //                            goal_determined = false;
 //                        else {
+//                            exploration->updateOptimalDs();
 //                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                             print_mutex_info("explore()", "acquiring");
                             costmap_mutex.lock();
@@ -2142,7 +2143,7 @@ class Explorer
             need_to_recharge = false;
         }
         
-        if(robot_state != exploring || robot_state != moving_to_frontier)
+        if(robot_state == charging || robot_state == in_queue)
             if(exploration != NULL) {
                 ROS_DEBUG("Setting 'use_theta' to false");
                 exploration->use_theta = false;
