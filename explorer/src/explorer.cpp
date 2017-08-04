@@ -67,6 +67,8 @@
 
 #define LOG_STATE_TRANSITION true
 
+#define ANTICIPATE_TERMINATION true
+
 bool exploration_finished;
 
 boost::mutex costmap_mutex;
@@ -2194,6 +2196,10 @@ class Explorer
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             //robot_state_next = finished_next;
             checked_percentage = true;
+        }
+        
+        if(percentage >= 90 && ANTICIPATE_TERMINATION) {
+            finalize_exploration();
         }
         
         if(robot_state_next == finished_next) {
