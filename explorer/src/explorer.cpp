@@ -1884,6 +1884,8 @@ class Explorer
                 
                 int auctioning_counter = 0;
                 
+                ros::Time auction_start_time = ros::Time::now();
+                
                 if(moving_along_path) {
                     log_major_error("'moving_along_path' should be false!!!");
                     moving_along_path = false;
@@ -1900,9 +1902,10 @@ class Explorer
                     update_robot_state();
                 }
                 
-                if(auctioning_counter >= 60 * 5) {
+                if(auctioning_counter >= 60 * 5 && (ros::Time::now() - auction_start_time >= ros::Duration(5*60))) {
                     log_major_error("auctioning was forced to stop!");
                     update_robot_state_2(going_in_queue);
+                    ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
                     continue;   
                 }
                 

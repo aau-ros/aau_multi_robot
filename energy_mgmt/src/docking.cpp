@@ -2569,10 +2569,14 @@ void docking::update_robot_state()  // TODO(minor) simplify
     
     mutex_auction.lock();
     
-    if(robot_is_auctioning && (ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout)))
-        conclude_auction();
-    else
-        ROS_INFO("auction still ongoing...");
+    if(robot_is_auctioning) {
+        if(ros::Time::now() - start_own_auction_time > ros::Duration(auction_timeout)))
+            conclude_auction();
+        else {
+            ROS_INFO("auction still ongoing...");
+            ROS_INFO("ros::Time::now() - start_own_auction_time: %f", (ros::Time::now() - start_own_auction_time).toSec());
+        }
+    }
     
     
     // sanity check
