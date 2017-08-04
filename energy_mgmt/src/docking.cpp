@@ -330,6 +330,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     starting_time = ros::Time::now();
     
+    
 }
 
 //void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
@@ -4787,3 +4788,7 @@ void docking::addDistance(double x1, double y1, double x2, double y2, double dis
     distance_elem.push_back(distance);
     distance_list.push_back(distance_elem);
 }
+
+//void docking::updateDistances() {
+//    if(ds_selection_policy != 2 && ds_selection_policy != 3)
+//}

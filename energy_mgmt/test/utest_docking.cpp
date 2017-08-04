@@ -361,6 +361,20 @@ TEST(DockingTest, testCase8) {
     //EXPECT_EQ(doc->optimal_ds_id, ds1.id);
 }
 
+TEST(DockingTest, testCase9) {
+    docking *doc = new docking();
+    ds_t ds0; ds0.id = 0; ds0.x =   0; ds0.y =   0; ds0.vacant = true;  doc->ds.push_back(ds0);
+    ds_t ds1; ds1.id = 1; ds1.x =  20; ds1.y =  20; ds1.vacant = true; doc->ds.push_back(ds1);
+    ds_t ds2; ds2.id = 2; ds2.x = 110; ds2.y = 110; ds2.vacant = true;  doc->ds.push_back(ds2);
+    double robot_x = 50, robot_y = 50;
+    doc->robot->x = robot_x;
+    doc->robot->y = robot_y;
+    doc->ds_selection_policy = 1;
+
+    //doc->compute_optimal_ds();
+    //EXPECT_EQ(doc->optimal_ds_id, ds1.id);
+}
+
 
 
 //} // end namespace dockingTest
