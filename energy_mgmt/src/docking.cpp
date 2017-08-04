@@ -487,7 +487,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     bool lock_acquired = optimal_ds_mutex.try_lock();
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    if (ds.size() > 0 && !moving_along_path && lock_acquired && auctions.size() == 0 && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && !moving_along_path && lock_acquired && auctions.size() == 0 && !robot_is_auctioning && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 //        ds_mutex.lock();
 //        if(ds.size() == 1)
@@ -2447,10 +2447,6 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
                                            // auctions... or I could but a control in the timer_callback!!!
 //            id_next_optimal_ds = (int)msg.get()->docking_station;
 
-            // Sanity check
-            if((int)msg.get()->docking_station != get_optimal_ds_id())
-                log_major_error("ID of the won auctioned DS != ID of the optimal DS");
-
 
         }
         else
@@ -2474,11 +2470,10 @@ void docking::cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &
     }
     else
         if(participation)
-            log_major_error("participation is true, but optimal_ds_id != auctioned_id!!!");
+            log_major_error("participation is true, but optimal_ds_id != auctioned_id!!!"); //actually this can easily happen
         else
             ROS_DEBUG("Received result of an auction the robot was not interested in: "
                   "ignoring");
-    
     mutex_auction.unlock();
 
 }
