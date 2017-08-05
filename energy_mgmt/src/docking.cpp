@@ -3678,6 +3678,8 @@ void docking::check_reachable_ds()
     
     ds_mutex.unlock();
     
+    ROS_INFO("end check_reachable_ds()");
+    
 }
 
 void docking::update_ds_graph() {
@@ -4799,6 +4801,7 @@ void docking::ds_management() {
         }
         else
             printed_stuck = false;
+            
         discover_docking_stations();    
         check_reachable_ds();   
         compute_optimal_ds();
