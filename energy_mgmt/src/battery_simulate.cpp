@@ -202,10 +202,12 @@ void battery_simulate::compute()
     if (time_diff_sec <= 0)
         return;
 
+    state.charging = false;
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
         ROS_INFO("Recharging battery");
+        state.charging = true;
         double ratio_A = -1, ratio_B = -1;
         if(consumed_energy_A < 0 && consumed_energy_B < 0) {
             ROS_FATAL("this should not happen...");
@@ -215,7 +217,7 @@ void battery_simulate::compute()
             ratio_A = 0.0;
             ratio_B = 1.0;
             consumed_energy_A = 0;
-            ROS_ERROR("this should not happen...");
+            ROS_ERROR("this should not happen..."); //FIXME actually this could happen since B is also consumed while charging...
         }   
         else if(consumed_energy_B <= 0) {
             ratio_A = 1.0;
@@ -332,6 +334,7 @@ void battery_simulate::compute()
         mutex_traveled_distance.unlock();
         
         state.remaining_time_run = state.remaining_distance * speed_avg;
+        
 
     }
 

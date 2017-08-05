@@ -3858,6 +3858,12 @@ class Explorer
         
         conservative_maximum_available_distance = msg->maximum_traveling_distance;
         
+        if(robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
+            log_minor_error("forcing fully_charged");
+            robot_state_next = fully_charged_next;
+        }
+            
+        
     }
     
     void shutdown() {
