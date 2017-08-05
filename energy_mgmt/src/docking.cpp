@@ -2284,12 +2284,12 @@ void docking::start_new_auction()
     
     if(robot_is_auctioning) {
         log_minor_error("robot_is_auctioning is true, but shoud be false!!");
-        //timer_finish_auction.stop();
-        auction_winner = false;
-        robot_is_auctioning = false;
-        expired_own_auction = true;
-        managing_auction = false;
-        discard_auction = true;
+//        timer_finish_auction.stop();
+//        auction_winner = false;
+//        robot_is_auctioning = false;
+//        expired_own_auction = true;
+//        managing_auction = false;
+//        discard_auction = true;
     }
     else {
         discard_auction = false;
