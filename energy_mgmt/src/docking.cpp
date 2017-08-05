@@ -3686,6 +3686,7 @@ void docking::check_reachable_ds()
 
 void docking::update_ds_graph() {
 
+    ds_mutex.lock();
     mutex_ds_graph.lock();
     for (unsigned int i = 0; i < ds.size(); i++) {
         for (unsigned int j = i; j < ds.size(); j++) {
@@ -3772,6 +3773,7 @@ void docking::update_ds_graph() {
         
         graph_fs.close();
     }
+    ds_mutex.unlock();
     
 }
 
