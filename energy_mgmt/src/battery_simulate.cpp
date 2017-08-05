@@ -202,12 +202,10 @@ void battery_simulate::compute()
     if (time_diff_sec <= 0)
         return;
 
-    state.charging = false;
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
         ROS_INFO("Recharging battery");
-        state.charging = true;
         double ratio_A = -1, ratio_B = -1;
         if(consumed_energy_A < 0 && consumed_energy_B < 0) {
             ROS_FATAL("this should not happen...");
