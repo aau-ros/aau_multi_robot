@@ -488,10 +488,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
     if (ds.size() > 0 && !moving_along_path && auctions.size() == 0 && !robot_is_auctioning && !auction_winner && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
-//        ds_mutex.lock();
-//        if(ds.size() == 1)
-//            next_optimal_ds_id = ds.at(0).id;
-//        ds_mutex.unlock();
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
         jobs_mutex.lock();
@@ -4697,6 +4693,8 @@ void docking::send_ds() {
     srv_msg.request.topic = "docking_stations";
     srv_msg.request.dst_robot = group_name;
     
+    ds_mutex.lock();
+    
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     for(unsigned int i=0; i < ds.size(); i++) {
         double x, y;
@@ -4711,6 +4709,8 @@ void docking::send_ds() {
         srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("docking_stations");
         sc_send_docking_station.call(srv_msg);
     }
+    
+    ds_mutex.unlock();
 }
 
 unsigned int docking::getAndUpdateMessageIdForTopic(std::string topic) {
@@ -4803,6 +4803,8 @@ void docking::ds_management() {
         check_reachable_ds();   
         compute_optimal_ds();
         runtime_checks();
+        log_optimal_ds();
+        send_ds();
         ros::Duration(1).sleep();
     }
 }    

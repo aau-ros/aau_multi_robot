@@ -83,12 +83,9 @@ int main(int argc, char** argv)
         doc.update_robot_state();
         
         doc.send_robot();
-
-        doc.send_ds();
         
         doc.update_reamining_distance();
-        
-        doc.log_optimal_ds();
+
         
 //        ros::spinOnce();
         
