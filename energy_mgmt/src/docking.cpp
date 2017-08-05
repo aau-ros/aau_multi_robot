@@ -4068,6 +4068,7 @@ void docking::runtime_checks() {
 //                two_robots_at_same_ds_printed = true;
 //            }
     
+    ds_mutex.lock();
     if(num_ds > 0)          
         if(!invalid_ds_count_printed && (ds.size() + undiscovered_ds.size() + discovered_ds.size() > (unsigned int)num_ds) ){
             log_major_error("invalid number of DS!");
@@ -4094,6 +4095,8 @@ void docking::runtime_checks() {
                     ROS_ERROR("ds.size(): %lu, undiscovered_ds.size(): %lu, discovered_ds.size(): %lu", (long unsigned int)ds.size(), (long unsigned int)undiscovered_ds.size(), (long unsigned int)discovered_ds.size());
                     ds_appears_twice_printed = true;
                 }
+                
+    ds_mutex.unlock();
 }
 
 void docking::path_callback(const std_msgs::String msg) {
@@ -4799,6 +4802,7 @@ void docking::ds_management() {
         discover_docking_stations();    
         check_reachable_ds();   
         compute_optimal_ds();
+        runtime_checks();
         ros::Duration(1).sleep();
     }
 }    

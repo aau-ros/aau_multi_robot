@@ -92,8 +92,6 @@ int main(int argc, char** argv)
         
 //        ros::spinOnce();
         
-        doc.runtime_checks();
-        
 //        doc.update_llh();
         
 //        doc.recompute_MST();
