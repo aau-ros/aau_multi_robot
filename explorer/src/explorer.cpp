@@ -121,6 +121,7 @@ class Explorer
     bool full_battery, frontiers_found;
     double traveled_distance, last_x, last_y;
     bool optima_ds_set;
+    bool has_to_force_fully_charged;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -165,6 +166,7 @@ class Explorer
         moving_time = 0;
         traveled_distance = 0;
         last_x = 0, last_y = 0;
+        has_to_force_fully_charged = false;
     
         // F
         test = true;
@@ -3858,7 +3860,10 @@ class Explorer
         
         conservative_maximum_available_distance = msg->maximum_traveling_distance;
         
-        if(robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
+        if(robot_state == charging && msg.get()->charging == true)
+            has_to_force_fully_charged = true;
+        
+        if(has_to_force_fully_charged && robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
             log_minor_error("forcing fully_charged");
             robot_state_next = fully_charged_next;
         }
