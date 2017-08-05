@@ -1023,7 +1023,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             ROS_WARN("This should be impossibile...");
     }
                   
-               
+    ROS_INFO("end compute_optimal_ds()");          
 }
 
 void docking::log_optimal_ds() {
