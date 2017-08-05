@@ -3866,6 +3866,7 @@ class Explorer
         if(has_to_force_fully_charged && robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
             log_minor_error("forcing fully_charged");
             robot_state_next = fully_charged_next;
+            has_to_force_fully_charged = false;
         }
             
         
