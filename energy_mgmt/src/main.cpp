@@ -125,6 +125,8 @@ int main(int argc, char** argv)
     thr_battery.join();
     thr_spin.interrupt();
     thr_spin.join();
+    thr_ds_management.interrupt();
+    thr_ds_management.join();
     
     spinner.stop();
     
