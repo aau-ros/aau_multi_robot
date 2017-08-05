@@ -2591,7 +2591,7 @@ void docking::update_robot_state()  // TODO(minor) simplify
         ROS_INFO("robot has not started its own auction");
     
     // sanity check
-    if(robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(1*60))) {
+    if(!waiting_to_discover_a_ds && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(1*60))) {
         log_major_error("robot stucked in queue!!!!");
         //timer_finish_auction.stop();
         auction_winner = false;
@@ -4793,7 +4793,7 @@ void docking::ds_management() {
     ROS_INFO("ds_management started");
     bool printed_stuck = false;
     while(ros::ok() && !finished_bool){
-        if(!printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(1*60))) {
+        if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(1*60))) {
             log_major_error("robot stuck in queue (2)!");
             printed_stuck = true;
         }
