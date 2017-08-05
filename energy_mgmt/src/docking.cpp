@@ -1606,8 +1606,6 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     }
     else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
     {
-//        id_ds_to_be_freed = get_target_ds_id();
-//        id_ds_to_be_freed = get_optimal_ds_id();
         going_to_ds = false;
         //free_ds(id_ds_to_be_freed); //it is better to release the DS when the robot has exited the fully_charged or leaving_ds state, but sometimes (at the moment for unknown reasones) this takes a while, even if the robot has already phisically released the DS...
     }
@@ -2034,8 +2032,15 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
      * i.e., if the auctioned DS is the one
      * currently targetted by the robot */
     
+
+
+
     //optimal_ds_mutex.lock();  //no need for this
     mutex_auction.lock();    
+
+
+
+
      
     if (!optimal_ds_is_set() || (int)msg.get()->docking_station != get_optimal_ds_id())
     {
@@ -2073,9 +2078,7 @@ void docking::cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg
             new_auction.starting_time = (double)ros::Time::now().toSec();
             new_auction.auction_id = msg.get()->auction;
 //            participating_to_auction++;
-            auctions.push_back(new_auction);
-            
-            
+            auctions.push_back(new_auction);           
 
             adhoc_communication::SendEmAuction srv;
             srv.request.dst_robot = group_name;

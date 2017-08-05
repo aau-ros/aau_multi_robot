@@ -9949,7 +9949,8 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
     } 
     */
 
-   
+   // TODO we could improve a little bit, keeping an array of booleans, a boolean for each DS, and when no EOs are found for a DS, the boolean is set to false and that DS is never checked again... however we must be sure that it cannot happen that the boolean is set to false even when with a later check we could find EOs for the associated DS...
+    //TODO we could use an hash/map maybe, to improve???
     //TODO it is not completely thread-safe (it is at least accoring to the current code...(?))
     for(unsigned int frontier_index = frontiers.size() - 1; frontier_index >= 0; frontier_index--) { //start from the bottom not to penalize the newest frontiers
         for(unsigned int ds_index=0; ds_index < ds_list.size(); ds_index++) {
