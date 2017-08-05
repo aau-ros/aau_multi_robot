@@ -3684,6 +3684,10 @@ class Explorer
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("lost_own_auction_callback");
+        if(robot_state_next == fully_charged_next) {
+            log_minor_error("next robot state is already 'fully_charged'");   
+            return;
+        }
 //        if(robot_id == 0) {
 //            robot_state_next = going_charging_next;
 //            return;
@@ -3702,12 +3706,20 @@ class Explorer
     void won_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("won_callback");
+        if(robot_state_next == fully_charged_next) {
+            log_minor_error("next robot state is already 'fully_charged'");   
+            return;
+        }
         robot_state_next = going_charging_next;
     }
 
     void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("lost_other_robot_callback");
+        if(robot_state_next == fully_charged_next) {
+            log_minor_error("next robot state is already 'fully_charged'");   
+            return;
+        }
 //        if(robot_id == 0) {
 //            robot_state_next = going_charging_next;
 //            return;
