@@ -18,8 +18,6 @@ add_service_files(
     FILES
     GetRobotState.srv
     SetRobotState.srv
-    LockRobotState.srv
-    UnlockRobotState.srv
 )
 
 ## Generate actions in the 'action' folder

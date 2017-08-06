@@ -1,4 +1,2 @@
 int32 robot_state
 ---
-bool succeeded
-string error_message
