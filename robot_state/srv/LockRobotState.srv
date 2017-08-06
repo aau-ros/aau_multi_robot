@@ -1,0 +1,3 @@
+---
+bool lock_acquired
+string locking_node

@@ -1,0 +1,3 @@
+string unlocking_node
+---
+bool lock_released

@@ -16,7 +16,10 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_service_files(
     FILES
-    GetRobotState.srv  
+    GetRobotState.srv
+    SetRobotState.srv
+    LockRobotState.srv
+    UnlockRobotState.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -50,7 +53,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 #add_library(robot_statelib src/main.cpp)
 
-
+#add_executable(robot_state_manager src/robot_state_manager.cpp)
 
 add_library(robot_state_managerlib src/robot_state_manager.cpp)
 add_dependencies(robot_state_managerlib robot_state_gencpp robot_state_generate_messages_cpp)
