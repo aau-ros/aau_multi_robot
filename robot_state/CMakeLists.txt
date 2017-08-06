@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(robot_state)
 
-enable_language(CXX)
-set(CMAKE_CXX_FLAGS "
-    -Wall -Wextra # enable all warnings
-    -rdynamic -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system # enable testing
-    -g -O0 -fprofile-arcs -ftest-coverage -lgcov # code coverage with gcov
-    ${CMAKE_CXX_FLAGS}
-")
-
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
@@ -49,14 +41,17 @@ catkin_package(
 ###########
 ## Build ##
 ###########
+enable_language(CXX)
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -rdynamic -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -g -O0 -fprofile-arcs -ftest-coverage -lgcov ${CMAKE_CXX_FLAGS}")
+
 include_directories(include)
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(robot_statelib src/main.cpp)
+#add_library(robot_statelib src/main.cpp)
 
 ## Declare a cpp executable
 add_executable(robot_state src/main.cpp)
-target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
+#target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
@@ -69,16 +64,16 @@ target_link_libraries(robot_state ${catkin_LIBRARIES})
 #############
 
 ## Mark executables and/or libraries for installation
-install(TARGETS robot_statelib
-        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+#install(TARGETS robot_statelib
+#    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#    RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 
 ## Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
+    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
 )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)

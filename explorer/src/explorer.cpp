@@ -133,6 +133,9 @@ class Explorer
         if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
            ros::console::notifyLoggerLevelsChanged();
         }
+
+        int test_robot_state = robot_state::EXPLORING;
+        int test_robot_state3 = robot_state::robot_state_enum::COMPUTING;
         
 //        ros::NodeHandle nh("~");
         rotation_counter = 0;
