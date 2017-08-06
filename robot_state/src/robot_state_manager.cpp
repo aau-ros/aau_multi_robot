@@ -76,6 +76,7 @@ std::string RobotStateManager::robotStateEnumToString(unsigned int enum_value) {
 //TODO not very robust to changes... try using enumerations or other ways...
 void RobotStateManager::fillRobotStateStringsVector() {
     std::vector<std::string>::iterator it = robot_state_strings.begin();
+    robot_state_strings.push_back("INITIALIZING");
     robot_state_strings.push_back("COMPUTING");
     robot_state_strings.push_back("EXPLORING");
     robot_state_strings.push_back("GOING_CHECKING_VACANCY");

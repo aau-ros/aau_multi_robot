@@ -9,6 +9,7 @@ namespace robot_state
     //TODO complete description
     enum robot_state_enum
     {
+        INITIALIZING,
         COMPUTING,              // the robot is computing which is the next goal (frontier, docking station, ...)
         EXPLORING,              // the robot is moving to a selected frontier
         GOING_CHECKING_VACANCY, // the robot is approaching a DS to check if it is actually free
