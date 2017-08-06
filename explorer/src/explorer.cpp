@@ -2340,7 +2340,7 @@ class Explorer
         }
 
         /* Check if the robot should go in a queue */
-        else if (robot_state_next == going_queue_next)
+        else if (robot_state_next == going_queue_next && robot_state != charging)
         {
             /* If it is already in a queue, just signal that it is in a queue, to make
              * the rescheduling timer in docking restart */
@@ -3734,16 +3734,15 @@ class Explorer
 //                return;
 //            }
 //        }
-        if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
+        else if(robot_state == in_queue) //to force the resetting of the timer to restart an auction
             robot_state_next = going_queue_next;
         
-        else if (robot_state_next != fully_charged_next) { //TODO what about leaving_ds? but maybe it is already handled later, since here the check is on the *next* state...
+        else { //TODO this is for leaving ds, but apparently now is very reduntant in this way...
             if (need_to_recharge)
                 robot_state_next = going_queue_next;
             else
                 robot_state_next = exploring_next;           
-        } else
-            ROS_INFO("ignoring");
+        }
     }
 
     // TODO(minor) use this instead than all the other auction callbacks

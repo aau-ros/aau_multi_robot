@@ -168,6 +168,7 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
         {
             ROS_DEBUG("Recharging aborted");
             state.charging = false;
+            state.fully_charged = false; //TODO reduntant?
         }
     }
     
