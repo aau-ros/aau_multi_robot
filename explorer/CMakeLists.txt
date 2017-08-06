@@ -34,6 +34,7 @@ find_package(catkin REQUIRED COMPONENTS
     global_planner
     adhoc_communication
     map_merger
+    robot_state
 )
 
 ## System dependencies are found with CMake's conventions
