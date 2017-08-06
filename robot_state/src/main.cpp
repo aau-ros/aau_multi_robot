@@ -11,7 +11,7 @@ int main(int argc, char** argv)
        ros::console::notifyLoggerLevelsChanged();
     }
 
-    //RobotStateManager robot_state_manager();
+    RobotStateManager robot_state_manager();
 
     ROS_INFO("Entering main loop");
     double rate = 10; // Hz

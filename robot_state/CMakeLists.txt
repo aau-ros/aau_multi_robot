@@ -11,12 +11,13 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 #add_message_files(
 #  FILES
+#  MyMessage.msg
 #)
 
-## Generate services in the 'srv' folder
-#add_service_files(
-#   FILES
-#)
+add_service_files(
+    FILES
+    GetRobotState.srv  
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -33,7 +34,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES robot_statelib
+#  LIBRARIES robot_statelib
   CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
@@ -49,12 +50,17 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 #add_library(robot_statelib src/main.cpp)
 
+
+
+add_library(robot_state_managerlib src/robot_state_manager.cpp)
+add_dependencies(robot_state_managerlib robot_state_gencpp robot_state_generate_messages_cpp)
+target_link_libraries(robot_state_managerlib ${catkin_LIBRARIES})
+
 ## Declare a cpp executable
 add_executable(robot_state src/main.cpp)
-#target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
+add_dependencies(robot_state robot_state_gencpp robot_state_generate_messages_cpp)
 
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
+#target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(robot_state ${catkin_LIBRARIES})
