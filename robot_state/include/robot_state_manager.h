@@ -37,14 +37,17 @@ private:
     ros::ServiceServer ss_lock_robot_state;
     ros::ServiceServer ss_unlock_robot_state;
 
+    void initializeRobotState();
     void createServices();
+    void fillRobotStateStringsVector();    
+
     bool get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res);
     bool set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res);
     bool lock_robot_state_callback(robot_state::LockRobotState::Request &req, robot_state::LockRobotState::Response &res);
     bool unlock_robot_state_callback(robot_state::UnlockRobotState::Request &req, robot_state::UnlockRobotState::Response &res);
 
     std::string robotStateEnumToString(unsigned int enum_value);
-    void fillRobotStateStringsVector();
+    
 };
 
 #endif /* ROBOT_STATE_MANAGER_H */
