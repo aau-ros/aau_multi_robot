@@ -65,6 +65,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     state.remaining_distance = maximum_traveling_distance;
     state.remaining_time_run = maximum_traveling_distance * speed_avg_init; //s //TODO(minor) "maximum" is misleading: use "estimated"...
     state.maximum_traveling_distance = maximum_traveling_distance;
+    state.fully_charged = true;
 
     // advertise topics
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
@@ -202,6 +203,7 @@ void battery_simulate::compute()
     if (time_diff_sec <= 0)
         return;
 
+    state.fully_charged = false;
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
     if (state.charging)
     {
@@ -249,6 +251,7 @@ void battery_simulate::compute()
         {
             ROS_INFO("Recharging completed");
             
+            state.fully_charged = true;
             // Set battery state to its maximum values
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
