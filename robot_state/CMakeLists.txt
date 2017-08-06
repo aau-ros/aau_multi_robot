@@ -37,7 +37,7 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES robot_statelib
+  #LIBRARIES robot_state_lib
   CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
@@ -66,7 +66,7 @@ add_dependencies(robot_state robot_state_gencpp robot_state_generate_messages_cp
 #target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(robot_state ${catkin_LIBRARIES})
+target_link_libraries(robot_state robot_state_managerlib ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -95,11 +95,20 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #############
 ## Testing ##
 #############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_explorer.cpp)
-## Add gtest based cpp test target and link libraries
 if(CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
+    find_package(rostest REQUIRED)
+
+    add_rostest_gtest(robot_state_test
+        test/test.launch
+        test/utest.cpp
+    )
+    target_link_libraries(robot_state_test
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(robot_state_test
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
 endif()
 

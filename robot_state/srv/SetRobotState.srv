@@ -1,3 +1,4 @@
 int32 robot_state
 ---
-bool robot_state_set
+bool succeeded
+string error_message

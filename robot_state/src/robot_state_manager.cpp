@@ -56,7 +56,7 @@ bool RobotStateManager::get_robot_state_callback(robot_state::GetRobotState::Req
 bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO("set_robot_state service required");
-    //TODO sanity check
+    //TODO sanity check... although robotStateEnumToString already goes in segmentation fault and the service call fails
     ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str()); //TODO
     robot_state = req.robot_state;     
     ROS_INFO("Service message successfully sent");
@@ -90,7 +90,7 @@ bool RobotStateManager::unlock_robot_state_callback(robot_state::UnlockRobotStat
 std::string RobotStateManager::robotStateEnumToString(unsigned int enum_value) {
     // Sanity check
     if(enum_value >= robot_state_strings.size())
-        ROS_FATAL("Invalid argument! It will cause a segmentation fault!");
+        ROS_FATAL("Invalid robot state! It will cause a segmentation fault!");
     return robot_state_strings.at(enum_value);
 }
 
