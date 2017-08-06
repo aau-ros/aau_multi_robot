@@ -242,7 +242,6 @@ void battery_simulate::compute()
         state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
         if(state.remaining_distance > maximum_traveling_distance)
             state.remaining_distance = maximum_traveling_distance;
-        state.soc = state.remaining_distance / maximum_traveling_distance;
 
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
@@ -251,15 +250,17 @@ void battery_simulate::compute()
         {
             ROS_INFO("Recharging completed");
             
-            state.fully_charged = true;
-            // Set battery state to its maximum values
-            state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             state.charging = false;
-            state.remaining_time_charge = 0;
+            state.fully_charged = true;
+             
             consumed_energy_A = 0;
             consumed_energy_B = 0;
+            
+            // Set battery state to its maximum values 
             state.remaining_time_run = maximum_traveling_distance * speed_avg;
             state.remaining_distance = maximum_traveling_distance;
+            state.remaining_time_charge = 0;
+            state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             
             // Inform nodes that charging has been completed
             std_msgs::Empty msg; //TODO(minor) use remaining_time_charge instead of the publisher
@@ -280,6 +281,8 @@ void battery_simulate::compute()
             mutex_traveled_distance.unlock();
             
             state.remaining_time_run = state.remaining_distance * speed_avg;
+            state.soc = state.remaining_distance / maximum_traveling_distance;
+            
             }
     }
     else if (do_not_consume_battery) {
@@ -296,24 +299,12 @@ void battery_simulate::compute()
         
     } else {
     
-    
         /* If the robot is moving, than we have to consider also the energy consumed for moving, otherwise it is
          * sufficient to consider the fixed power cost.
          * Notice that this is clearly an approximation, since we are not sure that the robot was moving for the whole
          * interval of time: moreover, since we do not know the exact speed profile during this interval of time, we
          * overestimate the consumed energy by assuming that the robot moved at the maximum speed for the whole period.
          */
-//        int mult; //TODO check better
-//        if(advanced_computations_bool)
-//            mult = 1;
-//        else
-//            mult = 0;
-        //if (speed_linear > 0 || speed_angular > 0) //in the foruma speed_angular is not used, so...
-//        if (speed_linear > 0) //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...)
-//            remaining_energy -= (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
-//        else
-//            remaining_energy -= (                                  power_standing + power_basic_computations + power_advanced_computation * mult) * time_diff_sec; // J
-
         
         if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
             consumed_energy_A += (power_moving_fixed_cost + power_per_speed * speed_linear) * time_diff_sec; // J
@@ -335,8 +326,8 @@ void battery_simulate::compute()
         mutex_traveled_distance.unlock();
         
         state.remaining_time_run = state.remaining_distance * speed_avg;
+        state.soc = state.remaining_distance / maximum_traveling_distance;
         
-
     }
 
 //    ROS_ERROR("SOC: %.0f%%; remaining distance: %.2fm", state.soc * 100, state.remaining_distance);

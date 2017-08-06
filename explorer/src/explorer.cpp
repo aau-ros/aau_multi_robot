@@ -2464,8 +2464,8 @@ class Explorer
         {
             ros::Rate(0.1).sleep();
             
-            if(robot_state == in_queue) //idle mode
-                continue;
+//            if(robot_state == in_queue) //idle mode
+//                continue;
 
             //ROS_DEBUG("frontiers(): acquiring lock");
             print_mutex_info("frontiers()", "acquiring");
