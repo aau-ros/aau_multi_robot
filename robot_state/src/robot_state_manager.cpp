@@ -36,6 +36,7 @@ void RobotStateManager::fillRobotStateStringsVector() {
     robot_state_strings.push_back("COMPUTING");
     robot_state_strings.push_back("EXPLORING");
     robot_state_strings.push_back("GOING_CHECKING_VACANCY");
+    robot_state_strings.push_back("CHECKING_VACANCY");
     robot_state_strings.push_back("GOING_CHARGING");
     robot_state_strings.push_back("CHARGING");
     robot_state_strings.push_back("FULLY_CHARGED");
@@ -57,20 +58,27 @@ bool RobotStateManager::get_robot_state_callback(robot_state::GetRobotState::Req
 }
 #pragma GCC diagnostic pop
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO("set_robot_state service required");
-    //TODO sanity check... although robotStateEnumToString already goes in segmentation fault and the service call fails
-    ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str()); //TODO
-    dt.updateLogFile(); //TODO
-    robot_state = req.robot_state;    
+    if(isNewStateValid(req.robot_state)) {
+        ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str());
+        dt.updateLogFile(); //TODO
+        robot_state = req.robot_state;
+        res.set_succeeded = true;
+    }
+    else {
+        ROS_ERROR("The next required robot state is invalid! Keeping current state (%s)", robotStateEnumToString(robot_state).c_str());
+        res.set_succeeded = false;
+    }
     ROS_INFO("Service message successfully sent");
     mutex.unlock();
     return true;
 }
-#pragma GCC diagnostic pop
+
+bool RobotStateManager::isNewStateValid(int new_state) {
+    return new_state >= 0 && (unsigned int)new_state < robot_state_strings.size();
+}
 
 std::string RobotStateManager::robotStateEnumToString(unsigned int enum_value) {
     // Sanity check

@@ -41,7 +41,8 @@ private:
     void loadParameters();
     void initializeRobotState();
     void createServices();
-    void fillRobotStateStringsVector();    
+    void fillRobotStateStringsVector();
+    bool isNewStateValid(int new_state);
 
     bool get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res); //TODO getRobotStateCallback
     bool set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res);
