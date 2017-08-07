@@ -1,1 +1,5 @@
+string node_name
+string robot_id
+string filename
+string new_sample
 ---

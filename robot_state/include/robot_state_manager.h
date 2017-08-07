@@ -2,9 +2,10 @@
 #define ROBOT_STATE_MANAGER_H
 
 #include <ros/ros.h>
-#include <ros/package.h>
-#include <ros/topic.h>
+#include <ros/package.h> //TODO
+#include <ros/topic.h> //TODO
 #include <boost/thread/mutex.hpp>
+#include "data_logger/data_logger.h"
 #include "robot_state/robot_state.h"
 #include "robot_state/GetRobotState.h"
 #include "robot_state/SetRobotState.h"
@@ -30,7 +31,7 @@ private:
     std::vector <std::string> robot_state_strings;
     boost::mutex mutex;
     
-    ros::ServiceServer ss_get_robot_state;
+    ros::ServiceServer ss_get_robot_state; //TODO get_robot_state_ss
     ros::ServiceServer ss_set_robot_state;
     ros::ServiceServer ss_lock_robot_state;
     ros::ServiceServer ss_unlock_robot_state;
@@ -39,7 +40,7 @@ private:
     void createServices();
     void fillRobotStateStringsVector();    
 
-    bool get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res);
+    bool get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res); //TODO getRobotStateCallback
     bool set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res);
 
     std::string robotStateEnumToString(unsigned int enum_value);

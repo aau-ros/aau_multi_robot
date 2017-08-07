@@ -7,6 +7,8 @@ RobotStateManager::RobotStateManager()
     initializeRobotState();
     createServices();    
     fillRobotStateStringsVector();
+    DataLogger dt;
+    dt.createLogFile();
     ROS_INFO("Instance correctly created");
 }
 

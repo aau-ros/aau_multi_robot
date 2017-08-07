@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <ros/console.h>
+#include "data_logger.h"
 
 int main(int argc, char** argv)
 {
@@ -10,7 +11,7 @@ int main(int argc, char** argv)
        ros::console::notifyLoggerLevelsChanged();
     }
 
-//    RobotStateManager robot_state_manager;
+    DataLogger data_logger;
 
     ROS_INFO("Entering main loop");
     double rate = 10; // Hz
