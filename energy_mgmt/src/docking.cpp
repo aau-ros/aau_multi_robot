@@ -4794,6 +4794,7 @@ void docking::addDistance(double x1, double y1, double x2, double y2, double dis
 void docking::ds_management() {
     ROS_INFO("ds_management started");
     bool printed_stuck = false;
+    ros::Time last_sent = ros::Time::now();
     while(ros::ok() && !finished_bool){
         if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(2*60))) {
             log_major_error("robot stuck in queue (2)!");
@@ -4807,7 +4808,10 @@ void docking::ds_management() {
         compute_optimal_ds();
         runtime_checks();
         log_optimal_ds();
-        send_ds();
+        if(ros::Time::now() - last_sent > ros::Duration(5)) {
+            send_ds();
+            last_sent = ros::Time::now();   
+        }
         ros::Duration(1).sleep();
     }
-}    
+}  
