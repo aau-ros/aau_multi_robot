@@ -14,7 +14,7 @@ TEST(RobotStateTest, testGetRobotStateService)
     bool call_succeeded = get_robot_state_sc.call(srv_msg);
     EXPECT_TRUE(call_succeeded);
     EXPECT_EQ(robot_state::INITIALIZING, srv_msg.response.robot_state);
-    EXPECT_NE(robot_state::COMPUTING, srv_msg.response.robot_state);
+    EXPECT_NE(robot_state::CHARGING, srv_msg.response.robot_state);
 }
 
 TEST(RobotStateTest, testSetRobotStateService)
@@ -26,7 +26,7 @@ TEST(RobotStateTest, testSetRobotStateService)
     ros::ServiceClient get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
     robot_state::SetRobotState set_srv_msg;
-    set_srv_msg.request.robot_state = robot_state::COMPUTING;
+    set_srv_msg.request.robot_state = robot_state::CHARGING;
     call_succeeded = set_robot_state_sc.call(set_srv_msg);
     EXPECT_TRUE(call_succeeded);
     EXPECT_TRUE(set_srv_msg.response.set_succeeded);
@@ -34,7 +34,7 @@ TEST(RobotStateTest, testSetRobotStateService)
     robot_state::GetRobotState get_srv_msg;
     call_succeeded = get_robot_state_sc.call(get_srv_msg);
     EXPECT_TRUE(call_succeeded);
-    EXPECT_EQ(robot_state::COMPUTING, get_srv_msg.response.robot_state);
+    EXPECT_EQ(robot_state::CHARGING, get_srv_msg.response.robot_state);
 }
 
 TEST(RobotStateTest, testSetRobotStateServiceWithInvalidValue)
@@ -54,7 +54,7 @@ TEST(RobotStateTest, testSetRobotStateServiceWithInvalidValue)
     robot_state::GetRobotState get_srv_msg;
     call_succeeded = get_robot_state_sc.call(get_srv_msg);
     EXPECT_TRUE(call_succeeded);
-    EXPECT_EQ(robot_state::COMPUTING, get_srv_msg.response.robot_state); //NB: the test is the one set by the previous test case!!!
+    EXPECT_EQ(robot_state::CHARGING, get_srv_msg.response.robot_state); //NB: the test is the one set by the previous test case!!!
 }
 
 int main(int argc, char **argv){
