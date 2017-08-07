@@ -21,7 +21,7 @@ class Computer2 : public Computer
 {
 public:
     Computer2(explorer::battery_state *b);
-    void execute(RobotState1 *r) override {};
+    void execute(RobotState1 *r) override {substractEnergyRequiredForSensing(); substractEnergyRequiredForBasicComputations();};
     void execute(RobotState2 *r) override {};
     void execute(RobotState3 *r) override {};
 
@@ -38,6 +38,12 @@ private:
     double max_speed_linear;            // m/s
     double maximum_traveling_distance;  // m/s
     explorer::battery_state *b;
+
+    void substractEnergyRequiredForSensing() {};
+    void substractEnergyRequiredForBasicComputations() {};
+    void substractEnergyRequiredForAdvancedComputations() {};
+    void substractEnergyRequiredForKeepingRobotAlive() {};
+    void rechargeBattery();
 };
 
 #endif // COMPUTER_H
