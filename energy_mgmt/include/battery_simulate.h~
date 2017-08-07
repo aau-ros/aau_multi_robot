@@ -23,7 +23,11 @@
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
 
+#include "robot_state_manager.h" //TODO this requires to link in CMakeLists.txt... better use a pointer? https://stackoverflow.com/questions/12466055/field-has-incomplete-type-error
+
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
+
+class RobotStateManager;
 
 class battery_simulate
 {
@@ -103,8 +107,9 @@ private:
     /**
      * The power consumption of the robot.
      */
-//    double power_charging, power_moving, power_standing, power_basic_computations, power_advanced_computation, power_idle;
     double power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging;
+    
+    double power_idle;
 
     /**
      * Speed of the robot.
@@ -253,6 +258,14 @@ private:
     boost::mutex mutex_traveled_distance;
     double last_traveled_distance, total_traveled_distance;
     double prev_consumed_energy_A;
+    
+    ros::ServiceClient set_robot_state_sc;
+    ros::ServiceClient get_robot_state_sc;
+    
+    void rechargeBattery(double time_diff_sec);
+    bool isRobotMoving();
+    
+    RobotStateManager robot_state_manager;
     
 };
 

@@ -9,7 +9,9 @@ find_package(catkin REQUIRED COMPONENTS
     data_logger
 )
 
-## Generate messages in the 'msg' folder
+################################################
+## Declare ROS messages, services and actions ##
+################################################
 #add_message_files(
 #  FILES
 #  MyMessage.msg
@@ -28,16 +30,19 @@ add_service_files(
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
 generate_messages(
     DEPENDENCIES
     std_msgs
 )
 
+
+###################################
+## catkin specific configuration ##
+###################################
 catkin_package(
     INCLUDE_DIRS include
     #LIBRARIES robot_state_lib
-    CATKIN_DEPENDS  roscpp rospy std_msgs message_runtime data_logger
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime data_logger
     #  DEPENDS system_lib
 )
 

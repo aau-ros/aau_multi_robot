@@ -7,7 +7,8 @@ namespace robot_state
 {
     //TODO complete
     //TODO complete description
-    enum robot_state_enum
+    //TODO add classes for Visitor
+    enum robot_state_t
     {
         INITIALIZING,
         CHOOSING_ACTION,

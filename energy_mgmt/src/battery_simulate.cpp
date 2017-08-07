@@ -50,6 +50,8 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     last_traveled_distance = 0;
     total_traveled_distance = 0;
     
+    power_idle = power_microcontroller + power_basic_computations;
+    
     //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
     
 //    if(INFINITE_ENERGY) {
@@ -196,8 +198,17 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
 void battery_simulate::compute()
 {
 
-    robot_state::GetRobotState srv_msg;
-    get_robot_state_sc.call(srv_msg);
+    robot_state_manager.getRobotState();
+
+    robot_state::GetRobotState get_srv_msg;
+    bool call_succeeded = get_robot_state_sc.call(get_srv_msg);
+    while(!call_succeeded) {
+        ROS_ERROR("call failed");   
+        call_succeeded = get_robot_state_sc.call(get_srv_msg);
+    }
+    
+    robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(get_srv_msg.response.robot_state); //TODO use visitor instead of switch
+        
 
     /* Compute the number of elapsed seconds since the last time that we updated the battery state (since we use
      * powers) */
@@ -205,7 +216,7 @@ void battery_simulate::compute()
     double time_diff_sec = time_diff.toSec();
     elapsed_time = time_diff_sec; //TODO for debugging, should be removed...
 
-    double power_idle = power_microcontroller + power_basic_computations;
+    
     
     /* If there is no time difference to last computation, there is nothing to do */
     if (time_diff_sec <= 0)
@@ -213,44 +224,10 @@ void battery_simulate::compute()
 
     state.fully_charged = false;
     /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
-    if (state.charging)
+    if (robot_state == robot_state::CHARGING)
     {
-        ROS_INFO("Recharging battery");
-        double ratio_A = -1, ratio_B = -1;
-        if(consumed_energy_A < 0 && consumed_energy_B < 0) {
-            ROS_FATAL("this should not happen...");
-            return;
-        }
-        else if(consumed_energy_A <= 0) {
-            ratio_A = 0.0;
-            ratio_B = 1.0;
-            consumed_energy_A = 0;
-            ROS_ERROR("this should not happen..."); //FIXME actually this could happen since B is also consumed while charging...
-        }   
-        else if(consumed_energy_B <= 0) {
-            ratio_A = 1.0;
-            ratio_B = 0.0;
-            consumed_energy_B = 0;
-            ROS_ERROR("this should not happen...");
-        }
-        else {
-            ratio_A = consumed_energy_A / (consumed_energy_A + consumed_energy_B);
-            ratio_B = consumed_energy_B / (consumed_energy_A + consumed_energy_B);
-        }
+        rechargeBattery(time_diff_sec);
         
-        if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1 || fabs(ratio_A + ratio_B - 1.0) > 0.01 ) {
-            ROS_FATAL("strange ratio");
-            return;
-        }
-        
-        consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
-        consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
-        consumed_energy_B += power_idle * time_diff_sec;
-        
-        state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
-        if(state.remaining_distance > maximum_traveling_distance)
-            state.remaining_distance = maximum_traveling_distance;
-
         /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
          * the remaing_energy during the charging process */
 //        if (state.soc >= 1)
@@ -265,47 +242,28 @@ void battery_simulate::compute()
             consumed_energy_B = 0;
             
             // Set battery state to its maximum values 
-            state.remaining_time_run = maximum_traveling_distance * speed_avg;
             state.remaining_distance = maximum_traveling_distance;
             state.remaining_time_charge = 0;
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             
-            // Inform nodes that charging has been completed
-            std_msgs::Empty msg; //TODO(minor) use remaining_time_charge instead of the publisher
-            pub_charging_completed.publish(msg);
-        }
-        else {
-            ROS_DEBUG("Recharging...");
-            state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
-            
-            mutex_traveled_distance.lock();
-            state.remaining_distance -= traveled_distance;
-//            ROS_ERROR("%.2f", traveled_distance);
-
-            last_traveled_distance = traveled_distance;
-            total_traveled_distance += traveled_distance;
-
-            traveled_distance = 0;
-            mutex_traveled_distance.unlock();
-            
-            state.remaining_time_run = state.remaining_distance * speed_avg;
-            state.soc = state.remaining_distance / maximum_traveling_distance;
-            
+            robot_state::SetRobotState set_srv_msmg;
+            call_succeeded = set_robot_state_sc.call(set_srv_msmg);
+            while(!call_succeeded) { //TODO duplicated code... use a function
+                call_succeeded = set_robot_state_sc.call(set_srv_msmg);
+                ROS_ERROR("..");   
             }
+            
+        }
     }
     else if (do_not_consume_battery) {
         time_last = time_manager->simulationTimeNow();
         return;
     } 
-    else if(idle_mode) {
+    else if(robot_state == robot_state::IN_QUEUE) {
         consumed_energy_B += power_idle * time_diff_sec; // J
-//        
-//        state.soc = remaining_energy / total_energy;
-//        state.remaining_time_charge = (total_energy - remaining_energy) / power_charging ;
-//        state.remaining_time_run = remaining_energy / (power_moving * max_speed_linear + power_standing + power_basic_computations + power_advanced_computation);  
-//        state.remaining_distance = state.remaining_time_run * speed_avg;
         
-    } else {
+    }
+    else if(isRobotMoving()) {
     
         /* If the robot is moving, than we have to consider also the energy consumed for moving, otherwise it is
          * sufficient to consider the fixed power cost.
@@ -333,10 +291,10 @@ void battery_simulate::compute()
         traveled_distance = 0;
         mutex_traveled_distance.unlock();
         
-        state.remaining_time_run = state.remaining_distance * speed_avg;
-        state.soc = state.remaining_distance / maximum_traveling_distance;
-        
     }
+    
+    state.remaining_time_run = state.remaining_distance * speed_avg;
+    state.soc = state.remaining_distance / maximum_traveling_distance;
 
 //    ROS_ERROR("SOC: %.0f%%; remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
     
@@ -376,6 +334,10 @@ void battery_simulate::publish()
     //ROS_ERROR("%.1f", state.soc);
 }
 
+bool battery_simulate::isRobotMoving() {
+    return false;
+}
+
 void battery_simulate::cb_cmd_vel(const geometry_msgs::Twist &msg)
 {
     ROS_DEBUG("Received speed");
@@ -396,18 +358,6 @@ void battery_simulate::cb_speed(const explorer::Speed &msg)  // unused for the m
         speed_avg = speed_avg_init;
     }
 }
-
-// TODO(minor) - DO WE NEED THIS???
-void battery_simulate::cb_soc(const std_msgs::Float32::ConstPtr &msg)
-{
-    // ROS_INFO("Received SOC!!!");
-}
-
-// TODO(minor) do we need this?
-//void battery_simulate::totalTime(const std_msgs::Float32::ConstPtr &msg)
-//{
-//    total_time = ("%F", msg->data);
-//}
 
 void battery_simulate::run() {
     while(ros::ok()) {
@@ -486,6 +436,48 @@ void battery_simulate::poseCallback(const geometry_msgs::PoseWithCovarianceStamp
     
     last_x = pose_x;
     last_y = pose_y;
+}
+
+
+void battery_simulate::rechargeBattery(double time_diff_sec) {
+    ROS_INFO("Recharging battery");
+    
+    
+    double ratio_A = -1, ratio_B = -1;
+    if(consumed_energy_A < 0 && consumed_energy_B < 0) {
+        ROS_FATAL("this should not happen...");
+        return;
+    }
+    else if(consumed_energy_A <= 0) {
+        ratio_A = 0.0;
+        ratio_B = 1.0;
+        consumed_energy_A = 0;
+        ROS_ERROR("this should not happen..."); //FIXME actually this could happen since B is also consumed while charging...
+    }   
+    else if(consumed_energy_B <= 0) {
+        ratio_A = 1.0;
+        ratio_B = 0.0;
+        consumed_energy_B = 0;
+        ROS_ERROR("this should not happen...");
+    }
+    else {
+        ratio_A = consumed_energy_A / (consumed_energy_A + consumed_energy_B);
+        ratio_B = consumed_energy_B / (consumed_energy_A + consumed_energy_B);
+    }
+
+    if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1 || fabs(ratio_A + ratio_B - 1.0) > 0.01 ) {
+        ROS_FATAL("strange ratio");
+        return;
+    }
+
+    consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
+    consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
+    consumed_energy_B += power_idle * time_diff_sec;
+
+    state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
+    state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
+    if(state.remaining_distance > maximum_traveling_distance)
+        state.remaining_distance = maximum_traveling_distance;
 }
 
 
