@@ -65,8 +65,6 @@ bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Req
 }
 #pragma GCC diagnostic pop
 
-
-
 std::string RobotStateManager::robotStateEnumToString(unsigned int enum_value) {
     // Sanity check
     if(enum_value >= robot_state_strings.size())

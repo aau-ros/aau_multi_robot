@@ -8,8 +8,6 @@
 #include "robot_state/robot_state.h"
 #include "robot_state/GetRobotState.h"
 #include "robot_state/SetRobotState.h"
-#include "robot_state/LockRobotState.h"
-#include "robot_state/UnlockRobotState.h"
 
 //TODO ???
 #define USAGE "\nUSAGE: map_server <map.yaml>\n" \
@@ -43,8 +41,6 @@ private:
 
     bool get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res);
     bool set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res);
-    bool lock_robot_state_callback(robot_state::LockRobotState::Request &req, robot_state::LockRobotState::Response &res);
-    bool unlock_robot_state_callback(robot_state::UnlockRobotState::Request &req, robot_state::UnlockRobotState::Response &res);
 
     std::string robotStateEnumToString(unsigned int enum_value);
     
