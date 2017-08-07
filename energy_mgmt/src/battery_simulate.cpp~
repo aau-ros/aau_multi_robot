@@ -197,8 +197,8 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
 
 void battery_simulate::compute()
 {
-
-    robot_state_manager.getRobotState().updateBatteryState(&robot_state_manager);
+    Computer c;
+    (robot_state_manager.getRobotState())->updateRobotState(&c);
 
     robot_state::GetRobotState get_srv_msg;
     bool call_succeeded = get_robot_state_sc.call(get_srv_msg);

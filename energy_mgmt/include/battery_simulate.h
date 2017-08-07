@@ -23,6 +23,8 @@
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
 
+#include "computer.h"
+
 #include "robot_state_manager.h" //TODO this requires to link in CMakeLists.txt... better use a pointer? https://stackoverflow.com/questions/12466055/field-has-incomplete-type-error
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
