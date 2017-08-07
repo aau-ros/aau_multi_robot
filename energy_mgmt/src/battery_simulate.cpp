@@ -23,6 +23,9 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     nh.getParam("energy_mgmt/maximum_traveling_distance", maximum_traveling_distance); // m/s
     advanced_computations_bool = true;
     
+    nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
+    nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+    
 //    ROS_ERROR("%.1f", power_moving);    
 //    ROS_ERROR("%f, %f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max, speed_avg_init);
 
@@ -192,6 +195,10 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
 
 void battery_simulate::compute()
 {
+
+    robot_state::GetRobotState srv_msg;
+    get_robot_state_sc.call(srv_msg);
+
     /* Compute the number of elapsed seconds since the last time that we updated the battery state (since we use
      * powers) */
     ros::Duration time_diff = time_manager->simulationTimeNow() - time_last;

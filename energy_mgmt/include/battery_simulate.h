@@ -254,6 +254,9 @@ private:
     double last_traveled_distance, total_traveled_distance;
     double prev_consumed_energy_A;
     
+    ros::ServiceClient set_robot_state_sc;
+    ros::ServiceClient get_robot_state_sc;
+    
 };
 
 
