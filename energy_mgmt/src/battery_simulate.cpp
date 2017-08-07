@@ -197,17 +197,11 @@ void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &ms
 
 void battery_simulate::compute()
 {
-    Computer c;
-    (robot_state_manager.getRobotState())->updateBatteryState(&c);
-
-    robot_state::GetRobotState get_srv_msg;
-    bool call_succeeded = get_robot_state_sc.call(get_srv_msg);
-    while(!call_succeeded) {
-        ROS_ERROR("call failed");   
-        call_succeeded = get_robot_state_sc.call(get_srv_msg);
-    }
+    Computer2 c(&state);
+    (robot_state_manager.getRobotState())->accept(&c);
     
-    robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(get_srv_msg.response.robot_state); //TODO use visitor instead of switch
+    //robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(get_srv_msg.response.robot_state); //TODO use visitor instead of switch 
+    robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(1);
         
 
     /* Compute the number of elapsed seconds since the last time that we updated the battery state (since we use
@@ -247,7 +241,7 @@ void battery_simulate::compute()
             state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
             
             robot_state::SetRobotState set_srv_msmg;
-            call_succeeded = set_robot_state_sc.call(set_srv_msmg);
+            bool call_succeeded = set_robot_state_sc.call(set_srv_msmg);
             while(!call_succeeded) { //TODO duplicated code... use a function
                 call_succeeded = set_robot_state_sc.call(set_srv_msmg);
                 ROS_ERROR("..");   

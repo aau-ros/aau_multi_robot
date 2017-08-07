@@ -1,16 +1,15 @@
 #include "robot_state_manager.h"
-#include <stdlib.h>     /* srand, rand */ //TODO remove
 
 RobotStateManager::RobotStateManager() {
-    ;
+    ros::NodeHandle nh;
+    //get_robot_state_sc = nh;
 }
 
 RobotStateEM *RobotStateManager::getRobotState() {
-    int v1 = rand() % 3;
-    if(v1 == 0)
-        return new RobotState1();
-    else if(v1 == 1)
-        return new RobotState2();
-    else
-        return new RobotState3();
+    robot_state::GetRobotState get_srv_msg;
+    bool call_succeeded = get_robot_state_sc.call(get_srv_msg);
+    while(!call_succeeded) {
+        ROS_ERROR("call failed");   
+        call_succeeded = get_robot_state_sc.call(get_srv_msg);
+    }
 }

@@ -12,6 +12,9 @@ class RobotStateManager
 public:
     RobotStateManager();
     RobotStateEM *getRobotState();
+
+private:
+    ros::ServiceClient get_robot_state_sc;
 };
 
 

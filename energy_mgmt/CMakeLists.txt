@@ -79,6 +79,7 @@ add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
 
+target_link_libraries(robot_state_em computer)
 target_link_libraries(robot_state_manager robot_state_em)
 
 add_executable(energy_mgmt src/main.cpp)
