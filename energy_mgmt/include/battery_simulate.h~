@@ -20,8 +20,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include <robot_state/robot_state.h>
-#include <robot_state/GetRobotState.h>
-#include <robot_state/SetRobotState.h>
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 

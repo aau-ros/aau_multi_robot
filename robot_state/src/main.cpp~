@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 
     // Change debugging level to "debug" (i.e., print all ROS_* messages)
     if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
-       ros::console::notifyLoggerLevelsChanged(); //TODO allow user to set log level for testing not to display errors (if possible...)
+       ros::console::notifyLoggerLevelsChanged(); //TODO allow user to set log level for testing
     }
 
     RobotStateManager robot_state_manager;

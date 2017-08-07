@@ -31,6 +31,13 @@ void RobotStateManager::createServices() {
 
 //TODO not very robust to changes... try using enumerations or other ways...
 void RobotStateManager::fillRobotStateStringsVector() {
+        
+        CHARGING_COMPLETED,
+        CHARGING_ABORTED,
+        LEAVING_DS,
+        GOING_IN_QUEUE,
+        IN_QUEUE,
+        AUCTIONING
     std::vector<std::string>::iterator it = robot_state_strings.begin();
     robot_state_strings.push_back("INITIALIZING");
     robot_state_strings.push_back("CHOOSING_ACTION");

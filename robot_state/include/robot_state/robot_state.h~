@@ -19,6 +19,7 @@ namespace robot_state
         CHARGING,
         CHARGING_COMPLETED,
         CHARGING_ABORTED,
+        FULLY_CHARGED,
         LEAVING_DS,
         GOING_IN_QUEUE,
         IN_QUEUE,
