@@ -38,6 +38,7 @@ private:
     ros::ServiceServer ss_lock_robot_state;
     ros::ServiceServer ss_unlock_robot_state;
 
+    void loadParameters();
     void initializeRobotState();
     void createServices();
     void fillRobotStateStringsVector();    

@@ -4,11 +4,16 @@
 RobotStateManager::RobotStateManager()
 {
     ROS_INFO_COND_NAMED(LOG_TRUE, "robot_state", "Creating instance of RobotStateManager class..."); //TODO use COND_NAMED everywhere
+    loadParameters();
     initializeRobotState();
-    createServices();    
+    createServices();
     fillRobotStateStringsVector();
     dt.createLogFile(); //TODO
     ROS_INFO("Instance correctly created");
+}
+
+void RobotStateManager::loadParameters() {
+    
 }
 
 void RobotStateManager::initializeRobotState() {
