@@ -35,7 +35,7 @@ void RobotStateManager::fillRobotStateStringsVector() {
     robot_state_strings.push_back("INITIALIZING");
     robot_state_strings.push_back("CHOOSING_ACTION");
     robot_state_strings.push_back("COMPUTING_NEXT_GOAL");
-    robot_state_strings.push_back("EXPLORING");
+    robot_state_strings.push_back("MOVING_TO_FRONTIER");
     robot_state_strings.push_back("GOING_CHECKING_VACANCY");
     robot_state_strings.push_back("CHECKING_VACANCY");
     robot_state_strings.push_back("GOING_CHARGING");

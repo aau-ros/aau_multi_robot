@@ -13,7 +13,7 @@ namespace robot_state
         INITIALIZING,
         CHOOSING_ACTION,
         COMPUTING_NEXT_GOAL,              // the robot is computing which is the next goal (frontier, docking station, ...)
-        EXPLORING,              // the robot is moving to a selected frontier
+        MOVING_TO_FRONTIER,              // the robot is moving to a selected frontier
         GOING_CHECKING_VACANCY, // the robot is approaching a DS to check if it is actually free
         CHECKING_VACANCY,
         GOING_CHARGING,
