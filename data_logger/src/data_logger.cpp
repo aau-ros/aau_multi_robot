@@ -4,7 +4,7 @@ DataLogger::DataLogger() {
     ;
 }
 
-bool DataLogger::createLogFile() {
+bool DataLogger::createLogFile() { //TODO raise exception
     return false;
 }
 
