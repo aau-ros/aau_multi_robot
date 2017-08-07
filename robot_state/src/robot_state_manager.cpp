@@ -64,6 +64,7 @@ bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Req
     mutex.lock();
     ROS_INFO("set_robot_state service required");
     if(isNewStateValid(req.robot_state)) {
+        //TODO check if the transition is a valid one... but here or in testing???
         ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str());
         dt.updateLogFile(); //TODO
         robot_state = req.robot_state;
