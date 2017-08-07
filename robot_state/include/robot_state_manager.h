@@ -31,6 +31,8 @@ private:
     std::vector <std::string> robot_state_strings;
     boost::mutex mutex;
     
+    DataLogger dt;
+    
     ros::ServiceServer ss_get_robot_state; //TODO get_robot_state_ss
     ros::ServiceServer ss_set_robot_state;
     ros::ServiceServer ss_lock_robot_state;
