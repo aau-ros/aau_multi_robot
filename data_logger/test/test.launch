@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <node pkg="robot_state" name="robot_state" type="robot_state"/>
-    <test pkg="robot_state" test-name="robot_state_test" type="robot_state_test" />
-</launch>
