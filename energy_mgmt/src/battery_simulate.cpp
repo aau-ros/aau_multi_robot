@@ -1,35 +1,38 @@
 #include <battery_simulate.h>
 
-#define INFINITE_ENERGY false
-
 using namespace std;
 
 //TODO(minor) comments, debugs, and so on...
 
 battery_simulate::battery_simulate() //TODO the constructor should require as argument an instance of TimeManagerInterface
 {
-    // read parameters
-    nh.getParam("energy_mgmt/speed_avg", speed_avg_init);
-//    ROS_INFO("speed_avg_init: %.2f", speed_avg_init);    
-    nh.getParam("energy_mgmt/power_charging", power_charging); // W (i.e, watt)
-    nh.getParam("energy_mgmt/power_per_speed", power_per_speed);     // W/(m/s)
-    nh.getParam("energy_mgmt/power_moving_fixed_cost", power_moving_fixed_cost);     // W/(m/s)
-    nh.getParam("energy_mgmt/power_sonar", power_sonar); // W
-    nh.getParam("energy_mgmt/power_laser", power_laser); // W
-    nh.getParam("energy_mgmt/power_microcontroller", power_microcontroller); // W
-    nh.getParam("energy_mgmt/power_basic_computations", power_basic_computations);  // W
-    nh.getParam("energy_mgmt/power_advanced_computations", power_advanced_computations);  // W
-    nh.getParam("energy_mgmt/max_linear_speed", max_speed_linear); // m/s
-    nh.getParam("energy_mgmt/maximum_traveling_distance", maximum_traveling_distance); // m/s
-    advanced_computations_bool = true;
-    
-    nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
-    nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
-    
-//    ROS_ERROR("%.1f", power_moving);    
-//    ROS_ERROR("%f, %f, %f, %f, %f", power_charging, power_moving, power_standing, charge_max, speed_avg_init);
+    loadParameters();
+    initializeVariables();
+    initializeBatteryState();
+    createServiceClients();
+    advertiseTopics();
+    subscribeToTopics();  
+}
 
-    // initialize private variables
+void battery_simulate::loadParameters() {
+    ros::NodeHandle nh_tilde("~");
+    nh_tilde.getParam("speed_avg", speed_avg_init); //TODO speed_avg maybe is not a good name
+    nh_tilde.getParam("power_charging", power_charging); // W (i.e, watt)
+    nh_tilde.getParam("power_per_speed", power_per_speed);     // W/(m/s)
+    nh_tilde.getParam("power_moving_fixed_cost", power_moving_fixed_cost);     // W/(m/s)
+    nh_tilde.getParam("power_sonar", power_sonar); // W
+    nh_tilde.getParam("power_laser", power_laser); // W
+    nh_tilde.getParam("power_microcontroller", power_microcontroller); // W
+    nh_tilde.getParam("power_basic_computations", power_basic_computations);  // W
+    nh_tilde.getParam("power_advanced_computations", power_advanced_computations);  // W
+    nh_tilde.getParam("max_linear_speed", max_speed_linear); // m/s
+    nh_tilde.getParam("maximum_traveling_distance", maximum_traveling_distance); // m/s
+    nh_tilde.param<std::string>("log_path", log_path, ""); //TODO getParam or param?
+    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
+}
+
+void battery_simulate::initializeVariables() {
+    //TODO too many variables, use robot states
     speed_angular = 0;
     time_moving = 0;   //TODO(minor) useless?
     time_standing = 0; //TODO(minor) useless?
@@ -49,21 +52,11 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     traveled_distance = 0;
     last_traveled_distance = 0;
     total_traveled_distance = 0;
-    
+    advanced_computations_bool = true;
     power_idle = power_microcontroller + power_basic_computations;
-    
-    //ROS_ERROR("maximum_running_time: %f", maximum_running_time);
-    
-//    if(INFINITE_ENERGY) {
-//        total_energy_A = 10000;
-//        remaining_energy_A = 10000;
-//        power_standing = 0.0;  
-//        power_moving   = 0.0;  
-//        power_charging = 100.0;
-//        maximum_running_time = 100000000000000000;
-//    }
+}
 
-    // initialize battery state
+void battery_simulate::initializeBatteryState() {
     state.charging = false;
     state.soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
     state.remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
@@ -71,26 +64,29 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     state.remaining_time_run = maximum_traveling_distance * speed_avg_init; //s //TODO(minor) "maximum" is misleading: use "estimated"...
     state.maximum_traveling_distance = maximum_traveling_distance;
     state.fully_charged = true;
+}
 
-    // advertise topics
+void battery_simulate::advertiseTopics() {
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
     pub_charging_completed = nh.advertise<std_msgs::Empty>("charging_completed", 1);
-    
     pub_full_battery_info = nh.advertise<explorer::battery_state>("full_battery_info", 1, true);
+    pub_full_battery_info.publish(state); //TODO ???
+}
 
-    // subscribe to topics
+void battery_simulate::subscribeToTopics() {
     sub_speed = nh.subscribe("avg_speed", 1, &battery_simulate::cb_speed, this);
     sub_cmd_vel = nh.subscribe("cmd_vel", 1, &battery_simulate::cb_cmd_vel, this);
     sub_robot = nh.subscribe("explorer/robot", 100, &battery_simulate::cb_robot, this);    
-//    sub_time = nh.subscribe("totalTime", 1, &battery_simulate::totalTime, this); // TODO(minor) do we need this?
+    pose_sub = nh.subscribe("amcl_pose", 1000, &battery_simulate::poseCallback, this);
+}
 
-    //ROS_ERROR("remaining distance: %f", state.remaining_distance);
-    pub_full_battery_info.publish(state);
-    
-    ros::NodeHandle nh_tilde("~");
-    nh_tilde.param<std::string>("log_path", log_path, "");
-    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
-    /* Initialize robot name */
+void battery_simulate::createServiceClients() {
+    nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
+    nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+}
+
+void battery_simulate::initializeRobotName() {
+/* Initialize robot name */
     if (robot_prefix.empty())
     {
         /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
@@ -125,9 +121,6 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
         ROS_INFO("Simulation");
         robot_name = robot_prefix;
     }
-    
-    pose_sub = nh.subscribe("amcl_pose", 1000, &battery_simulate::poseCallback, this);
-        
 }
 
 void battery_simulate::initializeSimulationTime() {

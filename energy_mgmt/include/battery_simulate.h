@@ -269,6 +269,14 @@ private:
     
     RobotStateManager robot_state_manager;
     
+    void loadParameters();
+    void initializeVariables();
+    void initializeBatteryState();
+    void createServiceClients();
+    void advertiseTopics();
+    void subscribeToTopics(); 
+    void initializeRobotName();
+
 };
 
 
