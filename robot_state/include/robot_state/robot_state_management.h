@@ -17,6 +17,8 @@ private:
     std::unordered_map<unsigned int, RobotState*> stateMap;
     ros::ServiceClient get_robot_state_sc;
     ros::ServiceClient set_robot_state_sc;
+    ros::ServiceClient try_to_lock_robot_state_ss;
+    ros::ServiceClient unlock_robot_state_ss;
 
     void createServiceClients();
     void createRobotStateInstances();

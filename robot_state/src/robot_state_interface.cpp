@@ -11,6 +11,8 @@ void RobotStateApi::createServiceClients() {
     ros::NodeHandle nh;
     set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+    try_to_lock_robot_state_ss = nh.serviceClient<robot_state::SetRobotState>("robot_state/try_to_lock_robot_state");
+    unlock_robot_state_ss = nh.serviceClient<robot_state::SetRobotState>("robot_state/unlock_robot_state");
 }
 
 void RobotStateApi::createRobotStateInstances() { //TODO complete stateMap

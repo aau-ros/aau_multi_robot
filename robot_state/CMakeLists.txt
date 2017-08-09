@@ -21,6 +21,8 @@ add_service_files(
     FILES
     GetRobotState.srv
     SetRobotState.srv
+    TryToLockRobotState.srv
+    UnlockRobotState.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -95,14 +97,14 @@ install(TARGETS robot_state_management
 if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
-    add_rostest_gtest(robot_state_test
+    add_rostest_gtest(server_test
         test/test.launch
-        test/utest.cpp
+        test/server_test.cpp
     )
-    target_link_libraries(robot_state_test
+    target_link_libraries(server_test
         ${catkin_LIBRARIES}
     )
-    add_dependencies(robot_state_test
+    add_dependencies(server_test
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )

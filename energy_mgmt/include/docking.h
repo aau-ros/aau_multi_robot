@@ -40,6 +40,7 @@
 #include "fake_network/RobotPosition.h"
 #include <mutex>          // std::mutex
 #include <unordered_map>
+#include "auction_manager.h"
 
 #include "gtest/gtest_prod.h"
 
@@ -690,8 +691,10 @@ class docking
     std::vector<auction_t> auctions;
     bool robot_is_auctioning;
     bool expired_own_auction, discard_auction;
-    ros::Time changed_state_time,  start_own_auction_time;
+    ros::Time changed_state_time, start_own_auction_time;
     void conclude_auction();
+
+    AuctionManager auction_manager;
 
     /* DEBUGGING */
     std::vector<std::vector<double> > distance_list;

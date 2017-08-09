@@ -65,21 +65,18 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
 )
 
-#add_library(battery src/battery.cpp)
 add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
+add_library(auction_manager src/auction_manager.cpp)
 
-add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-#add_dependencies(battery energy_mgmt_gencpp)
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
-
 add_executable(energy_mgmt src/main.cpp)
-
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(battery_state_updater
   time_manager
@@ -90,6 +87,12 @@ target_link_libraries(battery_state_updater
 target_link_libraries(battery_simulate
   time_manager
   battery_state_updater
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(docking
+  auction_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
