@@ -3,29 +3,31 @@
 
 #include <ros/ros.h>
 #include <explorer/battery_state.h>
+#include <explorer/Speed.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/Twist.h>
+#include <boost/thread/mutex.hpp>
 
-class RobotState1;
-class RobotState2;
-class RobotState3;
+class InitializingState;
 
-class Computer //TODO do we need Computer and Computer2?
+class Computer //TODO do we need Computer and Computer2? //TODO RobotStateVisitor
 {
 public:
     Computer() {};
-    virtual void execute(RobotState1 *r) = 0;
-    virtual void execute(RobotState2 *r) = 0;
-    virtual void execute(RobotState3 *r) = 0;
+    virtual void execute(InitializingState *r) = 0; //TODO visit()
 };
 
 class Computer2 : public Computer
 {
 public:
     Computer2(explorer::battery_state *b);
-    void execute(RobotState1 *r) override {substractEnergyRequiredForSensing(); substractEnergyRequiredForBasicComputations();};
-    void execute(RobotState2 *r) override {};
-    void execute(RobotState3 *r) override {};
+    void execute(InitializingState *r) override;
+    void initializeBatteryState();
+    void updateBatteryState();
+
 
 private:
+    // Parameters
     double speed_avg_init; //TODO speed_avg maybe is not a good name
     double power_charging;              // W (i.e, watt)
     double power_per_speed;             // W/(m/s)
@@ -37,13 +39,35 @@ private:
     double power_advanced_computations; // W
     double max_speed_linear;            // m/s
     double maximum_traveling_distance;  // m/s
+
+    double last_pose_x, last_pose_y;
+    double traveled_distance;
+    double last_traveled_distance;
+    double total_traveled_distance;
+    double speed_avg;
+    double speed_linear;
+    double speed_angular;
+    boost::mutex mutex_traveled_distance;
+
     explorer::battery_state *b;
+
+    ros::Subscriber avg_speed_sub;
+    ros::Subscriber cmd_vel_sub;
+    ros::Subscriber pose_sub;
+
+    void loadParameters();
+    void initializeVariables();
+    void subscribeToTopics();
 
     void substractEnergyRequiredForSensing() {};
     void substractEnergyRequiredForBasicComputations() {};
     void substractEnergyRequiredForAdvancedComputations() {};
     void substractEnergyRequiredForKeepingRobotAlive() {};
     void rechargeBattery();
+
+    void avgSpeedCallback(const explorer::Speed &msg);
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
+    void cmdVelCallback(const geometry_msgs::Twist &msg);
 };
 
 #endif // COMPUTER_H

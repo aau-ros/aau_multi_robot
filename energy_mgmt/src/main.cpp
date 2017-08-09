@@ -38,8 +38,6 @@ int main(int argc, char** argv)
     bat.initializeSimulationTime();
     bat.createLogDirectory();
     bat.createLogFiles();
-    bat.compute(); //force computation and publishing...
-    bat.publish();
     boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
     
     // coordinate docking of robots for recharging
