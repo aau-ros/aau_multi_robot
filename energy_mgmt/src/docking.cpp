@@ -206,9 +206,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
 
-    /* Timers */
-
-
     /* Variable initializations */
     robot_state = fully_charged;  // TODO(minor) param
     auction_winner = false;
@@ -1918,22 +1915,6 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     update_l1();
 }
 
-void docking::timerCallback(const ros::TimerEvent &event)
-{
-    mutex_auction.lock();
-    ROS_INFO("Auction timeout: compute auction winner");
-    
-    if(discard_auction) {
-        log_major_error("discarding auction");
-        discard_auction = false;  
-    } else
-        conclude_auction();
-    
-    
-    mutex_auction.unlock();
-    
-    
-}
 
 //DONE++
 void docking::abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y)
