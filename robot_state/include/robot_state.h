@@ -2,6 +2,7 @@
 #define ROBOT_STATE_H
 
 #include <iostream>
+#include "robot_state_handler.h"
 
 namespace robot_state
 {
@@ -28,14 +29,49 @@ namespace robot_state
 
 }
 
+
+
 class InitializingState;
+class ChoosingActionState;
+class ComputingNextGoalState;
+class MovingToFrontierState;
+class GoingCheckingVacancyState;
+class CheckingVanancyState;
+class GoingChargingState;
+class ChargingStateState;
+class ChargingCompletedState;
+class ChargingAbortedState;
+class LeavingDsState;
+class GoingInQueueState;
+class InQueueState;
+class AuctioningState;
 
 class RobotStateHandler //TODO do we need Computer and Computer2? //TODO RobotStateVisitor
 {
 public:
     RobotStateHandler() {};
-    virtual void execute(InitializingState *r) = 0; //TODO visit()
+    virtual void handle(InitializingState *robot_state) = 0;
+    virtual void handle(ChoosingActionState *robot_state) = 0;
+//    virtual void handle(ComputingNextGoalState *robot_state) = 0;
+//    virtual void handle(MovingToFrontierState *robot_state) = 0;
+//    virtual void handle(GoingCheckingVacancyState *robot_state) = 0;
+//    virtual void handle(CheckingVanancyState *robot_state) = 0;
+//    virtual void handle(ChargingStateState *robot_state) = 0;
+//    virtual void handle(ChargingCompletedState *robot_state) = 0;
+//    virtual void handle(ChargingAbortedState *robot_state) = 0;
+//    virtual void handle(LeavingDsState *robot_state) = 0;
+//    virtual void handle(GoingInQueueState *robot_state) = 0;
+//    virtual void handle(InQueueState *robot_state) = 0;
+//    virtual void handle(AuctioningState *robot_state) = 0;
 };
+
+
+
+
+
+
+
+
 
 class RobotState {
 public:
@@ -46,7 +82,99 @@ class InitializingState : public RobotState
 {
 public:
     InitializingState() {};
-    void accept(RobotStateHandler *handler) override {handler->execute(this);};
+    void accept(RobotStateHandler *handler) override {handler->handle(this);};
 };
+
+class ChoosingActionState : public RobotState
+{
+public:
+    ChoosingActionState() {};
+    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+};
+
+//class ComputingNextGoalState : public RobotState
+//{
+//public:
+//    ComputingNextGoalState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class MovingToFrontierState : public RobotState
+//{
+//public:
+//    MovingToFrontierState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class GoingCheckingVacancyState : public RobotState
+//{
+//public:
+//    GoingCheckingVacancyState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class CheckingVanancyState : public RobotState
+//{
+//public:
+//    CheckingVanancyState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class GoingChargingState : public RobotState
+//{
+//public:
+//    GoingChargingState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class ChargingStateState : public RobotState
+//{
+//public:
+//    ChargingState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class ChargingCompletedState : public RobotState
+//{
+//public:
+//    ChargingCompletedState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class ChargingAbortedState : public RobotState
+//{
+//public:
+//    ChargingAbortedState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class LeavingDsState : public RobotState
+//{
+//public:
+//    LeavingDsState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class GoingInQueueState : public RobotState
+//{
+//public:
+//    GoingInQueueState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class InQueueState : public RobotState
+//{
+//public:
+//    InQueueState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
+//class AuctioningState : public RobotState
+//{
+//public:
+//    AuctioningState() {};
+//    void accept(RobotStateHandler *handler) override {handler->handle(this);};
+//};
+
 
 #endif // ROBOT_STATE_H

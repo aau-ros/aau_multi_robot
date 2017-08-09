@@ -29,11 +29,6 @@ void BatteryStateUpdater::initializeVariables() {
     total_traveled_distance = 0;
 }
 
-void BatteryStateUpdater::execute(InitializingState *r) {
-    substractEnergyRequiredForSensing();
-    substractEnergyRequiredForBasicComputations();
-}
-
 void BatteryStateUpdater::subscribeToTopics() {
     ros::NodeHandle nh;
     avg_speed_sub = nh.subscribe("avg_speed", 10, &BatteryStateUpdater::avgSpeedCallback, this); //TODO queue lenght
@@ -51,10 +46,6 @@ void BatteryStateUpdater::initializeBatteryState() {
     b->fully_charged = true; //TODO assumption
     b->consumed_energy_A = 0;
     b->consumed_energy_B = 0;
-}
-
-void BatteryStateUpdater::updateBatteryState() {
-
 }
 
 void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
@@ -83,6 +74,16 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
     ROS_DEBUG("Received speed");
     speed_linear = msg.linear.x;
     speed_angular = msg.angular.z;
+}
+
+void BatteryStateUpdater::handle(InitializingState *r) {
+    substractEnergyRequiredForSensing();
+    substractEnergyRequiredForBasicComputations();
+}
+
+void BatteryStateUpdater::handle(ChoosingActionState *r) {
+    substractEnergyRequiredForSensing();
+    substractEnergyRequiredForBasicComputations();
 }
 
 //void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)

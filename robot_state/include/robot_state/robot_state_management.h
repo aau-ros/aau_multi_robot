@@ -1,5 +1,5 @@
-#ifndef ROBOT_STATE_MANAGER_H
-#define ROBOT_STATE_MANAGER_H
+#ifndef ROBOT_STATE_MANAGEMENT_H
+#define ROBOT_STATE_MANAGEMENT_H
 
 #include <unordered_map>
 #include <ros/ros.h>
@@ -20,4 +20,4 @@ private:
 };
 
 
-#endif // ROBOT_STATE_MANAGER_H
+#endif // ROBOT_STATE_MANAGEMENT_H

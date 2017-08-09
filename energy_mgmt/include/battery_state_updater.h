@@ -13,10 +13,9 @@ class BatteryStateUpdater : public RobotStateHandler
 {
 public:
     BatteryStateUpdater(explorer::battery_state *b);
-    void execute(InitializingState *r) override;
     void initializeBatteryState();
-    void updateBatteryState();
-
+    void handle(InitializingState *r) override;
+    void handle(ChoosingActionState *r) override;
 
 private:
     // Parameters
