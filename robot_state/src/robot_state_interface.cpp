@@ -1,10 +1,19 @@
 #include "robot_state/robot_state_management.h"
 
 RobotStateApi::RobotStateApi() {
+    ROS_INFO("Creating instance of RobotStateApi");
+    createServiceClients();
+    createRobotStateInstances();
+    ROS_INFO("Instance correctly created");
+}
+
+void RobotStateApi::createServiceClients() {
     ros::NodeHandle nh;
     set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+}
 
+void RobotStateApi::createRobotStateInstances() { //TODO complete stateMap
     stateMap.insert({robot_state::INITIALIZING, new InitializingState()});
 }
 

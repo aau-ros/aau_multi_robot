@@ -8,14 +8,16 @@
 #include <geometry_msgs/Twist.h>
 #include <boost/thread/mutex.hpp>
 #include <robot_state/robot_state_management.h>
+#include "time_manager.h"
 
 class BatteryStateUpdater : public RobotStateHandler
 {
 public:
     BatteryStateUpdater(explorer::battery_state *b);
-    void initializeBatteryState();
-    void handle(InitializingState *r) override;
-    void handle(ChoosingActionState *r) override;
+    void setTimeManager(TimeManagerInterface *time_manager);
+    void handle(InitializingState *state) override;
+    void handle(ChoosingActionState *state) override;
+    void handle(ComputingNextGoalState *state) override;
 
 private:
     // Parameters
@@ -38,22 +40,27 @@ private:
     double speed_avg;
     double speed_linear;
     double speed_angular;
+    double elapsed_time;
+    double time_last_update;
     boost::mutex mutex_traveled_distance;
 
     explorer::battery_state *b;
+    TimeManagerInterface *time_manager;
 
     ros::Subscriber avg_speed_sub;
     ros::Subscriber cmd_vel_sub;
     ros::Subscriber pose_sub;
 
     void loadParameters();
+    void initializeBatteryState();
     void initializeVariables();
     void subscribeToTopics();
 
+    double computeElapsedTime();
     void substractEnergyRequiredForSensing() {};
     void substractEnergyRequiredForBasicComputations() {};
     void substractEnergyRequiredForAdvancedComputations() {};
-    void substractEnergyRequiredForKeepingRobotAlive() {};
+    void substractEnergyRequiredForKeepingRobotAlive();
     void rechargeBattery();
 
     void avgSpeedCallback(const explorer::Speed &msg);

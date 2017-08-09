@@ -46,23 +46,24 @@ class GoingInQueueState;
 class InQueueState;
 class AuctioningState;
 
+//TODO move in separate file
 class RobotStateHandler //TODO do we need Computer and Computer2? //TODO RobotStateVisitor
 {
 public:
     RobotStateHandler() {};
-    virtual void handle(InitializingState *robot_state) = 0;
-    virtual void handle(ChoosingActionState *robot_state) = 0;
-//    virtual void handle(ComputingNextGoalState *robot_state) = 0;
-//    virtual void handle(MovingToFrontierState *robot_state) = 0;
-//    virtual void handle(GoingCheckingVacancyState *robot_state) = 0;
-//    virtual void handle(CheckingVanancyState *robot_state) = 0;
-//    virtual void handle(ChargingStateState *robot_state) = 0;
-//    virtual void handle(ChargingCompletedState *robot_state) = 0;
-//    virtual void handle(ChargingAbortedState *robot_state) = 0;
-//    virtual void handle(LeavingDsState *robot_state) = 0;
-//    virtual void handle(GoingInQueueState *robot_state) = 0;
-//    virtual void handle(InQueueState *robot_state) = 0;
-//    virtual void handle(AuctioningState *robot_state) = 0;
+    virtual void handle(InitializingState *state) = 0;
+    virtual void handle(ChoosingActionState *state) = 0;
+    virtual void handle(ComputingNextGoalState *state) = 0;
+//    virtual void handle(MovingToFrontierState *state) = 0;
+//    virtual void handle(GoingCheckingVacancyState *state) = 0;
+//    virtual void handle(CheckingVanancyState *state) = 0;
+//    virtual void handle(ChargingStateState *state) = 0;
+//    virtual void handle(ChargingCompletedState *state) = 0;
+//    virtual void handle(ChargingAbortedState *state) = 0;
+//    virtual void handle(LeavingDsState *state) = 0;
+//    virtual void handle(GoingInQueueState *state) = 0;
+//    virtual void handle(InQueueState *state) = 0;
+//    virtual void handle(AuctioningState *state) = 0;
 };
 
 

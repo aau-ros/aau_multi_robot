@@ -81,6 +81,12 @@ add_executable(energy_mgmt src/main.cpp)
 
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+target_link_libraries(battery_state_updater
+  time_manager
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
+
 target_link_libraries(battery_simulate
   time_manager
   battery_state_updater
@@ -103,38 +109,55 @@ target_link_libraries(energy_mgmt
 
 ## Add gtest based cpp test target and link libraries
 if(CATKIN_ENABLE_TESTING)
-  find_package(rostest REQUIRED)
+    find_package(rostest REQUIRED)
 
-  add_library(mock_time_manager test/mock_time_manager.cpp)
+    add_library(mock_time_manager test/mock_time_manager.cpp)
 
-  add_rostest_gtest(utest
-  test/test.launch
-  test/utest.cpp
-  )
-  target_link_libraries(utest
-  battery_simulate
-  mock_time_manager
-  ${catkin_LIBRARIES}
-  )
-  add_dependencies(utest
-  adhoc_communication_generate_messages_cpp
-  ${PROJECT_NAME}_generate_messages_cpp
-  ${catkin_EXPORTED_TARGETS}
-  )
+    #TODO use sub-cmakelists files
+    add_rostest_gtest(battery_state_updater_test
+        test/battery_state_updater_test.launch
+        test/battery_state_updater_test.cpp
+    )
+    target_link_libraries(battery_state_updater_test
+        battery_state_updater
+        mock_time_manager        
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(battery_state_updater_test
+        explorer_generate_messages_cpp
+        explorer_gencpp #TODO do we need both gencpp and generate_*?
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+#  add_rostest_gtest(utest
+#  test/test.launch
+#  test/utest.cpp
+#  )
+#  target_link_libraries(utest
+#  battery_simulate
+#  mock_time_manager
+#  ${catkin_LIBRARIES}
+#  )
+#  add_dependencies(utest
+#  adhoc_communication_generate_messages_cpp
+#  ${PROJECT_NAME}_generate_messages_cpp
+#  ${catkin_EXPORTED_TARGETS}
+#  )
 
 
-  add_rostest_gtest(utest_docking
-  test/test_docking.launch
-  test/utest_docking.cpp
-  )
-  target_link_libraries(utest_docking
-  docking
-  #mock_time_manager
-  ${catkin_LIBRARIES}
-  )
-  add_dependencies(utest_docking
-  adhoc_communication_generate_messages_cpp
-  ${PROJECT_NAME}_generate_messages_cpp
-  ${catkin_EXPORTED_TARGETS}
-  )
+#  add_rostest_gtest(utest_docking
+#  test/test_docking.launch
+#  test/utest_docking.cpp
+#  )
+#  target_link_libraries(utest_docking
+#  docking
+#  #mock_time_manager
+#  ${catkin_LIBRARIES}
+#  )
+#  add_dependencies(utest_docking
+#  adhoc_communication_generate_messages_cpp
+#  ${PROJECT_NAME}_generate_messages_cpp
+#  ${catkin_EXPORTED_TARGETS}
+#  )
 endif()

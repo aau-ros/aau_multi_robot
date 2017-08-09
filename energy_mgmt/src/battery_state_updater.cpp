@@ -6,7 +6,7 @@ BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
 }
 
 void BatteryStateUpdater::loadParameters() {
-    this->b = b; //TODO bas names
+    this->b = b; //TODO bad names
     ros::NodeHandle nh_tilde("~");
     nh_tilde.getParam("speed_avg_init", speed_avg_init); //TODO use config file instead of yaml file for the parameters
     nh_tilde.getParam("power_charging", power_charging);
@@ -27,6 +27,7 @@ void BatteryStateUpdater::initializeVariables() {
     traveled_distance = 0;
     last_traveled_distance = 0;
     total_traveled_distance = 0;
+    time_manager = new TimeManager(); //TODO
 }
 
 void BatteryStateUpdater::subscribeToTopics() {
@@ -76,14 +77,44 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
     speed_angular = msg.angular.z;
 }
 
-void BatteryStateUpdater::handle(InitializingState *r) {
-    substractEnergyRequiredForSensing();
+void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
+    computeElapsedTime();
+    substractEnergyRequiredForKeepingRobotAlive();
     substractEnergyRequiredForBasicComputations();
+    computeElapsedTime(); //TODO very bad to use is to update time_last_update
+    traveled_distance = 0;
 }
 
 void BatteryStateUpdater::handle(ChoosingActionState *r) {
+    computeElapsedTime();
+    substractEnergyRequiredForKeepingRobotAlive();
     substractEnergyRequiredForSensing();
     substractEnergyRequiredForBasicComputations();
+    computeElapsedTime();
+    traveled_distance = 0;
+}
+
+void BatteryStateUpdater::handle(ComputingNextGoalState *r) {
+    computeElapsedTime();
+    substractEnergyRequiredForKeepingRobotAlive();
+    substractEnergyRequiredForSensing();
+    substractEnergyRequiredForBasicComputations();
+    substractEnergyRequiredForAdvancedComputations();
+    traveled_distance = 0;
+}
+
+double BatteryStateUpdater::computeElapsedTime() { //TODO add this function to TimeManager instead
+    double time_now = time_manager->simulationTimeNow().toSec();
+    elapsed_time = time_now - time_last_update;
+    time_last_update = time_now;
+}
+
+void BatteryStateUpdater::substractEnergyRequiredForKeepingRobotAlive() {
+    
+}
+
+void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
+    this->time_manager = time_manager;
 }
 
 //void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)

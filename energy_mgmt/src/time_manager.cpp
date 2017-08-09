@@ -4,6 +4,6 @@ TimeManager::TimeManager() {
 
 }
 
-ros::Time TimeManager::simulationTimeNow() {
+ros::Time TimeManager::simulationTimeNow() { //TODO is it possible to have something like SimulationTime::now() ?
     return ros::Time::now();
 }

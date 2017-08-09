@@ -22,7 +22,7 @@ int main(int argc, char** argv)
         loop_rate.sleep(); // sleep for 1/rate seconds
     }
     
-    ROS_INFO("Shutting node down");
+    ROS_INFO("Shutting down node");
     ros::shutdown();
         
     return 0;
