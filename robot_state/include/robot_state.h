@@ -28,4 +28,25 @@ namespace robot_state
 
 }
 
+class InitializingState;
+
+class RobotStateHandler //TODO do we need Computer and Computer2? //TODO RobotStateVisitor
+{
+public:
+    RobotStateHandler() {};
+    virtual void execute(InitializingState *r) = 0; //TODO visit()
+};
+
+class RobotState {
+public:
+    virtual void accept(RobotStateHandler *handler) = 0;
+};
+
+class InitializingState : public RobotState
+{
+public:
+    InitializingState() {};
+    void accept(RobotStateHandler *handler) override {handler->execute(this);};
+};
+
 #endif // ROBOT_STATE_H

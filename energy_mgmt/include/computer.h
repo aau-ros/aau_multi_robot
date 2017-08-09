@@ -7,17 +7,9 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <boost/thread/mutex.hpp>
+#include <robot_state/robot_state_management.h>
 
-class InitializingState;
-
-class Computer //TODO do we need Computer and Computer2? //TODO RobotStateVisitor
-{
-public:
-    Computer() {};
-    virtual void execute(InitializingState *r) = 0; //TODO visit()
-};
-
-class Computer2 : public Computer
+class Computer2 : public RobotStateHandler
 {
 public:
     Computer2(explorer::battery_state *b);

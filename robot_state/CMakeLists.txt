@@ -35,55 +35,52 @@ generate_messages(
     std_msgs
 )
 
-
 ###################################
 ## catkin specific configuration ##
 ###################################
 catkin_package(
     INCLUDE_DIRS include
-    #LIBRARIES robot_state_lib
+    LIBRARIES robot_state_management
     CATKIN_DEPENDS roscpp rospy std_msgs message_runtime data_logger
     #  DEPENDS system_lib
 )
-
 
 ###########
 ## Build ##
 ###########
 enable_language(CXX)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -rdynamic -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -g -O0 -fprofile-arcs -ftest-coverage -lgcov ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -rdynamic -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -g -O0 -fprofile-arcs -ftest-coverage -lgcov ${CMAKE_CXX_FLAGS}")
 
 include_directories(include)
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(robot_state_managerlib src/robot_state_manager.cpp)
-add_dependencies(robot_state_managerlib robot_state_gencpp robot_state_generate_messages_cpp)
-target_link_libraries(robot_state_managerlib ${catkin_LIBRARIES})
+add_library(server src/server.cpp)
+add_dependencies(server robot_state_gencpp robot_state_generate_messages_cpp)
+target_link_libraries(server ${catkin_LIBRARIES})
 
 add_executable(robot_state src/main.cpp)
 add_dependencies(robot_state robot_state_gencpp robot_state_generate_messages_cpp)
-target_link_libraries(robot_state robot_state_managerlib ${catkin_LIBRARIES})
+target_link_libraries(robot_state server ${catkin_LIBRARIES})
 
-#add_library(robot_statelib src/main.cpp)
-#target_link_libraries(robot_statelib  ${catkin_LIBRARIES})
-
+add_library(robot_state_management src/robot_state_interface.cpp)
+target_link_libraries(robot_state_management ${catkin_LIBRARIES})
 
 #############
 ## Install ##
 #############
 
 ## Mark executables and/or libraries for installation
-#install(TARGETS robot_statelib
-#    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#    RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+install(TARGETS robot_state_management
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-    FILES_MATCHING PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
-)
+#install(DIRECTORY include/${PROJECT_NAME}/
+#    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+#    FILES_MATCHING PATTERN "*.h"
+#    PATTERN ".svn" EXCLUDE
+#)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
@@ -91,7 +88,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
-
 
 #############
 ## Testing ##
@@ -112,4 +108,3 @@ if(CATKIN_ENABLE_TESTING)
     )
 
 endif()
-

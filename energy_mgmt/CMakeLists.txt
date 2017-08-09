@@ -69,8 +69,6 @@ include_directories(
 add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 add_library(time_manager src/time_manager.cpp)
-add_library(robot_state_em src/robot_state_em.cpp)
-add_library(robot_state_manager src/robot_state_manager.cpp)
 add_library(computer src/computer.cpp)
 
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -79,18 +77,13 @@ add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
 
-target_link_libraries(robot_state_em computer)
-target_link_libraries(robot_state_manager robot_state_em)
-
 add_executable(energy_mgmt src/main.cpp)
 
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(battery_simulate
   time_manager
-  robot_state_manager
   computer
-  robot_state_em
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -100,7 +93,6 @@ target_link_libraries(energy_mgmt
   docking
   battery_simulate
   time_manager
-  #robot_state_em
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )

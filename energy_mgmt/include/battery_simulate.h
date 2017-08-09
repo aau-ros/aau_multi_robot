@@ -3,28 +3,20 @@
 
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
-
 #include <diagnostic_msgs/DiagnosticArray.h>
-//#include <energy_mgmt/battery_state.h>
 #include <explorer/battery_state.h>
-#include "std_msgs/Float32.h"
 #include <adhoc_communication/EmRobot.h>
 #include <sstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <stdlib.h>
 #include <fstream>
-#include "time_manager_interface.h"
 #include <boost/thread/mutex.hpp>
-
-#include <robot_state/robot_state.h>
-#include "robot_state_em.h"
+#include <robot_state/robot_state_management.h>
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
-
+#include "time_manager_interface.h"
 #include "computer.h"
-
-#include "robot_state_manager.h" //TODO this requires to link in CMakeLists.txt... better use a pointer? https://stackoverflow.com/questions/12466055/field-has-incomplete-type-error
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
@@ -79,13 +71,12 @@ private:
     ros::WallTime wall_time_start;
     TimeManagerInterface *time_manager;
     
-    RobotStateManager robot_state_manager;
+    RobotStateApi robot_state_manager;
     Computer2 *battery_state_updater;
     
     void loadParameters();
     void initializeVariables();
     void initializeBatteryState();
-    void createServiceClients();
     void advertiseTopics();
     void subscribeToTopics(); 
     void initializeRobotName();

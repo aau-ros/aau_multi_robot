@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 #include <ros/console.h>
-#include <robot_state_manager.h>
+#include <server.h>
 
 int main(int argc, char** argv)
 {
@@ -11,7 +11,7 @@ int main(int argc, char** argv)
        ros::console::notifyLoggerLevelsChanged(); //TODO allow user to set log level for testing not to display errors (if possible...)
     }
 
-    RobotStateManager robot_state_manager;
+    Server server;
 
     ROS_INFO("Entering main loop");
     double rate = 10; // Hz

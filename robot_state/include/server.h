@@ -1,14 +1,14 @@
-#ifndef ROBOT_STATE_MANAGER_H
-#define ROBOT_STATE_MANAGER_H
+#ifndef SERVER_H
+#define SERVER_H
 
 #include <ros/ros.h>
 #include <ros/package.h> //TODO
 #include <ros/topic.h> //TODO
 #include <boost/thread/mutex.hpp>
-#include "data_logger/data_logger.h"
-#include "robot_state/robot_state.h"
-#include "robot_state/GetRobotState.h"
-#include "robot_state/SetRobotState.h"
+#include <robot_state/GetRobotState.h>
+#include <robot_state/SetRobotState.h>
+#include <data_logger/data_logger.h>
+#include "robot_state.h"
 
 //TODO ???
 #define USAGE "\nUSAGE: map_server <map.yaml>\n" \
@@ -21,10 +21,10 @@
 #define LOG_FALSE   false
 #define LOG_ALL     true
 
-class RobotStateManager
+class Server
 {
 public:
-    RobotStateManager();
+    Server();
 
 private:
     unsigned int robot_state;
@@ -51,4 +51,4 @@ private:
     
 };
 
-#endif /* ROBOT_STATE_MANAGER_H */
+#endif // SERVER_H

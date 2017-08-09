@@ -38,7 +38,7 @@
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
 #include "distance_computer.h"
-#include <robot_state/robot_state.h>
+//#include <robot_state/robot_state_management.h>
 
 //#define PROFILE
 

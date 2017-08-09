@@ -2,7 +2,10 @@
 
 RobotStateManager::RobotStateManager() {
     ros::NodeHandle nh;
-    //get_robot_state_sc = nh;
+    set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
+    get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+
+    stateMap.insert({robot_state::INITIALIZING, new InitializingState()});
 }
 
 RobotStateEM *RobotStateManager::getRobotState() { //TODO raise exception
@@ -12,11 +15,5 @@ RobotStateEM *RobotStateManager::getRobotState() { //TODO raise exception
         ROS_ERROR("call failed");   
         call_succeeded = get_robot_state_sc.call(get_srv_msg);
     }
-
-    if(get_srv_msg.response.robot_state == robot_state::INITIALIZING)
-        return new InitializingState();
-    else if(get_srv_msg.response.robot_state == robot_state::AUCTIONING)
-        return NULL;
-    else
-        ROS_FATAL("INVALID");
+    return stateMap.at(get_srv_msg.response.robot_state); //TODO safety check to avoid out_of_range
 }

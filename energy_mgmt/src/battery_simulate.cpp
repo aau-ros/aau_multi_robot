@@ -10,7 +10,6 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
 {
     loadParameters();
     initializeRobotName();
-    createServiceClients();
     DataLogger dt;
     dt.createLogFile(); //TODO
     battery_state_updater = new Computer2(&state);
@@ -23,13 +22,7 @@ void battery_simulate::loadParameters() {
 }
 
 void battery_simulate::updateBatteryState() {
-    RobotStateEM *robot_state = robot_state_manager.getRobotState();
-    robot_state->accept(battery_state_updater);
-}
-
-void battery_simulate::createServiceClients() {
-    nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
-    nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+    robot_state_manager.getRobotState()->accept(battery_state_updater);
 }
 
 void battery_simulate::initializeRobotName() {

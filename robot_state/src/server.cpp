@@ -1,9 +1,9 @@
-#include <robot_state_manager.h>
+#include <server.h>
 
 //TODO use a separate executable???
-RobotStateManager::RobotStateManager()
+Server::Server()
 {
-    ROS_INFO_COND_NAMED(LOG_TRUE, "robot_state", "Creating instance of RobotStateManager class..."); //TODO use COND_NAMED everywhere
+    ROS_INFO_COND_NAMED(LOG_TRUE, "robot_state", "Creating instance of Server class..."); //TODO use COND_NAMED everywhere
     loadParameters();
     initializeRobotState();
     createServices();
@@ -12,25 +12,25 @@ RobotStateManager::RobotStateManager()
     ROS_INFO("Instance correctly created");
 }
 
-void RobotStateManager::loadParameters() {
+void Server::loadParameters() {
     
 }
 
-void RobotStateManager::initializeRobotState() {
+void Server::initializeRobotState() {
     robot_state = robot_state::INITIALIZING;
 }
 
-void RobotStateManager::createServices() {
+void Server::createServices() {
     ros::NodeHandle nh;
-    ss_get_robot_state = nh.advertiseService("robot_state/get_robot_state", &RobotStateManager::get_robot_state_callback, this);
-    ss_set_robot_state = nh.advertiseService("robot_state/set_robot_state", &RobotStateManager::set_robot_state_callback, this);
+    ss_get_robot_state = nh.advertiseService("robot_state/get_robot_state", &Server::get_robot_state_callback, this);
+    ss_set_robot_state = nh.advertiseService("robot_state/set_robot_state", &Server::set_robot_state_callback, this);
     //TODO use lock and unlock???
-    //ss_lock_robot_state = nh.advertiseService("robot_state/lock_robot_state", &RobotStateManager::lock_robot_state_callback, this);
-    //ss_unlock_robot_state = nh.advertiseService("robot_state/unlock_robot_state", &RobotStateManager::unlock_robot_state_callback, this);
+    //ss_lock_robot_state = nh.advertiseService("robot_state/lock_robot_state", &Server::lock_robot_state_callback, this);
+    //ss_unlock_robot_state = nh.advertiseService("robot_state/unlock_robot_state", &Server::unlock_robot_state_callback, this);
 }
 
 //TODO not very robust to changes... try using enumerations or other ways...
-void RobotStateManager::fillRobotStateStringsVector() {
+void Server::fillRobotStateStringsVector() {
     std::vector<std::string>::iterator it = robot_state_strings.begin();
     robot_state_strings.push_back("INITIALIZING");
     robot_state_strings.push_back("CHOOSING_ACTION");
@@ -50,7 +50,7 @@ void RobotStateManager::fillRobotStateStringsVector() {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-bool RobotStateManager::get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res) {
+bool Server::get_robot_state_callback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO("get_robot_state service required");    
     res.robot_state = robot_state;
@@ -60,7 +60,7 @@ bool RobotStateManager::get_robot_state_callback(robot_state::GetRobotState::Req
 }
 #pragma GCC diagnostic pop
 
-bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
+bool Server::set_robot_state_callback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO("set_robot_state service required");
     if(isNewStateValid(req.robot_state)) {
@@ -79,11 +79,11 @@ bool RobotStateManager::set_robot_state_callback(robot_state::SetRobotState::Req
     return true;
 }
 
-bool RobotStateManager::isNewStateValid(int new_state) {
+bool Server::isNewStateValid(int new_state) {
     return new_state >= 0 && (unsigned int)new_state < robot_state_strings.size();
 }
 
-std::string RobotStateManager::robotStateEnumToString(unsigned int enum_value) {
+std::string Server::robotStateEnumToString(unsigned int enum_value) {
     // Sanity check
     if(enum_value >= robot_state_strings.size())
         ROS_FATAL("Invalid robot state! It will cause a segmentation fault!");
