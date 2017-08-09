@@ -9,10 +9,10 @@
 #include <boost/thread/mutex.hpp>
 #include <robot_state/robot_state_management.h>
 
-class Computer2 : public RobotStateHandler
+class BatteryStateUpdater : public RobotStateHandler
 {
 public:
-    Computer2(explorer::battery_state *b);
+    BatteryStateUpdater(explorer::battery_state *b);
     void execute(InitializingState *r) override;
     void initializeBatteryState();
     void updateBatteryState();

@@ -1,11 +1,11 @@
-#include "computer.h"
+#include "battery_state_updater.h"
 
-Computer2::Computer2(explorer::battery_state *b) {
+BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
     loadParameters();
     initializeVariables();
 }
 
-void Computer2::loadParameters() {
+void BatteryStateUpdater::loadParameters() {
     this->b = b; //TODO bas names
     ros::NodeHandle nh_tilde("~");
     nh_tilde.getParam("speed_avg_init", speed_avg_init); //TODO use config file instead of yaml file for the parameters
@@ -21,7 +21,7 @@ void Computer2::loadParameters() {
     nh_tilde.getParam("maximum_traveling_distance", maximum_traveling_distance);
 }
 
-void Computer2::initializeVariables() {
+void BatteryStateUpdater::initializeVariables() {
     speed_avg = speed_avg_init;
     last_pose_x = 0, last_pose_y = 0;
     traveled_distance = 0;
@@ -29,19 +29,19 @@ void Computer2::initializeVariables() {
     total_traveled_distance = 0;
 }
 
-void Computer2::execute(InitializingState *r) {
+void BatteryStateUpdater::execute(InitializingState *r) {
     substractEnergyRequiredForSensing();
     substractEnergyRequiredForBasicComputations();
 }
 
-void Computer2::subscribeToTopics() {
+void BatteryStateUpdater::subscribeToTopics() {
     ros::NodeHandle nh;
-    avg_speed_sub = nh.subscribe("avg_speed", 10, &Computer2::avgSpeedCallback, this); //TODO queue lenght
-    cmd_vel_sub = nh.subscribe("cmd_vel", 10, &Computer2::cmdVelCallback, this);
-    pose_sub = nh.subscribe("amcl_pose", 10, &Computer2::poseCallback, this);
+    avg_speed_sub = nh.subscribe("avg_speed", 10, &BatteryStateUpdater::avgSpeedCallback, this); //TODO queue lenght
+    cmd_vel_sub = nh.subscribe("cmd_vel", 10, &BatteryStateUpdater::cmdVelCallback, this);
+    pose_sub = nh.subscribe("amcl_pose", 10, &BatteryStateUpdater::poseCallback, this);
 }
 
-void Computer2::initializeBatteryState() {
+void BatteryStateUpdater::initializeBatteryState() {
     b->charging = false;
     b->soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
     b->remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
@@ -53,11 +53,11 @@ void Computer2::initializeBatteryState() {
     b->consumed_energy_B = 0;
 }
 
-void Computer2::updateBatteryState() {
+void BatteryStateUpdater::updateBatteryState() {
 
 }
 
-void Computer2::avgSpeedCallback(const explorer::Speed &msg)
+void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
 {
     // if the average speed is very low, there is probably something wrong, set it to the value from the config file
     if (msg.avg_speed > speed_avg_init)
@@ -66,7 +66,7 @@ void Computer2::avgSpeedCallback(const explorer::Speed &msg)
         speed_avg = speed_avg_init;
 }
 
-void Computer2::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {
+void BatteryStateUpdater::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {
     double pose_x = pose->pose.pose.position.x;
     double pose_y = pose->pose.pose.position.y;
     
@@ -78,7 +78,7 @@ void Computer2::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConst
     last_pose_y = pose_y;
 }
 
-void Computer2::cmdVelCallback(const geometry_msgs::Twist &msg)
+void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
 {
     ROS_DEBUG("Received speed");
     speed_linear = msg.linear.x;
@@ -144,7 +144,7 @@ void Computer2::cmdVelCallback(const geometry_msgs::Twist &msg)
 
 //void battery_simulate::compute()
 //{
-//    Computer2 c(&state);
+//    BatteryStateUpdater c(&state);
 //    (robot_state_manager.getRobotState())->accept(&c);
 //    
 //    //robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(get_srv_msg.response.robot_state); //TODO use visitor instead of switch 

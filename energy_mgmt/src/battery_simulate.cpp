@@ -1,10 +1,8 @@
 #include <battery_simulate.h>
 
-#include "data_logger/data_logger.h"
+//TODO(minor) comments, debugs, and so on...
 
 using namespace std;
-
-//TODO(minor) comments, debugs, and so on...
 
 battery_simulate::battery_simulate() //TODO the constructor should require as argument an instance of TimeManagerInterface
 {
@@ -12,7 +10,7 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     initializeRobotName();
     DataLogger dt;
     dt.createLogFile(); //TODO
-    battery_state_updater = new Computer2(&state);
+    battery_state_updater = new BatteryStateUpdater(&state);
 }
 
 void battery_simulate::loadParameters() {

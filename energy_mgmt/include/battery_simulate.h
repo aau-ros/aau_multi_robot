@@ -1,22 +1,26 @@
 #ifndef BATTERY_SIMULATE_H
 #define BATTERY_SIMULATE_H
 
-#include <ros/ros.h>
-#include <std_msgs/Empty.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
-#include <explorer/battery_state.h>
-#include <adhoc_communication/EmRobot.h>
 #include <sstream>
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <stdlib.h>
 #include <fstream>
 #include <boost/thread/mutex.hpp>
+
+#include <ros/ros.h>
+#include <std_msgs/Empty.h>
+#include <explorer/battery_state.h>
+#include <adhoc_communication/EmRobot.h>
 #include <robot_state/robot_state_management.h>
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
+#include <data_logger/data_logger.h>
+
 #include "time_manager_interface.h"
-#include "computer.h"
+#include "battery_state_updater.h"
+
 
 #define SSTR(x) static_cast<std::ostringstream &>((std::ostringstream() << std::dec << x)).str()
 
@@ -72,7 +76,7 @@ private:
     TimeManagerInterface *time_manager;
     
     RobotStateApi robot_state_manager;
-    Computer2 *battery_state_updater;
+    BatteryStateUpdater *battery_state_updater;
     
     void loadParameters();
     void initializeVariables();
