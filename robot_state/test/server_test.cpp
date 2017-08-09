@@ -106,7 +106,7 @@ TEST(RobotStateTest, testLockAndUnlockServices)
     call_succeeded = get_robot_state_sc.call(get_srv_msg);
     EXPECT_TRUE(call_succeeded);
     EXPECT_EQ(robot_state::MOVING_TO_FRONTIER, get_srv_msg.response.robot_state);
-    EXPECT_NE(robot_state::CHOOSING_ACTION, get_srv_msg.response.robot_state);    
+    EXPECT_NE(robot_state::CHOOSING_ACTION, get_srv_msg.response.robot_state);
 
     set_srv_msg.request.setting_node = "node_A";
     set_srv_msg.request.robot_state = robot_state::IN_QUEUE;

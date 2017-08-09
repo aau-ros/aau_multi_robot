@@ -48,7 +48,7 @@ void Server::fillRobotStateStringsVector() {
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res) {
     mutex.lock();
-    ROS_INFO("get_robot_state service required");    
+    ROS_INFO("get_robot_state service required");
     res.robot_state = robot_state;
     ROS_INFO("Service response successfully sent");
     mutex.unlock();

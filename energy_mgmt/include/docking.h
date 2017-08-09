@@ -378,13 +378,6 @@ class docking
     void debug_timer_callback_1(const ros::TimerEvent &event);
     void debug_timer_callback_2(const ros::TimerEvent &event);
 
-    struct auction_bid_t
-    {
-        int robot_id;
-        float bid;
-    };
-    vector<auction_bid_t> auction_bids;
-
     ros::Subscriber sub_vacant_docking_station, sub_charging_completed, sub_translate, sub_vacant_ds, sub_occupied_ds,
         sub_check_vacancy;
 
@@ -428,11 +421,7 @@ class docking
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr &);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr &);
 
-    struct auction_t
-    {
-        int auction_id;
-        double starting_time;
-    };
+
 
     void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
 
@@ -564,13 +553,10 @@ class docking
     
     string ds_path;
     
-    int auction_timeout, reauctioning_timeout;
     float fiducial_signal_range, safety_coeff;
     bool fiducial_sensor_on, recompute_graph, recompute_llh;
     
     void finalize();
-    
-    int next_auction_id();
     
     void resend_ds_list_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     

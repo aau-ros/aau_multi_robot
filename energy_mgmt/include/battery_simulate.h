@@ -16,7 +16,7 @@
 #include <robot_state/robot_state_management.h>
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
-#include <data_logger/data_logger.h>
+#include <utilities/data_logger.h>
 
 #include "time_manager_interface.h"
 #include "battery_state_updater.h"

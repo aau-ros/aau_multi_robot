@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package>
-  <name>data_logger</name>
+  <name>utilities</name>
   <version>0.1.0</version>
   <description>
-      The data_logger package.
+      The utilities package.
   </description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->

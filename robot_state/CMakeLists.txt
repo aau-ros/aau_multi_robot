@@ -6,7 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
     rospy
     std_msgs
     message_generation
-    data_logger
+    utilities
 )
 
 ################################################
@@ -43,7 +43,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
     LIBRARIES robot_state_management
-    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime data_logger
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
     #  DEPENDS system_lib
 )
 

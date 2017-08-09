@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslib
   fake_network
   robot_state
+  utilities
 )
 
 ################################################
@@ -67,25 +68,27 @@ include_directories(
 
 add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
-add_library(time_manager src/time_manager.cpp)
+#add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
 add_library(auction_manager src/auction_manager.cpp)
+add_library(docking_station_manager src/docking_station_manager.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
+
 add_executable(energy_mgmt src/main.cpp)
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(battery_state_updater
-  time_manager
+#  time_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
 target_link_libraries(battery_simulate
-  time_manager
+#  time_manager
   battery_state_updater
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
@@ -93,6 +96,7 @@ target_link_libraries(battery_simulate
 
 target_link_libraries(docking
   auction_manager
+  docking_station_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -101,7 +105,7 @@ target_link_libraries(energy_mgmt
   #  battery
   docking
   battery_simulate
-  time_manager
+#  time_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -114,7 +118,7 @@ target_link_libraries(energy_mgmt
 if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
-    add_library(mock_time_manager test/mock_time_manager.cpp)
+#    add_library(mock_time_manager test/mock_time_manager.cpp)
 
     #TODO use sub-cmakelists files
     add_rostest_gtest(battery_state_updater_test
@@ -123,7 +127,7 @@ if(CATKIN_ENABLE_TESTING)
     )
     target_link_libraries(battery_state_updater_test
         battery_state_updater
-        mock_time_manager        
+#        mock_time_manager        
         ${catkin_LIBRARIES}
     )
     add_dependencies(battery_state_updater_test
