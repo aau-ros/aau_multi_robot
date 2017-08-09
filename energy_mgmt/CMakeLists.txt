@@ -83,7 +83,7 @@ add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPO
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(auction_manager
-  #bid_computer #TODO why is this not necessary?
+  bid_computer
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )

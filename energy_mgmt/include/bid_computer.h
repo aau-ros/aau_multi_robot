@@ -3,8 +3,8 @@
 
 class BidComputer {
 public:
-    BidComputer() {};
-    double getBid() {return 0;};
+    BidComputer();
+    double getBid();
 };
 
 #endif // BID_COMPUTER_H
