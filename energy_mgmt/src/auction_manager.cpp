@@ -9,6 +9,8 @@ AuctionManager::AuctionManager() {
     nh_tilde.param<double>("extra_auction_time", extra_auction_time, 3); //TODO use getParam and the fact that it returns a bool!!! http://wiki.ros.org/roscpp_tutorials/Tutorials/Parameters#getParam.28.29
     nh_tilde.param<double>("reauctioning_timeout", reauctioning_timeout, 10); //s
 
+    bc.getBid();
+
 //    timer_finish_auction = nh.createTimer(ros::Duration(auction_timeout), &docking::timerCallback, this, true, false);
 //    timer_restart_auction =
 //        nh.createTimer(ros::Duration(reauctioning_timeout), &docking::timer_callback_schedure_auction_restarting, this, true, false);

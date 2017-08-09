@@ -4,6 +4,7 @@
 #include <limits> // std::numeric_limits
 #include <boost/thread.hpp> // boost::mutex
 #include <ros/ros.h>
+#include "bid_computer.h"
 
 //TODO put this here or inside the class? where is better?
 struct auction_t
@@ -26,6 +27,7 @@ public:
     bool isRobotWinnerOfMostRecentAuction();
 
 private:
+    BidComputer bc;
     double auction_timeout, reauctioning_timeout, extra_auction_time;
     bool participating_to_auction;
     bool winner_of_auction;

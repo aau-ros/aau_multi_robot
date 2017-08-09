@@ -60,7 +60,7 @@ catkin_package(
 enable_language(CXX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov -std=c++11")
 
-include_directories(
+include_directories( # note: this path is relative to the current CMakeLists.txt
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
@@ -70,6 +70,7 @@ add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 #add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
+add_library(bid_computer src/bid_computer.cpp)
 add_library(auction_manager src/auction_manager.cpp)
 add_library(docking_station_manager src/docking_station_manager.cpp)
 
@@ -80,6 +81,12 @@ add_dependencies(docking map_merger_cpp)
 add_executable(energy_mgmt src/main.cpp)
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(auction_manager
+  #bid_computer #TODO why is this not necessary?
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
 
 target_link_libraries(battery_state_updater
 #  time_manager
