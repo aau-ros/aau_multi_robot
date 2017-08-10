@@ -7,14 +7,14 @@
 #include "robot_state/UnlockRobotState.h"
 
 #define INVALID_STATE 1000000
-#define SLEEP_TO_ALLOW_SERVICE_CREATION 1
+#define SLEEP_TIME_TO_ALLOW_SERVICE_CREATION 1
 
 //TODO dublicated code (for instance for declare the services)
 TEST(RobotStateTest, testGetRobotStateService)
 {
     ros::NodeHandle nh;
     ros::ServiceClient get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
-    ros::Duration(SLEEP_TO_ALLOW_SERVICE_CREATION).sleep();
+    ros::Duration(SLEEP_TIME_TO_ALLOW_SERVICE_CREATION).sleep();
 
     robot_state::GetRobotState srv_msg;
     bool call_succeeded = get_robot_state_sc.call(srv_msg);
@@ -30,7 +30,7 @@ TEST(RobotStateTest, testSetRobotStateService)
     ros::NodeHandle nh;
     ros::ServiceClient set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     ros::ServiceClient get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
-    ros::Duration(SLEEP_TO_ALLOW_SERVICE_CREATION).sleep();
+    ros::Duration(SLEEP_TIME_TO_ALLOW_SERVICE_CREATION).sleep();
 
     robot_state::SetRobotState set_srv_msg;
     set_srv_msg.request.robot_state = robot_state::CHARGING;
@@ -51,7 +51,7 @@ TEST(RobotStateTest, testSetRobotStateServiceWithInvalidValue)
     ros::NodeHandle nh;
     ros::ServiceClient set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     ros::ServiceClient get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
-    ros::Duration(SLEEP_TO_ALLOW_SERVICE_CREATION).sleep();
+    ros::Duration(SLEEP_TIME_TO_ALLOW_SERVICE_CREATION).sleep();
 
     robot_state::SetRobotState set_srv_msg;
     set_srv_msg.request.robot_state = INVALID_STATE;
@@ -74,7 +74,7 @@ TEST(RobotStateTest, testLockAndUnlockServices)
     ros::ServiceClient get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
     ros::ServiceClient try_to_lock_robot_state_sc = nh.serviceClient<robot_state::TryToLockRobotState>("robot_state/try_to_lock_robot_state");
     ros::ServiceClient unlock_robot_state_sc = nh.serviceClient<robot_state::UnlockRobotState>("robot_state/unlock_robot_state");
-    ros::Duration(SLEEP_TO_ALLOW_SERVICE_CREATION).sleep();
+    ros::Duration(SLEEP_TIME_TO_ALLOW_SERVICE_CREATION).sleep();
 
     robot_state::SetRobotState set_srv_msg;
     set_srv_msg.request.robot_state = robot_state::MOVING_TO_FRONTIER;

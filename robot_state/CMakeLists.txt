@@ -98,13 +98,26 @@ if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
     add_rostest_gtest(server_test
-        test/test.launch
+        test/server_test.launch
         test/server_test.cpp
     )
     target_link_libraries(server_test
         ${catkin_LIBRARIES}
     )
     add_dependencies(server_test
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(robot_state_pkg_api_test
+        test/robot_state_pkg_api_test.launch
+        test/robot_state_pkg_api_test.cpp
+    )
+    target_link_libraries(robot_state_pkg_api_test
+        robot_state_management
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(robot_state_pkg_api_test
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )
