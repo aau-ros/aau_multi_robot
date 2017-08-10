@@ -356,7 +356,6 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
             bid.robot_id = robot_id;
             bid.bid = bid_double;
             sendBid(bid, "adhoc_communication/send_em_auction/reply"); //TODO check topic
-
         }
         else
             ROS_INFO("The robot has no chance to win, so it won't place a bid for this auction");
