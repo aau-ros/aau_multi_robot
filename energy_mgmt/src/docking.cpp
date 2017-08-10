@@ -153,8 +153,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
 
     /* Adhoc communication services */
-    sc_send_auction =
-        nh.serviceClient<adhoc_communication::SendEmAuction>(my_prefix + "adhoc_communication/send_em_auction");
     sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(
         my_prefix + "adhoc_communication/send_em_docking_station");
     sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(my_prefix + "adhoc_communication/send_em_robot");

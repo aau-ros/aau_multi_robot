@@ -13,9 +13,6 @@
 #include <std_msgs/Empty.h>
 #include <explorer/battery_state.h>
 #include <adhoc_communication/EmRobot.h>
-#include <robot_state/robot_state_management.h>
-#include <robot_state/GetRobotState.h>
-#include <robot_state/SetRobotState.h>
 #include <utilities/data_logger.h>
 
 #include "time_manager_interface.h"
@@ -75,7 +72,6 @@ private:
     ros::WallTime wall_time_start;
     TimeManagerInterface *time_manager;
     
-    RobotStateApi robot_state_manager;
     BatteryStateUpdater *battery_state_updater;
     
     void loadParameters();

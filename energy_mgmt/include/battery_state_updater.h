@@ -15,6 +15,7 @@ class BatteryStateUpdater : public RobotStateHandler
 public:
     BatteryStateUpdater(explorer::battery_state *b);
     void setTimeManager(TimeManagerInterface *time_manager);
+    void updateBatteryState();
     void handle(InitializingState *state) override;
     void handle(ChoosingActionState *state) override;
     void handle(ComputingNextGoalState *state) override;
@@ -45,6 +46,7 @@ private:
     boost::mutex mutex_traveled_distance;
 
     explorer::battery_state *b;
+    RobotStateApi robot_state_manager;
     TimeManagerInterface *time_manager;
 
     ros::Subscriber avg_speed_sub;

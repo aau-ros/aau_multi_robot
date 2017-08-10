@@ -19,10 +19,6 @@ void battery_simulate::loadParameters() {
     nh_tilde.param<string>("robot_prefix", robot_prefix, "");
 }
 
-void battery_simulate::updateBatteryState() {
-    robot_state_manager.getRobotState()->accept(battery_state_updater);
-}
-
 void battery_simulate::initializeRobotName() {
     if (robot_prefix.empty())
     {
@@ -104,7 +100,7 @@ void battery_simulate::publishBatteryState()
 void battery_simulate::run() {
     while(ros::ok()) {
         logBatteryState();
-        updateBatteryState();
+        battery_state_updater->updateBatteryState();
         publishBatteryState();
         ros::Duration(1).sleep(); //TODO(minor) rates???
         ros::spinOnce();

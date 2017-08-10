@@ -77,6 +77,10 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
     speed_angular = msg.angular.z;
 }
 
+void BatteryStateUpdater::updateBatteryState() {
+    robot_state_manager.getRobotState()->accept(this);
+}
+
 void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
     computeElapsedTime();
     substractEnergyRequiredForKeepingRobotAlive();
