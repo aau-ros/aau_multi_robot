@@ -167,13 +167,13 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
 
-    add_rostest_gtest(itest
-        test/itest.launch
-        test/itest.cpp              
-    )
-    target_link_libraries(itest
-        ${catkin_LIBRARIES}
-    )
+#    add_rostest_gtest(itest
+#        test/itest.launch
+#        test/itest.cpp              
+#    )
+#    target_link_libraries(itest
+#        ${catkin_LIBRARIES}
+#    )
 
 #  add_rostest_gtest(utest
 #  test/test.launch

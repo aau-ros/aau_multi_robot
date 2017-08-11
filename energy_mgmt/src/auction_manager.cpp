@@ -374,7 +374,7 @@ void AuctionManager::scheduleNextAuction() {
     auction_mutex.unlock();
 }
 
-void AuctionManager::isRobotWaitingForNextAuction() {
+bool AuctionManager::isRobotWaitingForNextAuction() {
     return waiting_for_next_auction;
 }
 
