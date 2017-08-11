@@ -39,6 +39,7 @@ public:
     bool isRobotParticipatingToAuction();
     bool isRobotWinnerOfMostRecentAuction();
     void scheduleNextAuction();
+    void cancelScheduledAuction();
     void preventParticipationToAuctions();
     void allowParticipationToAuctions();
 

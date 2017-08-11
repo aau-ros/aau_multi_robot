@@ -176,7 +176,7 @@ void AuctionManager::terminateAuctionCallback(const ros::TimerEvent &event) {
         ROS_INFO("Auction %d has terminated: computing winner", 1); //TODO auction id
         unsigned int winner_id = computeAuctionWinner();
         winner_of_auction = isThisRobotTheWinner(winner_id);
-        timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the idea in the paper... jsut put a check in the timer callback...
+//        timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the idea in the paper... jsut put a check in the timer callback...
 
         bid_t bid;
         bid.robot_id = winner_id;
@@ -441,10 +441,19 @@ void AuctionManager::allowParticipationToAuctions() {
 }
 
 void AuctionManager::scheduleNextAuction() {
+    auction_mutex.lock();
     timer_restart_auction = nh.createTimer(ros::Duration(reauctioning_timeout), &AuctionManager::restartAuctionCallback, this, true, true);
+    auction_mutex.unlock();
 }
 
 void AuctionManager::restartAuctionCallback(const ros::TimerEvent &event) {
     ROS_INFO("Timeout for reauctioning");
     tryToAcquireDs();
+}
+
+void AuctionManager::cancelScheduledAuction() {
+    auction_mutex.lock();
+    ROS_INFO("Timeout for reauctioning");
+    timer_restart_auction.stop();
+    auction_mutex.unlock();
 }
