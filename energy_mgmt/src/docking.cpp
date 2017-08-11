@@ -12,6 +12,14 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     ROS_INFO("Creating instance of Docking class...");
 
     AuctionManager *am = new AuctionManager(123);
+
+//    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//    fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
+//               "starting_absolute_y,w1,w2,w3,w4,auction_duration,reauctioning_timeout,extra_time" << std::endl;
+//    fs_info << robot_id << "," << num_robots << "," << ds_selection_policy << "," << origin_absolute_x << ","
+//            << origin_absolute_y << "," << w1 << "," << w2 << "," << w3 << "," << w4 << "," << auction_timeout << "," << reauctioning_timeout << "," << extra_time << std::endl;
+//    fs_info.close();
+
     
 //    /* Load parameters */  // TODO(minor) checks if these params exist...
 //    ros::NodeHandle nh_tilde("~");

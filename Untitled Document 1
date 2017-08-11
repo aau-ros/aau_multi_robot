@@ -1,0 +1,7 @@
+while(!isRobotWinner())
+    schedule()
+    while(isRobotWaiting())
+        ;
+    while(isRobotParticipating())
+        ;
+cancelScheduled()
