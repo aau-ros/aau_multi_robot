@@ -10,287 +10,289 @@ int counter;
 docking::docking()  // TODO(minor) create functions; comments here and in .h file; check if the topics uses the correct messages...
 {
     ROS_INFO("Creating instance of Docking class...");
+
+    AuctionManager *am = new AuctionManager(123);
     
-    /* Load parameters */  // TODO(minor) checks if these params exist...
-    ros::NodeHandle nh_tilde("~");
-    nh_tilde.param("num_robots", num_robots, -1);
-//    nh_tilde.param<float>("resolution", resolution, 0.05);
-    nh_tilde.param("w1", w1, 0.25);
-    nh_tilde.param("w2", w2, 0.25);
-    nh_tilde.param("w3", w3, 0.25);
-    nh_tilde.param("w4", w4, 0.25);
-    //nh_tilde.param("w5", w5, 0.25);
-    w5 = 2;
-    nh_tilde.getParam("x", origin_absolute_x);
-    nh_tilde.getParam("y", origin_absolute_y);
-    nh_tilde.param<string>("move_base_frame", move_base_frame, "map");  // TODO(minor) remove this (used only to call map_merger translation)
-    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
-    nh_tilde.param<std::string>("log_path", log_path, "");
-    nh_tilde.param<int>("ds_selection_policy", ds_selection_policy, -1);
-    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 30.0); //m
-    nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true);         // not used at the moment...
-//    nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
-    counter = 0;
+//    /* Load parameters */  // TODO(minor) checks if these params exist...
+//    ros::NodeHandle nh_tilde("~");
+//    nh_tilde.param("num_robots", num_robots, -1);
+////    nh_tilde.param<float>("resolution", resolution, 0.05);
+//    nh_tilde.param("w1", w1, 0.25);
+//    nh_tilde.param("w2", w2, 0.25);
+//    nh_tilde.param("w3", w3, 0.25);
+//    nh_tilde.param("w4", w4, 0.25);
+//    //nh_tilde.param("w5", w5, 0.25);
+//    w5 = 2;
+//    nh_tilde.getParam("x", origin_absolute_x);
+//    nh_tilde.getParam("y", origin_absolute_y);
+//    nh_tilde.param<string>("move_base_frame", move_base_frame, "map");  // TODO(minor) remove this (used only to call map_merger translation)
+//    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
+//    nh_tilde.param<std::string>("log_path", log_path, "");
+//    nh_tilde.param<int>("ds_selection_policy", ds_selection_policy, -1);
+//    nh_tilde.param<float>("fiducial_signal_range", fiducial_signal_range, 30.0); //m
+//    nh_tilde.param<bool>("fiducial_sensor_on", fiducial_sensor_on, true);         // not used at the moment...
+////    nh_tilde.param<float>("safety_coeff", safety_coeff, 0.8);
+//    counter = 0;
 
-    // TODO(minor) other checks
-    if (num_robots < 1)
-        ROS_FATAL("Invalid number of robots (%d)!", num_robots);
-    if (ds_selection_policy < 0 || ds_selection_policy > 4)
-        ROS_FATAL("Invalid docking station selection policy (%d)!", ds_selection_policy);
+//    // TODO(minor) other checks
+//    if (num_robots < 1)
+//        ROS_FATAL("Invalid number of robots (%d)!", num_robots);
+//    if (ds_selection_policy < 0 || ds_selection_policy > 4)
+//        ROS_FATAL("Invalid docking station selection policy (%d)!", ds_selection_policy);
 
-    /* Initialize robot name */
-    if (robot_prefix.empty())
-    {
-        /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
-        ROS_INFO("Real robot");
+//    /* Initialize robot name */
+//    if (robot_prefix.empty())
+//    {
+//        /* Empty prefix: we are on an hardware platform (i.e., real experiment) */
+//        ROS_INFO("Real robot");
 
-        /* Set robot name and hostname */
-        char hostname[1024];
-        hostname[1023] = '\0';
-        gethostname(hostname, 1023);
-        robot_name = string(hostname);
+//        /* Set robot name and hostname */
+//        char hostname[1024];
+//        hostname[1023] = '\0';
+//        gethostname(hostname, 1023);
+//        robot_name = string(hostname);
 
-        /* Set robot ID based on the robot name */
-        std::string bob = "bob";
-        std::string marley = "marley";
-        std::string turtlebot = "turtlebot";
-        std::string joy = "joy";
-        std::string hans = "hans";
-        if (robot_name.compare(turtlebot) == 0)
-            robot_id = 0;
-        if (robot_name.compare(joy) == 0)
-            robot_id = 1;
-        if (robot_name.compare(marley) == 0)
-            robot_id = 2;
-        if (robot_name.compare(bob) == 0)
-            robot_id = 3;
-        if (robot_name.compare(hans) == 0)
-            robot_id = 4;
+//        /* Set robot ID based on the robot name */
+//        std::string bob = "bob";
+//        std::string marley = "marley";
+//        std::string turtlebot = "turtlebot";
+//        std::string joy = "joy";
+//        std::string hans = "hans";
+//        if (robot_name.compare(turtlebot) == 0)
+//            robot_id = 0;
+//        if (robot_name.compare(joy) == 0)
+//            robot_id = 1;
+//        if (robot_name.compare(marley) == 0)
+//            robot_id = 2;
+//        if (robot_name.compare(bob) == 0)
+//            robot_id = 3;
+//        if (robot_name.compare(hans) == 0)
+//            robot_id = 4;
 
-        my_prefix = "robot_" + SSTR(robot_id) + "/";  // TODO(minor)
-    }
-    else
-    {
-        /* Prefix is set: we are in a simulation */
-        ROS_INFO("Simulation");
+//        my_prefix = "robot_" + SSTR(robot_id) + "/";  // TODO(minor)
+//    }
+//    else
+//    {
+//        /* Prefix is set: we are in a simulation */
+//        ROS_INFO("Simulation");
 
-        robot_name = robot_prefix;  // TODO(minor) we need this? and are we sure that
-                                    // it must be equal to robot_refix
-                                    // (there is an unwanted '/' maybe...)
+//        robot_name = robot_prefix;  // TODO(minor) we need this? and are we sure that
+//                                    // it must be equal to robot_refix
+//                                    // (there is an unwanted '/' maybe...)
 
-        /* Read robot ID number: to do this, it is required that the robot_prefix is
-         * in the form "/robot_<id>", where
-         * <id> is the ID of the robot */
-        // TODO(minor) what if there are more than 10 robots and so we have
-        // robot_10: this line of code will fail!!!
-        robot_id = atoi(robot_prefix.substr(7, 1).c_str());
+//        /* Read robot ID number: to do this, it is required that the robot_prefix is
+//         * in the form "/robot_<id>", where
+//         * <id> is the ID of the robot */
+//        // TODO(minor) what if there are more than 10 robots and so we have
+//        // robot_10: this line of code will fail!!!
+//        robot_id = atoi(robot_prefix.substr(7, 1).c_str());
 
-        /* Since we are in simulation and we use launch files with the group tag,
-         * prefixes to topics are automatically
-         * added: there is no need to manually specify robot_prefix in the topic
-         * name */
-        // my_prefix = "docking/"; //TODO(minor)
-        my_prefix = "";
-        // my_node = "energy_mgmt/"
-        my_node = "";
+//        /* Since we are in simulation and we use launch files with the group tag,
+//         * prefixes to topics are automatically
+//         * added: there is no need to manually specify robot_prefix in the topic
+//         * name */
+//        // my_prefix = "docking/"; //TODO(minor)
+//        my_prefix = "";
+//        // my_node = "energy_mgmt/"
+//        my_node = "";
 
-        ROS_DEBUG("Robot prefix: %s; robot id: %d", robot_prefix.c_str(), robot_id);
-    }
+//        ROS_DEBUG("Robot prefix: %s; robot id: %d", robot_prefix.c_str(), robot_id);
+//    }
 
-    /* Initialize robot struct */
-    robot = NULL;
-    robot = new robot_t;
-    if(robot == NULL)
-        ROS_FATAL("Allocation failure!");
-    /*
-    if(robot == NULL)
-        ROS_ERROR("NULL!!!!!");
-    else {
-        robot->id = 10;
-        ROS_ERROR("%d", robot->id);
-    }
-    */
-    ros::Duration(10).sleep();
-    robot->id = robot_id;
-    robot->simple_state = active;
-    robot->home_world_x = origin_absolute_x;
-    robot->home_world_y = origin_absolute_y;
-    abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
-    
-    robots.push_back(*robot);
-    
-//    best_ds = NULL;
-//    target_ds = NULL;
-//    best_ds = new ds_t;
-//    if(best_ds == NULL)
+//    /* Initialize robot struct */
+//    robot = NULL;
+//    robot = new robot_t;
+//    if(robot == NULL)
 //        ROS_FATAL("Allocation failure!");
-//    target_ds = new ds_t;
-//    if(target_ds == NULL)
-//        ROS_FATAL("Allocation failure!");
-//    target_ds->id = -1;
-    
-    /*
-    temp_robot.x = 10;
-    ROS_ERROR("%f, %f", temp_robot.x, robots[0].x); //TODO(minor) they are different because with push_back I'm coping the whole structure, I'm not storing it's pointer!!!
-    robots[0].x = 20;
-    ROS_ERROR("%f, %f", temp_robot.x, robots[0].x);
-    robot = &robots[0];
-    robot->x = 30;
-    ROS_ERROR("%f, %f, %f", temp_robot.x, robot->x, robots[0].x);
-    robots[0].x = 40;
-    ROS_ERROR("%f, %f, %f", temp_robot.x, robot->x, robots[0].x);
+//    /*
+//    if(robot == NULL)
+//        ROS_ERROR("NULL!!!!!");
+//    else {
+//        robot->id = 10;
+//        ROS_ERROR("%d", robot->id);
+//    }
+//    */
+//    ros::Duration(10).sleep();
+//    robot->id = robot_id;
+//    robot->simple_state = active;
+//    robot->home_world_x = origin_absolute_x;
+//    robot->home_world_y = origin_absolute_y;
+//    abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
+//    
+//    robots.push_back(*robot);
+//    
+////    best_ds = NULL;
+////    target_ds = NULL;
+////    best_ds = new ds_t;
+////    if(best_ds == NULL)
+////        ROS_FATAL("Allocation failure!");
+////    target_ds = new ds_t;
+////    if(target_ds == NULL)
+////        ROS_FATAL("Allocation failure!");
+////    target_ds->id = -1;
+//    
+//    /*
+//    temp_robot.x = 10;
+//    ROS_ERROR("%f, %f", temp_robot.x, robots[0].x); //TODO(minor) they are different because with push_back I'm coping the whole structure, I'm not storing it's pointer!!!
+//    robots[0].x = 20;
+//    ROS_ERROR("%f, %f", temp_robot.x, robots[0].x);
+//    robot = &robots[0];
+//    robot->x = 30;
+//    ROS_ERROR("%f, %f, %f", temp_robot.x, robot->x, robots[0].x);
+//    robots[0].x = 40;
+//    ROS_ERROR("%f, %f, %f", temp_robot.x, robot->x, robots[0].x);
 
-    robot_t temp2_robot;
-    temp2_robot.id = 100;
-    temp2_robot.state = active;
-    robots.push_back(temp2_robot);
-    robot = &robots[1];
-    */
+//    robot_t temp2_robot;
+//    temp2_robot.id = 100;
+//    temp2_robot.state = active;
+//    robots.push_back(temp2_robot);
+//    robot = &robots[1];
+//    */
 
-    // TODO(minor) names (robot_0 end dockign)
-    // TODO(minor) save names in variables
-    // TODO(minor) queues length?
-
-
-    /* Adhoc communication services */
-    sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(
-        my_prefix + "adhoc_communication/send_em_docking_station");
-    sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(my_prefix + "adhoc_communication/send_em_robot");
+//    // TODO(minor) names (robot_0 end dockign)
+//    // TODO(minor) save names in variables
+//    // TODO(minor) queues length?
 
 
-    /* General services */
-    //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
-    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
-    sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");
-    //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
-    //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
-    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
-    //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
-    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
+//    /* Adhoc communication services */
+//    sc_send_docking_station = nh.serviceClient<adhoc_communication::SendEmDockingStation>(
+//        my_prefix + "adhoc_communication/send_em_docking_station");
+//    sc_send_robot = nh.serviceClient<adhoc_communication::SendEmRobot>(my_prefix + "adhoc_communication/send_em_robot");
 
-//    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
-    //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
-    /* Subscribers */
-    sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
-    sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
-    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
-    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &docking::cb_docking_stations, this);
-    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 1000, &docking::check_vacancy_callback, this);
-    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 1000, &docking::resend_ds_list_callback, this);
-    sub_full_battery_info = nh.subscribe("full_battery_info", 1000, &docking::full_battery_info_callback, this);
-    sub_next_ds = nh.subscribe("next_ds", 1000, &docking::next_ds_callback, this);
-    sub_test = nh.subscribe("test", 1000, &docking::test_2, this);
-	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 1000, &docking::goal_ds_for_path_navigation_callback, this);
-    sub_wait = nh.subscribe("explorer/im_ready", 1000, &docking::wait_for_explorer_callback, this);
-    sub_path = nh.subscribe("error_path", 1000, &docking::path_callback, this);
-    
-    /* Publishers */
-    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1000);
-    pub_adhoc_new_best_ds =
-        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
-    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 10);
-    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 10);
-    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 10);
-    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 10);
-    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
-    pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
-    pub_test = nh.advertise<std_msgs::Empty>("test", 10);
-	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
-	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 10);
-	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
-	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
-	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
-    pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
+//    /* General services */
+//    //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
+//    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
+//    sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");
+//    //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
+//    //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
+//    sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target");
+//    //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
+//    sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
-    /* Variable initializations */
-    robot_state = fully_charged;  // TODO(minor) param
-    auction_winner = false;
-    started_own_auction = false;
-    update_state_required = false;
-    moving_along_path = false;
-    managing_auction = false;
-    need_to_charge = false;  // TODO(minor) useless variable (if we use started_own_auction)
-    recompute_graph = false;
-    recompute_llh = false;
-    going_to_ds = false;
-    explorer_ready = false;
-    optimal_ds_set = false;
-//    target_ds_set = false;
-    finished_bool = false;
-    no_jobs_received_yet = true;
-    group_name = "mc_robot_0";
-    //group_name = "";
-    my_counter = 0;
-    llh = 0;
-    local_auction_id = 0;
-//    participating_to_auction = 0;
-    maximum_travelling_distance = -1;
-    old_optimal_ds_id = -100;
-//    old_target_ds_id = -200;
-    next_optimal_ds_id = old_optimal_ds_id;
-    old_optimal_ds_id_for_log = old_optimal_ds_id;
-//    old_target_ds_id_for_log = -1;
-//    target_ds_id = -1;
-    time_start = ros::Time::now();
-//    id_next_target_ds = -1;
-    path_navigation_tries = 0;
-    next_remaining_distance = 0, current_remaining_distance = 0;
-    has_to_free_optimal_ds = false;
-    id_ds_to_be_freed = -1;
-    already_printed_matching_error = false;
-    wait_for_ds = 0;
-    index_of_ds_in_path = -1;
-    two_robots_at_same_ds_printed = false;
-    invalid_ds_count_printed = false;
-    ds_appears_twice_printed = false;
-    waiting_to_discover_a_ds = false;
-    robot_is_auctioning = false;
-    expired_own_auction = false;
-    discard_auction = false;
-    changed_state_time = ros::Time::now();
-    start_own_auction_time = ros::Time::now();
-    test_mode = false;
+////    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
+//    //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
 
-    /* Function calls */
-    preload_docking_stations();
+//    /* Subscribers */
+//    sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
+//    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
+//    sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
+//    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
+//    sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &docking::cb_docking_stations, this);
+//    sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 1000, &docking::check_vacancy_callback, this);
+//    sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 1000, &docking::resend_ds_list_callback, this);
+//    sub_full_battery_info = nh.subscribe("full_battery_info", 1000, &docking::full_battery_info_callback, this);
+//    sub_next_ds = nh.subscribe("next_ds", 1000, &docking::next_ds_callback, this);
+//    sub_test = nh.subscribe("test", 1000, &docking::test_2, this);
+//	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 1000, &docking::goal_ds_for_path_navigation_callback, this);
+//    sub_wait = nh.subscribe("explorer/im_ready", 1000, &docking::wait_for_explorer_callback, this);
+//    sub_path = nh.subscribe("error_path", 1000, &docking::path_callback, this);
+//    
+//    /* Publishers */
+//    pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1000);
+//    pub_adhoc_new_best_ds =
+//        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
+//    pub_lost_own_auction = nh.advertise<std_msgs::Empty>("explorer/lost_own_auction", 10);
+//    pub_won_auction = nh.advertise<std_msgs::Empty>("explorer/won_auction", 10);
+//    pub_lost_other_robot_auction = nh.advertise<std_msgs::Empty>("explorer/lost_other_robot_auction", 10);
+//    pub_auction_result = nh.advertise<std_msgs::Empty>("explorer/auction_result", 10);
+//    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
+//    pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
+//    pub_test = nh.advertise<std_msgs::Empty>("test", 10);
+//	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
+//	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 10);
+//	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
+//	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
+//	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
+//    pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
 
-    if (DEBUG)
-    {
-        ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
-        debug_timers.push_back(timer0);
-        ros::Timer timer1 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_1, this, false, true);
-        debug_timers.push_back(timer1);
-        ros::Timer timer2 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_2, this, false, true);
-        debug_timers.push_back(timer2);
+//    /* Variable initializations */
+//    robot_state = fully_charged;  // TODO(minor) param
+//    auction_winner = false;
+//    started_own_auction = false;
+//    update_state_required = false;
+//    moving_along_path = false;
+//    managing_auction = false;
+//    need_to_charge = false;  // TODO(minor) useless variable (if we use started_own_auction)
+//    recompute_graph = false;
+//    recompute_llh = false;
+//    going_to_ds = false;
+//    explorer_ready = false;
+//    optimal_ds_set = false;
+////    target_ds_set = false;
+//    finished_bool = false;
+//    no_jobs_received_yet = true;
+//    group_name = "mc_robot_0";
+//    //group_name = "";
+//    my_counter = 0;
+//    llh = 0;
+//    local_auction_id = 0;
+////    participating_to_auction = 0;
+//    maximum_travelling_distance = -1;
+//    old_optimal_ds_id = -100;
+////    old_target_ds_id = -200;
+//    next_optimal_ds_id = old_optimal_ds_id;
+//    old_optimal_ds_id_for_log = old_optimal_ds_id;
+////    old_target_ds_id_for_log = -1;
+////    target_ds_id = -1;
+//    time_start = ros::Time::now();
+////    id_next_target_ds = -1;
+//    path_navigation_tries = 0;
+//    next_remaining_distance = 0, current_remaining_distance = 0;
+//    has_to_free_optimal_ds = false;
+//    id_ds_to_be_freed = -1;
+//    already_printed_matching_error = false;
+//    wait_for_ds = 0;
+//    index_of_ds_in_path = -1;
+//    two_robots_at_same_ds_printed = false;
+//    invalid_ds_count_printed = false;
+//    ds_appears_twice_printed = false;
+//    waiting_to_discover_a_ds = false;
+//    robot_is_auctioning = false;
+//    expired_own_auction = false;
+//    discard_auction = false;
+//    changed_state_time = ros::Time::now();
+//    start_own_auction_time = ros::Time::now();
+//    test_mode = false;
 
-        debug_timers[robot_id].stop();
-    }
-    
-    ROS_INFO("Instance of Docking class correctly created");
-    
-//    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
-    
-    DsGraph mygraph;
-    mygraph.addEdge(1,2,10);
-    //mygraph.print();
-    
-    nh_tilde.param<std::string>("log_path", original_log_path, "");
-    major_errors_file = original_log_path + std::string("_errors.log");
-    
-//    ROS_ERROR("%s", major_errors_file.c_str());
-    
-    graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
-    
-    pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
-    pub_this_robot = nh.advertise<adhoc_communication::EmRobot>("this_robot", 10, true);
-    
-    major_errors = 0, minor_errors = 0;
-    
-    timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, false, true); //TODO(minor) timeout
-    
-    starting_time = ros::Time::now();
+//    /* Function calls */
+//    preload_docking_stations();
+
+//    if (DEBUG)
+//    {
+//        ros::Timer timer0 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_0, this, false, true);
+//        debug_timers.push_back(timer0);
+//        ros::Timer timer1 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_1, this, false, true);
+//        debug_timers.push_back(timer1);
+//        ros::Timer timer2 = nh.createTimer(ros::Duration(20), &docking::debug_timer_callback_2, this, false, true);
+//        debug_timers.push_back(timer2);
+
+//        debug_timers[robot_id].stop();
+//    }
+//    
+//    ROS_INFO("Instance of Docking class correctly created");
+//    
+////    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
+//    
+//    DsGraph mygraph;
+//    mygraph.addEdge(1,2,10);
+//    //mygraph.print();
+//    
+//    nh_tilde.param<std::string>("log_path", original_log_path, "");
+//    major_errors_file = original_log_path + std::string("_errors.log");
+//    
+////    ROS_ERROR("%s", major_errors_file.c_str());
+//    
+//    graph_navigation_allowed = GRAPH_NAVIGATION_ALLOWED;
+//    
+//    pub_ds_position = nh.advertise <visualization_msgs::Marker> ("energy_mgmt/ds_positions", 1000, true);
+//    pub_this_robot = nh.advertise<adhoc_communication::EmRobot>("this_robot", 10, true);
+//    
+//    major_errors = 0, minor_errors = 0;
+//    
+//    timer_recompute_ds_graph = nh.createTimer(ros::Duration(60), &docking::timer_callback_recompute_ds_graph, this, false, true); //TODO(minor) timeout
+//    
+//    starting_time = ros::Time::now();
     
     
 }

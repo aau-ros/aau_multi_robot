@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch> 
+    <node pkg="robot_state" type="robot_state" name="robot_state" output="screen" />
+    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="screen" />
+<!--    <node pkg="simple_node" type="simple_node" name="simple_node" output="screen" />-->
+</launch>

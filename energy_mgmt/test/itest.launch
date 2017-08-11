@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="energy_mgmt" type="mock_robot" name="mock_robot" output="screen" />
+    <test pkg="energy_mgmt" test-name="itest" type="itest" />
+</launch>

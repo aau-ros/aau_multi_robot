@@ -1,7 +1,9 @@
 #include "auction_manager.h"
 
-AuctionManager::AuctionManager() {
-    initializeVariables();
+AuctionManager::AuctionManager(unsigned int robot_id) {
+    initializeVariables(robot_id);
+    createSubscribers();
+    createServiceClients();
 
 //    if (msg.get()->state == in_queue)
 //    {
@@ -26,20 +28,45 @@ AuctionManager::AuctionManager() {
 //    fs_info.close();
 }
 
-void AuctionManager::initializeVariables() {
-    auction_aborted = false;
+void AuctionManager::initializeVariables(unsigned int robot_id) {
+    _b1 = false;
+    _b2 = false;
+    _b3 = false;
+    _b4 = false;
     winner_of_auction = false;
-    auction_participation_state = IDLE;
+    robot_cannot_participate_to_auctions = false;
+    this->robot_id = robot_id;
+    auction_participation_state = IDLE;    
+    time_last_participation = 0;
+    local_auction_id = 0;
+    _u2 = 0;
+
     ros::NodeHandle nh_tilde("~");
-    nh_tilde.param<double>("auction_duration", auction_timeout, 3); //TODO(minor) int?
-    nh_tilde.param<double>("extra_auction_time", extra_auction_time, 3); //TODO use getParam and the fact that it returns a bool!!! http://wiki.ros.org/roscpp_tutorials/Tutorials/Parameters#getParam.28.29
-    nh_tilde.param<double>("reauctioning_timeout", reauctioning_timeout, 10); //s
+    int tmp;
+    nh.param<int>("num_robots", tmp, -1); //TODO
+    if(tmp < 0)
+        ROS_FATAL("Invalid number of robots!");
+    else
+        num_robots = (unsigned int)tmp;
+    if(!nh_tilde.getParam("auction_duration", auction_timeout)) {//TODO int or double?
+        ROS_FATAL("invalid auction_timeout!!");
+        auction_timeout = 3;
+    }
+    if(!nh_tilde.getParam("extra_auction_time", extra_auction_time)) { //TODO use getParam and the fact that it returns a bool!!! http://wiki.ros.org/roscpp_tutorials/Tutorials/Parameters#getParam.28.29
+        extra_auction_time = 3;
+        ROS_FATAL("Invalid extra_auction_time!");
+    }
+    if(!nh_tilde.getParam("reauctioning_timeout", reauctioning_timeout)) {
+        ROS_ERROR("invalid reauctioning_timeout");
+        reauctioning_timeout = 5;
+    }
+    nh_tilde.param<double>("sleep_time_between_two_participations", sleep_time_between_two_participations, 5); //s
 }
 
 void AuctionManager::createSubscribers() {
     std::string my_prefix = ""; //TODO
     auction_reply_sub = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/auction_reply", 1000, &AuctionManager::auctionReplyCallback, this);
-    auction_result_sub = nh.subscribe(my_prefix + "adhoc_communication/auction_result", 1000, &AuctionManager::auctionResultCallback, this); //TODO do i need 'adhoc_communication' in the service name?
+    auction_result_sub = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/auction_result", 1000, &AuctionManager::auctionResultCallback, this); //TODO do i need 'adhoc_communication' in the service name? and 'send_em_auction'?
     auction_starting_sub = nh.subscribe(my_prefix + "adhoc_communication/send_em_auction/auction_starting", 1000, &AuctionManager::auctionStartingCallback, this);
 }
 
@@ -48,7 +75,16 @@ void AuctionManager::createServiceClients() {
     sc_send_auction = nh.serviceClient<adhoc_communication::SendEmAuction>(my_prefix + "adhoc_communication/send_em_auction");
 }
 
+void AuctionManager::setBidComputer(BidComputer *bid_computer) {
+    this->bid_computer = bid_computer;
+}
+
+void AuctionManager::setTimeManager(TimeManagerInterface *time_manager) {
+    this->time_manager = time_manager;
+}
+
 void AuctionManager::tryToAcquireDs() {
+    ROS_ERROR("Starting new auction");
     auction_mutex.lock();
 
 //    if(wait_for_ds >= 100)
@@ -82,36 +118,47 @@ void AuctionManager::tryToAcquireDs() {
 //            }
 //        }
 
+    ROS_ERROR("Starting new auction");
     if(auction_participation_state == PARTICIPATING)
         ROS_INFO("The robot is already participating to an auction: let's wait for the other auction to terminate");
     else {
-        ROS_INFO("Starting new auction"); //TODO auction id
+        ROS_ERROR("Starting new auction"); //TODO auction id
         auction_participation_state = MANAGING;
         bid_t bid = startNewAuction();
         scheduleAuctionTermination();
         sendBid(bid, "adhoc_communication/send_em_auction/new_auction");
     }
+
+    auction_mutex.unlock();
 }
 
 bid_t AuctionManager::startNewAuction() {    
     bid_t bid;
-    bid.auction_id = 1; //TODO
+    bid.auction_id = nextAuctionId(); //TODO
     bid.robot_id = robot_id;
-    bid.bid = bc.getBid();
-    bid.ds_id = optimal_ds_id;
+    bid.bid = bid_computer->getBid();
+//    bid.ds_id = optimal_ds_id; //TODO
+    bid.ds_id = 20;
+    bid.starting_time = time_manager->simulationTimeNow().toSec(); //TODO time_manager
     auction_bids.push_back(bid);
+
+    current_auction.auction_id = bid.auction_id;
+    _u2 = current_auction.auction_id;
+    ROS_ERROR("%u", _u2);
+
     return bid;
 }
 
 void AuctionManager::sendBid(bid_t bid, std::string topic) {
-    ROS_INFO("Sendind bid for auction %d to other robots", 1); //TODO
+    ROS_INFO("Sending bid for auction %d to other robots", 1); //TODO
     adhoc_communication::SendEmAuction srv;
     srv.request.topic = topic; //TODO
-//    srv.request.dst_robot = group_name;
-//    srv.request.auction.auction = next_auction_id();
-//    srv.request.auction.robot = robot_id;
-//    srv.request.auction.docking_station = get_optimal_ds_id();
-//    srv.request.auction.bid = get_llh();
+//    srv.request.dst_robot = group_name; //TODO
+    srv.request.auction.auction = bid.auction_id;
+    srv.request.auction.robot = bid.robot_id;
+    srv.request.auction.docking_station = bid.ds_id;
+    srv.request.auction.bid = bid.bid;
+    srv.request.auction.starting_time = bid.starting_time;
     ROS_DEBUG("Calling service: %s", sc_send_auction.getService().c_str());
     sc_send_auction.call(srv); //TODO check if call succeded
 }
@@ -123,18 +170,14 @@ void AuctionManager::scheduleAuctionTermination() { //TODO put also some safety 
 void AuctionManager::terminateAuctionCallback(const ros::TimerEvent &event) {
     auction_mutex.lock();
 
-    //TODO check if auction has been aborted meanwhile
-    if(auction_aborted) {
+    if(auction_participation_state != MANAGING)
         ROS_INFO("Auction %d has been aborted because a more recent auction has been started by another robot", 1); //TODO auction_id //TODO use timestamps
-        auction_aborted = false;
-    }
     else {
         ROS_INFO("Auction %d has terminated: computing winner", 1); //TODO auction id
         unsigned int winner_id = computeAuctionWinner();
-        
         winner_of_auction = isThisRobotTheWinner(winner_id);
-
         timer_restart_auction.stop();  // TODO(minor) i'm not sure that this follows the idea in the paper... jsut put a check in the timer callback...
+
         bid_t bid;
         bid.robot_id = winner_id;
         sendAuctionResult(bid);
@@ -148,24 +191,28 @@ void AuctionManager::terminateAuctionCallback(const ros::TimerEvent &event) {
 }
 
 unsigned int AuctionManager::computeAuctionWinner() {
-    unsigned int winner_id = -1;
-    float winner_bid = std::numeric_limits<float>::min();
+    bid_t winning_bid;
+    winning_bid.robot_id = -1;
+    winning_bid.bid = std::numeric_limits<float>::min();
+    ROS_ERROR("!!!");
+
+    _u1 = auction_bids.size();
 
     for (auto it = auction_bids.begin(); it != auction_bids.end(); it++)
     {
-        ROS_DEBUG("robot_%d placed %f", it->robot_id, it->bid);
-        if (it->bid > winner_bid)
+        ROS_DEBUG("robot_%d placed %.1f", it->robot_id, it->bid);
+        if (it->bid > winning_bid.bid)
         {
-            winner_id = it->robot_id;
-            winner_bid = it->bid;
+            winning_bid.robot_id = it->robot_id;
+            winning_bid.bid = it->bid;
         }
     }
 
-    if(winner_id < 0) // this should not happen, since at least the robot that started the auction must have placed a bid
+    if(winning_bid.robot_id < 0) // this should not happen, since at least the robot that started the auction must have placed a bid
         ROS_ERROR("No winner for auction %d has been found", 1); //TODO auction_id //TODO raise exception?
 
-    ROS_DEBUG("The winner of auction %d is robot_%d", 1, winner_id); //TODO auction id
-    return winner_id;
+    ROS_ERROR("The winner of auction %d is robot_%d", 1, winning_bid.robot_id); //TODO auction id
+    return winning_bid.robot_id;
 }
 
 bool AuctionManager::isThisRobotTheWinner(unsigned int winner_id) {
@@ -218,73 +265,77 @@ void AuctionManager::sendAuctionResult(bid_t bid) {
 void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     auction_mutex.lock();
-
     if(auction_participation_state != MANAGING)
-        ROS_INFO("Received a bid that has arrived too late, since the associated auction has already finished: ignore it");
+        ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
     
     else if (current_auction.auction_id != (unsigned int)msg.get()->auction)
         ROS_INFO("Received a bid that is not for the auction recently started by this robot: ignore it");
     
     else {
-
         // TODO(minor) probably this is unnecessary, but jsut to be safe...
-        for (auto it = auction_bids.begin(); it != auction_bids.end(); it++)
-            if (it->robot_id == (unsigned int)msg.get()->robot)
-            {
-                ROS_INFO("Received a bid that was already received before: ignore it");
-                return;
-            }
-            
+//        for (auto it = auction_bids.begin(); it != auction_bids.end(); it++)
+//            if (it->robot_id == (unsigned int)msg.get()->robot)
+//            {
+//                ROS_INFO("Received a bid that was already received before: ignore it");
+//                return;
+//            }
+
         ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid, msg.get()->robot, current_auction.auction_id);
         bid_t bid;
         bid.robot_id = msg.get()->robot;
         bid.bid = msg.get()->bid;
         auction_bids.push_back(bid);
-
     }
 
     auction_mutex.unlock();
 }
 
 bool AuctionManager::isRobotParticipatingToAuction() {
-    return (auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING);
+    auction_mutex.lock();
+    bool return_value = (auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING);
+    auction_mutex.unlock();
+    return return_value;
 }
 
 bool AuctionManager::isRobotWinnerOfMostRecentAuction() {
-    return winner_of_auction;
+    auction_mutex.lock();
+    bool return_value = winner_of_auction;
+    auction_mutex.unlock();
+    return return_value;
 }
 
-//int docking::next_auction_id()
-//{
-//    ROS_DEBUG("Compute next auction ID");
-//    
-//    /* Increase local auction ID, and then return the global one */
-//    local_auction_id++;
-//    auction_id = local_auction_id * pow(10, (ceil(log10(num_robots)))) + robot_id;
-//    return auction_id;
-//    
-//    /*
-//    Examples:
-//    23 * pow(10, (ceil(log10(15)))) + 11 = 23 * 10^2 + 11 = 2300 + 11 = 2311;
-//    23 * pow(10, (ceil(log10(10)))) +  9 = 23 * 10^1 +  9 =  230 +  9 =  239;
-//    */
-//}
+unsigned int AuctionManager::nextAuctionId()
+{
+    ROS_DEBUG("Compute next auction ID");
+    // Examples:
+    //     23 * pow(10, (ceil(log10(15)))) + 11 = 23 * 10^2 + 11 = 2300 + 11 = 2311;
+    //     23 * pow(10, (ceil(log10(10)))) +  9 = 23 * 10^1 +  9 =  230 +  9 =  239;
+    
+    local_auction_id++;
+    _u5 = local_auction_id;
+    _u4 = pow(10, (ceil(log10(num_robots))));
+
+    ROS_ERROR("%d", (int) (local_auction_id * pow(10, (ceil(log10(num_robots)))) + robot_id));
+
+    return local_auction_id * pow(10, (ceil(log10(num_robots)))) + robot_id;
+}
 
 void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg) {
     auction_mutex.lock();
-     
-    if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
-    {
-        ROS_INFO("Winner of the auction started by another robot");
-        winner_of_auction = true;
-    }
-    else
-    {
-        ROS_INFO("Robot didn't win this auction started by another robot");
-        winner_of_auction = false;
-    }
+    if(auction_participation_state == PARTICIPATING) {
+        if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
+        {
+            ROS_INFO("Winner of the auction started by another robot");
+            winner_of_auction = true;           
+        }
+        else
+        {
+            ROS_INFO("Robot didn't win this auction started by another robot");
+            winner_of_auction = false;
+        }
 
-    auction_participation_state = IDLE;
+        auction_participation_state = IDLE;
+    }
 
     auction_mutex.unlock();
 }
@@ -294,12 +345,14 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
     auction_mutex.lock();
 
     ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
-
+    _b1 = true;
     if(auction_participation_state == MANAGING) {
         ROS_INFO("This robot is currently managing an auction...");
+        _b2 = true;
         if(current_auction.starting_time < msg.get()->starting_time) {
             ROS_INFO("... and the auction managed by the robot is older than the auction started by the other robot: the auction of this robot will be discarded");
             auction_participation_state = PARTICIPATING;
+            _b3 = true;
         } else
             ROS_INFO("... and the auction managed by the robot is more recent than the auction started by the other robot: ignoring the auction started by the other robot");
     }
@@ -311,9 +364,9 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
 //    }
     
     else if(robot_cannot_participate_to_auctions) //TODO
-        ROS_INFO("robot is searching for a path on graph: ignore auction"); //this is done because the search of a path on the DS graph can take a lot of time (at least with the version that is in used at the time of writing these lines of code), so a robot could basically "stall" a DS, since it could gain access to it, but since it's making computations it cannot used it (and it is not safe to stop the computations, since if we stop them every time that a robot wins an auction, it won't be able to find a path on the graph since it usually takes some time and so it is very likely that the robot will win an auction at some point)
+        ROS_INFO("robot is searching for a path on graph: ignore auction");
     
-    else {
+//    else {
 //        // TODO(minor) should do this ckeck also when the robot receive the result of an auction
 //        bool already_known_ds = false;
 //        for(std::vector<ds_t>::iterator it = discovered_ds.begin(); it != discovered_ds.end(); it++) //TODO(minor) create list discovered_ds + ds
@@ -334,7 +387,7 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
 //            sc_send_docking_station.call(srv_msg);
 //            return;
 //        }
-    }  
+//    }  
      
 //    if (optimal_ds_is_set || (int)msg.get()->docking_station != optimal_ds_id)
 //    {
@@ -343,14 +396,16 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
 //         * at the moment, so it won't participate to the auction */
 //        ROS_INFO("Robot has no interested in participating to this auction");
 //    }
-//    else
-    {
-        double bid_double = bc.getBid();
+
+
+    else {
+        double bid_double = bid_computer->getBid();
         if (bid_double > msg.get()->bid)
         {    
             ROS_INFO("The robot can place an higher bid than the one received, so it is going to participate to the auction");
-
-            terminate_auction_timer = nh.createTimer(ros::Duration(auction_timeout + extra_auction_time),                                              &AuctionManager::end_auction_participation_timer_callback, this, true, true);
+            auction_participation_state = PARTICIPATING;
+            _b4 = true;
+            terminate_auction_timer = nh.createTimer(ros::Duration(auction_timeout + extra_auction_time),                                              &AuctionManager::endAuctionParticipationCallback, this, true, true);
 
             bid_t bid;
             bid.robot_id = robot_id;
@@ -364,11 +419,13 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
     auction_mutex.unlock();
 }
 
-// TODO(minor) what if instead the auction result are received after this timer? what if instead it is received a lot early?
-void AuctionManager::end_auction_participation_timer_callback(const ros::TimerEvent &event) 
+void AuctionManager::endAuctionParticipationCallback(const ros::TimerEvent &event) 
 {
-    //FIXME it seems not to work correctly sometimes...
+    //TODO FIXME it seems not to work correctly sometimes...
+    auction_mutex.lock();
     ROS_DEBUG("Force to consider auction concluded");
+    auction_participation_state = IDLE;
+    auction_mutex.unlock();
 }
 
 void AuctionManager::preventParticipationToAuctions() {
@@ -381,4 +438,13 @@ void AuctionManager::allowParticipationToAuctions() {
     auction_mutex.lock();
     robot_cannot_participate_to_auctions = false;
     auction_mutex.unlock();
+}
+
+void AuctionManager::scheduleNextAuction() {
+    timer_restart_auction = nh.createTimer(ros::Duration(reauctioning_timeout), &AuctionManager::restartAuctionCallback, this, true, true);
+}
+
+void AuctionManager::restartAuctionCallback(const ros::TimerEvent &event) {
+    ROS_INFO("Timeout for reauctioning");
+    tryToAcquireDs();
 }

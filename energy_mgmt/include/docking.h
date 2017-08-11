@@ -680,7 +680,7 @@ class docking
     ros::Time changed_state_time, start_own_auction_time;
     void conclude_auction();
 
-    AuctionManager auction_manager;
+//    AuctionManager auction_manager; //TODO
 
     /* DEBUGGING */
     std::vector<std::vector<double> > distance_list;

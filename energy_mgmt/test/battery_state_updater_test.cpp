@@ -1,9 +1,8 @@
 #include <ros/ros.h>
 #include <gtest/gtest.h>
 #include <explorer/battery_state.h>
+#include <utilities/mock_time_manager.h>
 #include "battery_state_updater.h"
-#include "mock_time_manager.h"
-
 
 #define SENDING_SLEEP_TIME 1
 #define FLOAT_ABSOLUTE_ERROR 0.001

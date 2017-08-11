@@ -70,7 +70,7 @@ add_library(battery_simulate src/battery_simulate.cpp)
 add_library(docking src/docking.cpp)
 #add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
-add_library(bid_computer src/bid_computer.cpp)
+add_library(concrete_bid_computer src/concrete_bid_computer.cpp)
 add_library(auction_manager src/auction_manager.cpp)
 add_library(docking_station_manager src/docking_station_manager.cpp)
 
@@ -83,7 +83,7 @@ add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPO
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(auction_manager
-  bid_computer
+  concrete_bid_computer
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -125,12 +125,18 @@ target_link_libraries(energy_mgmt
 if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
-#    add_library(mock_time_manager test/mock_time_manager.cpp)
+#    add_library(mock_time_manager test/mock_time_manager.cpp)  
+    add_executable(mock_robot test/mock_robot.cpp)
+    target_link_libraries(mock_robot ${catkin_LIBRARIES})
+    add_dependencies(mock_robot
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
 
     #TODO use sub-cmakelists files
     add_rostest_gtest(battery_state_updater_test
-        test/battery_state_updater_test.launch
-        test/battery_state_updater_test.cpp
+        test/battery_state_updater_test.launch # apparently the .launch file must be the first, or won't compile
+        test/battery_state_updater_test.cpp        
     )
     target_link_libraries(battery_state_updater_test
         battery_state_updater
@@ -142,6 +148,31 @@ if(CATKIN_ENABLE_TESTING)
         explorer_gencpp #TODO do we need both gencpp and generate_*?
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(auction_manager_utest
+        test/auction_manager_utest.launch
+        test/auction_manager_utest.cpp              
+    )
+    add_library(mock_bid_computer test/mock_bid_computer.cpp)
+    target_link_libraries(auction_manager_utest
+        auction_manager
+        mock_bid_computer
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(auction_manager_utest
+        adhoc_communication_generate_messages_cpp
+        adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(itest
+        test/itest.launch
+        test/itest.cpp              
+    )
+    target_link_libraries(itest
+        ${catkin_LIBRARIES}
     )
 
 #  add_rostest_gtest(utest

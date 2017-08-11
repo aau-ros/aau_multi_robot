@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="num_robots" value="2" />
+    <param name="energy_mgmt/auction_duration" value="5" />
+    <param name="energy_mgmt/sleep_time_between_two_participations" value="5" />
+    <test pkg="energy_mgmt" test-name="auction_manager_utest" type="auction_manager_utest" time-limit="120.0" />
+</launch>

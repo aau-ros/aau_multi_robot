@@ -78,33 +78,29 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
 }
 
 void BatteryStateUpdater::updateBatteryState() {
-    robot_state_manager.getRobotState()->accept(this);
+    computeElapsedTime();
+// computeTraveledDistance();
+//    robot_state_manager.getRobotState()->accept(this);
+traveled_distance = 0;
 }
 
 void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
-    computeElapsedTime();
     substractEnergyRequiredForKeepingRobotAlive();
-    substractEnergyRequiredForBasicComputations();
-    computeElapsedTime(); //TODO very bad to use is to update time_last_update
-    traveled_distance = 0;
+    substractEnergyRequiredForBasicComputations();    
 }
 
 void BatteryStateUpdater::handle(ChoosingActionState *r) {
-    computeElapsedTime();
     substractEnergyRequiredForKeepingRobotAlive();
     substractEnergyRequiredForSensing();
     substractEnergyRequiredForBasicComputations();
-    computeElapsedTime();
     traveled_distance = 0;
 }
 
 void BatteryStateUpdater::handle(ComputingNextGoalState *r) {
-    computeElapsedTime();
     substractEnergyRequiredForKeepingRobotAlive();
     substractEnergyRequiredForSensing();
     substractEnergyRequiredForBasicComputations();
     substractEnergyRequiredForAdvancedComputations();
-    traveled_distance = 0;
 }
 
 double BatteryStateUpdater::computeElapsedTime() { //TODO add this function to TimeManager instead
