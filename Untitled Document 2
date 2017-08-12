@@ -1,0 +1,6 @@
+explore
+    - service
+    - set robot state
+    - check robot state
+battery
+    - read and set robot state

@@ -40,7 +40,9 @@ public:
 TEST(TestAuctionManager, testNonParticipation)
 {
     AuctionManager am(ROBOT_ID);
+    am.lock();
     EXPECT_FALSE(am.isRobotParticipatingToAuction());
+    am.unlock();
 }
 
 TEST(TestAuctionManager, testAuctionStartAndConclusion)
@@ -54,12 +56,22 @@ TEST(TestAuctionManager, testAuctionStartAndConclusion)
     mtm->addTime(10);
 
     am.tryToAcquireDs();
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
 
-    while(am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop); 
 
+    am.lock();
     EXPECT_FALSE(am.isRobotParticipatingToAuction());
+    am.unlock();
 }
 
 //TEST(TestAuctionManager, testSleepingBetweenTwoAuctions) //TODO
@@ -78,13 +90,23 @@ TEST(TestAuctionManager, testIsRobotWinnerOfMostRecentAuction)
     mtm->addTime(10);
 
     am.tryToAcquireDs();
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
 
-    while(am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
 
+    am.lock();
     EXPECT_FALSE(am.isRobotParticipatingToAuction());
-    EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction());
+    am.unlock();
+    EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction()); //TODO shoud lock everywhere...
 }
 
 TEST(TestAuctionManager, testVictoryWithTwoParticipatingRobots)
@@ -106,11 +128,19 @@ TEST(TestAuctionManager, testVictoryWithTwoParticipatingRobots)
     msg.robot = 222;
     am.tryToAcquireDs();
 
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
     auction_reply_pub.publish(msg);
 
-    while(am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
 
     EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction());
 }
@@ -136,11 +166,19 @@ TEST(TestAuctionManager, testLoseWithTwoParticipatingRobots)
 
     am.tryToAcquireDs();
 
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
     auction_reply_pub.publish(msg);
 
-    while(am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
 
     EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
 }
@@ -152,6 +190,7 @@ TEST(TestAuctionManager, testBidReception)
     MockTimeManager *mtm = new MockTimeManager();
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(7);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -163,11 +202,14 @@ TEST(TestAuctionManager, testBidReception)
     msg.auction = 43;
     msg.bid = 10;
     msg.robot = 222;
+    msg.docking_station = 7;
     auction_starting_pub.publish(msg);
     ros::Duration(SENDING_SLEEP_TIME).sleep();
 
     ros::spinOnce();
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
 }
 
 TEST(TestAuctionManager, testEndAuctionStartedByAnotherRobot)
@@ -177,6 +219,7 @@ TEST(TestAuctionManager, testEndAuctionStartedByAnotherRobot)
     MockTimeManager *mtm = new MockTimeManager();
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(78);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -188,13 +231,22 @@ TEST(TestAuctionManager, testEndAuctionStartedByAnotherRobot)
     msg.auction = 43;
     msg.bid = 10;
     msg.robot = 222;
+    msg.docking_station = 78;
     auction_starting_pub.publish(msg);
     ros::Duration(SENDING_SLEEP_TIME).sleep();
 
     ros::spinOnce();
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
-    while(am.isRobotParticipatingToAuction())
+    am.unlock();
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
     EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
 }
 
@@ -205,6 +257,7 @@ TEST(TestAuctionManager, testWinAuctionStartedByAnotherRobot)
     MockTimeManager *mtm = new MockTimeManager();
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(432);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -217,21 +270,33 @@ TEST(TestAuctionManager, testWinAuctionStartedByAnotherRobot)
     msg.auction = 43;
     msg.bid = 10;
     msg.robot = 222;
+    msg.docking_station = 432;
 
+    am.lock();
     EXPECT_FALSE(am.isRobotParticipatingToAuction());
+    am.unlock();
     auction_starting_pub.publish(msg);
     ros::Duration(SENDING_SLEEP_TIME).sleep();
     ros::spinOnce();
     ros::Duration(SENDING_SLEEP_TIME).sleep();
+
+    am.lock();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
 
     adhoc_communication::EmAuction msg2;
     msg.auction = 43;
     msg.robot = ROBOT_ID;
     auction_result_pub.publish(msg);
 
-    while(am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
     EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction());
 }
 
@@ -243,7 +308,13 @@ TEST(TestAuctionManager, testDoNotParticipateToAnotherRobotAuction)
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     mbd->addBid(100);
+    mbd->addBid(100);
+    mbd->addBid(100);
+    mbd->addBid(100);
     mtm->addTime(10);
+    mtm->addTime(20);
+    mtm->addTime(30);
+    mtm->addTime(40);
 
     ros::NodeHandle nh;
     std::string prefix = "";
@@ -251,16 +322,77 @@ TEST(TestAuctionManager, testDoNotParticipateToAnotherRobotAuction)
     
     adhoc_communication::EmAuction msg;
     msg.auction = 43;
-    msg.bid = 500;
+    msg.bid = 10;
     msg.robot = 222;
+    msg.docking_station = 567;
     auction_starting_pub.publish(msg);
     ros::Duration(SENDING_SLEEP_TIME).sleep();
 
     ros::spinOnce();
     for(int i=0; i<5; i++) {
         ros::Duration(1).sleep();
+        am.lock();
         EXPECT_FALSE(am.isRobotParticipatingToAuction());
+        am.unlock();
+        ros::spinOnce();
     }
+
+    am.setOptimalDs(567);
+
+    msg.auction = 43;
+    msg.bid = 500;
+    msg.robot = 222;
+    msg.docking_station = 567;
+    auction_starting_pub.publish(msg);
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+
+    ros::spinOnce();
+    for(int i=0; i<5; i++) {
+        ros::Duration(1).sleep();
+        am.lock();
+        EXPECT_FALSE(am.isRobotParticipatingToAuction());
+        am.unlock();
+        ros::spinOnce();
+    }
+    EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
+
+    EXPECT_FALSE(am.isRobotParticipatingToAuction());
+
+    msg.auction = 43;
+    msg.bid = 10;
+    msg.robot = 222;
+    msg.docking_station = 567;
+    auction_starting_pub.publish(msg);
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+    ros::spinOnce();
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+
+    ros::spinOnce();
+    EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
+        ros::spinOnce();
+    }
+    while(loop);
+
+    msg.auction = 43;
+    msg.bid = 10;
+    msg.robot = 222;
+    msg.docking_station = 0;
+    auction_starting_pub.publish(msg);
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+    ros::spinOnce();
+    for(int i=0; i<5; i++) {
+        ros::Duration(1).sleep();
+        am.lock();
+        EXPECT_FALSE(am.isRobotParticipatingToAuction());
+        am.unlock();
+        ros::spinOnce();
+    }
+    EXPECT_FALSE(am.isRobotParticipatingToAuction());
     EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
 }
 
@@ -271,8 +403,11 @@ TEST(TestAuctionManager, testInterruptAuction)
     MockTimeManager *mtm = new MockTimeManager();
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(7);
+    mbd->addBid(100);
     mbd->addBid(100);
     mtm->addTime(10);
+    mtm->addTime(20);
 
     EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
 
@@ -283,20 +418,33 @@ TEST(TestAuctionManager, testInterruptAuction)
     msg.bid = 500;
     msg.starting_time = 20;
     msg.robot = 222;
+    msg.docking_station = 7;
     
+    am.lock();
     am.tryToAcquireDs();
-    ros::Duration(0.5).sleep();
-    ros::spinOnce();
+    ros::Duration(0.5).sleep();     
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
+    am.unlock();
+
+    ros::spinOnce();
 
     auction_starting_pub.publish(msg);
     ros::Duration(0.5).sleep();
     ros::spinOnce();
 
-    EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
+    am.lock();
+    EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());    
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
-    while(am.isRobotParticipatingToAuction())
+    am.unlock();
+
+    bool loop;
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
     EXPECT_FALSE(am.isRobotWinnerOfMostRecentAuction());
 }
 
@@ -312,11 +460,21 @@ TEST(TestAuctionManager, testScheduleNextAuction)
 
     am.scheduleNextAuction();
 
-    while(!am.isRobotParticipatingToAuction())
+    bool loop;
+    do {
+        am.lock();
+        loop = !am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
-
-    while(am.isRobotParticipatingToAuction())
+    }
+    while(loop);
+    do {
+        am.lock();
+        loop = am.isRobotParticipatingToAuction();
+        am.unlock();
         ros::spinOnce();
+    }
+    while(loop);
 
     EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction());
 }

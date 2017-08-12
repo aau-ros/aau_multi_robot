@@ -42,7 +42,9 @@ public:
     void cancelScheduledAuction();
     void preventParticipationToAuctions();
     void allowParticipationToAuctions();
-    bool isRobotWaitingForNextAuction();
+    void setOptimalDs(unsigned int optimal_ds_id);
+    void lock();
+    void unlock();
 
     unsigned int _u1, _u2, _u3, _u4, _u5;
     bool _b1, _b2, _b3, _b4;
@@ -54,7 +56,6 @@ private:
     double auction_timeout, reauctioning_timeout, extra_auction_time;
     auction_participation_state_t auction_participation_state;
     bool winner_of_auction;
-    bool waiting_for_next_auction;
     boost::mutex auction_mutex;
     ros::NodeHandle nh;
     ros::Timer terminate_auction_timer, timer_restart_auction;
@@ -87,6 +88,7 @@ private:
     void auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg);
     void endAuctionParticipationCallback(const ros::TimerEvent &event);
     void restartAuctionCallback(const ros::TimerEvent &event);
+    void participateToOtherRobotAuction(double bid_double);
 };
 
 #endif // AUCTION_MANAGER_H
