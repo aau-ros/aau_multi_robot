@@ -4,10 +4,12 @@
 #include <utilities/mock_time_manager.h>
 #include "auction_manager.h"
 #include "mock_bid_computer.h"
-
+#include "mock_sender.h"
 
 #define ROBOT_ID 5
 #define SENDING_SLEEP_TIME 0.3
+
+ros::ServiceServer send_auction_ss;
 
 namespace testing
 {
@@ -50,13 +52,16 @@ TEST(TestAuctionManager, testAuctionStartAndConclusion)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(123);
     mbd->addBid(100);
     mtm->addTime(10);
 
-    am.tryToAcquireDs();
     am.lock();
+    am.tryToAcquireDs();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
     am.unlock();
 
@@ -84,8 +89,11 @@ TEST(TestAuctionManager, testIsRobotWinnerOfMostRecentAuction)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(123);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -114,8 +122,11 @@ TEST(TestAuctionManager, testVictoryWithTwoParticipatingRobots)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(123);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -126,6 +137,7 @@ TEST(TestAuctionManager, testVictoryWithTwoParticipatingRobots)
     msg.auction = 10 + ROBOT_ID;
     msg.bid = 50;
     msg.robot = 222;
+    msg.docking_station = 123;
     am.tryToAcquireDs();
 
     am.lock();
@@ -145,13 +157,49 @@ TEST(TestAuctionManager, testVictoryWithTwoParticipatingRobots)
     EXPECT_TRUE(am.isRobotWinnerOfMostRecentAuction());
 }
 
+TEST(TestAuctionManager, testOptimalDsNotSet)
+{
+    AuctionManager am(ROBOT_ID);
+    MockBidComputer *mbd = new MockBidComputer();
+    MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
+    am.setBidComputer(mbd);
+    am.setTimeManager(mtm);
+    mbd->addBid(100);
+    mtm->addTime(10);
+
+    ros::NodeHandle nh;
+    std::string prefix = "";
+    ros::Publisher auction_starting_pub = nh.advertise<adhoc_communication::EmAuction>(prefix + "adhoc_communication/send_em_auction/auction_starting", 10, true);
+    
+    adhoc_communication::EmAuction msg;
+    msg.auction = 43;
+    msg.bid = 10;
+    msg.robot = 222;
+    msg.docking_station = 7;
+    auction_starting_pub.publish(msg);
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+
+    for(unsigned int i=0; i<5; i++) {
+        ros::spinOnce();
+        am.lock();        
+        EXPECT_FALSE(am.isRobotParticipatingToAuction());        
+        am.unlock();
+        ros::Duration(1).sleep();
+    }
+}
+
 TEST(TestAuctionManager, testLoseWithTwoParticipatingRobots)
 {
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
+    am.setOptimalDs(123);
     mbd->addBid(100);
     mtm->addTime(10);
 
@@ -163,6 +211,7 @@ TEST(TestAuctionManager, testLoseWithTwoParticipatingRobots)
     msg.auction = 10 + ROBOT_ID;
     msg.bid = 500;
     msg.robot = 222;
+    msg.docking_station = 123;
 
     am.tryToAcquireDs();
 
@@ -188,6 +237,8 @@ TEST(TestAuctionManager, testBidReception)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     am.setOptimalDs(7);
@@ -217,6 +268,8 @@ TEST(TestAuctionManager, testEndAuctionStartedByAnotherRobot)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     am.setOptimalDs(78);
@@ -255,6 +308,8 @@ TEST(TestAuctionManager, testWinAuctionStartedByAnotherRobot)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     am.setOptimalDs(432);
@@ -305,6 +360,8 @@ TEST(TestAuctionManager, testDoNotParticipateToAnotherRobotAuction)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     mbd->addBid(100);
@@ -401,6 +458,8 @@ TEST(TestAuctionManager, testInterruptAuction)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     am.setOptimalDs(7);
@@ -453,6 +512,8 @@ TEST(TestAuctionManager, testScheduleNextAuction)
     AuctionManager am(ROBOT_ID);
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
+    MockSender *ms = new MockSender();
+    am.setSender(ms);
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     mbd->addBid(100);
@@ -480,7 +541,7 @@ TEST(TestAuctionManager, testScheduleNextAuction)
 }
 
 int main(int argc, char **argv){
-  ros::init(argc, argv, "energy_mgmt");
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+    ros::init(argc, argv, "energy_mgmt");
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

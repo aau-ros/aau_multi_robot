@@ -71,6 +71,7 @@ add_library(docking src/docking.cpp)
 #add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
 add_library(concrete_bid_computer src/concrete_bid_computer.cpp)
+add_library(concrete_sender src/concrete_sender.cpp)
 add_library(auction_manager src/auction_manager.cpp)
 add_library(docking_station_manager src/docking_station_manager.cpp)
 
@@ -84,6 +85,7 @@ add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(auction_manager
   concrete_bid_computer
+  concrete_sender
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
@@ -155,9 +157,11 @@ if(CATKIN_ENABLE_TESTING)
         test/auction_manager_utest.cpp              
     )
     add_library(mock_bid_computer test/mock_bid_computer.cpp)
+    add_library(mock_sender test/mock_sender.cpp)
     target_link_libraries(auction_manager_utest
         auction_manager
         mock_bid_computer
+        mock_sender
         ${catkin_LIBRARIES}
     )
     add_dependencies(auction_manager_utest

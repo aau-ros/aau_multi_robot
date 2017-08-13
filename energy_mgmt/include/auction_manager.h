@@ -4,9 +4,10 @@
 #include <limits> // std::numeric_limits
 #include <boost/thread.hpp> // boost::mutex
 #include <ros/ros.h>
-#include <adhoc_communication/SendEmAuction.h>
-#include "bid_computer.h"
 #include <utilities/time_manager_interface.h>
+#include "bid_computer.h"
+//#include "auction_structs.h"
+#include "sender.h"
 
 enum auction_participation_state_t {
     IDLE,
@@ -14,27 +15,12 @@ enum auction_participation_state_t {
     MANAGING
 };
 
-//TODO put this here or inside the class? where is better?
-struct auction_t
-{
-    unsigned int auction_id;
-    double starting_time;
-};
-
-struct bid_t //TODO but in adhoc it is called auction, not bid...
-{
-    unsigned int auction_id;
-    unsigned int robot_id;
-    unsigned int ds_id;
-    double bid;
-    double starting_time;
-};
-
 class AuctionManager {
 public:
     AuctionManager(unsigned int robot_id);
     void setBidComputer(BidComputer *bid_computer);
     void setTimeManager(TimeManagerInterface *time_manager);
+    void setSender(Sender *sender);
     void tryToAcquireDs();
     bool isRobotParticipatingToAuction();
     bool isRobotWinnerOfMostRecentAuction();
@@ -53,6 +39,7 @@ public:
 private:
     BidComputer *bid_computer;
     TimeManagerInterface *time_manager;
+    Sender *sender;
     double auction_timeout, reauctioning_timeout, extra_auction_time;
     auction_participation_state_t auction_participation_state;
     bool winner_of_auction;
@@ -71,14 +58,15 @@ private:
     double time_last_participation;
     unsigned int local_auction_id;
     unsigned int num_robots;
+    std::string auction_starting_topic, auction_reply_topic, auction_result_topic;
 
     void initializeVariables(unsigned int robot_id);
     void createSubscribers();
     void createServiceClients();
-    bid_t startNewAuction();
+    auction_t startNewAuction();
     unsigned int nextAuctionId();
     void scheduleAuctionTermination();
-    void sendBid(bid_t bid, std::string topic);
+//    void sendBid(bid_t bid, std::string topic);
     void terminateAuctionCallback(const ros::TimerEvent &event);
     unsigned int computeAuctionWinner();
     bool isThisRobotTheWinner(unsigned int winner_id);
