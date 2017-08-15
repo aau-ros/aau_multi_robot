@@ -2,9 +2,6 @@
 
 ConcreteBidComputer::ConcreteBidComputer() {
     ros::NodeHandle nh_tilde("~");
-    if(!nh_tilde.getParam("num_robots", num_robots))
-        ROS_FATAL("parameter not found");
-//    nh_tilde.param<float>("resolution", resolution, 0.05);
     if(!nh_tilde.getParam("w1", w1))
         ROS_FATAL("parameter not found");
     if(!nh_tilde.getParam("w2", w2))
@@ -24,7 +21,9 @@ ConcreteBidComputer::ConcreteBidComputer() {
     sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &ConcreteBidComputer::cb_battery, this);
     sub_robots = nh.subscribe(my_prefix + "robots", 1000, &ConcreteBidComputer::cb_robots, this);
     sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &ConcreteBidComputer::cb_docking_stations, this);
-
+    sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
+                                                         &ConcreteBidComputer::newOptimalDsCallback, this);
+    pose_sub = nh.subscribe("amcl_pose", 10, &ConcreteBidComputer::poseCallback, this);
     //TODO(IMPORTANT)
 //    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //    fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
@@ -34,8 +33,14 @@ ConcreteBidComputer::ConcreteBidComputer() {
 //    fs_info.close();
 }
 
+void ConcreteBidComputer::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    next_optimal_ds_x = msg.get()->x;
+    next_optimal_ds_y = msg.get()->y;
+}
+
 void ConcreteBidComputer::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..
 {
+    message_mutex.lock();
     ROS_DEBUG("Update l1");
     unsigned int num_ds_vacant = countVacantDss();
     unsigned int num_robots_active = countActiveRobots();
@@ -45,24 +50,23 @@ void ConcreteBidComputer::update_l1() //TODO(minor) would be better to update th
     {
         ROS_ERROR("Invalid number of vacant docking stations: %d!", num_ds_vacant);
         l1 = 0;
-        return;
     }
-    if (num_robots_active < 0)
+    else if (num_robots_active < 0)
     {
         ROS_ERROR("Invalid number of active robots: %d!", num_robots_active);
         l1 = 1;
-        return;
     }
-
-    // Compute l1, considering boundaries
-    if (num_ds_vacant > num_robots_active)
-        l1 = 1;
-    else if (num_robots_active == 0)
-        l1 = 0;
-    else
-        l1 = num_ds_vacant / num_robots_active;
-    ROS_DEBUG("l1: %.1f", l1);
-   
+    else {
+        // Compute l1, considering boundaries
+        if (num_ds_vacant > num_robots_active)
+            l1 = 1;
+        else if (num_robots_active == 0)
+            l1 = 0;
+        else
+            l1 = num_ds_vacant / num_robots_active;
+        ROS_DEBUG("l1: %.1f", l1);
+    }
+    message_mutex.unlock();   
 }
 
 unsigned int ConcreteBidComputer::countVacantDss() {
@@ -93,12 +97,13 @@ unsigned int ConcreteBidComputer::countActiveRobots() {
 
 void ConcreteBidComputer::update_l2()
 {
+    message_mutex.lock();
     ROS_DEBUG("Update l2");
     
-    double time_run = battery.remaining_time_run;
+    double time_run = battery->remaining_time_run;
     ROS_DEBUG("Remaining running time: %.2fs", time_run);
     
-    double time_charge = battery.remaining_time_charge;
+    double time_charge = battery->remaining_time_charge;
     ROS_DEBUG("Remaining time until recharge completion: %.2fs", time_charge);
 
     // Sanity checks
@@ -106,28 +111,28 @@ void ConcreteBidComputer::update_l2()
     {
         ROS_ERROR("Invalid charging time: %.2f!", time_charge);
         l2 = 0;
-        return;
     }
-    if (time_run < 0)
+    else if (time_run < 0)
     {
         ROS_WARN("Run time is negative: %.2f", time_run);
         l2 = 1;
-        return;
     }
-    if (time_run == 0 && time_charge == 0)
+    else if (time_run == 0 && time_charge == 0)
     {
         ROS_ERROR("Invalid run and charging times. Both are zero!");
         l2 = 1;
-        return;
     }
-
-    // Compute l2
-    l2 = time_charge / (time_charge + time_run);
-    ROS_DEBUG("l2: %.1f", l2);
+    else {
+        // Compute l2
+        l2 = time_charge / (time_charge + time_run);
+        ROS_DEBUG("l2: %.1f", l2);
+    }
+    message_mutex.unlock();
 }
 
 void ConcreteBidComputer::update_l3()
 {
+    message_mutex.lock();
     ROS_DEBUG("Update l3");
     
     /* Count number of jobs: count frontiers and reachable frontiers */
@@ -139,129 +144,125 @@ void ConcreteBidComputer::update_l3()
         double dist = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate); // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
         
         /* If it is not possible to compute the distance from this job, it is better to restart the computation of l3 later */
-        if (dist < 0)
-        {
-            ROS_INFO("Computation of l3 failed: it will be recomputed later...");
-            recompute_llh = true;
-            return;
-        }
+//        if (dist < 0)
+//        {
+//            ROS_INFO("Computation of l3 failed: it will be recomputed later...");
+//        }
         
         double dist2;
         if(optimal_ds_is_set)
             dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, optimal_ds_x, optimal_ds_y);
         else
             dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, 0, 0); //TODO 
-        if (dist2 < 0)
-        {
-            ROS_INFO("Computation of l3 failed: it will be recomputed later...");
-            recompute_llh = true;
-            return;
-        }
+//        if (dist2 < 0)
+//        {
+//            ROS_INFO("Computation of l3 failed: it will be recomputed later...");
+//            recompute_llh = true;
+//            return;
+//        }
         
-        if (dist + dist2 <= conservative_maximum_distance_one_way) //NB I'm considering the frontiers that are reachable with current battery life, whereare previously I've count just the unvisited frontiers, not matter if they are reachable or not...
+        if (dist + dist2 <= battery->maximum_traveling_distance / 2) //NB I'm considering the frontiers that are reachable with current battery life, whereare previously I've count just the unvisited frontiers, not matter if they are reachable or not...
             ++num_jobs_close;
     }
     ROS_DEBUG("Number of frontiers: %d", num_jobs);
     ROS_DEBUG("Number of reachable frontiers: %d", num_jobs_close);
     
     /* If the execution flow reaches this point, the (re)computation of l3 succeeded */
-    recompute_llh = false;
+//    recompute_llh = false;
 
     /* Sanity checks */
     if (num_jobs < 0)
     {
         ROS_ERROR("Invalid number of jobs: %d", num_jobs);
         l3 = 1;
-        return;
     }
-    if (num_jobs_close < 0)
+    else if (num_jobs_close < 0)
     {
         ROS_ERROR("Invalid number of jobs close by: %d", num_jobs_close);
         l3 = 1;
-        return;
     }
-    if (num_jobs_close > num_jobs)
+    else if (num_jobs_close > num_jobs)
     {
         ROS_ERROR("Number of jobs close by greater than total number of jobs: %d > %d", num_jobs_close, num_jobs);
         l3 = 0;
-        return;
     }
-
-    /* Compute l3, considering boundaries */
-    if (num_jobs == 0)
-        l3 = 1;
-    else
-        l3 = (num_jobs - num_jobs_close) / num_jobs;
-    ROS_DEBUG("l3: %.1f", l3);
-        
+    else {
+        /* Compute l3, considering boundaries */
+        if (num_jobs == 0)
+            l3 = 1;
+        else
+            l3 = (num_jobs - num_jobs_close) / num_jobs;
+        ROS_DEBUG("l3: %.1f", l3);
+    }
+    message_mutex.unlock();
 }
 
-void ConcreteBidComputer::update_l4() //TODO(minor) comments
+void ConcreteBidComputer::update_l4()
 {
+    message_mutex.lock();
     ROS_DEBUG("Update l4");
     
-    if (!optimal_ds_is_set)
-    {
-        ROS_DEBUG("No optimal DS");
-        l4 = 0;
-        return;
-    }
+//    if (!optimal_ds_is_set)
+//    {
+//        ROS_DEBUG("No optimal DS");
+//        l4 = 0;
+//    }
     
     if( ds.size() == 0 || jobs.size() == 0)
     {
         ROS_DEBUG("No frontiers");
         l4 = 0;
-        return;
     }
-    
-    // get distance to docking station
-    double dist_ds = -1;
-    dist_ds = distance_from_robot(optimal_ds_x, optimal_ds_y); // use euclidean distance to make it faster
-    //ROS_ERROR("%f, %f", ds[i].x, ds[i].y);
-    if (dist_ds < 0)
-    {
-        ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
-        recompute_llh = true;
-    }
-    ROS_DEBUG("Distance to optimal DS: %.2f", dist_ds);
+    else {
+        // get distance to docking station
+        double dist_ds = -1;
+        if(optimal_ds_is_set)
+            dist_ds = distance_from_robot(optimal_ds_x, optimal_ds_y); // use euclidean distance to make it faster
+        else
+            dist_ds = distance_from_robot(0, 0); //TODO
+//        if (dist_ds < 0)
+//        {
+//            ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
+//            recompute_llh = true;
+//        }
+        ROS_DEBUG("Distance to optimal DS: %.2f", dist_ds);
 
-    // get distance to closest job
-    double dist_job = std::numeric_limits<int>::max();
-    for (unsigned int i = 0; i < jobs.size(); i++)
-    {
-        double dist_job_temp = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
-        if (dist_job_temp < 0)
+        // get distance to closest job
+        double dist_job = std::numeric_limits<int>::max();
+        for (unsigned int i = 0; i < jobs.size(); i++)
         {
-            ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
-            recompute_llh = true;
-            return;
+            double dist_job_temp = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate);  // use euclidean distance to make it faster //TODO(minor) sure? do the same somewhere else?
+//            if (dist_job_temp < 0)
+//            {
+//                ROS_ERROR("Computation of l4 failed: it will be recomputed later...");
+//                recompute_llh = true;
+//            }
+            if (dist_job_temp < dist_job)
+                dist_job = dist_job_temp;
         }
-        if (dist_job_temp < dist_job)
-            dist_job = dist_job_temp;
+        ROS_DEBUG("Distance to closest frontier: %.2f", dist_job);
+        
+//        recompute_llh = false;
+
+        // sanity checks
+        if (dist_job < 0 || dist_job >= std::numeric_limits<int>::max())
+        {
+            ROS_ERROR("Invalid distance to closest job: %.3f", dist_job);
+            l4 = 0;
+        }
+        else if (dist_job == 0 && dist_ds == 0)
+        {
+            ROS_ERROR("Invalid distances to closest job and docking station. Both are zero!");
+            l4 = 0;
+        }      
+        else {
+            // compute l4
+            l4 = dist_job / (dist_job + dist_ds);
+            ROS_DEBUG("l4: %.1f", l4);
+//            recompute_llh = false;
+        }
     }
-    ROS_DEBUG("Distance to closest frontier: %.2f", dist_job);
-    
-    recompute_llh = false;
-
-    // sanity checks
-    if (dist_job < 0 || dist_job >= std::numeric_limits<int>::max())
-    {
-        ROS_ERROR("Invalid distance to closest job: %.3f", dist_job);
-        l4 = 0;
-        return;
-    }
-    if (dist_job == 0 && dist_ds == 0)
-    {
-        ROS_ERROR("Invalid distances to closest job and docking station. Both are zero!");
-        l4 = 0;
-        return;
-    }      
-
-    // compute l4
-    l4 = dist_job / (dist_job + dist_ds);
-    ROS_DEBUG("l4: %.1f", l4);
-
-    recompute_llh = false;
+    message_mutex.unlock();
 }
 
 double ConcreteBidComputer::distance_from_robot(double x, double y) {
@@ -271,6 +272,7 @@ double ConcreteBidComputer::distance_from_robot(double x, double y) {
 }
 
 double ConcreteBidComputer::getBid() {
+    llh = l1 * w1 + l2 * w2 + l3 * w3 + l4 * w4;
     return llh;
 }
 
@@ -283,23 +285,9 @@ double ConcreteBidComputer::distance(double start_x, double start_y, double goal
 
 void ConcreteBidComputer::cb_battery(const explorer::battery_state::ConstPtr &msg)
 {
-    //ROS_DEBUG("Received battery state");
-    next_battery = msg;
-
-    /* Store new battery state */
-    battery.charging = msg.get()->charging;
-    battery.soc = msg.get()->soc;
-    battery.remaining_time_charge = msg.get()->remaining_time_charge;
-    battery.remaining_time_run = msg.get()->remaining_time_run;
-    battery.remaining_distance = msg.get()->remaining_distance;
-
-    next_remaining_distance = battery.remaining_distance;
-    
-    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
-    
-    //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
-    if(maximum_travelling_distance < msg.get()->remaining_distance)
-        maximum_travelling_distance = msg.get()->remaining_distance;
+    ROS_DEBUG("Received battery state");
+    next_battery = msg;    
+//    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 }
 
 
@@ -339,13 +327,14 @@ bool ConcreteBidComputer::isActiveState(state_t state) {
 
 void ConcreteBidComputer::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 {
+    ROS_INFO("received frontiers");
     next_jobs = msg.get()->frontier_element;
 }
 
 void ConcreteBidComputer::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
-    ROS_INFO("received ds%d", msg.get()->id);
     ds_mutex.lock();
+    ROS_INFO("received ds%d", msg.get()->id);    
 
     /* Check if DS is in list already */
     bool new_ds = true;
@@ -384,6 +373,11 @@ void ConcreteBidComputer::cb_docking_stations(const adhoc_communication::EmDocki
 void ConcreteBidComputer::processMessages() {
     message_mutex.lock();
     jobs = next_jobs;
+    optimal_ds_x = next_optimal_ds_x;
+    optimal_ds_y = next_optimal_ds_y;
+    robot_x = next_robot_x;
+    robot_y = next_robot_y;
+    battery = next_battery;
     message_mutex.unlock();
 }
 
@@ -391,4 +385,12 @@ void ConcreteBidComputer::abs_to_rel(double absolute_x, double absolute_y, doubl
 {
     *relative_x = absolute_x - origin_absolute_x;
     *relative_y = absolute_y - origin_absolute_y;
+}
+
+void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {        
+    message_mutex.lock();
+    ROS_INFO("received robot position");
+    next_robot_x = pose->pose.pose.position.x;
+    next_robot_y = pose->pose.pose.position.y;
+    message_mutex.unlock();
 }

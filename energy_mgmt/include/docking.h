@@ -577,6 +577,7 @@ class docking
 
     ros::Time changed_state_time;
     void conclude_auction();
+    void send_optimal_ds();
 
 //    AuctionManager auction_manager; //TODO
 

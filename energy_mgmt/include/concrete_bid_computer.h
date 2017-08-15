@@ -9,6 +9,7 @@
 #include <adhoc_communication/EmRobot.h>
 #include <explorer/battery_state.h>
 #include <robot_state/robot_state_management.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "bid_computer.h"
 
 enum state_t
@@ -95,22 +96,19 @@ private:
     double w1, w2, w3, w4;
     double l1, l2, l3, l4;
     double llh;
-    double num_robots;
     double origin_absolute_x, origin_absolute_y;
-    bool recompute_llh;
+//    bool recompute_llh;
     bool optimal_ds_is_set;
     std::vector<adhoc_communication::ExpFrontierElement> jobs, next_jobs;
     double optimal_ds_x, optimal_ds_y;
-    double robot_x, robot_y;
+    double next_optimal_ds_x, next_optimal_ds_y; 
+    double robot_x, robot_y, next_robot_x, next_robot_y;
     std::vector<ds_t> ds;
     std::vector<robot_t> robots;
-    double conservative_maximum_distance_one_way;
-    explorer::battery_state battery;
-    double next_remaining_distance, maximum_travelling_distance;
-    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations;
+    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_new_optimal_ds, pose_sub;
     adhoc_communication::EmDockingStation::ConstPtr em_docking_station_msg;
-    explorer::battery_state::ConstPtr next_battery;
     std::mutex robot_mutex, ds_mutex, message_mutex;
+    explorer::battery_state::ConstPtr battery, next_battery;
 
     void update_l1();
     unsigned int countVacantDss();
@@ -124,6 +122,8 @@ private:
     void cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg);
     void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg);
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     bool isActiveState(state_t state);
     void abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y);
 };

@@ -3575,17 +3575,25 @@ void docking::addDistance(double x1, double y1, double x2, double y2, double dis
 //    if(ds_selection_policy != 2 && ds_selection_policy != 3)
 //}
 
+void docking::send_optimal_ds() {
+    adhoc_communication::EmDockingStation msg_optimal;
+    msg_optimal.id = get_optimal_ds_id();
+    msg_optimal.x = get_optimal_ds_x();
+    msg_optimal.y = get_optimal_ds_y();
+    pub_new_optimal_ds.publish(msg_optimal);
+}
+
 void docking::ds_management() {
     ROS_INFO("ds_management started");
-    bool printed_stuck = false;
+//    bool printed_stuck = false;
     ros::Time last_sent = ros::Time::now();
     while(ros::ok() && !finished_bool){
-        if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(2*60))) {
-            log_major_error("robot stuck in queue (2)!");
-            printed_stuck = true;
-        }
-        else
-            printed_stuck = false;
+//        if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(2*60))) {
+//            log_major_error("robot stuck in queue (2)!");
+//            printed_stuck = true;
+//        }
+//        else
+//            printed_stuck = false;
             
         discover_docking_stations();    
         check_reachable_ds();   
@@ -3594,6 +3602,8 @@ void docking::ds_management() {
         log_optimal_ds();
         if(ros::Time::now() - last_sent > ros::Duration(5)) {
             send_ds();
+            send_robot();
+            send_optimal_ds();
             last_sent = ros::Time::now();   
         }
         ros::Duration(1).sleep();
