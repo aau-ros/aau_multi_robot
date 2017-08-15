@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <launch>
-    <test pkg="energy_mgmt" test-name="auction_manager_utest" type="auction_manager_utest" time-limit="120.0" >
+    <test pkg="energy_mgmt" test-name="auction_observer_utest" type="auction_observer_utest" time-limit="120.0" >
         <param name="num_robots" value="2" />
         <param name="auction_duration" value="3" />
         <param name="sleep_time_between_two_participations" value="5" />
-        <param name="reauctioning_timeout" value="10" />
+        <param name="reauctioning_timeout" value="30" />
         <param name="extra_auction_time" value="1" />
     </test>    
 </launch>

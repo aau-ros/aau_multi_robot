@@ -15,7 +15,7 @@
 #include <adhoc_communication/EmRobot.h>
 #include <utilities/data_logger.h>
 
-#include <utilities/time_manager_interface.h>
+#include <utilities/time_manager.h>
 #include "battery_state_updater.h"
 
 

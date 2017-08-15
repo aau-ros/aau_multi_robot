@@ -1,0 +1,22 @@
+#ifndef MOCK_AUCTION_MANAGER_H
+#define MOCK_AUCTION_MANAGER_H
+
+#include "auction_manager_interface.h"
+
+class MockAuctionManager : public AuctionManagerInterface {
+public:
+    auction_t current_auction_test;
+    bool participating_test;
+    bool auction_started_test;
+    bool winner_test;
+
+    MockAuctionManager();
+    void tryToAcquireDs();
+    bool isRobotParticipatingToAuction();
+    bool isRobotWinnerOfMostRecentAuction();
+    auction_t getCurrentAuction();
+    void lock();
+    void unlock();
+};
+
+#endif // MOCK_AUCTION_MANAGER_H

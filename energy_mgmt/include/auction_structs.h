@@ -9,9 +9,9 @@ struct auction_t
 {
     unsigned int auction_id;
     double starting_time;
+    double ending_time;
     unsigned int auctioneer;
-    unsigned int docking_station_id;
-//    double ending_time;
+    unsigned int docking_station_id;    
     unsigned int winner_robot;
 };
 

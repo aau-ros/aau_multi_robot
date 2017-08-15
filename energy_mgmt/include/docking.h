@@ -103,16 +103,11 @@ class docking
     void join_all_multicast_groups();
     void wait_for_explorer();
     void wait_battery_info();
-    //void recompute_MST();
-    void update_llh();
     void start_join_timer();
     bool finished_bool;
-    void test();
-    void test_2(const std_msgs::Empty &msg);
     void update_reamining_distance();
     
-    ros::Publisher pub_test, pub_new_ds_on_graph, pub_ds_count;
-    ros::Subscriber sub_test;
+    ros::Publisher pub_new_ds_on_graph, pub_ds_count;
     void log_optimal_ds();
     
     /**
@@ -123,7 +118,6 @@ class docking
     void discover_docking_stations();
     
     void send_robot();
-    void send_fake_msg();
     void check_reachable_ds();
     void runtime_checks();
     void spinOnce();
@@ -137,15 +131,12 @@ class docking
      */
     ros::NodeHandle nh;
 
-    /**
-     * Service client for sending an auction.
-     */
-    ros::ServiceClient sc_send_auction, sc_send_docking_station, sc_send_robot;
+    ros::ServiceClient sc_send_docking_station, sc_send_robot;
 
     /**
      * Subscribers for the required topics.
      */
-    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_auction_starting, sub_auction_reply, sub_resend_ds_list;
+    ros::Subscriber sub_battery, sub_robots, sub_jobs, sub_docking_stations, sub_resend_ds_list;
 
     /**
      * Callbacks for the subscribed topics.
@@ -154,44 +145,6 @@ class docking
     void cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg);
     void cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg);
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg);
-    void cb_new_auction(const adhoc_communication::EmAuction::ConstPtr &msg);
-
-    /**
-     * Get the likelihood value as a linear combination of the values l1 to l4.
-     * @return double: The likelihood value.
-     */
-    double get_llh();
-
-    /**
-     * Update the likelihood value l1.
-     */
-    void update_l1();
-
-    /**
-     * Update the likelihood value l2.
-     */
-    void update_l2();
-
-    /**
-     * Update the likelihood value l3.
-     */
-    void update_l3();
-
-    /**
-     * Update the likelihood value l4.
-     */
-    void update_l4();
-    
-    void update_l5();
-
-    /**
-     * Send an auction to a multicast group.
-     * @param string multicast_group: The multicast group to send the auction to.
-     * @param adhoc_communication::EmAuction auction: The auction that will be sent.
-     * @param string topic: The topic name which the auction will be published in.
-     * @return bool: Success of transmission.
-     */
-    bool auction_send_multicast(string multicast_group, adhoc_communication::EmAuction auction, string topic);
 
     /**
      * Compute the length of the trajectory from the robots current position to a given goal.
@@ -216,31 +169,16 @@ class docking
     double distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean = false);
 
     /**
-     * Navigation function and costmap for calculating paths.
-     */
-    // navfn::NavfnROS nav;
-    costmap_2d::Costmap2DROS *costmap;
-
-    /**
      * Distance until which jobs are still considered close by (in meters).
      */
     double distance_close;
 
     /**
-     * The coordinate frame used for calculating path lengths.
-     */
-    string move_base_frame;
-
-    /**
      * Name and ID of the robot.
      */
     string robot_name, robot_prefix;
-    int robot_id;
 
-    /**
-     * ID of the last auction.
-     */
-    int auction_id, local_auction_id;
+    int robot_id;
 
     /**
      * A vector of all robots with their current state.
@@ -340,17 +278,6 @@ class docking
     //vector<job_t> jobs;
     vector<adhoc_communication::ExpFrontierElement> jobs;
 
-    /**
-     * Likelihood values for going recharging. A linear combination of the values is used in the auctions.
-     */
-    double l1, l2, l3, l4, l5;
-
-    /**
-     * The weights for the weighted sum of the likelihood values l1,...,l4.
-     */
-    double w1, w2, w3, w4, w5;
-
-    // F
     ros::Publisher pub_ds, pub_new_optimal_ds, pub_finish;
     
     /* Currently optimal DS, i.e., the DS for which the robot would start an uaction or take part to an already started auction */
@@ -362,15 +289,11 @@ class docking
     
     ros::Subscriber sub_robot_position, sub_auction_winner_adhoc;
     ros::ServiceServer ss_send_docking_station;
-    bool foo(adhoc_communication::SendEmDockingStation::Request &req,
-             adhoc_communication::SendEmDockingStation::Response &res);
     ros::Publisher pub_adhoc_new_best_ds;
     ros::Subscriber sub_adhoc_new_best_ds, sub_all_points, sub_recharge;
     ros::ServiceClient sc_trasform;
 
-    void timerCallback(const ros::TimerEvent &);
-
-    ros::Timer timer_restart_auction, timer_finish_auction, timer_recompute_ds_graph;
+    ros::Timer timer_recompute_ds_graph;
     
     std::vector<ros::Timer> debug_timers;
     
@@ -421,23 +344,12 @@ class docking
     void vacant_ds_callback(const std_msgs::Empty::ConstPtr &);
     void occupied_ds_callback(const std_msgs::Empty::ConstPtr &);
 
-
-
-    void cb_auction_reply(const adhoc_communication::EmAuction::ConstPtr &);
-
-    bool managing_auction;
-
     void check_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     bool need_to_charge;
 
-    std::vector<ros::Timer> timers;
+    ros::Publisher pub_moving_along_path;
 
-    void end_auction_participation_timer_callback(const ros::TimerEvent &event);
-
-    ros::Publisher pub_lost_own_auction, pub_won_auction, pub_lost_other_robot_auction, pub_auction_result,
-        pub_moving_along_path;
-    bool lost_own_auction, auction_winner, lost_other_robot_auction, update_state_required;
     void abort_charging_callback(const std_msgs::Empty &msg);
 
     ros::Subscriber sub_robot_pose, sub_robot;
@@ -447,15 +359,9 @@ class docking
 
     void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 
-    double llh;
-
     string my_prefix, my_node;
 
-
-
     std::string log_path;
-
-    void start_new_auction();
 
     void set_optimal_ds_vacant(bool vacant);
 
@@ -533,14 +439,11 @@ class docking
     void adhoc_ds(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void points(const adhoc_communication::MmListOfPoints::ConstPtr &msg);
     void cb_recharge(const std_msgs::Empty &msg);
-    void cb_auction_result(const adhoc_communication::EmAuction::ConstPtr &msg);
 
     std::string csv_file, csv_file_2, csv_file_3, info_file, graph_file, ds_filename;
     std::fstream fs_csv, fs2_csv, fs3_csv, fs_info, graph_fs, ds_fs;
     
     ros::Time time_start;
-    
-    bool started_own_auction;
     
     std::vector< std::vector<float> > ds_graph;
     std::vector< std::vector<int> > ds_mst; //TODO woubl be better a 2d vector of bool
@@ -565,7 +468,6 @@ class docking
     bool going_to_ds;
     
     int extra_time;
-    
     
     float conservative_remaining_distance_with_return();
     float conservative_maximum_distance_with_return();
@@ -609,8 +511,6 @@ class docking
     std::string original_log_path;
     std::fstream major_errors_fstream;
     
-    
-    
     void log_major_error(std::string text);
     void log_minor_error(std::string text);
     void path_callback(const std_msgs::String msg);
@@ -644,8 +544,8 @@ class docking
   	void start_periodic_auction();
     int next_optimal_ds_id;
     double next_remaining_distance, current_remaining_distance;
-    boost::mutex jobs_mutex, robot_mutex, mutex_message, mutex_auction_result;
-    std::mutex optimal_ds_mutex, mutex_ds_graph, mutex_auction;
+    boost::mutex jobs_mutex, robot_mutex, mutex_message;
+    std::mutex optimal_ds_mutex, mutex_ds_graph;
     boost::shared_mutex ds_mutex;
     ros::Subscriber sub_goal_ds_for_path_navigation;
     unsigned int  path_navigation_tries;
@@ -665,7 +565,7 @@ class docking
     ros::Publisher pub_force_in_queue;
     int old_target_ds_id;
     bool waiting_to_discover_a_ds;
-    ros::Time  starting_time;
+    ros::Time starting_time;
     std::unordered_map <std::string, unsigned int> topic_ids;
     std::unordered_map <std::string, std::unordered_map <unsigned int, unsigned int> > received_topic_ids;
     unsigned int getAndUpdateMessageIdForTopic(std::string topic);
@@ -674,10 +574,8 @@ class docking
     double get_optimal_ds_timestamp();
     std::vector<std::string> enum_string;
     std::string get_text_for_enum(int enumVal);
-    std::vector<auction_t> auctions;
-    bool robot_is_auctioning;
-    bool expired_own_auction, discard_auction;
-    ros::Time changed_state_time, start_own_auction_time;
+
+    ros::Time changed_state_time;
     void conclude_auction();
 
 //    AuctionManager auction_manager; //TODO
@@ -686,7 +584,6 @@ class docking
     std::vector<std::vector<double> > distance_list;
     bool test_mode;
     void addDistance(double x1, double y1, double x2, double y2, double distance);
-    
     
 };
 

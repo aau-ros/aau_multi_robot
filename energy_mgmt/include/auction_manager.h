@@ -1,21 +1,9 @@
 #ifndef AUCTION_MANAGER_H
 #define AUCTION_MANAGER_H
 
-#include <limits> // std::numeric_limits
-#include <boost/thread.hpp> // boost::mutex
-#include <ros/ros.h>
-#include <utilities/time_manager_interface.h>
-#include "bid_computer.h"
-//#include "auction_structs.h"
-#include "sender.h"
+#include "auction_manager_interface.h"
 
-enum auction_participation_state_t {
-    IDLE,
-    PARTICIPATING,
-    MANAGING
-};
-
-class AuctionManager {
+class AuctionManager : public AuctionManagerInterface {
 public:
     AuctionManager(unsigned int robot_id);
     void setBidComputer(BidComputer *bid_computer);
@@ -24,11 +12,10 @@ public:
     void tryToAcquireDs();
     bool isRobotParticipatingToAuction();
     bool isRobotWinnerOfMostRecentAuction();
-    void scheduleNextAuction();
-    void cancelScheduledAuction();
     void preventParticipationToAuctions();
     void allowParticipationToAuctions();
     void setOptimalDs(unsigned int optimal_ds_id);
+    auction_t getCurrentAuction();
     void lock();
     void unlock();
 
@@ -61,6 +48,7 @@ private:
     std::string auction_starting_topic, auction_reply_topic, auction_result_topic;
 
     void initializeVariables(unsigned int robot_id);
+    void loadParameters();
     void createSubscribers();
     void createServiceClients();
     auction_t startNewAuction();
@@ -76,7 +64,7 @@ private:
     void auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg);
     void endAuctionParticipationCallback(const ros::TimerEvent &event);
     void restartAuctionCallback(const ros::TimerEvent &event);
-    void participateToOtherRobotAuction(double bid_double);
+    auction_t participateToOtherRobotAuction(double bid_double, const adhoc_communication::EmAuction::ConstPtr &msg);
 };
 
 #endif // AUCTION_MANAGER_H
