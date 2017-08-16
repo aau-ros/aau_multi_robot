@@ -35,4 +35,15 @@
 
         <!-- <param name="move_base_frame" value="$(arg robot_prefix)/map"/> -->
     </node>
+
+    <node pkg="energy_mgmt" type="auction_mgmt" name="auction_mgmt" output="$(arg output)">
+        <param name="x" value ="$(arg x)" />
+        <param name="y" value ="$(arg y)" />
+        <param name="robot_prefix" value ="$(arg robot_prefix)" />
+        <param name="num_robots" value="$(arg num_robots)" />
+        <rosparam file="$(find energy_mgmt)/param/durations.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/extra_params.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/llh.yaml" command="load"/>
+    </node>
 </launch>

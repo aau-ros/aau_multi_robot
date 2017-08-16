@@ -23,9 +23,9 @@ public:
     virtual void tryToAcquireDs() = 0;
     virtual bool isRobotParticipatingToAuction() = 0;
     virtual bool isRobotWinnerOfMostRecentAuction() = 0;
-    void preventParticipationToAuctions();
-    void allowParticipationToAuctions();
-    void setOptimalDs(unsigned int optimal_ds_id);
+    virtual void preventParticipationToAuctions() = 0;
+    virtual void allowParticipationToAuctions() = 0;
+    virtual void setOptimalDs(unsigned int optimal_ds_id) = 0;
     virtual auction_t getCurrentAuction() = 0;
     virtual void lock() = 0;
     virtual void unlock() = 0;

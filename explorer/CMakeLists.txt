@@ -83,6 +83,8 @@ add_service_files(
    #RobotPosition.srv
    Distance.srv
    DistanceFromRobot.srv
+   ChargingCompleted.srv
+   AuctionResult.srv
 )
 
 ## Generate actions in the 'action' folder

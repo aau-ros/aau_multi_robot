@@ -166,9 +166,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
-    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
+//    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
-    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
+//    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
     sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &docking::cb_docking_stations, this);
     sub_check_vacancy = nh.subscribe("adhoc_communication/check_vacancy", 1000, &docking::check_vacancy_callback, this);
     sub_resend_ds_list = nh.subscribe("adhoc_communication/resend_ds_list", 1000, &docking::resend_ds_list_callback, this);
@@ -275,6 +275,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
             << origin_absolute_y << "," << std::endl;
     fs_info.close();
     
+    get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
     
 }
 
@@ -427,8 +428,8 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
-    ROS_ERROR("auctions.size() == 0");
-    if (ds.size() > 0 && !moving_along_path && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+
+    if (ds.size() > 0 && can_update_ds() && !moving_along_path && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
@@ -879,33 +880,35 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             )
             {
                 
-                ROS_ERROR("auctions.size()");
+                    if(can_update_ds()) {
             
-                    optimal_ds_mutex.lock();                
+                        optimal_ds_mutex.lock();                
 
-                    waiting_to_discover_a_ds = false;
-                    finished_bool = false; //TODO(minor) find better place...
-    //                changed = true;
-                    set_optimal_ds(next_optimal_ds_id);
-                    
-                    if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
-                        log_major_error("OH NO!!!!!!!!!!!!");
-                        ROS_INFO("%d", get_optimal_ds_id());
+                        waiting_to_discover_a_ds = false;
+                        finished_bool = false; //TODO(minor) find better place...
+        //                changed = true;
+                        set_optimal_ds(next_optimal_ds_id);
+                        
+                        if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
+                            log_major_error("OH NO!!!!!!!!!!!!");
+                            ROS_INFO("%d", get_optimal_ds_id());
+                        }
+
+                        old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+
+                        /* Update parameter l4 */
+    //                    update_l4();
+                        
+                        /* Notify explorer about the optimal DS change */
+                        adhoc_communication::EmDockingStation msg_optimal;
+                        msg_optimal.id = get_optimal_ds_id();
+                        msg_optimal.x = get_optimal_ds_x();
+                        msg_optimal.y = get_optimal_ds_y();
+                        pub_new_optimal_ds.publish(msg_optimal);
+
+                        optimal_ds_mutex.unlock(); 
+                
                     }
-
-                    old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
-
-                    /* Update parameter l4 */
-//                    update_l4();
-                    
-                    /* Notify explorer about the optimal DS change */
-                    adhoc_communication::EmDockingStation msg_optimal;
-                    msg_optimal.id = get_optimal_ds_id();
-                    msg_optimal.x = get_optimal_ds_x();
-                    msg_optimal.y = get_optimal_ds_y();
-                    pub_new_optimal_ds.publish(msg_optimal);
-
-                    optimal_ds_mutex.unlock(); 
             
             }
 
@@ -1032,58 +1035,58 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
     return -1;
 }
 
-void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TODO(minor) better name and do better
+void docking::handle_robot_state()
 {
     // TODO(minor) better update...
     for(unsigned int i=0; i<robots.size(); i++)
         if(robots[i].id == robot_id) {
-            if (msg.get()->state == exploring || msg.get()->state == fully_charged || msg.get()->state == moving_to_frontier ||
-                msg.get()->state == leaving_ds)
+            if (next_robot_state == exploring || next_robot_state == fully_charged || next_robot_state == moving_to_frontier ||
+                next_robot_state == leaving_ds)
                 robots[i].simple_state = active;
             else
                 robots[i].simple_state = idle;
         }
         
-    if(robot_state == charging && (msg.get()->state != fully_charged && msg.get()->state != leaving_ds)) {
+    if(robot_state == charging && (next_robot_state != fully_charged && next_robot_state != leaving_ds)) {
         log_major_error("invalid state after charging!!!");
         ROS_INFO("current state: charging");   
-        ROS_INFO("next state: %d", msg.get()->state);
+        ROS_INFO("next state: %d", next_robot_state);
     }
     
-    if(has_to_free_optimal_ds && (msg.get()->state == fully_charged || msg.get()->state == leaving_ds) ) {
+    if(has_to_free_optimal_ds && (next_robot_state == fully_charged || next_robot_state == leaving_ds) ) {
 //        set_optimal_ds_vacant(true);
         free_ds(id_ds_to_be_freed);
         has_to_free_optimal_ds = false;
     }
         
-    if (msg.get()->state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
+    if (next_robot_state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
         going_to_ds = false;
         
-//    if (has_to_free_optimal_ds && msg.get()->state != fully_charged && msg.get()->state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
+//    if (has_to_free_optimal_ds && next_robot_state != fully_charged && next_robot_state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
 //     {
 //            has_to_free_optimal_ds = false;
 //            set_optimal_ds_vacant(true);
 //    }
 
-    if (msg.get()->state == in_queue)
+    if (next_robot_state == in_queue)
     {
         ;
     }
-    else if (msg.get()->state == going_charging)
+    else if (next_robot_state == going_charging)
     {
         ;  // ROS_ERROR("\n\t\e[1;34m Robo t going charging!!!\e[0m");
     }
-    else if (msg.get()->state == charging)
+    else if (next_robot_state == charging)
     {
         id_ds_to_be_freed = get_optimal_ds_id();
         has_to_free_optimal_ds = true;
         set_optimal_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
-    else if (msg.get()->state == going_checking_vacancy)
+    else if (next_robot_state == going_checking_vacancy)
     {
         ;  // ROS_ERROR("\n\t\e[1;34m going checking vacancy!!!\e[0m");
     }
-    else if (msg.get()->state == checking_vacancy)
+    else if (next_robot_state == checking_vacancy)
     {
 //        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
 //            log_major_error("sending invalid DS id 5!!!");
@@ -1100,17 +1103,20 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
-    else if (msg.get()->state == auctioning)
+    else if (next_robot_state == auctioning)
     {
         ROS_INFO("Robot needs to recharge");
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
             ROS_ERROR("calling start_new_auction()");
-//            start_new_auction();  
+//            start_new_auction(); 
+
+        if(!optimal_ds_is_set())
+            log_major_error("!optimal_ds_is_set");
                                   // TODO(minor) only if the robot has not been just interrupted from recharging
     }
-    else if (msg.get()->state == auctioning_2) {
+    else if (next_robot_state == auctioning_2) {
         if(ds_selection_policy == 2)
 		{
 			if(finished_bool) {
@@ -1151,7 +1157,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
             pub_finish.publish(msg);
         }   
     }
-    else if (msg.get()->state == auctioning_3) {
+    else if (next_robot_state == auctioning_3) {
         if(graph_navigation_allowed) {
 	        compute_and_publish_path_on_ds_graph_to_home();
             if(finished_bool) {
@@ -1176,39 +1182,42 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
             pub_finish.publish(msg);
         }   
     }
-    else if (msg.get()->state == fully_charged || msg.get()->state == leaving_ds)
+    else if (next_robot_state == fully_charged || next_robot_state == leaving_ds)
     {
         going_to_ds = false;
         //free_ds(id_ds_to_be_freed); //it is better to release the DS when the robot has exited the fully_charged or leaving_ds state, but sometimes (at the moment for unknown reasones) this takes a while, even if the robot has already phisically released the DS...
     }
-    else if (msg.get()->state == moving_to_frontier || msg.get()->state == going_in_queue)
+    else if (next_robot_state == moving_to_frontier || next_robot_state == going_in_queue)
         ;
-    else if(msg.get()->state == exploring)
+    else if(next_robot_state == exploring)
     {
         ;
     }
-    else if (msg.get()->state == finished)
+    else if (next_robot_state == finished)
     {
         finalize();
     }
-    else if (msg.get()->state == stuck)
+    else if (next_robot_state == stuck)
     {
         finalize();
     }
-    else if (msg.get()->state == dead)
+    else if (next_robot_state == dead)
     {
         finalize();
     }
-    else if (msg.get()->state == moving_away_from_ds)
+    else if (next_robot_state == moving_away_from_ds)
     {
         ;
     }
-    else if (msg.get()->state == stopped)
+    else if (next_robot_state == stopped)
     {
         ;
     }
-    else if (msg.get()->state == exploring_for_graph_navigation)
+    else if (next_robot_state == exploring_for_graph_navigation)
     {
+        ;
+    }
+    else if(next_robot_state == choosing_next_action) {
         ;
     }
     else
@@ -1220,7 +1229,7 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     
     
     
-//    if(robot->state == charging && msg.get()->state != charging)
+//    if(robot->state == charging && next_robot_state != charging)
 //        for (unsigned int j = 0; j < ds.size(); j++)
 //            if (ds[j].id == robot->charging_ds) {
 //                ds_mutex.lock();
@@ -1239,14 +1248,14 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
             
             
 
-    robot_state = static_cast<state_t>(msg.get()->state);
+    robot_state = next_robot_state;
     robot->state = robot_state;
     
     
     
     
     
-//    if(robot->state == charging && msg.get()->state == charging)
+//    if(robot->state == charging && next_robot_state == charging)
 //        for (unsigned int j = 0; j < ds.size(); j++)
 //            if (ds[j].id == get_optimal_ds_id()) {
 //                ds_mutex.lock();
@@ -1269,6 +1278,13 @@ void docking::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)  // TO
     
     send_robot();
     
+}
+
+void docking::get_robot_state() {
+    robot_state::GetRobotState msg;
+    while(!get_robot_state_sc.call(msg))
+        ROS_ERROR("get state failed");
+    next_robot_state = static_cast<state_t>(msg.response.robot_state);
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -3408,6 +3424,7 @@ bool docking::set_optimal_ds(int id) {
         ROS_INFO("Change optimal DS: (none) -> ds%d", optimal_ds_id);
         
     optimal_ds_set = true;
+    send_optimal_ds();
     return true;
 }
 
@@ -3551,15 +3568,15 @@ double docking::get_optimal_ds_timestamp() {
     return optimal_ds_timestamp;
 }
 
-std::string docking::get_text_for_enum(int enumVal)
-{
-    if((unsigned int)enumVal >= enum_string.size()) {
-        log_major_error("segmenv in get_text_for_enum");
-        return "";
-    }
-    else
-        return enum_string[enumVal];
-}
+//std::string docking::get_text_for_enum(int enumVal)
+//{
+//    if((unsigned int)enumVal >= enum_string.size()) {
+//        log_major_error("segmenv in get_text_for_enum");
+//        return "";
+//    }
+//    else
+//        return enum_string[enumVal];
+//}
 
 void docking::addDistance(double x1, double y1, double x2, double y2, double distance) {
     std::vector<double> distance_elem;
@@ -3628,4 +3645,8 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
     //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
     if(maximum_travelling_distance < msg.get()->remaining_distance)
         maximum_travelling_distance = msg.get()->remaining_distance;
+}
+
+bool docking::can_update_ds() {
+    return robot_state != auctioning && robot_state != auctioning_2 && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != charging && robot_state != going_in_queue && robot_state != in_queue;
 }

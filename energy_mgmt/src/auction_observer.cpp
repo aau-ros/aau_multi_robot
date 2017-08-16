@@ -5,6 +5,12 @@ AuctionObserver::AuctionObserver() {
     error_1 = false, error_2 = false, error_3 = false;
     robot_state = robot_state::INITIALIZING;
     loadParameters();
+    ros::NodeHandle nh;
+    sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
+                                                         &AuctionObserver::newOptimalDsCallback, this);
+                                                         
+    set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
+    get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 }
 
 void AuctionObserver::loadParameters() {
@@ -50,45 +56,76 @@ void AuctionObserver::sanityChecks() {
 }
 
 void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO we should use a visitor //TODO this function is quite ugly...
+    ROS_INFO("actAccordingToRobotStateAndAuctionResult");
     robot_state = getRobotState();
 
     auction_manager->lock();
 
     if(!auction_manager->isRobotParticipatingToAuction()) {
-        if(robot_state == robot_state::AUCTIONING) { //TODO(IMPORTANT) or auctioning_2
+        ROS_INFO("acting accorgint to state");
+        
+        if(robot_state == choosing_next_action) {
+            ROS_INFO("choosing_next_action state");
+            if(auction_manager->isRobotWinnerOfMostRecentAuction())
+                setRobotState(going_checking_vacancy);
+            else
+                setRobotState(exploring);
+
+        }
+
+        if(robot_state == exploring_for_graph_navigation)
+            auction_manager->preventParticipationToAuctions();
+        else
+            auction_manager->allowParticipationToAuctions();
+
+        if(robot_state == auctioning || robot_state == auctioning_2) {
+            ROS_INFO("auctioning state");
             if(!auction_already_started) {
                 auction_already_started = true;
                 auction_manager->tryToAcquireDs();
             }
         }
 
-        else {
+        else
             auction_already_started = false;
 
-            if(robot_state == robot_state::IN_QUEUE) {
-                if(auction_manager->isRobotWinnerOfMostRecentAuction())
-                    setRobotState(robot_state::GOING_CHECKING_VACANCY);
-                else {
-                    auction_t current_auction = auction_manager->getCurrentAuction();
-                    if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout)
-                        auction_manager->tryToAcquireDs();
-                }
+        if(robot_state == in_queue) {
+            ROS_INFO("in_queue state");
+            if(auction_manager->isRobotWinnerOfMostRecentAuction())
+                setRobotState(going_checking_vacancy);
+            else {
+                auction_t current_auction = auction_manager->getCurrentAuction();
+                if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout)
+                    auction_manager->tryToAcquireDs();
             }
-
-            else if(robot_state == robot_state::CHARGING)
-                if(!auction_manager->isRobotWinnerOfMostRecentAuction())
-                    setRobotState(robot_state::CHARGING_ABORTED);
         }
+
+        if(robot_state == charging)
+            if(!auction_manager->isRobotWinnerOfMostRecentAuction())
+                setRobotState(leaving_ds);
+
     }
+    else
+        ROS_INFO("robot is under auction");
+        
     auction_manager->unlock();
 }
 
 unsigned int AuctionObserver::getRobotState() {
-    return robot_state_manager->getRobotState();
+//    return robot_state_manager->getRobotState();
+    robot_state::GetRobotState srv;
+    while(!get_robot_state_sc.call(srv))
+        ROS_INFO("call to get_robot_state failed");
+    return srv.response.robot_state;
 }
 
 void AuctionObserver::setRobotState(unsigned int robot_state) {
-    robot_state_manager->setRobotState(robot_state);
+    ROS_INFO("setting state");
+    robot_state::SetRobotState srv;
+    srv.request.robot_state = robot_state;
+    while(!set_robot_state_sc.call(srv))
+        ROS_INFO("call to get_robot_state failed");
+//    robot_state_manager->setRobotState(robot_state);
 }
 
 void AuctionObserver::setAuctionManager(AuctionManagerInterface *auction_manager) {
@@ -101,4 +138,8 @@ void AuctionObserver::setTimeManager(TimeManagerInterface *time_manager) {
 
 void AuctionObserver::setRobotStateManager(RobotStateManager2 *robot_state_manager) { //TODO set or inject?
     this->robot_state_manager = robot_state_manager;
+}
+
+void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    auction_manager->setOptimalDs(msg.get()->id);
 }

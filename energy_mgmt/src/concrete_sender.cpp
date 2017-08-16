@@ -10,8 +10,9 @@ void ConcreteSender::sendBid(bid_t bid, auction_t auction, std::string topic) {
     ROS_INFO("Sending bid for auction %u to other robots", auction.auction_id);
     adhoc_communication::SendEmAuction srv;
     srv.request.topic = topic;
-//    srv.request.dst_robot = group_name; //TODO(IMPORTANT)
-    srv.request.dst_robot = "";
+//    srv.request.dst_robot = group_name;
+//group_name = "mc_robot_0";
+    srv.request.dst_robot = "mc_robot_0";
     srv.request.auction.auction = auction.auction_id;
     srv.request.auction.robot = auction.auctioneer;
     srv.request.auction.docking_station = auction.docking_station_id;

@@ -84,6 +84,9 @@ add_dependencies(docking map_merger_cpp)
 add_executable(energy_mgmt src/main.cpp)
 add_executable(auction_mgmt src/auction_main.cpp)
 
+add_dependencies(robot_state_manager2 ${catkin_EXPORTED_TARGETS})
+add_dependencies(concrete_bid_computer adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(concrete_sender ${catkin_EXPORTED_TARGETS})
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -198,6 +201,10 @@ if(CATKIN_ENABLE_TESTING)
         mock_auction_manager
         robot_state_manager2
         ${catkin_LIBRARIES}
+    )
+    add_dependencies(mock_auction_manager
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
     )
     add_dependencies(auction_observer_utest
         ${PROJECT_NAME}_generate_messages_cpp

@@ -35,37 +35,37 @@ int main(int argc, char** argv)
 
     RobotStateApi r;
     
-//    TimeManager tm;
-//    battery_simulate bat;
-//    bat.setTimeManager(&tm);
-//    bat.initializeSimulationTime();
-//    bat.createLogDirectory();
-//    bat.createLogFiles();
-//    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
+    TimeManager tm;
+    battery_simulate bat;
+    bat.setTimeManager(&tm);
+    bat.initializeSimulationTime();
+    bat.createLogDirectory();
+    bat.createLogFiles();
+    boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
 //    
 //    // coordinate docking of robots for recharging
     docking doc;
-//    doc.create_log_files();
-//    doc.wait_for_explorer();
+    doc.create_log_files();
+    doc.wait_for_explorer();
 //    
-//    //doc.wait_battery_info(); //only ok if threat thr_battery is active
+    doc.wait_battery_info(); //only ok if threat thr_battery is active
 //    
 //    //doc.join_all_multicast_groups();
 //    //doc.start_join_timer();
 //    
 //    
-//    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
-//    boost::thread thr_ds_management(boost::bind(&docking::ds_management, &doc));
+    boost::thread thr_spin(boost::bind(&docking::spin, &doc));
+    boost::thread thr_ds_management(boost::bind(&docking::ds_management, &doc));
 //    
 
-//// Frequency of loop
-//    double rate = 1; // Hz
-//    ros::Rate loop_rate(rate);
-//    ros::NodeHandle nh;
-//    //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-//    
-//    ros::AsyncSpinner spinner(20);
-//    spinner.start();
+// Frequency of loop
+    double rate = 1; // Hz
+    ros::Rate loop_rate(rate);
+    ros::NodeHandle nh;
+    //ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+    
+    ros::AsyncSpinner spinner(20);
+    spinner.start();
 //    
     while(ros::ok() && !doc.finished_bool){
 //        // get updates from subscriptions
@@ -79,26 +79,26 @@ int main(int argc, char** argv)
 //        
 ////        doc.join_all_multicast_groups();
 //        
-//        doc.update_robot_position();
+        doc.update_robot_position();
 //        
 //        doc.update_robot_state();
 //        
-//        doc.send_robot();
+        doc.send_robot();
 //        
-//        doc.update_reamining_distance();
+        doc.update_reamining_distance();
 
 //        
 ////        ros::spinOnce();
 //        
 ////        doc.update_llh();
 //        
-////        doc.recompute_MST();
+//        doc.recompute_MST();
 //        
 ////        doc.send_fake_msg();
 //        
 
-//        // Sleep for 1/rate seconds
-//        loop_rate.sleep();
+        // Sleep for 1/rate seconds
+        loop_rate.sleep();
 //        
 //        ROS_INFO("End of main loop");
 //        

@@ -394,3 +394,10 @@ void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceSt
     next_robot_y = pose->pose.pose.position.y;
     message_mutex.unlock();
 }
+
+void ConcreteBidComputer::updateLlh() {
+    update_l1();
+    update_l2();
+    update_l3();
+    update_l4();
+}

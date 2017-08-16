@@ -3,7 +3,7 @@
 RobotStateApi::RobotStateApi() {//TODO RobotStatePackageApi and .cpp file name
     ROS_INFO("Creating instance of RobotStateApi");
 //    createServiceClients();
-    fillMaps();
+//    fillMaps();
     ROS_INFO("Instance correctly created");
 }
 
@@ -16,8 +16,8 @@ RobotStateApi::RobotStateApi() {//TODO RobotStatePackageApi and .cpp file name
 //}
 
 void RobotStateApi::fillMaps() { //TODO complete stateMap
-    addStateToMaps(robot_state::INITIALIZING, new InitializingState());
-    addStateToMaps(robot_state::CHOOSING_ACTION, new ChoosingActionState());
+//    addStateToMaps(robot_state::INITIALIZING, new InitializingState());
+//    addStateToMaps(robot_state::CHOOSING_ACTION, new ChoosingActionState());
 }
 
 void RobotStateApi::addStateToMaps(unsigned int enum_val, RobotState *state) {

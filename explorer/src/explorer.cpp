@@ -34,11 +34,14 @@
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/MmPoint.h>
-//#include <robot_state/GetRobotState.h>
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
 #include "distance_computer.h"
-//#include <robot_state/robot_state_management.h>
+#include "explorer/ChargingCompleted.h"
+#include "explorer/AuctionResult.h"
+#include <robot_state/robot_state_management.h>
+#include "robot_state/SetRobotState.h"
+#include "robot_state/GetRobotState.h"
 
 //#define PROFILE
 
@@ -92,7 +95,7 @@ class Explorer
     int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
-    ros::ServiceClient sc_get_robot_state;
+    ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc;
     bool created;
     float queue_distance, max_av_distance;
     float safety_coeff, min_distance_queue_ds;
@@ -123,6 +126,10 @@ class Explorer
     double traveled_distance, last_x, last_y;
     bool optima_ds_set;
     bool has_to_force_fully_charged;
+    bool explorer_count;
+    
+    ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
+    ros::ServiceServer charging_complete_ss;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -133,9 +140,6 @@ class Explorer
         if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
            ros::console::notifyLoggerLevelsChanged();
         }
-
-//        int test_robot_state = robot_state::EXPLORING;
-//        int test_robot_state3 = robot_state::robot_state_enum::COMPUTING;
         
 //        ros::NodeHandle nh("~");
         rotation_counter = 0;
@@ -205,6 +209,7 @@ class Explorer
         full_battery = false;
         frontiers_found = false;
         optima_ds_set = false;
+        explorer_count = 0;
 
         /* Initial robot state */
         robot_state = exploring;  // TODO(minor) what if instead it is not fully charged?
@@ -217,6 +222,12 @@ class Explorer
         ros::NodeHandle nh2;
         sub_free_cells_count = nh2.subscribe("free_cells_count", 10, &Explorer::free_cells_count_callback, this);
         sub_discovered_free_cells_count = nh2.subscribe("discovered_free_cells_count", 10, &Explorer::discovered_free_cells_count_callback, this);
+        
+        set_robot_state_sc = nh2.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
+        get_robot_state_sc = nh2.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+        
+        charging_complete_ss = nh2.advertiseService("charging_completed",  &Explorer::battery_charging_completed_callback, this);
+        has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
         
         //ROS_ERROR("%s", sub_free_cells_count.getTopic().c_str());
 
@@ -234,7 +245,7 @@ class Explorer
         sub_lost_other_robot_auction = nh.subscribe("lost_other_robot_auction", 10, &Explorer::lost_other_robot_callback,
                                                     this);  // to know when a robot lost another robot auction
 
-        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 10);  // to publish robot state updates
+//        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 10);  // to publish robot state updates
         
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
@@ -462,6 +473,7 @@ class Explorer
         enum_string.push_back("auctioning_3");
         enum_string.push_back("stopped");
         enum_string.push_back("exploring_for_graph_navigation");
+        enum_string.push_back("choosing_next_action");
         
         checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
 
@@ -499,8 +511,8 @@ class Explorer
 
         ros::Subscriber sub, sub2, sub3, pose_sub, sub_finish;
 
-        ros::Subscriber my_sub =
-            nh.subscribe("charging_completed", 10, &Explorer::battery_charging_completed_callback, this);
+//        ros::Subscriber my_sub =
+//            nh.subscribe("charging_completed", 10, &Explorer::battery_charging_completed_callback, this);
 
         ros::Subscriber sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
                                                          &Explorer::new_optimal_docking_station_selected_callback, this);
@@ -510,7 +522,7 @@ class Explorer
             
         //ROS_ERROR("%s", pub_next_ds.getTopic().c_str());
 
-        ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
+//        ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
         
         ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
         
@@ -744,7 +756,7 @@ class Explorer
 //                                    ROS_INFO("Now it is ok...");
 //                                }
 //                    if(robot_state == leaving_ds) { //this is because at the moment in the code fully_charged in considered a state of computation with the idea that the computation is performed with full battery life, differently from 'exploring' state, and this information is used sometimes, so we should modifying the transition function to be "charging -> leaving_ds -> exploring_fully_charged | exploring_not_fully_charged"
-                        update_robot_state_2(exploring);
+                        update_robot_state_2(choosing_next_action);
                         continue;
 //                    }
                 }
@@ -1359,11 +1371,11 @@ class Explorer
                             log_minor_error("very slow...");
                         }
                         
-                        if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
-                            goal_determined  = false;
-                            update_robot_state_2(exploring);
-                            ros::Duration(5).sleep();
-                        }
+//                        if(DEBUG && IMM_CHARGE && number_of_recharges == 0 ) {
+//                            goal_determined  = false;
+//                            update_robot_state_2(exploring);
+//                            ros::Duration(5).sleep();
+//                        }
                         
 //                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                        fs_exp_se_log << std::endl;
@@ -1572,7 +1584,7 @@ class Explorer
                                                             retries2++;
                                                             costmap_mutex.unlock();
                                                             print_mutex_info("explore()", "unlock");
-                                                            update_robot_state_2(exploring);
+                                                            update_robot_state_2(choosing_next_action);
                                                             continue;
                                                     }
                                                     else {
@@ -1581,7 +1593,7 @@ class Explorer
                                                             ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
                                                             costmap_mutex.unlock();
                                                             print_mutex_info("explore()", "unlock");
-                                                            update_robot_state_2(exploring);
+                                                            update_robot_state_2(choosing_next_action);
                                                             continue;
                                                         }
                                                         else
@@ -2026,8 +2038,8 @@ class Explorer
                 {
                     ROS_INFO("Reached DS for recharging");
 
-                    std_msgs::Empty msg;
-                    pub_occupied_ds.publish(msg);  // TODO(minor) it seems not to be used by any other node... remove it
+//                    std_msgs::Empty msg;
+//                    pub_occupied_ds.publish(msg);  // TODO(minor) it seems not to be used by any other node... remove it
 
                     number_of_recharges++;  // TODO(minor) remove
                     update_robot_state_2(charging);
@@ -2040,7 +2052,7 @@ class Explorer
                 {
                     /* Robot reached frontier */
                     if (robot_state == moving_to_frontier)
-                        update_robot_state_2(exploring);
+                        update_robot_state_2(choosing_next_action);
 
                     // do not store travelled distance here... the move_robot called at the previous iteration has done it...
 //                    ROS_INFO("STORING PATH");
@@ -2090,7 +2102,7 @@ class Explorer
 //                            skip_findFrontiers = true;
 //                        else
 //                            skip_findFrontiers = false;
-                        update_robot_state_2(exploring);
+                        update_robot_state_2(choosing_next_action);
                     }
                     else
                         update_robot_state_2(going_charging);  // TODO(minor) if
@@ -2139,7 +2151,7 @@ class Explorer
         msg.state = new_state;
         previous_state = robot_state;
         robot_state = static_cast<state_t>(new_state);
-        pub_robot.publish(msg);
+//        pub_robot.publish(msg);
 
         if (robot_state == auctioning || robot_state == auctioning_2 || robot_state == auctioning_3) {
             need_to_recharge = true;
@@ -2165,9 +2177,6 @@ class Explorer
 
         if(robot_state == moving_to_frontier) 
             already_navigated_DS_graph = false;
-            
-        //robot_state::GetRobotState srv;
-        // sc_get_robot_state.call(srv);
         
         ros::Duration time = ros::Time::now() - time_start;
 
@@ -2186,13 +2195,66 @@ class Explorer
 //            std_msgs::Empty msg;
 //            pub_finished_exploration.publish(msg);
 //            exploration_finished = true;
-//        }            
+//        }   
+
+        robot_state::SetRobotState set_msg;
+        set_msg.request.robot_state = robot_state;
+        while(!set_robot_state_sc.call(set_msg))
+            ROS_ERROR("call to set robot state failed, retrying...");
+            
+       if(robot_state == moving_to_frontier) {
+            ROS_INFO("increasing counter");
+            explorer_count++;
+       }
         
     }
 
     void update_robot_state()
     {
         ROS_DEBUG("Updating robot state...");
+        
+        robot_state::GetRobotState srv;
+        while(!get_robot_state_sc.call(srv))
+            ROS_INFO("call to get_robot_state failed");
+
+        if(robot_state != srv.response.robot_state) {
+            ROS_INFO("robot state changed by another robot");
+            update_robot_state_2(srv.response.robot_state);
+            return;
+        } 
+        
+/*
+        if(robot_state == in_queue) {
+            explorer::AuctionResult has_to_go_msg;
+            while(!has_to_go_to_ds_sc.call(has_to_go_msg))
+                ROS_ERROR("call to has_to_go failed");
+            if(has_to_go_msg.response.winner) {
+                ROS_INFO("robot won auction, go chargin instead of exploring");
+                update_robot_state_2(going_checking_vacancy);
+                return;
+            } else
+                ROS_INFO("robot still didn't win an auction...");
+        }
+        
+        else if(robot_state != srv.response.robot_state) {
+            ROS_INFO("robot state changed by another robot");
+            update_robot_state_2(srv.response.robot_state);
+            return;
+        } 
+        
+        
+        if(robot_state == charging) {
+            explorer::AuctionResult has_to_go_msg;
+            while(!has_to_go_to_ds_sc.call(has_to_go_msg))
+                ROS_ERROR("call to has_to_go failed");
+            if(has_to_go_msg.response.loser) {
+                ROS_INFO("robot lost auction while charging: leaving ds");
+                update_robot_state_2(leaving_ds);
+                return;
+            }
+        }
+*/
+
         
         // TODO(minor) do we need the spin?
         ros::spinOnce();
@@ -3690,6 +3752,7 @@ class Explorer
     void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
     {
         ROS_INFO("lost_own_auction_callback");
+        ROS_ERROR("shouldn't be called anymore!");
         if(robot_state_next == fully_charged_next) {
             log_minor_error("next robot state is already 'fully_charged'");   
             return;
@@ -3776,11 +3839,12 @@ class Explorer
             robot_state_next = going_queue_next;
     }
 
-    void battery_charging_completed_callback(const std_msgs::Empty::ConstPtr &msg)
+    bool battery_charging_completed_callback(explorer::ChargingCompleted::Request &req, explorer::ChargingCompleted::Response &res)
     {
         ROS_INFO("Recharging completed");
-        if (robot_state != moving_to_frontier)
+//        if (robot_state != moving_to_frontier)
             robot_state_next = fully_charged_next;
+        return true;
     }
 
     void new_optimal_docking_station_selected_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
@@ -3863,20 +3927,20 @@ class Explorer
         
         conservative_maximum_available_distance = msg->maximum_traveling_distance;
         
-        if(robot_state == charging && msg.get()->charging == true)
-            has_to_force_fully_charged = true;
-        
-        if(has_to_force_fully_charged && robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
-            if(msg.get()->fully_charged) {
-                log_minor_error("forcing fully_charged");
-                robot_state_next = fully_charged_next;
-            }
-            else {
-                log_minor_error("forcing to go to queue");
-                robot_state_next = going_queue_next;
-            }
-            has_to_force_fully_charged = false;
-        }
+//        if(robot_state == charging && msg.get()->charging == true)
+//            has_to_force_fully_charged = true;
+//        
+//        if(has_to_force_fully_charged && robot_state == charging && msg.get()->charging == false && robot_state_next != fully_charged_next) {
+//            if(msg.get()->fully_charged) {
+//                log_minor_error("forcing fully_charged");
+//                robot_state_next = fully_charged_next;
+//            }
+//            else {
+//                log_minor_error("forcing to go to queue");
+//                robot_state_next = going_queue_next;
+//            }
+//            has_to_force_fully_charged = false;
+//        }
             
         
     }
@@ -4144,7 +4208,7 @@ class Explorer
                         else if(robot_state == leaving_ds)
                         {
                             log_minor_error("Force the robot to think that it has left the target DS");
-                            update_robot_state_2(exploring);
+                            update_robot_state_2(choosing_next_action);
                         }
                         else if(robot_state == going_in_queue) {
                             log_minor_error("Force the robot to think that it reached the queue");
@@ -4158,7 +4222,7 @@ class Explorer
                             if(retries_moving < 3) {
                                 log_minor_error("Robot is not moving anymore... retrying");
                                 retries_moving++;
-                                update_robot_state_2(exploring);
+                                update_robot_state_2(choosing_next_action);
                             }
                             else {
                                 log_major_error("Robot is not moving anymore");
@@ -4483,43 +4547,6 @@ class Explorer
     ros::Subscriber sub_going_charging, sub_going_queue, sub_exploring;
     ros::Subscriber sub_lost_own_auction, sub_won_auction, sub_lost_other_robot_auction;
 
-    enum state_t
-    {
-        exploring,       // the robot is computing which is the next frontier to be
-                         // explored
-        going_charging,  // the robot has the right to occupy a DS to recharge
-        charging,        // the robot is charging at a DS
-        finished,        // the robot has finished the exploration
-        fully_charged,   // the robot has recently finished a charging process; notice
-                         // that the robot is in this state even if it is not really
-                         // fully charged (since just after a couple of seconds after
-                         // the end of the recharging process the robot has already
-                         // lost some battery energy, since it consumes power even
-                         // when it stays still
-        stuck,
-        in_queue,                                  // the robot is in a queue, waiting for a DS to be vacant
-        auctioning,                                // auctioning: the robot has started an auction; notice that if
-                                                   // the robot is aprticipating to an auction that it was not
-                                                   // started by it, its state is not equal to auctioning!!!
-        auctioning_2,
-        going_in_queue,                            // the robot is moving near a DS to later put itself in
-                                                   // in_queue state
-        going_checking_vacancy,                    // the robot is moving near a DS to check if it
-                                                   // vacant, so that it can occupy it and start
-                                                   // recharging
-        checking_vacancy,                          // the robot is currently checking if the DS is vacant,
-                                                   // i.e., it is waiting information from the other robots
-                                                   // about the state of the DS
-        moving_to_frontier_before_going_charging,  // TODO hmm...
-        moving_to_frontier,                        // the robot has selected the next frontier to be
-                                                   // reached, and it is moving toward it
-        leaving_ds,                                // the robot was recharging, but another robot stopped
-        dead,
-        moving_away_from_ds,
-        auctioning_3,
-        stopped,
-        exploring_for_graph_navigation
-    };
     state_t robot_state, previous_state;
 
     // TODO

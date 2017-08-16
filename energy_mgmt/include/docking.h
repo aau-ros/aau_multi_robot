@@ -40,7 +40,8 @@
 #include "fake_network/RobotPosition.h"
 #include <mutex>          // std::mutex
 #include <unordered_map>
-#include "auction_manager.h"
+#include "robot_state/GetRobotState.h"
+#include "robot_state/robot_state_management.h"
 
 #include "gtest/gtest_prod.h"
 
@@ -186,58 +187,7 @@ class docking
     int num_robots;  // number of robots is known in simulations
     int num_ds;
 
-    enum state_t
-    {
-        exploring,  // the robot is computing which is the next frontier to be
-                    // explored
-
-        going_charging,  // the robot has the right to occupy a DS to recharge
-
-        charging,  // the robot is charging at a DS
-
-        finished,  // the robot has finished the exploration
-
-        fully_charged,  // the robot has recently finished a charging process; notice
-                        // that the robot is in this state even if it is not really
-                        // fully charged (since just after a couple of seconds after
-                        // the end of the recharging process the robot has already
-                        // lost some battery energy, since it consumes power even
-                        // when it stays still
-
-        stuck,
-
-        in_queue,  // the robot is in a queue, waiting for a DS to be vacant
-
-        auctioning,  // auctioning: the robot has started an auction; notice that if
-                     // the robot is aprticipating to an auction that it was not
-                     // started by it, its state is not equal to auctioning!!!
-                     
-        auctioning_2,
-
-        going_in_queue,  // the robot is moving near a DS to later put itself in
-                         // in_queue state
-
-        going_checking_vacancy,  // the robot is moving near a DS to check if it
-                                 // vacant, so that it can occupy it and start
-                                 // recharging
-
-        checking_vacancy,  // the robot is currently checking if the DS is vacant,
-                           // i.e., it is waiting information from the other robots
-                           // about the state of the DS
-
-        moving_to_frontier_before_going_charging,  // TODO hmm...
-
-        moving_to_frontier,  // the robot has selected the next frontier to be
-                             // reached, and it is moving toward it
-        leaving_ds,          // the robot was recharging, but another robot stopped
-        dead,
-        moving_away_from_ds,
-        auctioning_3,
-        stopped,
-        exploring_for_graph_navigation
-    };
-
-    state_t robot_state;
+    state_t robot_state, next_robot_state;
 
     enum simple_state_t
     {
@@ -357,7 +307,7 @@ class docking
 
     ds_t *next_optimal_ds, *next_target_ds;
 
-    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
+//    void cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg);
 
     string my_prefix, my_node;
 
@@ -578,6 +528,11 @@ class docking
     ros::Time changed_state_time;
     void conclude_auction();
     void send_optimal_ds();
+    bool can_update_ds();
+    void get_robot_state();
+    void handle_robot_state();
+
+    ros::ServiceClient get_robot_state_sc;
 
 //    AuctionManager auction_manager; //TODO
 

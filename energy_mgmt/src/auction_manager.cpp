@@ -259,10 +259,11 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
         if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
         {
             ROS_INFO("Winner of the auction started by another robot");
-            winner_of_auction = true;
 
             if(current_auction.auction_id != msg.get()->auction)
-                ROS_ERROR("current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed");
+                ROS_ERROR("actually current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed": ignoring auction result);
+            else
+                winner_of_auction = true;
         }
         else
         {
