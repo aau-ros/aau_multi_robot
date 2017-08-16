@@ -261,7 +261,7 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
             ROS_INFO("Winner of the auction started by another robot");
 
             if(current_auction.auction_id != msg.get()->auction)
-                ROS_ERROR("actually current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed": ignoring auction result);
+                ROS_ERROR("actually, current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed: ignoring auction result");
             else
                 winner_of_auction = true;
         }

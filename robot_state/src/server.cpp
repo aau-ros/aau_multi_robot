@@ -48,9 +48,9 @@ void Server::fillRobotStateStringsVector() {
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res) {
     mutex.lock();
-//    ROS_INFO("get_robot_state service required");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "get_robot_state service required");
     res.robot_state = robot_state;
-//    ROS_INFO("Service response successfully sent");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;
 }
@@ -58,7 +58,7 @@ bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, rob
 
 bool Server::setRobotStateCallback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
-//    ROS_INFO("set_robot_state service required");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "set_robot_state service required");
     if(state_locked) {
         if(locking_node == req.setting_node)
             transitionToNextStateIfPossible(req, res);
@@ -68,7 +68,7 @@ bool Server::setRobotStateCallback(robot_state::SetRobotState::Request &req, rob
         }
     } else
         transitionToNextStateIfPossible(req, res);
-//    ROS_INFO("Service response successfully sent");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;
 }
@@ -89,7 +89,7 @@ void Server::transitionToNextStateIfPossible(robot_state::SetRobotState::Request
 
 bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Request &req, robot_state::TryToLockRobotState::Response &res) {
     mutex.lock();
-    ROS_INFO("try_to_lock_robot_state service required");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "try_to_lock_robot_state service required");
     if(!state_locked) {
         ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
         state_locked = true;
@@ -100,7 +100,7 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
         ROS_INFO("The robot state is currently under control of %s: locking failed", locking_node.c_str());
         res.lock_acquired = false;
     }
-    ROS_INFO("Service response successfully sent");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;
 }
@@ -109,10 +109,10 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 bool Server::unlockRobotStateCallback(robot_state::UnlockRobotState::Request &req, robot_state::UnlockRobotState::Response &res) {
     mutex.lock();
-    ROS_INFO("unlock_robot_state service required");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "unlock_robot_state service required");
     ROS_INFO("Lock on robot state released");
     state_locked = false;
-    ROS_INFO("Service response successfully sent");
+    ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;
 }

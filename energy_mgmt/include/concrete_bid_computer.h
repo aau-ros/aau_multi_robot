@@ -74,7 +74,7 @@ private:
     void cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
-    bool isActiveState(state_t state);
+    bool isActiveState(robot_state::robot_state_t state);
     void abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y);
 };
 

@@ -300,7 +300,7 @@ void ConcreteBidComputer::cb_robots(const adhoc_communication::EmRobot::ConstPtr
     {
         if (robots[i].id == msg.get()->id)
         {
-            robots[i].active = isActiveState(static_cast<state_t>(msg.get()->state));
+            robots[i].active = isActiveState(static_cast<robot_state::robot_state_t>(msg.get()->state));
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].selected_ds = msg.get()->selected_ds;               
@@ -311,7 +311,7 @@ void ConcreteBidComputer::cb_robots(const adhoc_communication::EmRobot::ConstPtr
     {  
         robot_t new_robot;
         new_robot.id = msg.get()->id;
-        new_robot.active = isActiveState(static_cast<state_t>(msg.get()->state));
+        new_robot.active = isActiveState(static_cast<robot_state::robot_state_t>(msg.get()->state));
         new_robot.x = msg.get()->x;
         new_robot.y = msg.get()->y;
         new_robot.selected_ds = msg.get()->selected_ds;
@@ -321,8 +321,8 @@ void ConcreteBidComputer::cb_robots(const adhoc_communication::EmRobot::ConstPtr
     robot_mutex.unlock();
 }
 
-bool ConcreteBidComputer::isActiveState(state_t state) {
-    return state == exploring || state == fully_charged || state == moving_to_frontier;
+bool ConcreteBidComputer::isActiveState(robot_state::robot_state_t state) {
+    return state == robot_state::COMPUTING_NEXT_GOAL || state == robot_state::MOVING_TO_FRONTIER || state == robot_state::CHOOSING_ACTION;
 }
 
 void ConcreteBidComputer::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)

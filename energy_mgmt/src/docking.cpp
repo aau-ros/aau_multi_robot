@@ -2,7 +2,10 @@
 
 //TODO(minor) ConstPtr
 
+#pragma GCC diagnostic ignored "-Wenum-compare"
+
 using namespace std;
+using namespace robot_state;
 
 int counter;
 
@@ -105,7 +108,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     */
     ros::Duration(10).sleep();
     robot->id = robot_id;
-    robot->simple_state = active;
     robot->home_world_x = origin_absolute_x;
     robot->home_world_y = origin_absolute_y;
     abs_to_rel(origin_absolute_x, origin_absolute_y, &(robot->x), &(robot->y));
@@ -192,7 +194,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
 
     /* Variable initializations */
-    robot_state = fully_charged;  // TODO(minor) param
+    robot_state = robot_state::INITIALIZING;  // TODO(minor) param
     moving_along_path = false;
     need_to_charge = false;  // TODO(minor) useless variable (if we use started_own_auction)
     recompute_graph = false;
@@ -874,7 +876,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         if (old_optimal_ds_id != next_optimal_ds_id)
         {
             if(
-                (robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue)
+                (robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::CHARGING && robot_state != robot_state::IN_QUEUE)
             ||
                 (waiting_to_discover_a_ds)
             )
@@ -917,7 +919,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             ROS_INFO("Optimal DS unchanged");
             
 //        if(get_optimal_ds_id() != get_target_ds_id())  {
-//            if(robot_state != going_in_queue && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != going_charging && robot_state != charging && robot_state != in_queue) //TODO exclude also in_queue???
+//            if(robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::CHARGING && robot_state != in_queue) //TODO exclude also in_queue???
 //            {   
 //                changed = true;
 //                ROS_INFO("Update target DS, and inform explorer");
@@ -1038,18 +1040,10 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 void docking::handle_robot_state()
 {
     // TODO(minor) better update...
-    for(unsigned int i=0; i<robots.size(); i++)
-        if(robots[i].id == robot_id) {
-            if (next_robot_state == exploring || next_robot_state == fully_charged || next_robot_state == moving_to_frontier ||
-                next_robot_state == leaving_ds)
-                robots[i].simple_state = active;
-            else
-                robots[i].simple_state = idle;
-        }
         
-    if(robot_state == charging && (next_robot_state != fully_charged && next_robot_state != leaving_ds)) {
-        log_major_error("invalid state after charging!!!");
-        ROS_INFO("current state: charging");   
+    if(robot_state == robot_state::CHARGING && (next_robot_state != fully_charged && next_robot_state != leaving_ds && next_robot_state != finished)) {
+        log_major_error("invalid state after robot_state::CHARGING!!!");
+        ROS_INFO("current state: robot_state::CHARGING");   
         ROS_INFO("next state: %d", next_robot_state);
     }
     
@@ -1059,7 +1053,7 @@ void docking::handle_robot_state()
         has_to_free_optimal_ds = false;
     }
         
-    if (next_robot_state != going_checking_vacancy) //TODO(minor) very bad... maybe in if(... == checking_vacancy) would be better...
+    if (next_robot_state != robot_state::GOING_CHECKING_VACANCY) //TODO(minor) very bad... maybe in if(... == robot_state::CHECKING_VACANCY) would be better...
         going_to_ds = false;
         
 //    if (has_to_free_optimal_ds && next_robot_state != fully_charged && next_robot_state != leaving_ds) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the leaving_ds state is so short that it makes almost no different
@@ -1068,25 +1062,25 @@ void docking::handle_robot_state()
 //            set_optimal_ds_vacant(true);
 //    }
 
-    if (next_robot_state == in_queue)
+    if (next_robot_state == robot_state::IN_QUEUE)
     {
         ;
     }
-    else if (next_robot_state == going_charging)
+    else if (next_robot_state == robot_state::GOING_CHARGING)
     {
         ;  // ROS_ERROR("\n\t\e[1;34m Robo t going charging!!!\e[0m");
     }
-    else if (next_robot_state == charging)
+    else if (next_robot_state == robot_state::CHARGING)
     {
         id_ds_to_be_freed = get_optimal_ds_id();
         has_to_free_optimal_ds = true;
         set_optimal_ds_vacant(false); // we could thing of doing it ealrly... but this would mean that the other robots will think that a DS is occupied even if it is not, which means that maybe one of them could have a high value of the llh and could get that given DS, but instead the robot will give up and it will try with another DS (this with the vacant stragety), so it could be disadvantaging...
     }
-    else if (next_robot_state == going_checking_vacancy)
+    else if (next_robot_state == robot_state::GOING_CHECKING_VACANCY)
     {
         ;  // ROS_ERROR("\n\t\e[1;34m going checking vacancy!!!\e[0m");
     }
-    else if (next_robot_state == checking_vacancy)
+    else if (next_robot_state == robot_state::CHECKING_VACANCY)
     {
 //        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
 //            log_major_error("sending invalid DS id 5!!!");
@@ -1103,12 +1097,12 @@ void docking::handle_robot_state()
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
     }
-    else if (next_robot_state == auctioning)
+    else if (next_robot_state == robot_state::AUCTIONING)
     {
         ROS_INFO("Robot needs to recharge");
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
             ROS_ERROR("calling start_new_auction()");
 //            start_new_auction(); 
 
@@ -1127,7 +1121,7 @@ void docking::handle_robot_state()
 		        ROS_INFO("Robot needs to recharge");
 		        need_to_charge = true;
 		        if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
 		        {
 		            ros::Duration(1).sleep();
 		            ROS_ERROR("calling start_new_auction()");
@@ -1144,7 +1138,7 @@ void docking::handle_robot_state()
 //                ROS_INFO("Robot needs to recharge");
 //                need_to_charge = true;
 //                if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-//                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+//                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
 //                {
 //                    ros::Duration(10).sleep();
 //                    start_new_auction();
@@ -1168,7 +1162,7 @@ void docking::handle_robot_state()
                 ROS_INFO("Robot needs to recharge");
                 need_to_charge = true;
                 if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                                          // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
                 {
                     ros::Duration(10).sleep();
                     ROS_ERROR("calling start_new_auction()");
@@ -1187,9 +1181,9 @@ void docking::handle_robot_state()
         going_to_ds = false;
         //free_ds(id_ds_to_be_freed); //it is better to release the DS when the robot has exited the fully_charged or leaving_ds state, but sometimes (at the moment for unknown reasones) this takes a while, even if the robot has already phisically released the DS...
     }
-    else if (next_robot_state == moving_to_frontier || next_robot_state == going_in_queue)
+    else if (next_robot_state == robot_state::MOVING_TO_FRONTIER || next_robot_state == robot_state::GOING_IN_QUEUE)
         ;
-    else if(next_robot_state == exploring)
+    else if(next_robot_state == robot_state::COMPUTING_NEXT_GOAL)
     {
         ;
     }
@@ -1229,7 +1223,7 @@ void docking::handle_robot_state()
     
     
     
-//    if(robot->state == charging && next_robot_state != charging)
+//    if(robot->state == robot_state::CHARGING && next_robot_state != robot_state::CHARGING)
 //        for (unsigned int j = 0; j < ds.size(); j++)
 //            if (ds[j].id == robot->charging_ds) {
 //                ds_mutex.lock();
@@ -1255,7 +1249,7 @@ void docking::handle_robot_state()
     
     
     
-//    if(robot->state == charging && next_robot_state == charging)
+//    if(robot->state == robot_state::CHARGING && next_robot_state == robot_state::CHARGING)
 //        for (unsigned int j = 0; j < ds.size(); j++)
 //            if (ds[j].id == get_optimal_ds_id()) {
 //                ds_mutex.lock();
@@ -1284,7 +1278,7 @@ void docking::get_robot_state() {
     robot_state::GetRobotState msg;
     while(!get_robot_state_sc.call(msg))
         ROS_ERROR("get state failed");
-    next_robot_state = static_cast<state_t>(msg.response.robot_state);
+    next_robot_state = static_cast<robot_state::robot_state_t>(msg.response.robot_state);
 }
 
 void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
@@ -1318,46 +1312,12 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
             new_robot = false;
             
-//            if(robots[i].state == charging && msg.get()->state != charging)
-//                for (unsigned int j = 0; j < ds.size(); j++)
-//                    if (ds[j].id == robots.at(i).charging_ds) {
-//                        ds_mutex.lock();
-//                        if (!ds[j].vacant)
-//                        {
-//                            ds[j].vacant = true;
-//                            ds.at(j).timestamp = msg.get()->header.timestamp;
-//                            ROS_INFO("ds%d is now vacant", robots.at(i).charging_ds);
-//                            update_l1();
-//                        }
-//                        ds_mutex.unlock();
-//                        break;
-//                    }
 
-            robots[i].state = static_cast<state_t>(msg.get()->state);
-            if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
-                msg.get()->state == moving_to_frontier)
-                robots[i].simple_state = active;
-            else
-                robots[i].simple_state = idle;
+            robots[i].state = static_cast<robot_state::robot_state_t>(msg.get()->state);
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].selected_ds = msg.get()->selected_ds;
             
-//            if(robots[i].state == charging && msg.get()->state == charging)
-//                for (unsigned int j = 0; j < ds.size(); j++)
-//                    if (ds[j].id == msg.get()->selected_ds) {
-//                        ds_mutex.lock();
-//                        if (ds[j].vacant)
-//                            {
-//                                robots.at(i).charging_ds = ds.at(j).id;
-//                                ds[j].vacant = false;
-//                                ds.at(j).timestamp = msg.get()->header.timestamp;
-//                                ROS_INFO("ds%d is now occupied", robots.at(i).charging_ds);
-//                                update_l1();
-//                            }  
-//                        ds_mutex.unlock();
-//                        break;
-//                    }
                 
             break;
         }
@@ -1369,12 +1329,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         /* Store robot information */    
         robot_t new_robot;
         new_robot.id = msg.get()->id;
-        new_robot.state = static_cast<state_t>(msg.get()->state);
-        if (msg.get()->state == exploring || msg.get()->state == fully_charged ||
-            msg.get()->state == moving_to_frontier)
-            new_robot.simple_state = active;
-        else
-            new_robot.simple_state = idle;
+        new_robot.state = static_cast<robot_state::robot_state_t>(msg.get()->state);
         new_robot.x = msg.get()->x;
         new_robot.y = msg.get()->y;
         new_robot.selected_ds = msg.get()->selected_ds;
@@ -1388,25 +1343,6 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
     
     robot_mutex.unlock();
-    
-    // sanity check
-//    unsigned int charing_robot_counter = 0;
-//    for (unsigned int i = 0; i < robots.size(); ++i)
-//        if(robots.at(i).state == charging)
-//            charing_robot_counter++;
-//    unsigned int occupied_ds = 0;
-//    for (unsigned int j = 0; j < ds.size(); j++)
-//        if(!ds.at(j).vacant)
-//            occupied_ds++;
-//    if(charing_robot_counter != occupied_ds) {
-//        log_major_error("charing_robot_counter != occupied_ds");
-////        for (unsigned int i = 0; i < robots.size(); ++i)
-////            ROS_INFO("robot %d charging?: %
-//        
-//    }
-
-    /* Update parameter l1 of charging likelihood function */
-//    update_l1();
     
 }
 
@@ -1436,10 +1372,7 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
     
     if(jobs.size() > 0)
         no_jobs_received_yet = false;
-    
-    /* Update parameters l3 and l4 of charging likelihood function */
-//    update_l3();
-//    update_l4();
+
 }
 
 
@@ -1503,14 +1436,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
                 // if the ds is now vacant and it's robot's target ds and the robot is in queue, the robot can start already start a new auction
                 //TODO but in this way we start an auction when the DS has become vacant because the robot that was previously recharging at that DS was forced to leave because it has just lost an auction, which means that we have already a winner for the DS...
                 
-                //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from going_in_queue to in_queue if the DS is still occupied
-                
-//                if(ds[i].vacant && ds[i].id == get_target_ds_id() && robot_state == in_queue) { 
-                if(ds[i].vacant && ds[i].id == get_optimal_ds_id() && robot_state == in_queue) { 
-
-                    ROS_ERROR("Anticipate periodic re-auctioning");
-//                    start_periodic_auction(); //notice that if the robot is already under auction (maybe started by itself), no new auction will be started, so no problem
-                }
+                //TODO but if instead the robot is going in queue, it won't restart the auction immediately... we should check when transictioning from robot_state::GOING_IN_QUEUE to in_queue if the DS is still occupied
                     
             }
             else
@@ -1560,8 +1486,6 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
     
     ds_mutex.unlock();
 
-    /* Update parameter l1 of charging likelihood function */
-//    update_l1();
 }
 
 
@@ -1615,15 +1539,15 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
         /* If the robot is going to or already charging, or if it is going to check
          * already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
-        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-            robot_state == checking_vacancy || robot_state == fully_charged || robot_state == leaving_ds)
-//        if (robot_state == charging || robot_state == going_charging || robot_state == going_checking_vacancy ||
-//            robot_state == checking_vacancy)
+        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
+            robot_state == robot_state::CHECKING_VACANCY || robot_state == fully_charged || robot_state == leaving_ds)
+//        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
+//            robot_state == robot_state::CHECKING_VACANCY)
         {
             /* Print some debut text */
-            if (robot_state == charging || robot_state == going_charging)
+            if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING)
                 ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
-            else if (robot_state == going_checking_vacancy || robot_state == checking_vacancy)
+            else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY)
                 ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
             else if (robot_state == fully_charged || robot_state == leaving_ds)
                 ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
@@ -2894,7 +2818,7 @@ bool docking::set_optimal_ds_given_index(int index) {
 void docking::runtime_checks() {
 //    for(unsigned int i=0; i<robots.size()-1; i++)
 //        for(unsigned int j=i+1; j<robots.size(); j++)
-//            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == charging && robots[j].state == charging) {
+//            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
 //                log_major_error("two robots recharging at the same DS!!!");
 //                ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
 //                two_robots_at_same_ds_printed = true;
@@ -3291,7 +3215,7 @@ void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::Em
         ROS_INFO("Robot needs to recharge");
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "auctioning" state...); do we have other similar problems?
+                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
         {
             ROS_ERROR("calling start_new_auction()");
 //            start_new_auction();
@@ -3605,7 +3529,7 @@ void docking::ds_management() {
 //    bool printed_stuck = false;
     ros::Time last_sent = ros::Time::now();
     while(ros::ok() && !finished_bool){
-//        if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == in_queue && (ros::Time::now() - changed_state_time > ros::Duration(2*60))) {
+//        if(!waiting_to_discover_a_ds && !printed_stuck && robot_state == robot_state::IN_QUEUE && (ros::Time::now() - changed_state_time > ros::Duration(2*60))) {
 //            log_major_error("robot stuck in queue (2)!");
 //            printed_stuck = true;
 //        }
@@ -3648,5 +3572,5 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 }
 
 bool docking::can_update_ds() {
-    return robot_state != auctioning && robot_state != auctioning_2 && robot_state != going_checking_vacancy && robot_state != checking_vacancy && robot_state != charging && robot_state != going_in_queue && robot_state != in_queue;
+    return robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE;
 }

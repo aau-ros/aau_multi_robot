@@ -187,19 +187,12 @@ class docking
     int num_robots;  // number of robots is known in simulations
     int num_ds;
 
-    state_t robot_state, next_robot_state;
-
-    enum simple_state_t
-    {
-        active,
-        idle
-    };
+    robot_state::robot_state_t robot_state, next_robot_state;
 
     struct robot_t
     {
         int id;
-        simple_state_t simple_state;
-        state_t state;
+        robot_state::robot_state_t state;
         double x, y, home_world_x, home_world_y;
         int selected_ds;
         int charging_ds;

@@ -55,7 +55,7 @@ void AuctionObserver::sanityChecks() {
     auction_manager->unlock();
 }
 
-void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO we should use a visitor //TODO this function is quite ugly...
+void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this function is quite ugly... we should use a visitor
     ROS_INFO("actAccordingToRobotStateAndAuctionResult");
     robot_state = getRobotState();
 
@@ -64,21 +64,21 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO we sho
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
         
-        if(robot_state == choosing_next_action) {
+        if(robot_state == robot_state::CHOOSING_ACTION) {
             ROS_INFO("choosing_next_action state");
             if(auction_manager->isRobotWinnerOfMostRecentAuction())
-                setRobotState(going_checking_vacancy);
+                setRobotState(robot_state::GOING_CHECKING_VACANCY);
             else
-                setRobotState(exploring);
+                setRobotState(robot_state::COMPUTING_NEXT_GOAL);
 
         }
 
-        if(robot_state == exploring_for_graph_navigation)
+        if(robot_state == robot_state::exploring_for_graph_navigation)
             auction_manager->preventParticipationToAuctions();
         else
             auction_manager->allowParticipationToAuctions();
 
-        if(robot_state == auctioning || robot_state == auctioning_2) {
+        if(robot_state == robot_state::AUCTIONING || robot_state == robot_state::auctioning_2) {
             ROS_INFO("auctioning state");
             if(!auction_already_started) {
                 auction_already_started = true;
@@ -89,10 +89,10 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO we sho
         else
             auction_already_started = false;
 
-        if(robot_state == in_queue) {
+        if(robot_state == robot_state::IN_QUEUE) {
             ROS_INFO("in_queue state");
             if(auction_manager->isRobotWinnerOfMostRecentAuction())
-                setRobotState(going_checking_vacancy);
+                setRobotState(robot_state::GOING_CHECKING_VACANCY);
             else {
                 auction_t current_auction = auction_manager->getCurrentAuction();
                 if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout)
@@ -100,9 +100,9 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO we sho
             }
         }
 
-        if(robot_state == charging)
+        if(robot_state == robot_state::CHARGING)
             if(!auction_manager->isRobotWinnerOfMostRecentAuction())
-                setRobotState(leaving_ds);
+                setRobotState(robot_state::CHARGING_ABORTED);
 
     }
     else

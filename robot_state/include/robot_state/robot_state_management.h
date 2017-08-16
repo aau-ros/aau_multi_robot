@@ -3,9 +3,9 @@
 
 #include <unordered_map>
 #include <ros/ros.h>
-#include <robot_state.h>
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
+#include "robot_state.h"
 
 class RobotStateApi
 {
