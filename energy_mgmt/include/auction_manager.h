@@ -9,6 +9,7 @@ public:
     void setBidComputer(BidComputer *bid_computer);
     void setTimeManager(TimeManagerInterface *time_manager);
     void setSender(Sender *sender);
+
     void tryToAcquireDs();
     bool isRobotParticipatingToAuction();
     bool isRobotWinnerOfMostRecentAuction();

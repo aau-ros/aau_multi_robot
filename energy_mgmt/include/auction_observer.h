@@ -11,6 +11,7 @@ public:
     void setAuctionManager(AuctionManagerInterface *auction_manager);
     void setTimeManager(TimeManagerInterface *time_manager);
     void setRobotStateManager(RobotStateManager2 *robot_state_manager);
+
     void actAccordingToRobotStateAndAuctionResult();
     void sanityChecks();
     bool error_1, error_2, error_3; //TODO very bad... use dep. inj. also here (instead of directly using ROS_ERRRO) or protected var.s
