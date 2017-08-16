@@ -24,3 +24,9 @@ auction_t MockAuctionManager::getCurrentAuction() {
 void MockAuctionManager::lock() {}
 
 void MockAuctionManager::unlock() {}
+
+void MockAuctionManager::preventParticipationToAuctions() {}
+
+void MockAuctionManager::allowParticipationToAuctions() {}
+
+void MockAuctionManager::setOptimalDs(unsigned int optimal_ds_id) {}

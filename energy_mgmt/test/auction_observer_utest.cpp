@@ -193,6 +193,40 @@ TEST(TestAuctionObserver, testReauctioning)
     EXPECT_TRUE(mam.auction_started_test);
 }
 
+TEST(TestAuctionObserver, testGoChargingOnlyIfNewAuctionWasWon)
+{
+    AuctionObserver ao;
+    RobotStateManager2 rsm;
+    MockAuctionManager mam;
+    mam.participating_test = false;
+    MockTimeManager mtm;
+    ao.setRobotStateManager(&rsm);
+    ao.setAuctionManager(&mam);
+    ao.setTimeManager(&mtm);
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    mam.current_auction_test.auction_id = 1;
+    mam.winner_test = true;
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    mam.current_auction_test.auction_id = 2;
+    mam.winner_test = false;
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    mam.current_auction_test.auction_id = 3;
+    mam.winner_test = true;
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
+}
+
 int main(int argc, char **argv){
     ros::init(argc, argv, "auction_observer_utest");
     ros::NodeHandle private_nh("~");

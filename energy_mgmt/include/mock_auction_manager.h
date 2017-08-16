@@ -17,6 +17,9 @@ public:
     auction_t getCurrentAuction();
     void lock();
     void unlock();
+    void preventParticipationToAuctions();
+    void allowParticipationToAuctions();
+    void setOptimalDs(unsigned int optimal_ds_id);
 };
 
 #endif // MOCK_AUCTION_MANAGER_H

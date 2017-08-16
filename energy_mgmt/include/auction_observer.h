@@ -2,16 +2,21 @@
 #define AUCTION_OBSERVER_H
 
 #include <utilities/time_manager.h>
-#include "robot_state_manager2.h"
+#include "robot_state_manager_interface.h"
 #include "auction_manager_interface.h"
 #include <adhoc_communication/EmDockingStation.h>
+#include <robot_state/robot_state_management.h>
+#include "robot_state/GetRobotState.h"
+#include "robot_state/SetRobotState.h"
+#include "robot_state/TryToLockRobotState.h"
+#include "robot_state/UnlockRobotState.h"
 
 class AuctionObserver {
 public:
     AuctionObserver();
     void setAuctionManager(AuctionManagerInterface *auction_manager);
     void setTimeManager(TimeManagerInterface *time_manager);
-    void setRobotStateManager(RobotStateManager2 *robot_state_manager);
+    void setRobotStateManager(RobotStateManagerInterface *robot_state_manager);
 
     void actAccordingToRobotStateAndAuctionResult();
     void sanityChecks();
@@ -20,18 +25,19 @@ public:
 private:
     AuctionManagerInterface *auction_manager;
     TimeManagerInterface *time_manager;
-    RobotStateManager2 *robot_state_manager;
+    RobotStateManagerInterface *robot_state_manager;
     ros::Subscriber sub_new_optimal_ds;
-    
-    ros::ServiceClient get_robot_state_sc, set_robot_state_sc;
 
     bool auction_already_started;
     double reauctioning_timeout, auction_timeout, extra_auction_time;
     unsigned int robot_state;
+    bool new_victory;
+    unsigned int last_auction_id;
 
     void loadParameters();
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
+    void analyzeAuctionResult();
     void newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 };
 

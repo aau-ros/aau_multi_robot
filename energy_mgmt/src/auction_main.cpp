@@ -6,7 +6,7 @@
 #include "auction_observer.h"
 #include "concrete_sender.h"
 #include "concrete_bid_computer.h"
-#include "robot_state_manager2.h"
+#include "robot_state_manager.h"
 #include "concrete_sender.h"
 
 int main(int argc, char** argv)
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
     TimeManager tm;
     ConcreteBidComputer cbc;
-    RobotStateManager2 rsm;
+    RobotStateManager rsm;
     ConcreteSender cs;
 
     ros::NodeHandle nh_tilde("~");

@@ -76,6 +76,7 @@ add_library(auction_manager src/auction_manager.cpp)
 add_library(auction_observer src/auction_observer.cpp)
 add_library(docking_station_manager src/docking_station_manager.cpp)
 add_library(robot_state_manager2 src/robot_state_manager2.cpp)
+add_library(robot_state_manager_energy src/robot_state_manager.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
@@ -85,6 +86,7 @@ add_executable(energy_mgmt src/main.cpp)
 add_executable(auction_mgmt src/auction_main.cpp)
 
 add_dependencies(robot_state_manager2 ${catkin_EXPORTED_TARGETS})
+add_dependencies(robot_state_manager_energy ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_bid_computer robot_state adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_sender ${catkin_EXPORTED_TARGETS})
 add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -128,7 +130,7 @@ target_link_libraries(energy_mgmt
 )
 target_link_libraries(auction_observer
   auction_manager
-  robot_state_manager2
+  robot_state_manager_energy
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )

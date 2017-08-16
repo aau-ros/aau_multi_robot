@@ -4,23 +4,26 @@
 #include <unordered_map>
 
 #include <ros/ros.h>
-#include <robot_state/robot_state.h>
 #include <robot_state/GetRobotState.h>
 #include <robot_state/SetRobotState.h>
+#include <robot_state/TryToLockRobotState.h>
+#include <robot_state/UnlockRobotState.h>
+#include "robot_state_manager_interface.h"
 
-#include "robot_state_em.h"
-
-class RobotStateManager
+class RobotStateManager : public RobotStateManagerInterface
 {
 public:
     RobotStateManager();
-    RobotStateEM *getRobotState();
+    unsigned int getRobotState();
+    void setRobotState(unsigned int robot_state);
+    void lockRobotState();
+    void unlockRobotState();
 
 private:
-    std::unordered_map<unsigned int, RobotStateEM*> stateMap; //https://stackoverflow.com/questions/25465224/making-a-map-in-which-the-value-type-is-an-abstract-class-in-c
-
     ros::ServiceClient get_robot_state_sc;
     ros::ServiceClient set_robot_state_sc;
+    ros::ServiceClient try_to_lock_robot_state_sc;
+    ros::ServiceClient unlock_robot_state_sc;
 };
 
 

@@ -29,16 +29,12 @@ namespace robot_state
         // MISSING
         auctioning_2,
         exploring_for_graph_navigation,
-        choosing_next_action,
         stopped,
         dead,
         stuck,
         auctioning_3,
-        moving_to_frontier_before_going_charging,
         finished,
-        moving_away_from_ds,
         fully_charged,
-        leaving_ds
     };
 }
 

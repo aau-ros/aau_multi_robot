@@ -1,21 +1,18 @@
 #ifndef ROBOT_STATE_MANAGER2_H
 #define ROBOT_STATE_MANAGER2_H
 
-#include <unordered_map>
+#include "robot_state_manager_interface.h"
 
-#include <ros/ros.h>
-#include <robot_state/robot_state_management.h>
-#include <robot_state/GetRobotState.h>
-#include <robot_state/SetRobotState.h>
-
-class RobotStateManager2
+class RobotStateManager2 : public RobotStateManagerInterface
 {
 public:
     RobotStateManager2();
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
+    void lockRobotState();
+    void unlockRobotState();
 
-protected:
+private:
     unsigned int robot_state;
 };
 
