@@ -38,7 +38,6 @@ int main(int argc, char** argv)
     TimeManager tm;
     battery_simulate bat;
     bat.setTimeManager(&tm);
-    bat.initializeSimulationTime();
     bat.createLogDirectory();
     bat.createLogFiles();
     boost::thread thr_battery(boost::bind(&battery_simulate::run, &bat)); 
