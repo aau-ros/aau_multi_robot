@@ -1,24 +1,42 @@
 #include "battery_state_updater.h"
 
 BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
-    loadParameters();
-    initializeVariables();
+//    loadParameters();
+//    initializeVariables();
+//    subscribeToTopics();
+//    initializeBatteryState();
+//    this->b = b;
 }
 
 void BatteryStateUpdater::loadParameters() {
     this->b = b; //TODO bad names
     ros::NodeHandle nh_tilde("~");
-    nh_tilde.getParam("speed_avg_init", speed_avg_init); //TODO use config file instead of yaml file for the parameters
-    nh_tilde.getParam("power_charging", power_charging);
-    nh_tilde.getParam("power_per_speed", power_per_speed);
-    nh_tilde.getParam("power_moving_fixed_cost", power_moving_fixed_cost);
-    nh_tilde.getParam("power_sonar", power_sonar);
-    nh_tilde.getParam("power_laser", power_laser);
-    nh_tilde.getParam("power_microcontroller", power_microcontroller);
-    nh_tilde.getParam("power_basic_computations", power_basic_computations);
-    nh_tilde.getParam("power_advanced_computations", power_advanced_computations);
-    nh_tilde.getParam("max_linear_speed", max_speed_linear);
-    nh_tilde.getParam("maximum_traveling_distance", maximum_traveling_distance);
+    if(!nh_tilde.getParam("speed_avg_init", speed_avg_init)) //TODO use config file instead of yaml file for the parameters
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_charging", power_charging))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_per_speed", power_per_speed))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_moving_fixed_cost", power_moving_fixed_cost))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_sonar", power_sonar))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_laser", power_laser))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_microcontroller", power_microcontroller))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_basic_computations", power_basic_computations))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("power_advanced_computations", power_advanced_computations))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("max_linear_speed", max_speed_linear))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("maximum_traveling_distance", maximum_traveling_distance))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("log_path", log_path))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
+        ROS_FATAL("INVALID PARAM");
 }
 
 void BatteryStateUpdater::initializeVariables() {
@@ -27,7 +45,6 @@ void BatteryStateUpdater::initializeVariables() {
     traveled_distance = 0;
     last_traveled_distance = 0;
     total_traveled_distance = 0;
-    time_manager = new TimeManager(); //TODO
 }
 
 void BatteryStateUpdater::subscribeToTopics() {
@@ -77,33 +94,134 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
     speed_angular = msg.angular.z;
 }
 
-void BatteryStateUpdater::updateBatteryState() {
+void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
     computeElapsedTime();
-// computeTraveledDistance();
+    computeTraveledDistance();
+
 //    robot_state_manager.getRobotState()->accept(this);
-traveled_distance = 0;
-}
+    robot_state::robot_state_t robot_state;
+    robot_state = static_cast<robot_state::robot_state_t>(robot_state_manager->getRobotState());
 
-void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
-    substractEnergyRequiredForKeepingRobotAlive();
-    substractEnergyRequiredForBasicComputations();    
-}
+    if(robot_state == robot_state::INITIALIZING) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForBasicComputations();
 
-void BatteryStateUpdater::handle(ChoosingActionState *r) {
-    substractEnergyRequiredForKeepingRobotAlive();
-    substractEnergyRequiredForSensing();
-    substractEnergyRequiredForBasicComputations();
+    } else if(robot_state == robot_state::CHOOSING_ACTION) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::COMPUTING_NEXT_GOAL) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForAdvancedComputations();
+
+    } else if(robot_state == robot_state::MOVING_TO_FRONTIER) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::CHECKING_VACANCY) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::GOING_CHARGING) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::CHARGING) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForBasicComputations();
+        rechargeBattery();
+
+    } else if(robot_state == robot_state::CHARGING_COMPLETED) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::CHARGING_ABORTED) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::LEAVING_DS) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::GOING_IN_QUEUE) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::IN_QUEUE) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::AUCTIONING) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::auctioning_2) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::exploring_for_graph_navigation) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::stopped) {
+        ;
+
+    } else if(robot_state == robot_state::stuck) {
+        ;
+
+    } else if(robot_state == robot_state::auctioning_3) {
+        substractEnergyRequiredForKeepingRobotAlive();
+        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::finished) {
+        ;
+
+    } else
+        ROS_FATAL("INVALID ROBOT STATE");
+
+    updateRemainingUsableDistanceAndRunningTime();
+
     traveled_distance = 0;
 }
 
-void BatteryStateUpdater::handle(ComputingNextGoalState *r) {
-    substractEnergyRequiredForKeepingRobotAlive();
-    substractEnergyRequiredForSensing();
-    substractEnergyRequiredForBasicComputations();
-    substractEnergyRequiredForAdvancedComputations();
-}
+//void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
+//    substractEnergyRequiredForKeepingRobotAlive();
+//    substractEnergyRequiredForBasicComputations();    
+//}
 
-double BatteryStateUpdater::computeElapsedTime() { //TODO add this function to TimeManager instead
+//void BatteryStateUpdater::handle(ChoosingActionState *r) {
+//    substractEnergyRequiredForKeepingRobotAlive();
+//    substractEnergyRequiredForSensing();
+//    substractEnergyRequiredForBasicComputations();
+//}
+
+//void BatteryStateUpdater::handle(ComputingNextGoalState *r) {
+//    substractEnergyRequiredForKeepingRobotAlive();
+//    substractEnergyRequiredForSensing();
+//    substractEnergyRequiredForBasicComputations();
+//    substractEnergyRequiredForAdvancedComputations();
+//}
+
+void BatteryStateUpdater::computeElapsedTime() { //TODO add this function to TimeManager instead
     double time_now = time_manager->simulationTimeNow().toSec();
     elapsed_time = time_now - time_last_update;
     time_last_update = time_now;
@@ -113,98 +231,50 @@ void BatteryStateUpdater::substractEnergyRequiredForKeepingRobotAlive() {
     
 }
 
-void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
-    this->time_manager = time_manager;
+void BatteryStateUpdater::substractEnergyRequiredForSensing() {
+    
 }
 
-//void battery_simulate::cb_robot(const adhoc_communication::EmRobot::ConstPtr &msg)
-//{
-//    if(initializing && msg.get()->state == moving_to_frontier) {
-//        if(counter_moving_to_frontier == 0)
-//            counter_moving_to_frontier++;
-//        else {
-//            initializing = false;
-//            ROS_INFO("Finished initialization procedure");
-//        }
-//        return;
+void BatteryStateUpdater::substractEnergyRequiredForBasicComputations() {
+    
+}
 
-//        //TODO use this code
-//        //if(initializing) {
-//        //    initializing = false;
-//         //   ROS_INFO("Finished initialization procedure");
-//        //}
-//        //return;  
-//    } 
-//    
-//    if(initializing)
-//        return;
+void BatteryStateUpdater::substractEnergyRequiredForAdvancedComputations() {
+    
+}
 
-//    if (msg.get()->state == charging)
-//    {
-//        ROS_DEBUG("Start recharging");
-//        state.charging = true;
-//        prev_consumed_energy_A = consumed_energy_A;
-//    }
-//    else {
-//        /* The robot is not charging; if the battery was previously under charging, it means that the robot aborted the
-//        recharging process */
-//        if (state.charging == true)
-//        {
-//            ROS_DEBUG("Recharging aborted");
-//            state.charging = false;
-//            state.fully_charged = false; //TODO reduntant?
-//        }
-//    }
-//    
-//    if(msg.get()->state == fully_charged) //when the robot is fully_charged, it is left a little bit at the DS to allow him to compute the next DS without consuming energy, so that the check of the reachability of frontiers also using the Ds graph makes sense
-//        do_not_consume_battery = true;
-//    else
-//        do_not_consume_battery = false;
-//    
-////    if(msg.get()->state == fully_charged || msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
-//    if(msg.get()->state == exploring || msg.get()->state == exploring_for_graph_navigation)
-//        advanced_computations_bool = true;
-//    else
-//        advanced_computations_bool = false;
-//    
-//    if(msg.get()->state == in_queue)
-//        idle_mode = true;
-//    else
-//        idle_mode = false;
-//        
-//}
+void BatteryStateUpdater::rechargeBattery() {
+    ROS_INFO("Recharging battery");
+    double ratio_A = -1, ratio_B = -1;
 
-//void battery_simulate::compute()
-//{
-//    BatteryStateUpdater c(&state);
-//    (robot_state_manager.getRobotState())->accept(&c);
-//    
-//    //robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(get_srv_msg.response.robot_state); //TODO use visitor instead of switch 
-//    robot_state::robot_state_t robot_state = static_cast<robot_state::robot_state_t>(1);
-//        
+    if(b->consumed_energy_A < 0 && b->consumed_energy_B < 0) {
+        ROS_FATAL("this should not happen...");
+    }
 
-//    /* Compute the number of elapsed seconds since the last time that we updated the battery state (since we use
-//     * powers) */
-//    ros::Duration time_diff = time_manager->simulationTimeNow() - time_last;
-//    double time_diff_sec = time_diff.toSec();
-//    elapsed_time = time_diff_sec; //TODO for debugging, should be removed...
+    if(b->consumed_energy_A <= 0) {
+        ratio_A = 0.0;
+        ratio_B = 1.0;
+        b->consumed_energy_A = 0;
+    }   
+    else if(b->consumed_energy_B <= 0) {
+        ratio_A = 1.0;
+        ratio_B = 0.0;
+        b->consumed_energy_B = 0;
+    }
+    else {
+        ratio_A = b->consumed_energy_A / (b->consumed_energy_A + b->consumed_energy_B);
+        ratio_B = b->consumed_energy_B / (b->consumed_energy_A + b->consumed_energy_B);
+    }
+    
+    if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1 || fabs(ratio_A + ratio_B - 1.0) > 0.01 ) //TODO this sanity check should be useless
+        ROS_FATAL("strange ratio");
+    
+    b->consumed_energy_A -= ratio_A * power_charging * elapsed_time;
+    b->consumed_energy_B -= ratio_B * power_charging * elapsed_time;
 
-//    
-//    
-//    /* If there is no time difference to last computation, there is nothing to do */
-//    if (time_diff_sec <= 0)
-//        return;
+    b->remaining_time_charge = (b->consumed_energy_A + b->consumed_energy_B) / power_charging ;
 
-//    state.fully_charged = false;
-//    /* If the robot is charging, increase remaining battery life, otherwise compute consumed energy and decrease remaining battery life */
-//    if (robot_state == robot_state::CHARGING)
-//    {
-//        rechargeBattery(time_diff_sec);
-//        
-//        /* Check if the battery is now fully charged; notice that SOC could be higher than 100% due to how we increment
-//         * the remaing_energy during the charging process */
-////        if (state.soc >= 1)
-//        if(consumed_energy_A <=0 && consumed_energy_B <= 0)
+//if(consumed_energy_A <=0 && consumed_energy_B <= 0)
 //        {
 //            ROS_INFO("Recharging completed");
 //            
@@ -227,25 +297,10 @@ void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
 //            }
 //            
 //        }
-//    }
-//    else if (do_not_consume_battery) {
-//        time_last = time_manager->simulationTimeNow();
-//        return;
-//    } 
-//    else if(robot_state == robot_state::IN_QUEUE) {
-//        consumed_energy_B += power_idle * time_diff_sec; // J
-//        
-//    }
-//    else if(isRobotMoving()) {
-//    
-//        /* If the robot is moving, than we have to consider also the energy consumed for moving, otherwise it is
-//         * sufficient to consider the fixed power cost.
-//         * Notice that this is clearly an approximation, since we are not sure that the robot was moving for the whole
-//         * interval of time: moreover, since we do not know the exact speed profile during this interval of time, we
-//         * overestimate the consumed energy by assuming that the robot moved at the maximum speed for the whole period.
-//         */
-//        
-//        if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
+}
+
+void BatteryStateUpdater::computeTraveledDistance() {
+//if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
 //            consumed_energy_A += (power_moving_fixed_cost + power_per_speed * speed_linear) * time_diff_sec; // J
 //        }
 //        
@@ -268,50 +323,68 @@ void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
 //    
 //    state.remaining_time_run = state.remaining_distance * speed_avg;
 //    state.soc = state.remaining_distance / maximum_traveling_distance;
+}
 
-////    ROS_ERROR("SOC: %.0f%%; remaining distance: %.2fm", state.soc * 100, state.remaining_distance);
-//    
-//    /* Store the time at which this battery state update has been perfomed, so that next time we can compute againg the elapsed time interval */
-//    time_last = time_manager->simulationTimeNow();
-//}
-
-//void battery_simulate::rechargeBattery(double time_diff_sec) {
-//    ROS_INFO("Recharging battery");
-//    
-//    
-//    double ratio_A = -1, ratio_B = -1;
-//    if(consumed_energy_A < 0 && consumed_energy_B < 0) {
-//        ROS_FATAL("this should not happen...");
-//        return;
-//    }
-//    else if(consumed_energy_A <= 0) {
-//        ratio_A = 0.0;
-//        ratio_B = 1.0;
-//        consumed_energy_A = 0;
-//        ROS_ERROR("this should not happen..."); //FIXME actually this could happen since B is also consumed while charging...
-//    }   
-//    else if(consumed_energy_B <= 0) {
-//        ratio_A = 1.0;
-//        ratio_B = 0.0;
-//        consumed_energy_B = 0;
-//        ROS_ERROR("this should not happen...");
-//    }
-//    else {
-//        ratio_A = consumed_energy_A / (consumed_energy_A + consumed_energy_B);
-//        ratio_B = consumed_energy_B / (consumed_energy_A + consumed_energy_B);
-//    }
-
-//    if(ratio_A < 0 || ratio_A > 1 || ratio_B < 0 || ratio_B > 1 || fabs(ratio_A + ratio_B - 1.0) > 0.01 ) {
-//        ROS_FATAL("strange ratio");
-//        return;
-//    }
-
-//    consumed_energy_A -= ratio_A * power_charging * time_diff_sec;
-//    consumed_energy_B -= ratio_B * power_charging * time_diff_sec;
-//    consumed_energy_B += power_idle * time_diff_sec;
-
+void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
 //    state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
 //    state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
 //    if(state.remaining_distance > maximum_traveling_distance)
 //        state.remaining_distance = maximum_traveling_distance;
-//}
+}
+
+void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
+    this->time_manager = time_manager;
+}
+
+void BatteryStateUpdater::setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {
+    this->robot_state_manager = robot_state_manager;
+}
+
+void foo() {
+//state.remaining_distance = maximum_traveling_distance;
+//            state.remaining_time_charge = 0;
+//    state.remaining_time_run = state.remaining_distance * speed_avg;
+//    state.soc = state.remaining_distance / maximum_traveling_distance;
+}
+
+void BatteryStateUpdater::createLogDirectory() {
+    /* Create directory */
+    log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+    {
+        ROS_INFO("Creating directory %s", log_path.c_str());
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+            {
+                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+                exit(-1);
+            }
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+            exit(-1);
+        }
+    }
+    else
+    {
+        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+    }
+}
+
+void BatteryStateUpdater::createLogFiles() {
+    /* Create file names */
+    log_path = log_path.append("/");
+    info_file = log_path + std::string("metadata_battery.csv");
+
+    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,max_linear_speed,initial_speed_avg" << std::endl;
+    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << max_speed_linear << "," << speed_avg_init << std::endl;
+    fs_info.close();
+    
+//    sim_time_start = ros::Time::now();
+//    wall_time_start = ros::WallTime::now();
+}

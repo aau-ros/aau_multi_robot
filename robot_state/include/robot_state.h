@@ -26,15 +26,13 @@ namespace robot_state
         IN_QUEUE,
         AUCTIONING,
 
-        // MISSING
+        // to be removed
         auctioning_2,
         exploring_for_graph_navigation,
         stopped,
-        dead,
         stuck,
         auctioning_3,
-        finished,
-        fully_charged,
+        finished
     };
 }
 

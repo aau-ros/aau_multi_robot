@@ -173,24 +173,24 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
 
-    add_rostest_gtest(auction_manager_utest
-        test/auction_manager_utest.launch
-        test/auction_manager_utest.cpp              
-    )
-    add_library(mock_bid_computer test/mock_bid_computer.cpp)
-    add_library(mock_sender test/mock_sender.cpp)
-    target_link_libraries(auction_manager_utest
-        auction_manager
-        mock_bid_computer
-        mock_sender
-        ${catkin_LIBRARIES}
-    )
-    add_dependencies(auction_manager_utest
-        adhoc_communication_generate_messages_cpp
-        adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
-        ${PROJECT_NAME}_generate_messages_cpp
-        ${catkin_EXPORTED_TARGETS}
-    )
+#    add_rostest_gtest(auction_manager_utest
+#        test/auction_manager_utest.launch
+#        test/auction_manager_utest.cpp              
+#    )
+#    add_library(mock_bid_computer test/mock_bid_computer.cpp)
+#    add_library(mock_sender test/mock_sender.cpp)
+#    target_link_libraries(auction_manager_utest
+#        auction_manager
+#        mock_bid_computer
+#        mock_sender
+#        ${catkin_LIBRARIES}
+#    )
+#    add_dependencies(auction_manager_utest
+#        adhoc_communication_generate_messages_cpp
+#        adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
+#        ${PROJECT_NAME}_generate_messages_cpp
+#        ${catkin_EXPORTED_TARGETS}
+#    )
 
     add_rostest_gtest(auction_observer_utest
         test/auction_observer_utest.launch

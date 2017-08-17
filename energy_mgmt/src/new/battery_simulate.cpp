@@ -15,8 +15,10 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
 
 void battery_simulate::loadParameters() {
     ros::NodeHandle nh_tilde("~");
-    nh_tilde.param<std::string>("log_path", log_path, ""); //TODO getParam or param?
-    nh_tilde.param<string>("robot_prefix", robot_prefix, "");
+    if(!nh_tilde.getParam("log_path", log_path))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
+        ROS_FATAL("INVALID PARAM");
 }
 
 void battery_simulate::initializeRobotName() {
@@ -64,32 +66,14 @@ void battery_simulate::initializeSimulationTime() {
 }
 
 void battery_simulate::logBatteryState()
-{
-    std::string state_std;
-//    if(initializing)
-//        state_std = "initializing";
-//    else if(idle_mode)
-//        state_std = "idle";
-//    else if(state.charging) 
-//        state_std = "charging";
-//    else if(advanced_computations_bool)
-//        state_std = "computing";
-//    else if(speed_linear > 0 || speed_angular > 0)
-//        state_std = "moving";
-//    else if(do_not_consume_battery)
-//        state_std = "at_ds_for_computation";
-//    else
-//        state_std = "standing";
-        
-//    ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
-//    ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;
-
-    //TODO    
-//    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << state.consumed_energy_A << "," << state.consumed_energy_B << "," 
-////    << last_traveled_distance << "," << total_traveled_distance << "," << time_manager->simulationTimeNow() << "," << ros::WallTime::now() 
-//    << std::endl;
-//    battery_state_fs.close();
+{    
+    ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
+    ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;  
+    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << state_std << "," << state.consumed_energy_A << "," << state.consumed_energy_B << "," 
+//    << last_traveled_distance << "," << total_traveled_distance << "," << time_manager->simulationTimeNow() << "," << ros::WallTime::now() 
+    << std::endl;
+    battery_state_fs.close();
 }
 
 void battery_simulate::publishBatteryState()
@@ -142,63 +126,12 @@ void battery_simulate::createLogDirectory() {
 void battery_simulate::createLogFiles() {
     /* Create file names */
     log_path = log_path.append("/");
-    info_file = log_path + std::string("metadata_battery.csv");
     battery_state_filename = log_path + std::string("battery_state.csv");
-
-//    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,max_linear_speed,initial_speed_avg" << std::endl;
-//    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << max_speed_linear << "," << speed_avg_init << std::endl;
-//    fs_info.close();
     
-//    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//    battery_state_fs << "#elapsed_sim_time,elapsed_wall_time,state.remaining_time_run,state.remaining_time_charge,state.remaining_distance,state,consumed_energy_A,consumed_energy_B,last_traveled_distance,total_traveled_distance,sim_time,wall_time" << std::endl;
-//    battery_state_fs.close();
+    battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    battery_state_fs << "#elapsed_sim_time,elapsed_wall_time,state.remaining_time_run,state.remaining_time_charge,state.remaining_distance,state,consumed_energy_A,consumed_energy_B,last_traveled_distance,total_traveled_distance,sim_time,wall_time" << std::endl;
+    battery_state_fs.close();
     
 //    sim_time_start = ros::Time::now();
 //    wall_time_start = ros::WallTime::now();
 }
-
-
-
-
-
-
-
-/*************************
- ** Debugging functions **
- *************************/
-//void battery_simulate::set_last_time() {
-////    time_last = time_manager->simulationTimeNow();
-//}
-
-//double battery_simulate::last_time_secs() {
-////    return time_last.toSec();
-//}
-
-//double battery_simulate::getElapsedTime() {
-////    return elapsed_time;
-//}
-
-//void battery_simulate::spinOnce() {
-//    ros::spinOnce();
-//}
-
-//double battery_simulate::getConsumedEnergyA() {
-//    return state.consumed_energy_A;
-//}
-
-//double battery_simulate::getConsumedEnergyB() {
-//    return state.consumed_energy_B;
-//}
-
-//double battery_simulate::getRemainingDistance() {
-//    return state.remaining_distance;
-//}
-
-//double battery_simulate::getMaximumTravelingDistance() {
-////    return maximum_traveling_distance;
-//}
-
-//double battery_simulate::getTotalTraveledDistance() {
-////    return total_traveled_distance;
-//}

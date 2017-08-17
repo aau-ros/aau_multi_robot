@@ -1041,13 +1041,13 @@ void docking::handle_robot_state()
 {
     // TODO(minor) better update...
         
-    if(robot_state == robot_state::CHARGING && (next_robot_state != fully_charged && next_robot_state != robot_state::LEAVING_DS && next_robot_state != finished)) {
+    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::LEAVING_DS && next_robot_state != finished)) {
         log_major_error("invalid state after robot_state::CHARGING!!!");
         ROS_INFO("current state: robot_state::CHARGING");   
         ROS_INFO("next state: %d", next_robot_state);
     }
     
-    if(has_to_free_optimal_ds && (next_robot_state == fully_charged || next_robot_state == robot_state::LEAVING_DS) ) {
+    if(has_to_free_optimal_ds && next_robot_state == robot_state::LEAVING_DS) {
 //        set_optimal_ds_vacant(true);
         free_ds(id_ds_to_be_freed);
         has_to_free_optimal_ds = false;
@@ -1176,7 +1176,7 @@ void docking::handle_robot_state()
             pub_finish.publish(msg);
         }   
     }
-    else if (next_robot_state == fully_charged || next_robot_state == robot_state::LEAVING_DS)
+    else if (next_robot_state == robot_state::LEAVING_DS)
     {
         going_to_ds = false;
         //free_ds(id_ds_to_be_freed); //it is better to release the DS when the robot has exited the fully_charged or robot_state::LEAVING_DS state, but sometimes (at the moment for unknown reasones) this takes a while, even if the robot has already phisically released the DS...
@@ -1192,10 +1192,6 @@ void docking::handle_robot_state()
         finalize();
     }
     else if (next_robot_state == stuck)
-    {
-        finalize();
-    }
-    else if (next_robot_state == dead)
     {
         finalize();
     }
@@ -1533,7 +1529,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
          * already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
         if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
-            robot_state == robot_state::CHECKING_VACANCY || robot_state == fully_charged || robot_state == robot_state::LEAVING_DS)
+            robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::LEAVING_DS)
 //        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
 //            robot_state == robot_state::CHECKING_VACANCY)
         {
@@ -1542,7 +1538,7 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
                 ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
             else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY)
                 ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
-            else if (robot_state == fully_charged || robot_state == robot_state::LEAVING_DS)
+            else if (robot_state == robot_state::LEAVING_DS)
                 ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
 
             /* Reply to the robot that asked for the check, telling it that the DS is

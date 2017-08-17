@@ -81,6 +81,7 @@ bool exploration_finished;
 
 boost::mutex costmap_mutex;
 boost::mutex log_mutex;
+boost::mutex state_mutex;
 
 void sleepok(int t, ros::NodeHandle &nh)
 {
@@ -471,11 +472,9 @@ class Explorer
         enum_string.push_back("auctioning_2");
         enum_string.push_back("exploring_for_graph_navigation");
         enum_string.push_back("stopped");
-        enum_string.push_back("dead");
         enum_string.push_back("stuck");
         enum_string.push_back("auctioning_3");
         enum_string.push_back("finished");
-        enum_string.push_back("fully_charged");
         
         checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
 
@@ -2631,11 +2630,11 @@ class Explorer
         } else
             ROS_INFO("Status file created successfully");
         
-        if(percentage < 90 && robot_state != stuck && robot_state != dead) {
+        if(percentage < 90 && robot_state != stuck) {
             log_major_error("low percentage (<90%)!!!");
         }
         
-        if(percentage < 95 && robot_state != stuck && robot_state != dead) {
+        if(percentage < 95 && robot_state != stuck) {
             log_minor_error("percentage < 95%");
         }
         
@@ -3394,21 +3393,28 @@ class Explorer
 
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
+        state_mutex.lock();
+
         if(robot_state == robot_state::CHECKING_VACANCY) { //TODO is it possible to received a message about vacancy when not performing vacancy checks? probably yes due to broadcasting
             ROS_INFO("Target DS is (going to be) occupied by robot %d", msg.get()->used_by_robot_id);
             //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
              //TODO this check should be already in update_robot_state() probably...
-            update_robot_state_2(robot_state::GOING_IN_QUEUE);
-            
+            update_robot_state_2(robot_state::GOING_IN_QUEUE);            
         }
+
+        state_mutex.unlock();
     }
     
     void vacancy_callback(const ros::TimerEvent &event) {
+        state_mutex.lock();
+
         ROS_INFO("Timeout for vacancy check");
-        if(robot_state_next != going_queue_next && robot_state == robot_state::CHECKING_VACANCY)
+        if(robot_state == robot_state::CHECKING_VACANCY)
             update_robot_state_2(robot_state::GOING_CHECKING_VACANCY);
         else
             update_robot_state_2(robot_state::GOING_IN_QUEUE);
+
+        state_mutex.unlock();
     }
 
     void new_optimal_docking_station_selected_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
@@ -3507,7 +3513,6 @@ class Explorer
     void abort() {
         ROS_ERROR("Exploration is going to be gracefully terminated for this robot...");
         ros::Duration(3).sleep();
-        update_robot_state_2(dead);
         this->indicateSimulationEnd();
         
         shutdown();
@@ -4120,16 +4125,12 @@ class Explorer
         exploring_next,
         going_charging_next,
         going_queue_next,
-        fully_charged_next,
         current_state,
         finished_next
     };
     state_next_t robot_state_next;
 
   private:
-    // enum state_t {exploring, going_charging, charging, finished, fully_charged,
-    // stuck, in_queue};
-    // state_t robot_state;
 
     ros::Publisher pub_move_base;
     ros::Publisher pub_Point;

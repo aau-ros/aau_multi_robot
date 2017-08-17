@@ -45,11 +45,9 @@ void Server::fillRobotStateStringsVector() {
     robot_state_strings.push_back("auctioning_2");
     robot_state_strings.push_back("exploring_for_graph_navigation");
     robot_state_strings.push_back("stopped");
-    robot_state_strings.push_back("dead");
     robot_state_strings.push_back("stuck");
     robot_state_strings.push_back("auctioning_3");
     robot_state_strings.push_back("finished");
-    robot_state_strings.push_back("fully_charged");
 }
 
 #pragma GCC diagnostic push

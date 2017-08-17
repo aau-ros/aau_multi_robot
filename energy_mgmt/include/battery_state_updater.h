@@ -6,19 +6,26 @@
 #include <explorer/Speed.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/Twist.h>
+#include <fstream>
+#include <boost/filesystem.hpp>
 #include <boost/thread/mutex.hpp>
 #include <robot_state/robot_state_management.h>
 #include <utilities/time_manager.h>
+#include "robot_state_manager_interface.h"
 
-class BatteryStateUpdater : public RobotStateHandler
+//class BatteryStateUpdater : public RobotStateHandler
+class BatteryStateUpdater
 {
 public:
     BatteryStateUpdater(explorer::battery_state *b);
     void setTimeManager(TimeManagerInterface *time_manager);
+    void setRobotStateManager(RobotStateManagerInterface *robot_state_manager);
+    void createLogFiles();
+    void createLogDirectory();
     void updateBatteryState();
-    void handle(InitializingState *state) override;
-    void handle(ChoosingActionState *state) override;
-    void handle(ComputingNextGoalState *state) override;
+//    void handle(InitializingState *state) override;
+//    void handle(ChoosingActionState *state) override;
+//    void handle(ComputingNextGoalState *state) override;
 
 private:
     // Parameters
@@ -45,8 +52,14 @@ private:
     double time_last_update;
     boost::mutex mutex_traveled_distance;
 
+    std::string log_path;
+    std::string info_file, battery_state_filename;
+    std::fstream fs_info, battery_state_fs;
+    std::string robot_name;
+    std::string robot_prefix;
+
     explorer::battery_state *b;
-    RobotStateApi robot_state_manager;
+    RobotStateManagerInterface *robot_state_manager;
     TimeManagerInterface *time_manager;
 
     ros::Subscriber avg_speed_sub;
@@ -58,10 +71,12 @@ private:
     void initializeVariables();
     void subscribeToTopics();
 
-    double computeElapsedTime();
-    void substractEnergyRequiredForSensing() {};
-    void substractEnergyRequiredForBasicComputations() {};
-    void substractEnergyRequiredForAdvancedComputations() {};
+    void computeElapsedTime();
+    void computeTraveledDistance();
+    void updateRemainingUsableDistanceAndRunningTime();
+    void substractEnergyRequiredForSensing();
+    void substractEnergyRequiredForBasicComputations();
+    void substractEnergyRequiredForAdvancedComputations();
     void substractEnergyRequiredForKeepingRobotAlive();
     void rechargeBattery();
 
