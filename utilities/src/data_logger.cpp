@@ -1,20 +1,28 @@
 #include "utilities/data_logger.h"
 
 DataLogger::DataLogger(std::string node_name, std::string robot_name, std::string log_path) {
-    std::string complete_path = createCompletePath(node_name, robot_name, log_path);
-    createDirectoryFromPathIfNotExists(complete_path);
+    complete_dir_path = createCompletePath(node_name, robot_name, log_path);
+    createDirectoryFromPathIfNotExists(complete_dir_path);
 }
 
-bool DataLogger::createLogFile(std::string filename, std::stringstream &header) { //TODO raise exception
-    return false;
+void DataLogger::createLogFile(std::string filename, std::stringstream &header) { //TODO raise exception
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << header;
+    fs.close();
 }
 
-bool DataLogger::updateLogFile(std::string filename, std::stringstream &new_sample) {
-    return false;   
+void DataLogger::updateLogFile(std::string filename, std::stringstream &new_sample) {
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << new_sample;
+    fs.close();
 }
 
 std::string DataLogger::createCompletePath(std::string node_name, std::string robot_name, std::string log_path) {
-    return log_path.append(node_name).append(robot_name);
+    return log_path.append("/" + node_name).append("/" + robot_name);
 }
 
 void DataLogger::createDirectoryFromPathIfNotExists(std::string path) {
@@ -32,7 +40,7 @@ void DataLogger::createDirectoryFromPathIfNotExists(std::string path) {
         }
         catch (const boost::filesystem::filesystem_error &e)
         {
-            ROS_ERROR("Cannot create path %saborting node...", path.c_str());
+            ROS_ERROR("Cannot create path %s: aborting node...", path.c_str());
             exit(-1);
         }
     }
