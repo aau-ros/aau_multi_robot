@@ -20,7 +20,7 @@ public:
     BatteryStateUpdater(explorer::battery_state *b);
     void setTimeManager(TimeManagerInterface *time_manager);
     void setRobotStateManager(RobotStateManagerInterface *robot_state_manager);
-    void createLogFiles();
+    void logMetadata();
     void createLogDirectory();
     void updateBatteryState();
 //    void handle(InitializingState *state) override;
@@ -42,7 +42,6 @@ private:
     double maximum_traveling_distance;  // m/s
 
     double last_pose_x, last_pose_y;
-    double traveled_distance;
     double last_traveled_distance;
     double total_traveled_distance;
     double speed_avg;
@@ -50,6 +49,7 @@ private:
     double speed_angular;
     double elapsed_time;
     double time_last_update;
+    double prev_consumed_energy_A;
     boost::mutex mutex_traveled_distance;
 
     std::string log_path;
@@ -72,12 +72,13 @@ private:
     void subscribeToTopics();
 
     void computeElapsedTime();
-    void computeTraveledDistance();
     void updateRemainingUsableDistanceAndRunningTime();
     void substractEnergyRequiredForSensing();
     void substractEnergyRequiredForBasicComputations();
     void substractEnergyRequiredForAdvancedComputations();
     void substractEnergyRequiredForKeepingRobotAlive();
+    void substractEnergyRequiredForLocomotion();
+    void subtractTraveledDistance();
     void rechargeBattery();
 
     void avgSpeedCallback(const explorer::Speed &msg);

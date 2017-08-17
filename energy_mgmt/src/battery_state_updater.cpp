@@ -1,11 +1,12 @@
 #include "battery_state_updater.h"
 
 BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
-//    loadParameters();
-//    initializeVariables();
-//    subscribeToTopics();
-//    initializeBatteryState();
-//    this->b = b;
+    loadParameters();
+    initializeVariables();
+    subscribeToTopics();
+    initializeBatteryState();
+    logMetadata(); //TODO this makes the tests fail... but maybe it's just because we didn't set the log_path param
+    this->b = b;
 }
 
 void BatteryStateUpdater::loadParameters() {
@@ -42,9 +43,9 @@ void BatteryStateUpdater::loadParameters() {
 void BatteryStateUpdater::initializeVariables() {
     speed_avg = speed_avg_init;
     last_pose_x = 0, last_pose_y = 0;
-    traveled_distance = 0;
     last_traveled_distance = 0;
     total_traveled_distance = 0;
+    prev_consumed_energy_A = 0;
 }
 
 void BatteryStateUpdater::subscribeToTopics() {
@@ -76,15 +77,19 @@ void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
 }
 
 void BatteryStateUpdater::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {
-    double pose_x = pose->pose.pose.position.x;
-    double pose_y = pose->pose.pose.position.y;
-    
     mutex_traveled_distance.lock();
-    traveled_distance += sqrt( (last_pose_x-pose_x)*(last_pose_x-pose_x) + (last_pose_y-pose_y)*(last_pose_y-pose_y) ); //TODO use hypot
-    mutex_traveled_distance.unlock();
+
+    double pose_x = pose->pose.pose.position.x;
+    double pose_y = pose->pose.pose.position.y;    
+    
+    double distance = sqrt( (last_pose_x-pose_x)*(last_pose_x-pose_x) + (last_pose_y-pose_y)*(last_pose_y-pose_y) ); //TODO use hypot
+    last_traveled_distance += distance;
+    total_traveled_distance += distance;
     
     last_pose_x = pose_x;
     last_pose_y = pose_y;
+
+    mutex_traveled_distance.unlock();
 }
 
 void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
@@ -95,8 +100,8 @@ void BatteryStateUpdater::cmdVelCallback(const geometry_msgs::Twist &msg)
 }
 
 void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
+    ROS_INFO("Updating battery state");
     computeElapsedTime();
-    computeTraveledDistance();
 
 //    robot_state_manager.getRobotState()->accept(this);
     robot_state::robot_state_t robot_state;
@@ -121,11 +126,15 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForLocomotion();
+        subtractTraveledDistance();
 
     } else if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForLocomotion();
+        subtractTraveledDistance();
 
     } else if(robot_state == robot_state::CHECKING_VACANCY) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -136,6 +145,8 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForLocomotion();
+        subtractTraveledDistance();
 
     } else if(robot_state == robot_state::CHARGING) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -156,11 +167,14 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForLocomotion();
+        //subtractTraveledDistance(); //TODO(IMPORTANT) we should use this, but it complicates a lot the exstimations
 
     } else if(robot_state == robot_state::GOING_IN_QUEUE) {
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForLocomotion();
 
     } else if(robot_state == robot_state::IN_QUEUE) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -198,9 +212,10 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
     } else
         ROS_FATAL("INVALID ROBOT STATE");
 
-    updateRemainingUsableDistanceAndRunningTime();
+    if(robot_state != robot_state::CHARGING)
+        prev_consumed_energy_A = b->consumed_energy_A;
 
-    traveled_distance = 0;
+    updateRemainingUsableDistanceAndRunningTime();
 }
 
 //void BatteryStateUpdater::handle(InitializingState *r) { //TODO check how each state consumes energy...
@@ -228,19 +243,28 @@ void BatteryStateUpdater::computeElapsedTime() { //TODO add this function to Tim
 }
 
 void BatteryStateUpdater::substractEnergyRequiredForKeepingRobotAlive() {
-    
+    b->consumed_energy_B += elapsed_time * power_microcontroller;
 }
 
 void BatteryStateUpdater::substractEnergyRequiredForSensing() {
-    
+    b->consumed_energy_B += elapsed_time * (power_sonar + power_laser);
 }
 
 void BatteryStateUpdater::substractEnergyRequiredForBasicComputations() {
-    
+    b->consumed_energy_B += elapsed_time * power_basic_computations;
 }
 
 void BatteryStateUpdater::substractEnergyRequiredForAdvancedComputations() {
-    
+    b->consumed_energy_B += elapsed_time * power_advanced_computations;
+}
+
+void BatteryStateUpdater::substractEnergyRequiredForLocomotion() {
+    b->consumed_energy_A += elapsed_time * (power_per_speed * speed_linear + power_moving_fixed_cost);
+}
+
+void BatteryStateUpdater::subtractTraveledDistance() {
+    b->remaining_distance -= last_traveled_distance;
+    last_traveled_distance = 0;
 }
 
 void BatteryStateUpdater::rechargeBattery() {
@@ -255,11 +279,13 @@ void BatteryStateUpdater::rechargeBattery() {
         ratio_A = 0.0;
         ratio_B = 1.0;
         b->consumed_energy_A = 0;
+        ROS_ERROR("this should not happen");
     }   
     else if(b->consumed_energy_B <= 0) {
         ratio_A = 1.0;
         ratio_B = 0.0;
         b->consumed_energy_B = 0;
+        ROS_ERROR("this should not happen");
     }
     else {
         ratio_A = b->consumed_energy_A / (b->consumed_energy_A + b->consumed_energy_B);
@@ -271,65 +297,48 @@ void BatteryStateUpdater::rechargeBattery() {
     
     b->consumed_energy_A -= ratio_A * power_charging * elapsed_time;
     b->consumed_energy_B -= ratio_B * power_charging * elapsed_time;
-
-    b->remaining_time_charge = (b->consumed_energy_A + b->consumed_energy_B) / power_charging ;
-
-//if(consumed_energy_A <=0 && consumed_energy_B <= 0)
-//        {
-//            ROS_INFO("Recharging completed");
-//            
-//            state.charging = false;
-//            state.fully_charged = true;
-//             
-//            consumed_energy_A = 0;
-//            consumed_energy_B = 0;
-//            
-//            // Set battery state to its maximum values 
-//            state.remaining_distance = maximum_traveling_distance;
-//            state.remaining_time_charge = 0;
-//            state.soc = 1; // since SOC cannot be higher than 100% in real life, force it to be 100%
-//            
-//            robot_state::SetRobotState set_srv_msmg;
-//            bool call_succeeded = set_robot_state_sc.call(set_srv_msmg);
-//            while(!call_succeeded) { //TODO duplicated code... use a function
-//                call_succeeded = set_robot_state_sc.call(set_srv_msmg);
-//                ROS_ERROR("..");   
-//            }
-//            
-//        }
-}
-
-void BatteryStateUpdater::computeTraveledDistance() {
-//if (speed_linear > 0) { //TODO we should check also the robot state (e.g.: if the robot is in 'exploring', speed_linear should be zero...); notice that 
-//            consumed_energy_A += (power_moving_fixed_cost + power_per_speed * speed_linear) * time_diff_sec; // J
-//        }
-//        
-//        consumed_energy_B += (power_sonar + power_laser + power_microcontroller + power_basic_computations + power_advanced_computations) * time_diff_sec; // J
-//        
-//        /* Update battery state */
-//        state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
-//        
-//        mutex_traveled_distance.lock();
-//        state.remaining_distance -= traveled_distance;
-////        ROS_ERROR("%.2f", traveled_distance);
-
-//        last_traveled_distance = traveled_distance;
-//        total_traveled_distance += traveled_distance;
-
-//        traveled_distance = 0;
-//        mutex_traveled_distance.unlock();
-//        
-//    }
-//    
-//    state.remaining_time_run = state.remaining_distance * speed_avg;
-//    state.soc = state.remaining_distance / maximum_traveling_distance;
 }
 
 void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
-//    state.remaining_time_charge = (consumed_energy_A + consumed_energy_B) / power_charging ;
-//    state.remaining_distance = (prev_consumed_energy_A - consumed_energy_A) / prev_consumed_energy_A * maximum_traveling_distance;
-//    if(state.remaining_distance > maximum_traveling_distance)
-//        state.remaining_distance = maximum_traveling_distance;
+    ROS_FATAL("MISSING");
+    if(b->consumed_energy_A <=0 && b->consumed_energy_B <= 0)
+    {
+        ROS_INFO("Recharging completed");
+         
+        b->consumed_energy_A = 0;
+        b->consumed_energy_B = 0;
+        
+        // Set battery state to its maximum values 
+        b->remaining_distance = maximum_traveling_distance;
+        b->remaining_time_charge = 0;
+        b->remaining_time_run = b->remaining_distance * speed_avg;
+        b->soc = 1;
+        
+        robot_state_manager->lockRobotState();
+        robot_state::robot_state_t robot_state;
+        robot_state = static_cast<robot_state::robot_state_t>(robot_state_manager->getRobotState());
+        if(robot_state == robot_state::CHARGING)
+            robot_state_manager->setRobotState(robot_state::CHARGING_COMPLETED);
+        robot_state_manager->unlockRobotState();
+        
+    } else {
+        if(b->consumed_energy_A < 0) 
+            ROS_ERROR("this shouldn't happend");
+
+        else if(b->consumed_energy_B < 0)
+            ROS_ERROR("this shouldn't happend");
+
+        b->remaining_time_charge = (b->consumed_energy_A + b->consumed_energy_B) / power_charging ;
+        b->remaining_distance = ( (prev_consumed_energy_A - b->consumed_energy_A) / prev_consumed_energy_A ) * maximum_traveling_distance;
+        if(b->remaining_distance > maximum_traveling_distance) {
+            ROS_ERROR("state.remaining_distance > maximum_traveling_distance");
+            b->remaining_distance = maximum_traveling_distance;
+        }
+        b->remaining_time_run = b->remaining_distance * speed_avg;
+        b->soc = b->remaining_distance / maximum_traveling_distance;
+
+
+    }
 }
 
 void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
@@ -338,13 +347,6 @@ void BatteryStateUpdater::setTimeManager(TimeManagerInterface *time_manager) {
 
 void BatteryStateUpdater::setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {
     this->robot_state_manager = robot_state_manager;
-}
-
-void foo() {
-//state.remaining_distance = maximum_traveling_distance;
-//            state.remaining_time_charge = 0;
-//    state.remaining_time_run = state.remaining_distance * speed_avg;
-//    state.soc = state.remaining_distance / maximum_traveling_distance;
 }
 
 void BatteryStateUpdater::createLogDirectory() {
@@ -375,7 +377,7 @@ void BatteryStateUpdater::createLogDirectory() {
     }
 }
 
-void BatteryStateUpdater::createLogFiles() {
+void BatteryStateUpdater::logMetadata() {
     /* Create file names */
     log_path = log_path.append("/");
     info_file = log_path + std::string("metadata_battery.csv");
@@ -384,7 +386,4 @@ void BatteryStateUpdater::createLogFiles() {
     fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,max_linear_speed,initial_speed_avg" << std::endl;
     fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << max_speed_linear << "," << speed_avg_init << std::endl;
     fs_info.close();
-    
-//    sim_time_start = ros::Time::now();
-//    wall_time_start = ros::WallTime::now();
 }
