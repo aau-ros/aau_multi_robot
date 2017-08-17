@@ -9,9 +9,6 @@ AuctionManager::AuctionManager(unsigned int robot_id) {
 }
 
 void AuctionManager::initializeVariables(unsigned int robot_id) {
-    _b1 = false; _b2 = false; _b3 = false; _b4 = false; //TODO remove
-    _u1 = 0; _u2 = 0;
-
     winner_of_auction = false;
     robot_cannot_participate_to_auctions = false;
     optimal_ds_is_set = false;
@@ -20,6 +17,7 @@ void AuctionManager::initializeVariables(unsigned int robot_id) {
     time_last_participation = 0;
     local_auction_id = 0;
     current_auction.starting_time = -1;
+    current_auction.ending_time = 0;
 }
 
 void AuctionManager::loadParameters() {
@@ -55,6 +53,49 @@ void AuctionManager::createSubscribers() {
     auction_starting_sub = nh.subscribe(my_prefix + auction_starting_topic, 1000, &AuctionManager::auctionStartingCallback, this);
     auction_reply_sub = nh.subscribe(my_prefix + auction_reply_topic, 1000, &AuctionManager::auctionReplyCallback, this);
     auction_result_sub = nh.subscribe(my_prefix + auction_result_topic, 1000, &AuctionManager::auctionResultCallback, this);
+}
+
+void AuctionManager::logMetadata()
+{
+    ROS_INFO("Creating log files...");
+
+    /* Create directory */
+    log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+    {
+        ROS_INFO("Creating directory %s", log_path.c_str());
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+            {
+                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+                exit(-1);
+            }
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+            exit(-1);
+        }
+    }
+    else
+    {
+        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+    }
+
+    std::string filename;
+    std::fstream fs;
+
+    log_path = log_path.append("/");
+    filename = log_path + std::string("auctions.csv");
+
+    fs.open(filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << "#auction_duration,reauctioning_timeout,extra_auction_time" << std::endl;
+    fs << auction_timeout << "," << reauctioning_timeout << "," << extra_auction_time << std::endl;
+    fs.close();
+
 }
 
 void AuctionManager::setBidComputer(BidComputer *bid_computer) {
@@ -231,7 +272,7 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
 }
 
 bool AuctionManager::isRobotParticipatingToAuction() {
-    return (auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING);
+    return ((auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING) && current_auction.ending_time < 0);
 }
 
 bool AuctionManager::isRobotWinnerOfMostRecentAuction() {

@@ -1592,6 +1592,8 @@ void docking::create_log_files()
         ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
     }
 
+    std::fstream fs;
+
     /* Create file names */
     log_path = log_path.append("/");
     csv_file = log_path + std::string("optimal_ds.log"); //TODO(minor) .log or .csv?
@@ -1617,6 +1619,12 @@ void docking::create_log_files()
     ds_fs.open(ds_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     ds_fs << "#id,x,y" << std::endl;
     ds_fs.close();
+
+    fs.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
+               "starting_absolute_y" << std::endl;
+    fs << robot_id << "," << num_robots << "," << ds_selection_policy << "," << origin_absolute_x << "," << origin_absolute_y << std::endl;
+    fs.close();
 
 }
 

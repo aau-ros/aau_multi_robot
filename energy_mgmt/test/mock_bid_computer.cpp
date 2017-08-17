@@ -13,3 +13,9 @@ double MockBidComputer::getBid() {
 void MockBidComputer::addBid(double bid) {
     bids.push_back(bid);
 }
+
+void MockBidComputer::processMessages() {}
+
+void MockBidComputer::updateLlh() {}
+
+void MockBidComputer::logMetadata() {}

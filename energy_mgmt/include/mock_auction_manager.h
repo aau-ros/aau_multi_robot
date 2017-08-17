@@ -20,6 +20,7 @@ public:
     void preventParticipationToAuctions();
     void allowParticipationToAuctions();
     void setOptimalDs(unsigned int optimal_ds_id);
+    void logMetadata() {}
 };
 
 #endif // MOCK_AUCTION_MANAGER_H

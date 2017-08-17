@@ -14,6 +14,10 @@ ConcreteBidComputer::ConcreteBidComputer() {
         ROS_FATAL("parameter not found");
     if(!nh_tilde.getParam("y", origin_absolute_y))
         ROS_FATAL("parameter not found");
+    if(!nh_tilde.getParam("robot_prefix", robot_name))
+        ROS_FATAL("parameter not found");
+    if(!nh_tilde.getParam("log_path", log_path))
+        ROS_FATAL("parameter not found");
 
     std::string my_prefix = "";
     ros::NodeHandle nh;
@@ -24,14 +28,50 @@ ConcreteBidComputer::ConcreteBidComputer() {
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
                                                          &ConcreteBidComputer::newOptimalDsCallback, this);
     pose_sub = nh.subscribe("amcl_pose", 10, &ConcreteBidComputer::poseCallback, this);
-    //TODO(IMPORTANT)
-//    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//    fs_info << "#robot_id,num_robots,ds_selection_policy,starting_absolute_x,"
-//               "starting_absolute_y,w1,w2,w3,w4,auction_duration,reauctioning_timeout,extra_time" << std::endl;
-//    fs_info << robot_id << "," << num_robots << "," << ds_selection_policy << "," << origin_absolute_x << ","
-//            << origin_absolute_y << "," << w1 << "," << w2 << "," << w3 << "," << w4 << "," << auction_timeout << "," << reauctioning_timeout << "," << extra_time << std::endl;
-//    fs_info.close();
 }
+
+void ConcreteBidComputer::logMetadata()
+{
+    ROS_INFO("Creating log files...");
+
+    /* Create directory */
+    log_path = log_path.append("/energy_mgmt");
+    log_path = log_path.append(robot_name);
+    boost::filesystem::path boost_log_path(log_path.c_str());
+    if (!boost::filesystem::exists(boost_log_path))
+    {
+        ROS_INFO("Creating directory %s", log_path.c_str());
+        try
+        {
+            if (!boost::filesystem::create_directories(boost_log_path))
+            {
+                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+                exit(-1);
+            }
+        }
+        catch (const boost::filesystem::filesystem_error &e)
+        {
+            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+            exit(-1);
+        }
+    }
+    else
+    {
+        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+    }
+
+    std::string filename;
+    std::fstream fs;
+
+    log_path = log_path.append("/");
+    filename = log_path + std::string("llh.csv");
+
+    fs.open(filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << "#w1,w2,w3,w4" << std::endl;
+    fs << w1 << "," << w2 << "," << w3 << "," << w4 << std::endl;
+    fs.close();
+}
+
 
 void ConcreteBidComputer::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
     next_optimal_ds_x = msg.get()->x;

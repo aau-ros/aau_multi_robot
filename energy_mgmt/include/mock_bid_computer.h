@@ -9,7 +9,10 @@ class MockBidComputer : public BidComputer
 {
 public:
     MockBidComputer();
-    double getBid();
+    double getBid() override;
+    void updateLlh() override;
+    void processMessages() override;
+    void logMetadata() override;
     void addBid(double bid);
 
 private:

@@ -3,6 +3,8 @@
 
 #include <limits>
 #include <mutex>
+#include <fstream>
+#include <boost/filesystem.hpp>
 #include <adhoc_communication/ExpFrontierElement.h>
 #include <adhoc_communication/EmDockingStation.h>
 #include <adhoc_communication/ExpFrontier.h>
@@ -38,16 +40,16 @@ struct robot_t
 class ConcreteBidComputer : public BidComputer {
 public:
     ConcreteBidComputer();
-    double getBid();
-    void updateLlh();
-    void processMessages();
+    double getBid() override;
+    void updateLlh() override;
+    void processMessages() override;
+    void logMetadata() override;
 
 private:
     double w1, w2, w3, w4;
     double l1, l2, l3, l4;
     double llh;
     double origin_absolute_x, origin_absolute_y;
-//    bool recompute_llh;
     bool optimal_ds_is_set;
     std::vector<adhoc_communication::ExpFrontierElement> jobs, next_jobs;
     double optimal_ds_x, optimal_ds_y;
@@ -59,6 +61,7 @@ private:
     adhoc_communication::EmDockingStation::ConstPtr em_docking_station_msg;
     std::mutex robot_mutex, ds_mutex, message_mutex;
     explorer::battery_state::ConstPtr battery, next_battery;
+    std::string log_path, robot_name;
 
     void update_l1();
     unsigned int countVacantDss();

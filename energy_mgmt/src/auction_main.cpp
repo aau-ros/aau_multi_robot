@@ -18,8 +18,12 @@ int main(int argc, char** argv)
     }
 
     TimeManager tm;
+
     ConcreteBidComputer cbc;
+    cbc.logMetadata();
+
     RobotStateManager rsm;
+
     ConcreteSender cs;
 
     ros::NodeHandle nh_tilde("~");
@@ -34,6 +38,7 @@ int main(int argc, char** argv)
     auction_manager.setTimeManager(&tm);
     auction_manager.setBidComputer(&cbc);
     auction_manager.setSender(&cs);
+    auction_manager.logMetadata();
 
     AuctionObserver auction_observer;
     auction_observer.setAuctionManager(&auction_manager);

@@ -1,6 +1,8 @@
 #ifndef AUCTION_MANAGER_H
 #define AUCTION_MANAGER_H
 
+#include <fstream>
+#include <boost/filesystem.hpp>
 #include "auction_manager_interface.h"
 
 class AuctionManager : public AuctionManagerInterface {
@@ -19,10 +21,7 @@ public:
     auction_t getCurrentAuction();
     void lock();
     void unlock();
-
-    unsigned int _u1, _u2, _u3, _u4, _u5;
-    bool _b1, _b2, _b3, _b4;
-    int _d1;
+    void logMetadata();
 
 private:
     BidComputer *bid_computer;
@@ -47,6 +46,7 @@ private:
     unsigned int local_auction_id;
     unsigned int num_robots;
     std::string auction_starting_topic, auction_reply_topic, auction_result_topic;
+    std::string log_path, robot_name;
 
     void initializeVariables(unsigned int robot_id);
     void loadParameters();

@@ -60,7 +60,7 @@ catkin_package(
 enable_language(CXX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -fprofile-arcs -ftest-coverage -rdynamic -Wall -DBOOST_SYSTEM_NO_DEPRECATED -lboost_system -lgcov -std=c++11")
 
-include_directories( # note: this path is relative to the current CMakeLists.txt
+include_directories( # note: this path is relative to the CMakeLists.txt location
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
@@ -145,53 +145,52 @@ target_link_libraries(auction_mgmt
 ## Testing ##
 #############
 
-## Add gtest based cpp test target and link libraries
 if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
 #    add_library(mock_time_manager test/mock_time_manager.cpp)  
-#    add_executable(mock_robot test/mock_robot.cpp)
-#    target_link_libraries(mock_robot ${catkin_LIBRARIES})
-#    add_dependencies(mock_robot
-#        ${PROJECT_NAME}_generate_messages_cpp
-#        ${catkin_EXPORTED_TARGETS}
-#    )
+    add_executable(mock_robot test/mock_robot.cpp)
+    target_link_libraries(mock_robot ${catkin_LIBRARIES})
+    add_dependencies(mock_robot
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
 
-#    #TODO use sub-cmakelists files
-#    add_rostest_gtest(battery_state_updater_test
-#        test/battery_state_updater_test.launch # apparently the .launch file must be the first, or won't compile
-#        test/battery_state_updater_test.cpp        
-#    )
-#    target_link_libraries(battery_state_updater_test
-#        battery_state_updater
-##        mock_time_manager        
-#        ${catkin_LIBRARIES}
-#    )
-#    add_dependencies(battery_state_updater_test
-#        explorer_generate_messages_cpp
-#        explorer_gencpp #TODO do we need both gencpp and generate_*?
-#        ${PROJECT_NAME}_generate_messages_cpp
-#        ${catkin_EXPORTED_TARGETS}
-#    )
+    #TODO use sub-cmakelists files
+    add_rostest_gtest(battery_state_updater_test
+        test/battery_state_updater_test.launch # apparently the .launch file must be the first, or won't compile
+        test/battery_state_updater_test.cpp        
+    )
+    target_link_libraries(battery_state_updater_test
+        battery_state_updater
+#        mock_time_manager        
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(battery_state_updater_test
+        explorer_generate_messages_cpp
+        explorer_gencpp #TODO do we need both gencpp and generate_*?
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
 
-#    add_rostest_gtest(auction_manager_utest
-#        test/auction_manager_utest.launch
-#        test/auction_manager_utest.cpp              
-#    )
-#    add_library(mock_bid_computer test/mock_bid_computer.cpp)
-#    add_library(mock_sender test/mock_sender.cpp)
-#    target_link_libraries(auction_manager_utest
-#        auction_manager
-#        mock_bid_computer
-#        mock_sender
-#        ${catkin_LIBRARIES}
-#    )
-#    add_dependencies(auction_manager_utest
-#        adhoc_communication_generate_messages_cpp
-#        adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
-#        ${PROJECT_NAME}_generate_messages_cpp
-#        ${catkin_EXPORTED_TARGETS}
-#    )
+    add_rostest_gtest(auction_manager_utest
+        test/auction_manager_utest.launch
+        test/auction_manager_utest.cpp              
+    )
+    add_library(mock_bid_computer test/mock_bid_computer.cpp)
+    add_library(mock_sender test/mock_sender.cpp)
+    target_link_libraries(auction_manager_utest
+        auction_manager
+        mock_bid_computer
+        mock_sender
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(auction_manager_utest
+        adhoc_communication_generate_messages_cpp
+        adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
 
     add_rostest_gtest(auction_observer_utest
         test/auction_observer_utest.launch
