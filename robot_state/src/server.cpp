@@ -7,7 +7,7 @@ Server::Server()
     initializeRobotState();
     createServices();
     fillRobotStateStringsVector();
-    dt.createLogFile(); //TODO
+//    dt.createLogFile(); //TODO
     ROS_INFO("Instance correctly created");
 }
 
@@ -83,7 +83,7 @@ void Server::transitionToNextStateIfPossible(robot_state::SetRobotState::Request
     if(isNewStateValid(req.robot_state)) {
         //TODO check if the transition is a valid one... but here or in testing???
         ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str());
-        dt.updateLogFile(); //TODO
+//        dt.updateLogFile(); //TODO
         robot_state = req.robot_state;
         res.set_succeeded = true;
     }
@@ -97,10 +97,16 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
     mutex.lock();
     ROS_INFO_COND(LOG_SERVICE_CALL, "try_to_lock_robot_state service required");
     if(!state_locked) {
-        ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
-        state_locked = true;
-        locking_node = req.locking_node;
-        res.lock_acquired = true;        
+        if(req.locking_node.empty()) {
+            ROS_ERROR("Lock on robot state required by an unnamed node: request rejected");
+            res.lock_acquired = false;
+        }
+        else {
+            ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
+            state_locked = true;
+            locking_node = req.locking_node;
+            res.lock_acquired = true;        
+        }
     }
     else {
         ROS_INFO("The robot state is currently under control of %s: locking failed", locking_node.c_str());

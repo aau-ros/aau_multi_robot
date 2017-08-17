@@ -97,14 +97,14 @@ install(TARGETS robot_state_management
 if(CATKIN_ENABLE_TESTING)
     find_package(rostest REQUIRED)
 
-    add_rostest_gtest(server_test
-        test/server_test.launch
-        test/server_test.cpp
+    add_rostest_gtest(server_utest
+        test/server_utest.launch
+        test/server_utest.cpp
     )
-    target_link_libraries(server_test
+    target_link_libraries(server_utest
         ${catkin_LIBRARIES}
     )
-    add_dependencies(server_test
+    add_dependencies(server_utest
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )

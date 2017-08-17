@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <launch>
     <node pkg="robot_state" name="robot_state" type="robot_state"/>
-    <test pkg="robot_state" test-name="server_test" type="server_test" />
+    <test pkg="robot_state" test-name="server_utest" type="server_utest" />
 </launch>

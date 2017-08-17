@@ -17,6 +17,7 @@
 
 #include <utilities/time_manager.h>
 #include "battery_state_updater.h"
+#include "robot_state_manager.h"
 
 class battery_simulate
 {
@@ -47,8 +48,10 @@ private:
     std::string robot_name;
     std::string robot_prefix;
     int robot_id;
+
     TimeManagerInterface *time_manager;
     BatteryStateUpdater *battery_state_updater;
+    DataLogger *data_logger;
     
     void loadParameters();
     void initializeVariables();

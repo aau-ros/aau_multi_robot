@@ -13,13 +13,14 @@
 class RobotStateManager : public RobotStateManagerInterface
 {
 public:
-    RobotStateManager();
+    RobotStateManager(std::string node_name);
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
     void lockRobotState();
     void unlockRobotState();
 
 private:
+    std::string node_name;
     ros::ServiceClient get_robot_state_sc;
     ros::ServiceClient set_robot_state_sc;
     ros::ServiceClient try_to_lock_robot_state_sc;

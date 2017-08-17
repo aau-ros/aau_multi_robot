@@ -65,6 +65,26 @@ TEST(RobotStateTest, testSetRobotStateServiceWithInvalidValue)
     EXPECT_EQ(robot_state::CHARGING, get_srv_msg.response.robot_state); //NB: the test is the one set by the previous test case!!!
 }
 
+TEST(RobotStateTest, testLockingFailureDueToEmptyNodeName)
+{
+    bool call_succeeded;
+
+    ros::NodeHandle nh;
+    ros::ServiceClient try_to_lock_robot_state_sc = nh.serviceClient<robot_state::TryToLockRobotState>("robot_state/try_to_lock_robot_state");
+    ros::Duration(SLEEP_TIME_TO_ALLOW_SERVICE_CREATION).sleep();
+
+    robot_state::TryToLockRobotState try_to_lock_srv_msg;
+    call_succeeded = try_to_lock_robot_state_sc.call(try_to_lock_srv_msg);
+    EXPECT_TRUE(call_succeeded);
+    EXPECT_FALSE(try_to_lock_srv_msg.response.lock_acquired);
+
+    robot_state::TryToLockRobotState try_to_lock_srv_msg_2;
+    try_to_lock_srv_msg_2.request.locking_node = "";
+    call_succeeded = try_to_lock_robot_state_sc.call(try_to_lock_srv_msg_2);
+    EXPECT_TRUE(call_succeeded);
+    EXPECT_FALSE(try_to_lock_srv_msg_2.response.lock_acquired);
+}
+
 TEST(RobotStateTest, testLockAndUnlockServices)
 {
     bool call_succeeded;
@@ -91,12 +111,12 @@ TEST(RobotStateTest, testLockAndUnlockServices)
     try_to_lock_srv_msg.request.locking_node = "node_A";
     call_succeeded = try_to_lock_robot_state_sc.call(try_to_lock_srv_msg);
     EXPECT_TRUE(call_succeeded);
-    EXPECT_EQ(true, try_to_lock_srv_msg.response.lock_acquired);
+    EXPECT_TRUE(try_to_lock_srv_msg.response.lock_acquired);
 
     try_to_lock_srv_msg.request.locking_node = "node_B";
     call_succeeded = try_to_lock_robot_state_sc.call(try_to_lock_srv_msg);
     EXPECT_TRUE(call_succeeded);
-    EXPECT_EQ(false, try_to_lock_srv_msg.response.lock_acquired);
+    EXPECT_FALSE(try_to_lock_srv_msg.response.lock_acquired);
 
     set_srv_msg.request.setting_node = "node_B";
     set_srv_msg.request.robot_state = robot_state::CHOOSING_ACTION;

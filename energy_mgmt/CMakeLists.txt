@@ -109,6 +109,7 @@ target_link_libraries(battery_state_updater
 target_link_libraries(battery_simulate
 #  time_manager
   battery_state_updater
+  robot_state_manager_energy
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )

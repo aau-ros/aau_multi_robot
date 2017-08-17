@@ -36,7 +36,7 @@ private:
     bool state_locked;
     std::string locking_node;
     
-    DataLogger dt;
+//    DataLogger dt;
     
     ros::ServiceServer get_robot_state_ss;
     ros::ServiceServer set_robot_state_ss;

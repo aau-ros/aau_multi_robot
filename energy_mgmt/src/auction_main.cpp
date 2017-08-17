@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     ConcreteBidComputer cbc;
     cbc.logMetadata();
 
-    RobotStateManager rsm;
+    RobotStateManager rsm("auction_mgmt");
 
     ConcreteSender cs;
 

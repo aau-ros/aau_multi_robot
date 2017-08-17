@@ -1,6 +1,7 @@
 #include "robot_state_manager.h"
 
-RobotStateManager::RobotStateManager() {
+RobotStateManager::RobotStateManager(std::string node_name) {
+    this->node_name = node_name;
     ros::NodeHandle nh;
     set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -18,6 +19,7 @@ unsigned int RobotStateManager::getRobotState() {
 void RobotStateManager::setRobotState(unsigned int robot_state) {
     ROS_INFO("setting state");
     robot_state::SetRobotState srv;
+    srv.request.setting_node = node_name;
     srv.request.robot_state = robot_state;
     while(!set_robot_state_sc.call(srv))
         ROS_ERROR("call to get_robot_state failed");
@@ -25,6 +27,7 @@ void RobotStateManager::setRobotState(unsigned int robot_state) {
 
 void RobotStateManager::lockRobotState() {
     robot_state::TryToLockRobotState try_msg;
+    try_msg.request.locking_node = node_name;
     bool repeat, call_succeeded;
     do {
         ROS_INFO("trying to acquire lock on robot_state");

@@ -5,6 +5,7 @@ BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
     initializeVariables();
     subscribeToTopics();
     initializeBatteryState();
+
     logMetadata(); //TODO this makes the tests fail... but maybe it's just because we didn't set the log_path param
     this->b = b;
 }
