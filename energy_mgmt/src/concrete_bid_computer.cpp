@@ -29,6 +29,7 @@ ConcreteBidComputer::ConcreteBidComputer() {
     pose_sub = nh.subscribe("amcl_pose", 10, &ConcreteBidComputer::poseCallback, this);
 
     l1 = 0, l2 = 0, l3 = 0, l4 = 0;
+    optimal_ds_is_set = false;
 }
 
 void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {        
@@ -42,6 +43,7 @@ void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceSt
 void ConcreteBidComputer::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
     next_optimal_ds_x = msg.get()->x;
     next_optimal_ds_y = msg.get()->y;
+    next_optimal_ds_set = true;
 }
 
 void ConcreteBidComputer::updateLlh() {
@@ -99,10 +101,13 @@ unsigned int ConcreteBidComputer::countActiveRobots() {
 void ConcreteBidComputer::update_l2()
 {
     message_mutex.lock();
+
     ROS_DEBUG("Update l2");
 
-    if(battery == NULL)
+    if(battery == NULL) {
+        ROS_WARN("No battery state received yet");
         l2 = 0;
+    }
     
     else {
         double time_run = battery->remaining_time_run;
@@ -144,39 +149,37 @@ void ConcreteBidComputer::update_l3()
     unsigned int num_jobs, num_jobs_close;
     countJobsAndCloseJobs(num_jobs, num_jobs_close);
 
-    if (num_jobs_close > num_jobs)
-    {
-        ROS_ERROR("Number of jobs close by greater than total number of jobs: %d > %d", num_jobs_close, num_jobs);
-        l3 = 0;
-    }
-    else {
-        if (num_jobs == 0)
-            l3 = 1;
-        else
-            l3 = (num_jobs - num_jobs_close) / num_jobs;
-        ROS_DEBUG("l3: %.1f", l3);
-    }
+    if (num_jobs == 0)
+        l3 = 1;
+    else
+        l3 = (double)(num_jobs - num_jobs_close) / (double)num_jobs;
+    ROS_DEBUG("l3: %.1f", l3);
 
     message_mutex.unlock();
 }
 
 void ConcreteBidComputer::countJobsAndCloseJobs(unsigned int &num_jobs, unsigned int &num_jobs_close) {
     num_jobs = 0, num_jobs_close = 0;
-    for (unsigned int i = 0; i < jobs.size(); ++i)
-    {
-        num_jobs++;
 
-        double dist = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate); 
-        
-        double dist2;
-        if(optimal_ds_is_set)
-            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, optimal_ds_x, optimal_ds_y);
-        else
-            dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, 0, 0); //TODO 
-        
-        if (dist + dist2 <= battery->maximum_traveling_distance)
-            num_jobs_close++;
-    }
+    if(battery == NULL)
+        ROS_WARN("No battery state received yet");
+    else
+        for (unsigned int i = 0; i < jobs.size(); i++)
+        {
+            num_jobs++;
+
+            double dist = distance_from_robot(jobs[i].x_coordinate, jobs[i].y_coordinate); 
+            
+            double dist2;
+            if(optimal_ds_is_set)
+                dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, optimal_ds_x, optimal_ds_y);
+            else
+                dist2 = distance(jobs[i].x_coordinate, jobs[i].y_coordinate, 0, 0); //TODO 
+            
+            if (dist + dist2 <= battery->maximum_traveling_distance)
+                num_jobs_close++;
+
+        }
     ROS_DEBUG("Number of frontiers: %d", num_jobs);
     ROS_DEBUG("Number of reachable frontiers: %d", num_jobs_close);
 }
@@ -207,7 +210,7 @@ void ConcreteBidComputer::update_l4()
             l4 = 0;
         }      
         else {
-            l4 = dist_job / (dist_job + dist_ds);
+            l4 = (double)dist_job / (double)(dist_job + dist_ds);
             ROS_DEBUG("l4: %.1f", l4);
         }
     }
@@ -342,6 +345,7 @@ void ConcreteBidComputer::processMessages() {
     jobs = next_jobs;
     optimal_ds_x = next_optimal_ds_x;
     optimal_ds_y = next_optimal_ds_y;
+    optimal_ds_is_set = next_optimal_ds_set;
     robot_x = next_robot_x;
     robot_y = next_robot_y;
     battery = next_battery;

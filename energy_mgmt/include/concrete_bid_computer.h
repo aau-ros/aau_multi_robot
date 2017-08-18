@@ -50,7 +50,7 @@ private:
     double l1, l2, l3, l4;
     double llh;
     double origin_absolute_x, origin_absolute_y;
-    bool optimal_ds_is_set;
+    bool optimal_ds_is_set, next_optimal_ds_set;
     std::vector<adhoc_communication::ExpFrontierElement> jobs, next_jobs;
     double optimal_ds_x, optimal_ds_y;
     double next_optimal_ds_x, next_optimal_ds_y; 

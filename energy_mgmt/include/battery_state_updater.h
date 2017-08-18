@@ -1,20 +1,9 @@
-#ifndef COMPUTER_H
-#define COMPUTER_H
+#ifndef BATTERY_STATE_UPDATER_H
+#define BATTERY_STATE_UPDATER_H
 
-#include <ros/ros.h>
-#include <explorer/battery_state.h>
-#include <explorer/Speed.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
-#include <geometry_msgs/Twist.h>
-#include <fstream>
-#include <boost/filesystem.hpp>
-#include <boost/thread/mutex.hpp>
-#include <robot_state/robot_state_management.h>
-#include <utilities/time_manager.h>
-#include "robot_state_manager_interface.h"
+#include "battery_state_updater_interface.h"
 
-//class BatteryStateUpdater : public RobotStateHandler
-class BatteryStateUpdater
+class BatteryStateUpdater : public BatteryStateUpdaterInterface
 {
 public:
     BatteryStateUpdater(explorer::battery_state *b);
@@ -86,4 +75,4 @@ private:
     void cmdVelCallback(const geometry_msgs::Twist &msg);
 };
 
-#endif // COMPUTER_H
+#endif // BATTERY_STATE_UPDATER_H

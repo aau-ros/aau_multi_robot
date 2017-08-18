@@ -9,16 +9,6 @@ battery_simulate::battery_simulate() //TODO the constructor should require as ar
     loadParameters();
     initializeRobotName();
 
-    data_logger = new DataLogger("energy_mgmt_test", robot_prefix, log_path);
-    std::stringstream stream;
-    stream << "#..." << std::endl;
-    data_logger->createLogFile("metadata.csv", stream);
-
-    battery_state_updater = new BatteryStateUpdater(&state);
-
-    RobotStateManager rsm("energy_mgmt");
-    battery_state_updater->setRobotStateManager(&rsm);
-
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
 }
 
@@ -97,6 +87,10 @@ void battery_simulate::setTimeManager(TimeManagerInterface *time_manager) {
     this->time_manager = time_manager;
 }
 
+void battery_simulate::setBatteryStateUpdater(BatteryStateUpdaterInterface *battery_state_updater) {
+    this->battery_state_updater = battery_state_updater;
+}
+
 void battery_simulate::createLogDirectory() {
     /* Create directory */
     log_path = log_path.append("/energy_mgmt");
@@ -136,6 +130,11 @@ void battery_simulate::createLogFiles() {
     
     sim_time_start = ros::Time::now();
     wall_time_start = ros::WallTime::now();
+
+    data_logger = new DataLogger("energy_mgmt_test", robot_prefix, log_path);
+    std::stringstream stream;
+    stream << "#..." << std::endl;
+    data_logger->createLogFile("metadata.csv", stream);
 }
 
 void battery_simulate::publishBatteryState() {

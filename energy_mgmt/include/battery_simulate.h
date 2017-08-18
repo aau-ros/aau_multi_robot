@@ -14,10 +14,9 @@
 #include <explorer/battery_state.h>
 #include <adhoc_communication/EmRobot.h>
 #include <utilities/data_logger.h>
-
 #include <utilities/time_manager.h>
-#include "battery_state_updater.h"
-#include "robot_state_manager.h"
+
+#include "battery_state_updater_interface.h"
 
 class battery_simulate
 {
@@ -50,7 +49,7 @@ private:
     int robot_id;
 
     TimeManagerInterface *time_manager;
-    BatteryStateUpdater *battery_state_updater;
+    BatteryStateUpdaterInterface *battery_state_updater;
     DataLogger *data_logger;
     
     void loadParameters();
@@ -58,6 +57,7 @@ private:
     void initializeBatteryState();
     void initializeRobotName();
     void updateBatteryState();
+    void setBatteryStateUpdater(BatteryStateUpdaterInterface *battery_state_updater);
 };
 
 
