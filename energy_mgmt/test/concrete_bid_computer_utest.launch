@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="concrete_bid_computer_utest" type="concrete_bid_computer_utest" >
+        <param name="w1" value="1.5" />
+        <param name="w2" value="2" />
+        <param name="w3" value="3" />
+        <param name="w4" value="4" />
+        <param name="x" value="10" />
+        <param name="y" value="20" />
+        <param name="robot_prefix" value="robot_0" />
+        <param name="log_path" value="" />
+    </test>    
+</launch>
+

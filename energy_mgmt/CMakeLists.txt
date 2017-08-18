@@ -159,7 +159,7 @@ if(CATKIN_ENABLE_TESTING)
 
     #TODO use sub-cmakelists files
     add_rostest_gtest(battery_state_updater_test
-        test/battery_state_updater_test.launch # apparently the .launch file must be the first, or won't compile
+        test/battery_state_updater_test.launch # apparently the launch file must be the first, or won't compile
         test/battery_state_updater_test.cpp        
     )
     target_link_libraries(battery_state_updater_test
@@ -209,6 +209,19 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
     add_dependencies(auction_observer_utest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(concrete_bid_computer_utest
+        test/concrete_bid_computer_utest.launch
+        test/concrete_bid_computer_utest.cpp        
+    )
+    target_link_libraries(concrete_bid_computer_utest
+        concrete_bid_computer
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(concrete_bid_computer_utest
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )

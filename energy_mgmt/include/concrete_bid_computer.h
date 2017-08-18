@@ -68,7 +68,10 @@ private:
     unsigned int countActiveRobots();
     void update_l2();
     void update_l3();
+    void countJobsAndCloseJobs(unsigned int &num_jobs, unsigned int &num_jobs_close);
     void update_l4();
+    double distanceRobotOptimalDs();
+    double distanceOptimalDsClosestFrontier();
     double distance_from_robot(double x, double y);
     double distance(double start_x, double start_y, double goal_x, double goal_y);
     void cb_battery(const explorer::battery_state::ConstPtr &msg);
