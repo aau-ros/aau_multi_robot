@@ -82,16 +82,18 @@ add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)
 add_dependencies(docking map_merger_cpp)
 
-add_executable(energy_mgmt src/main.cpp)
+add_executable(ds_mgmt src/main.cpp)
 add_executable(auction_mgmt src/auction_main.cpp)
+add_executable(battery_mgmt src/battery_main.cpp)
 
 add_dependencies(robot_state_manager2 ${catkin_EXPORTED_TARGETS})
 add_dependencies(robot_state_manager_energy ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_bid_computer robot_state adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_sender ${catkin_EXPORTED_TARGETS})
-add_dependencies(energy_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ds_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(battery_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(auction_manager
   concrete_bid_computer
@@ -121,20 +123,28 @@ target_link_libraries(docking
   ${catkin_LIBRARIES}
 )
 
-target_link_libraries(energy_mgmt
-  #  battery
+target_link_libraries(ds_mgmt
   docking
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(battery_mgmt
+  #  battery
   battery_simulate
+  robot_state_manager_energy
 #  time_manager
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
+
 target_link_libraries(auction_observer
   auction_manager
   robot_state_manager_energy
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
+
 target_link_libraries(auction_mgmt
   auction_manager
   auction_observer

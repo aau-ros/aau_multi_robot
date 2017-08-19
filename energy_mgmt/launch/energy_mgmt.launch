@@ -12,8 +12,31 @@
     <arg name="use_sim_time" default="true" />
     <param name="use_sim_time"  value="$(arg use_sim_time)"/>
     <!-- <arg name="num_robots"/> -->
+
+    <node pkg="energy_mgmt" type="battery_mgmt" name="battery_mgmt" output="$(arg output)">
+        <param name="num_robots" value="$(arg num_robots)" />
+        <param name="robot_prefix" value ="$(arg robot_prefix)" />
+        <param name="move_base_frame" value="$(arg robot_prefix)/map" />
+
+        <param name="x" value ="$(arg x)" />
+        <param name="y" value ="$(arg y)" />
+        
+        <param name="log_path" value="$(arg log_path)" />
+        <param name="maximum_traveling_distance" value="$(arg maximum_traveling_distance)" />
+        <param name="ds_selection_policy" value="$(arg ds_selection_policy)" />
+        
+        <param name="use_sim_time" value="$(arg use_sim_time)" />
+
+        <rosparam file="$(arg ds_yaml)" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/durations.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/extra_params.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/battery_simulation.yaml" command="load"/>
+        <rosparam file="$(find energy_mgmt)/param/llh.yaml" command="load"/>
+
+        <!-- <param name="move_base_frame" value="$(arg robot_prefix)/map"/> -->
+    </node>
  
-    <node pkg="energy_mgmt" type="energy_mgmt" name="energy_mgmt" output="$(arg output)">
+    <node pkg="energy_mgmt" type="ds_mgmt" name="ds_mgmt" output="$(arg output)">
         <param name="num_robots" value="$(arg num_robots)" />
         <param name="robot_prefix" value ="$(arg robot_prefix)" />
         <param name="move_base_frame" value="$(arg robot_prefix)/map" />

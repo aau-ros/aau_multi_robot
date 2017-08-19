@@ -35,6 +35,8 @@ private:
     unsigned int last_auction_id;
 
     void loadParameters();
+    void initializeVariables();
+    void createSubscribers();
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
     void analyzeAuctionResult();

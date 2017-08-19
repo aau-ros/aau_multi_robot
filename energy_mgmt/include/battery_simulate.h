@@ -23,11 +23,13 @@ class battery_simulate
 public:
     battery_simulate();
     void setTimeManager(TimeManagerInterface *time_manager);
-    void logBatteryState();
+    void setBatteryStateUpdater(BatteryStateUpdaterInterface *battery_state_updater);
+    void updateBatteryState();
     void publishBatteryState();   
-    void run();
+    void logBatteryState();
     void createLogDirectory();
     void createLogFiles();
+    explorer::battery_state *getBatteryState();    
 
 private:
     ros::NodeHandle nh;
@@ -56,8 +58,6 @@ private:
     void initializeVariables();
     void initializeBatteryState();
     void initializeRobotName();
-    void updateBatteryState();
-    void setBatteryStateUpdater(BatteryStateUpdaterInterface *battery_state_updater);
 };
 
 

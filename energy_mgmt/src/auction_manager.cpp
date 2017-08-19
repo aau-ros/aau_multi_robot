@@ -45,6 +45,7 @@ void AuctionManager::loadParameters() {
 
 void AuctionManager::createSubscribers() {
     //TODO do i need 'adhoc_communication' in the service name? and 'send_em_auction'?
+    //TODO everytime we use a topic in two different classes, we should load it from a file, so to be sure not to have typos
     auction_starting_topic = "adhoc_communication/send_em_auction/auction_starting"; 
     auction_reply_topic = "adhoc_communication/send_em_auction/auction_reply";
     auction_result_topic = "adhoc_communication/send_em_auction/auction_result"; 
@@ -301,10 +302,16 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
         {
             ROS_INFO("Winner of the auction started by another robot");
 
-            if(current_auction.auction_id != msg.get()->auction)
-                ROS_ERROR("actually, current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed: ignoring auction result");
-            else
-                winner_of_auction = true;
+            if(current_auction.auction_id != msg.get()->auction) {
+                ROS_ERROR("actually, current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed:  ignoring auction result");
+                winner_of_auction = false;
+            } else
+                if(current_auction.docking_station_id == optimal_ds_id)
+                    winner_of_auction = true;
+                else {
+                    ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
+                    winner_of_auction = false;
+                }
         }
         else
         {
@@ -386,30 +393,9 @@ void AuctionManager::endAuctionParticipationCallback(const ros::TimerEvent &even
     ROS_DEBUG("Force to consider auction concluded");
     auction_participation_state = IDLE;
     current_auction.ending_time = time_manager->simulationTimeNow().toSec();
+    winner_of_auction = false;
     auction_mutex.unlock();
 }
-
-//TODO the fact that we have to unlock before calling tryToAcquireDs maybe means that we have a bad design...
-//void AuctionManager::restartAuctionCallback(const ros::TimerEvent &event) {
-//    auction_mutex.lock();
-
-//    ROS_INFO("Timeout for reauctioning");
-//    if(auction_participation_state != IDLE)
-//        ROS_INFO("Robot is already participating to an auction");
-//    else if(winner_of_auction)
-//        ROS_INFO("Robot has just won another auction, so let's avoid reauctioning");
-//    else
-//        tryToAcquireDs();
-
-//    auction_mutex.unlock();
-//}
-
-//void AuctionManager::cancelScheduledAuction() {
-//    auction_mutex.lock();
-//    ROS_INFO("Cancel scheduled auction");
-//    timer_restart_auction.stop();
-//    auction_mutex.unlock();
-//}
 
 void AuctionManager::lock() {
     auction_mutex.lock();
@@ -435,7 +421,3 @@ void AuctionManager::allowParticipationToAuctions() {
 auction_t AuctionManager::getCurrentAuction() {
     return current_auction;
 }
-
-//void AuctionManager::scheduleNextAuction() {
-//    timer_restart_auction = nh.createTimer(ros::Duration(reauctioning_timeout), &AuctionManager::restartAuctionCallback, this, true, true);
-//}

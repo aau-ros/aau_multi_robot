@@ -1,15 +1,9 @@
 #include "auction_observer.h"
 
 AuctionObserver::AuctionObserver() {
-    auction_already_started = false;
-    error_1 = false, error_2 = false, error_3 = false;
-    new_victory = false;
-    last_auction_id = 0;
-    robot_state = robot_state::INITIALIZING;
     loadParameters();
-    ros::NodeHandle nh;
-    sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
-                                                         &AuctionObserver::newOptimalDsCallback, this);
+    initializeVariables();
+    createSubscribers();
 }
 
 void AuctionObserver::loadParameters() {
@@ -26,6 +20,19 @@ void AuctionObserver::loadParameters() {
         ROS_ERROR("invalid reauctioning_timeout");
         reauctioning_timeout = 5;
     }
+}
+
+void AuctionObserver::initializeVariables() {
+    auction_already_started = false;
+    error_1 = false, error_2 = false, error_3 = false;
+    new_victory = false;
+    last_auction_id = 0;
+    robot_state = robot_state::INITIALIZING;
+}
+
+void AuctionObserver::createSubscribers() {
+    ros::NodeHandle nh;
+    sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &AuctionObserver::newOptimalDsCallback, this);
 }
 
 void AuctionObserver::sanityChecks() {

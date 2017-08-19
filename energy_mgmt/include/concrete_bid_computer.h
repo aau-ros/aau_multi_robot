@@ -63,6 +63,9 @@ private:
     explorer::battery_state::ConstPtr battery, next_battery;
     std::string log_path, robot_name;
 
+    void loadParameters();
+    void initializeVariables();
+    void subscribeToTopics();
     void update_l1();
     unsigned int countVacantDss();
     unsigned int countActiveRobots();

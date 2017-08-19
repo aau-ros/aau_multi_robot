@@ -51,11 +51,9 @@ private:
     void initializeVariables(unsigned int robot_id);
     void loadParameters();
     void createSubscribers();
-    void createServiceClients();
     auction_t startNewAuction();
     unsigned int nextAuctionId();
     void scheduleAuctionTermination();
-//    void sendBid(bid_t bid, std::string topic);
     void terminateAuctionCallback(const ros::TimerEvent &event);
     unsigned int computeAuctionWinner();
     bool isThisRobotTheWinner(unsigned int winner_id);
@@ -64,7 +62,6 @@ private:
     void auctionStartingCallback(const adhoc_communication::EmAuction::ConstPtr &msg);
     void auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg);
     void endAuctionParticipationCallback(const ros::TimerEvent &event);
-    void restartAuctionCallback(const ros::TimerEvent &event);
     auction_t participateToOtherRobotAuction(double bid_double, const adhoc_communication::EmAuction::ConstPtr &msg);
 };
 

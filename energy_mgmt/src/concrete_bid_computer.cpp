@@ -1,6 +1,12 @@
 #include "concrete_bid_computer.h"
 
 ConcreteBidComputer::ConcreteBidComputer() {
+    loadParameters();
+    initializeVariables();
+    subscribeToTopics();
+}
+
+void ConcreteBidComputer::loadParameters() {
     ros::NodeHandle nh_tilde("~");
     if(!nh_tilde.getParam("w1", w1))
         ROS_FATAL("parameter not found");
@@ -18,7 +24,14 @@ ConcreteBidComputer::ConcreteBidComputer() {
         ROS_FATAL("parameter not found");
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_FATAL("parameter not found");
-
+} 
+    
+void ConcreteBidComputer::initializeVariables() {
+    l1 = 0, l2 = 0, l3 = 0, l4 = 0;
+    optimal_ds_is_set = false;
+}
+ 
+void ConcreteBidComputer::subscribeToTopics() { //TODO maybe we should have a separate class for publishers and subscribers
     std::string my_prefix = "";
     ros::NodeHandle nh;
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &ConcreteBidComputer::cb_jobs, this);
@@ -27,9 +40,6 @@ ConcreteBidComputer::ConcreteBidComputer() {
     sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &ConcreteBidComputer::cb_docking_stations, this);
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &ConcreteBidComputer::newOptimalDsCallback, this);
     pose_sub = nh.subscribe("amcl_pose", 10, &ConcreteBidComputer::poseCallback, this);
-
-    l1 = 0, l2 = 0, l3 = 0, l4 = 0;
-    optimal_ds_is_set = false;
 }
 
 void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {        

@@ -57,6 +57,10 @@ void battery_simulate::initializeRobotName() {
     }
 }
 
+explorer::battery_state *battery_simulate::getBatteryState() {
+    return &state;
+}
+
 void battery_simulate::logBatteryState()
 {    
     ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
@@ -73,14 +77,8 @@ void battery_simulate::logBatteryState()
 
 }
 
-void battery_simulate::run() {
-    while(ros::ok()) {
-        logBatteryState();
-        battery_state_updater->updateBatteryState();
-        publishBatteryState();
-        ros::Duration(1).sleep(); //TODO(minor) rates???
-        ros::spinOnce();
-    }
+void battery_simulate::updateBatteryState() {
+    battery_state_updater->updateBatteryState();
 }
 
 void battery_simulate::setTimeManager(TimeManagerInterface *time_manager) {
