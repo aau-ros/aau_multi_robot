@@ -11,8 +11,9 @@
 
 int main(int argc, char** argv)
 {
-  
     ros::init(argc, argv, "battery_mgmt");
+    ros::NodeHandle nh;
+    ros::start();
     
     if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
        ros::console::notifyLoggerLevelsChanged();
@@ -57,8 +58,8 @@ int main(int argc, char** argv)
 
     double rate = 1; // Hz
     ros::Rate loop_rate(rate);
-    ros::NodeHandle nh;
 
+    ROS_INFO("Starting main loop");
     while(ros::ok()){
         ros::spinOnce();
   

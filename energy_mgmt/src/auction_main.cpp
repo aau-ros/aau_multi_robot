@@ -12,6 +12,8 @@
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "auction_mgmt");
+    ros::NodeHandle nh;
+    ros::start();
     
     if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
        ros::console::notifyLoggerLevelsChanged();
@@ -20,7 +22,7 @@ int main(int argc, char** argv)
     TimeManager tm;
 
     ConcreteBidComputer cbc;
-    cbc.logMetadata();
+//    cbc.logMetadata();
 
     RobotStateManager rsm("auction_mgmt");
 
@@ -38,7 +40,7 @@ int main(int argc, char** argv)
     auction_manager.setTimeManager(&tm);
     auction_manager.setBidComputer(&cbc);
     auction_manager.setSender(&cs);
-    auction_manager.logMetadata();
+//    auction_manager.logMetadata();
 
     AuctionObserver auction_observer;
     auction_observer.setAuctionManager(&auction_manager);
@@ -47,13 +49,14 @@ int main(int argc, char** argv)
     
     double rate = 10; // Hz
     ros::Rate loop_rate(rate);
-    ros::NodeHandle nh;
+    
     
 //    ros::AsyncSpinner spinner(20);
 //    spinner.start();
 
     ros::Time last_udpate_llh = ros::Time::now();
     
+    ROS_INFO("Starting main loop");
     while(ros::ok()){
         ros::spinOnce();
         auction_observer.actAccordingToRobotStateAndAuctionResult();
