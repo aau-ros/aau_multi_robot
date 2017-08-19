@@ -2,6 +2,7 @@
 #include <ros/console.h>
 #include "docking.h"
 #include <boost/thread.hpp>
+#include "robot_state_manager.h"
 
 int main(int argc, char** argv)
 {  
@@ -12,8 +13,11 @@ int main(int argc, char** argv)
     if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
        ros::console::notifyLoggerLevelsChanged();
     }
+
+    RobotStateManager rsm("ds_mgmt");
     
     docking doc;
+    doc.setRobotStateManager(&rsm);
     doc.create_log_files();
     doc.wait_for_explorer();  
     doc.wait_battery_info(); //only ok if threat thr_battery is active

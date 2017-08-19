@@ -125,6 +125,7 @@ target_link_libraries(docking
 
 target_link_libraries(ds_mgmt
   docking
+  robot_state_manager_energy
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )

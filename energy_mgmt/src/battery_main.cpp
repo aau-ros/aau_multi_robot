@@ -35,12 +35,7 @@ int main(int argc, char** argv)
     }
     */
 
-    ros::NodeHandle nh_tilde("~");
-    std::string robot_prefix;
-    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
-        ROS_FATAL("robot_prefix not found!");
-
-    RobotStateManager rsm(robot_prefix);
+    RobotStateManager rsm("battery_mgmt");
 
     battery_simulate bat;
     

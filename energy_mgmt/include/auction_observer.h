@@ -32,7 +32,7 @@ private:
     double reauctioning_timeout, auction_timeout, extra_auction_time;
     unsigned int robot_state;
     bool new_victory;
-    unsigned int last_auction_id;
+    unsigned int last_auction_id, optimal_ds_id;
 
     void loadParameters();
     void initializeVariables();

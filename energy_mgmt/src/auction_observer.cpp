@@ -144,6 +144,7 @@ void AuctionObserver::setRobotStateManager(RobotStateManagerInterface *robot_sta
 }
 
 void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    optimal_ds_id = msg.get()->id;
     auction_manager->setOptimalDs(msg.get()->id);
 }
 
@@ -151,7 +152,10 @@ void AuctionObserver::analyzeAuctionResult() {
     auction_t current_auction = auction_manager->getCurrentAuction();
     if(last_auction_id != current_auction.auction_id) {
         last_auction_id = current_auction.auction_id;
-        new_victory = auction_manager->isRobotWinnerOfMostRecentAuction();
+        if(optimal_ds_id != current_auction.docking_station_id)
+            new_victory = false;
+        else
+            new_victory = auction_manager->isRobotWinnerOfMostRecentAuction();
     } else {
         new_victory = false;
     }

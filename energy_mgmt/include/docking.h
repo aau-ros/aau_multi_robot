@@ -42,6 +42,7 @@
 #include <unordered_map>
 #include "robot_state/GetRobotState.h"
 #include "robot_state/robot_state_management.h"
+#include "robot_state_manager_interface.h"
 
 #include "gtest/gtest_prod.h"
 
@@ -125,6 +126,7 @@ class docking
     void send_ds();
     void create_log_files();
     void ds_management();
+    void setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {this->robot_state_manager = robot_state_manager;};
 
   private:
     /**
@@ -533,6 +535,7 @@ class docking
     std::vector<std::vector<double> > distance_list;
     bool test_mode;
     void addDistance(double x1, double y1, double x2, double y2, double distance);
+    RobotStateManagerInterface *robot_state_manager;
     
 };
 

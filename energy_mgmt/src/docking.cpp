@@ -875,45 +875,34 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 //            ROS_DEBUG("No optimal DS has been selected yet");      
         if (old_optimal_ds_id != next_optimal_ds_id)
         {
-            if(
-                (robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::CHARGING && robot_state != robot_state::IN_QUEUE)
-            ||
-                (waiting_to_discover_a_ds)
-            )
+            ROS_INFO("calling lockState()");
+            robot_state_manager->lockRobotState();
+            if(can_update_ds() || waiting_to_discover_a_ds)
             {
+                optimal_ds_mutex.lock();                
+
+                waiting_to_discover_a_ds = false;
+                finished_bool = false; //TODO(minor) find better place...
+//                changed = true;
+                set_optimal_ds(next_optimal_ds_id);
                 
-                    if(can_update_ds()) {
-            
-                        optimal_ds_mutex.lock();                
+                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
+                    log_major_error("OH NO!!!!!!!!!!!!");
+                    ROS_INFO("%d", get_optimal_ds_id());
+                }
 
-                        waiting_to_discover_a_ds = false;
-                        finished_bool = false; //TODO(minor) find better place...
-        //                changed = true;
-                        set_optimal_ds(next_optimal_ds_id);
-                        
-                        if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
-                            log_major_error("OH NO!!!!!!!!!!!!");
-                            ROS_INFO("%d", get_optimal_ds_id());
-                        }
-
-                        old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
-
-                        /* Update parameter l4 */
-    //                    update_l4();
-                        
-                        /* Notify explorer about the optimal DS change */
-                        adhoc_communication::EmDockingStation msg_optimal;
-                        msg_optimal.id = get_optimal_ds_id();
-                        msg_optimal.x = get_optimal_ds_x();
-                        msg_optimal.y = get_optimal_ds_y();
-                        pub_new_optimal_ds.publish(msg_optimal);
-
-                        optimal_ds_mutex.unlock(); 
+                old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
                 
-                    }
-            
+                /* Notify explorer about the optimal DS change */
+                adhoc_communication::EmDockingStation msg_optimal;
+                msg_optimal.id = get_optimal_ds_id();
+                msg_optimal.x = get_optimal_ds_x();
+                msg_optimal.y = get_optimal_ds_y();
+                pub_new_optimal_ds.publish(msg_optimal);
+
+                optimal_ds_mutex.unlock(); 
             }
-
+            robot_state_manager->unlockRobotState();
         }
         else
             ROS_INFO("Optimal DS unchanged");
@@ -3569,5 +3558,5 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 }
 
 bool docking::can_update_ds() {
-    return robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE;
+    return robot_state != robot_state::CHOOSING_ACTION && robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE;
 }

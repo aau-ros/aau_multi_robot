@@ -1,7 +1,10 @@
 #include "robot_state_manager.h"
 
 RobotStateManager::RobotStateManager(std::string node_name) {
+    if(node_name.empty())
+        ROS_FATAL("EMPTY NODE NAME");
     this->node_name = node_name;
+
     ros::NodeHandle nh;
     set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
