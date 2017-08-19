@@ -89,7 +89,7 @@ add_executable(battery_mgmt src/battery_main.cpp)
 add_dependencies(robot_state_manager2 ${catkin_EXPORTED_TARGETS})
 add_dependencies(robot_state_manager_energy ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_bid_computer robot_state adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(concrete_sender ${catkin_EXPORTED_TARGETS})
+add_dependencies(concrete_sender adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(ds_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(battery_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -196,6 +196,7 @@ if(CATKIN_ENABLE_TESTING)
         mock_sender
         ${catkin_LIBRARIES}
     )
+    add_dependencies(mock_sender adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
     add_dependencies(auction_manager_utest
         adhoc_communication_generate_messages_cpp
         adhoc_communication_gencpp #TODO do we need both gencpp and generate_*?
