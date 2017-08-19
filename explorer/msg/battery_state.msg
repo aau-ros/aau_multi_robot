@@ -1,5 +1,3 @@
-bool charging
-bool fully_charged
 float32 soc
 float32 remaining_time_charge
 float32 remaining_time_run

@@ -6,10 +6,12 @@ using namespace std;
 
 battery_simulate::battery_simulate() //TODO the constructor should require as argument an instance of TimeManagerInterface
 {
+    ROS_INFO("Creating instance of battery_simulate");
     loadParameters();
     initializeRobotName();
 
     pub_battery = nh.advertise<explorer::battery_state>("battery_state", 1);
+    ROS_INFO("Instance created successfully");
 }
 
 void battery_simulate::loadParameters() {
@@ -57,22 +59,18 @@ void battery_simulate::initializeRobotName() {
     }
 }
 
-explorer::battery_state *battery_simulate::getBatteryState() {
-    return &state;
-}
-
 void battery_simulate::logBatteryState()
 {    
     ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
     ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;  
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state.remaining_time_run << "," << state.remaining_time_charge << "," << state.remaining_distance << "," << "," << state.consumed_energy_A << "," << state.consumed_energy_B << "," 
+    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state->remaining_time_run << "," << state->remaining_time_charge << "," << state->remaining_distance << "," << "," << state->consumed_energy_A << "," << state->consumed_energy_B << "," 
 //    << last_traveled_distance << "," << total_traveled_distance << "," << time_manager->simulationTimeNow() << "," << ros::WallTime::now() 
     << std::endl;
     battery_state_fs.close();
 
     std::stringstream stream;
-    stream << time_manager->simulationTimeNow() << "," << state.consumed_energy_A << "," << state.consumed_energy_B << std::endl;
+    stream << time_manager->simulationTimeNow() << "," << state->consumed_energy_A << "," << state->consumed_energy_B << std::endl;
     data_logger->updateLogFile("metadata.csv", stream);
 
 }
@@ -137,6 +135,10 @@ void battery_simulate::createLogFiles() {
 
 void battery_simulate::publishBatteryState() {
     ROS_INFO("publishing battery state");
-    pub_battery.publish(state);
-    ROS_INFO("%.1f, %.1f", state.remaining_distance, state.maximum_traveling_distance);
+    pub_battery.publish(*state);
+    ROS_INFO("%.1f, %.1f", state->remaining_distance, state->maximum_traveling_distance);
+}
+
+void battery_simulate::setBatteryState(explorer::battery_state *state) {
+    this->state = state;
 }

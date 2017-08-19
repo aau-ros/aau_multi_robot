@@ -3485,7 +3485,7 @@ class Explorer
         next_available_distance = msg->remaining_distance;
         ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, next_available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
 
-        if (msg->charging == false && battery_charge == 100 && charge_time == 0)
+        if (battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
 
         /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */

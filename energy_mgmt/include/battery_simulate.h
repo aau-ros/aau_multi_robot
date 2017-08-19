@@ -29,11 +29,11 @@ public:
     void logBatteryState();
     void createLogDirectory();
     void createLogFiles();
-    explorer::battery_state *getBatteryState();    
+    void setBatteryState(explorer::battery_state *state);
 
 private:
     ros::NodeHandle nh;
-    explorer::battery_state state;
+    explorer::battery_state *state;
 
     ros::ServiceClient set_robot_state_sc;
     ros::ServiceClient get_robot_state_sc;

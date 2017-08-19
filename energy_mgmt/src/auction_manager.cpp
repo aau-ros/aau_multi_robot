@@ -40,6 +40,9 @@ void AuctionManager::loadParameters() {
         ROS_ERROR("invalid reauctioning_timeout");
         reauctioning_timeout = 5;
     }
+    if(!nh_tilde.getParam("log_path", log_path)) {
+        ROS_ERROR("invalid log_path");
+    }
     nh_tilde.param<double>("sleep_time_between_two_participations", sleep_time_between_two_participations, 5); //s //TODO use
 }
 

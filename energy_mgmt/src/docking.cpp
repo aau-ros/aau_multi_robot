@@ -3542,7 +3542,6 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
     //ROS_DEBUG("Received battery state");
 
     /* Store new battery state */
-    battery.charging = msg.get()->charging;
     battery.soc = msg.get()->soc;
     battery.remaining_time_charge = msg.get()->remaining_time_charge;
     battery.remaining_time_run = msg.get()->remaining_time_run;

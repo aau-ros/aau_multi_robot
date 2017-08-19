@@ -47,7 +47,7 @@ private:
     std::string robot_name;
     std::string robot_prefix;
 
-    explorer::battery_state *b;
+    explorer::battery_state *battery_state;
     RobotStateManagerInterface *robot_state_manager;
     TimeManagerInterface *time_manager;
 

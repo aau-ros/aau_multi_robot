@@ -11,9 +11,11 @@
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "battery_mgmt");
+    std::string node = "battery_mgmt";
+    ros::init(argc, argv, node);
     ros::NodeHandle nh;
     ros::start();
+    ROS_INFO("Starting node %s", node.c_str());
     
     if( ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug) ) {
        ros::console::notifyLoggerLevelsChanged();
@@ -35,11 +37,14 @@ int main(int argc, char** argv)
     }
     */
 
-    RobotStateManager rsm("battery_mgmt");
+    explorer::battery_state bs;
+
+    RobotStateManager rsm(node);
 
     battery_simulate bat;
+    bat.setBatteryState(&bs);
     
-    BatteryStateUpdater bsu(bat.getBatteryState()); //TODO not so beatiful...
+    BatteryStateUpdater bsu(&bs); //TODO not so beatiful...
     bsu.setRobotStateManager(&rsm);
     bsu.createLogDirectory();
     bsu.logMetadata();
