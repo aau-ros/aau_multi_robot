@@ -41,15 +41,18 @@ int main(int argc, char** argv)
 
     RobotStateManager rsm(node);
 
+    TimeManager tm;
+
     battery_simulate bat;
     bat.setBatteryState(&bs);
     
     BatteryStateUpdater bsu(&bs); //TODO not so beatiful...
     bsu.setRobotStateManager(&rsm);
+    bsu.setTimeManager(&tm);
     bsu.createLogDirectory();
     bsu.logMetadata();
 
-    TimeManager tm;
+
 
     bat.setTimeManager(&tm);
     bat.setBatteryStateUpdater(&bsu);

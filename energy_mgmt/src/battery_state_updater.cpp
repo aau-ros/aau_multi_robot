@@ -12,7 +12,6 @@ BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
 
     logMetadata(); //TODO this makes the tests fail... but maybe it's just because we didn't set the log_path param
 
-
     ROS_INFO("Instance correctly created");
 }
 
@@ -116,6 +115,8 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 //    robot_state_manager.getRobotState()->accept(this);
     robot_state::robot_state_t robot_state;
     robot_state = static_cast<robot_state::robot_state_t>(robot_state_manager->getRobotState());
+
+    ROS_INFO("Got state");
 
     if(robot_state == robot_state::INITIALIZING) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -310,7 +311,6 @@ void BatteryStateUpdater::rechargeBattery() {
 }
 
 void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
-    ROS_FATAL("MISSING");
     if(battery_state->consumed_energy_A <=0 && battery_state->consumed_energy_B <= 0)
     {
         ROS_INFO("Recharging completed");
@@ -346,8 +346,6 @@ void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
         }
         battery_state->remaining_time_run = battery_state->remaining_distance * speed_avg;
         battery_state->soc = battery_state->remaining_distance / maximum_traveling_distance;
-
-
     }
 }
 
@@ -360,7 +358,6 @@ void BatteryStateUpdater::setRobotStateManager(RobotStateManagerInterface *robot
 }
 
 void BatteryStateUpdater::createLogDirectory() {
-    /* Create directory */
     log_path = log_path.append("/energy_mgmt");
     log_path = log_path.append(robot_name);
     boost::filesystem::path boost_log_path(log_path.c_str());
