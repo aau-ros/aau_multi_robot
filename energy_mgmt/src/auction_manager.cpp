@@ -309,7 +309,7 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
                 ROS_ERROR("actually, current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed:  ignoring auction result");
                 winner_of_auction = false;
             } else
-                if(current_auction.docking_station_id == optimal_ds_id)
+                if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id)
                     winner_of_auction = true;
                 else {
                     ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
