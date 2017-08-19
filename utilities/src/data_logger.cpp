@@ -5,7 +5,7 @@ DataLogger::DataLogger(std::string node_name, std::string robot_name, std::strin
     createDirectoryFromPathIfNotExists(complete_dir_path);
 }
 
-void DataLogger::createLogFile(std::string filename, std::stringstream &header) { //TODO raise exception
+void DataLogger::createLogFile(std::string filename, std::stringstream header) { //TODO raise exception
     std::string complete_file_path = complete_dir_path.append("/" + filename);
     std::fstream fs;
     fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
