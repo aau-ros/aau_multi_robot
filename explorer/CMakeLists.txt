@@ -157,7 +157,7 @@ add_library(distance_computer src/distance_computer.cpp)
 #add_library(rosaria src/rosaria.cpp)
 #add_library(matrix src/src/matrix.cpp)
 
-add_dependencies(exploration_planner adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp hungarian munkres distance_computer)
+add_dependencies(exploration_planner fake_network_gencpp adhoc_communication_gencpp explorer_gencpp explorer_generate_messages_cpp hungarian munkres distance_computer)
 
 ## Declare a cpp executable
 add_executable(explorer src/explorer.cpp)
