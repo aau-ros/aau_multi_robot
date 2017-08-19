@@ -27,7 +27,7 @@ TEST(RobotStatePkgApiTest, testSetRobotStateEnum)
 int main(int argc, char **argv){
     ros::init(argc, argv, "robot_state");
 
-    // Wait some seconds to let robot_state node start
+    // Wait some seconds to let robot_state node start //TODO would be better to use a service...
     ros::start(); // required to use ros::Time and ros::Duration
     ros::Duration(SLEEP_TIME_TO_LET_ROBOT_STATE_NODE_START).sleep();
 
