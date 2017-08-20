@@ -1333,7 +1333,6 @@ class Explorer
 //                            }
                         
                             /* The robot has found a reachable frontier: it can move toward it */                            
-                            explorations++;
                             update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
                             retries3 = 0;
                             retries5 = 0;
@@ -3366,18 +3365,18 @@ class Explorer
         moving_along_path = true;
         ds_path_counter = 0;
         
-        if(OPP_ONLY_TWO_DS) {
-            path[0][0] = msg.get()->positions[0].x;
-            path[0][1] = msg.get()->positions[0].y;
-            path[1][0] = msg.get()->positions[1].x;
-            path[1][1] = msg.get()->positions[1].y;
-        }
-        else {
+//        if(OPP_ONLY_TWO_DS) {
+//            path[0][0] = msg.get()->positions[0].x;
+//            path[0][1] = msg.get()->positions[0].y;
+//            path[1][0] = msg.get()->positions[1].x;
+//            path[1][1] = msg.get()->positions[1].y;
+//        }
+//        else {
             complex_path.clear();
             ds_path_size = msg.get()->positions.size();
             for(int i=0; i < ds_path_size; i++)
                 complex_path.push_back(msg.get()->positions[i]);
-        }
+//        }
     }
 
     void bat_callback(const explorer::battery_state::ConstPtr &msg)

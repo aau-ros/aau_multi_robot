@@ -71,7 +71,7 @@ void battery_simulate::logBatteryState()
 
     std::stringstream stream;
     stream << time_manager->simulationTimeNow() << "," << state->consumed_energy_A << "," << state->consumed_energy_B << std::endl;
-    data_logger->updateLogFile("metadata.csv", stream);
+    data_logger->updateLogFile("metadata.csv", &stream);
 
 }
 
@@ -130,7 +130,7 @@ void battery_simulate::createLogFiles() {
     data_logger = new DataLogger("energy_mgmt_test", robot_prefix, log_path);
     std::stringstream stream;
     stream << "#..." << std::endl;
-    data_logger->createLogFile("metadata.csv", stream);
+    data_logger->createLogFile("metadata.csv", &stream);
 }
 
 void battery_simulate::publishBatteryState() {

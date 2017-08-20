@@ -5068,7 +5068,7 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     
     //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
 
-    //ROS_ERROR("calling client");
+    ROS_INFO("calling map_merger service");
     if(client.call(service_message))
         ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
     else {
@@ -5086,8 +5086,10 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     if(index < 0 || !my_check_efficiency_of_goal(this->available_distance, &frontiers.at(index))) {
         ROS_INFO("robot doesn't know the auctioned frontier: ignoring it");
         return;
+    }
 
-    double cost = frontier_cost(frontiers.at(index));
+    ROS_INFO("Replying to frontier auction");
+    double cost = frontier_cost(&frontiers.at(index));
     //release_mutex(&store_frontier_mutex, __FUNCTION__);
    
     //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
@@ -5099,7 +5101,6 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
     //negotiation_element.id = my_selected_frontier->id;
     negotiation_element.bid = cost;
-    
     negotiation_list.frontier_element.push_back(negotiation_element);
     
     my_sendToMulticast("mc_", negotiation_list, "reply_to_frontier");
