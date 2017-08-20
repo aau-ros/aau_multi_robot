@@ -57,17 +57,12 @@
 //#define STUCK_COUNTDOWN 10
 #define STUCK_COUNTDOWN 1000  // F
 
-#define SAFETY_COEFF 0.003
-//#define SAFETY_COEFF 10.005
 #define INCR 1.7
 #define OPP_ONLY_TWO_DS false
-#define SAFETY_COEFF_2 0.8
 #define IMM_CHARGE 0
 #define DEBUG false
 #define TIMEOUT_CHECK_1 3
 #define DS_GRAPG_NAVIGATION_ALLOWED true
-#define COEFF_A 0.9
-#define COEFF_B 0.2
 
 #define LOG_STATE_TRANSITION true
 
@@ -93,21 +88,18 @@ class Explorer
 {
   public:
     // TODO(minor) move in better place
-    bool ready, moving_along_path, explorer_ready;
-    int my_counter, ds_path_counter, ds_path_size;
+    bool moving_along_path, explorer_ready;
+    int ds_path_counter, ds_path_size;
     ros::Publisher pub_robot, pub_wait, pub_finished_exploration, pub_finished_exploration_id;
     ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count, sub_force_in_queue;
-    int path[2][2];
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
     ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc;
     bool created;
-    float queue_distance, max_av_distance;
-    float safety_coeff, min_distance_queue_ds;
+    float queue_distance, min_distance_queue_ds, max_av_distance;
     float stored_robot_x, stored_robot_y;
     float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
-    int explorations;
     int free_cells_count, discovered_free_cells_count;
     float percentage;
     int failures_going_to_DS;
@@ -116,12 +108,10 @@ class Explorer
     int major_errors, minor_errors;
     bool skip_findFrontiers;
     int retry_recharging_current_ds;
-    int increase;
     ros::Timer checking_vacancy_timer;
     bool ds_graph_navigation_allowed;
     double conservative_maximum_available_distance;
     bool moving_to_ds, home_point_set;
-    float coeff_a, coeff_b;
     unsigned int retries, retries2, retries3, retries4, retries5, retries6, retries_moving;
     double next_available_distance;
     double moving_time;
@@ -130,7 +120,6 @@ class Explorer
     bool full_battery, frontiers_found;
     double traveled_distance, last_x, last_y;
     bool optima_ds_set;
-    bool has_to_force_fully_charged;
     bool explorer_count;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
@@ -148,7 +137,6 @@ class Explorer
         
 //        ros::NodeHandle nh("~");
         rotation_counter = 0;
-        number_of_robots = 1;
         accessing_cluster = 0;
         cluster_element_size = 0;
         cluster_flag=false;
@@ -179,20 +167,14 @@ class Explorer
         moving_time = 0;
         traveled_distance = 0;
         last_x = 0, last_y = 0;
-        has_to_force_fully_charged = false;
     
         // F
-        test = true;
-        vacant_ds = true;
-        ready = false;
         moving_along_path = false;
         created = false;
         exploration = NULL;
         explorer_ready = false;
         available_distance = -1;
         already_navigated_DS_graph = false;
-        need_to_recharge = false;
-        explorations = 0;
         discovered_free_cells_count = 0;
         free_cells_count = 0;
         failures_going_to_DS = 0;
@@ -203,13 +185,10 @@ class Explorer
         last_printed_pose_x = 0, last_printed_pose_y = 0;
         skip_findFrontiers = false;
         retry_recharging_current_ds = 0;
-        increase = 0;
         ds_graph_navigation_allowed = DS_GRAPG_NAVIGATION_ALLOWED;
         conservative_maximum_available_distance = -1;
         moving_to_ds = false;
         home_point_set = false;
-        coeff_a = COEFF_A;
-        coeff_b = COEFF_B;
         received_battery_info = false;
         full_battery = false;
         frontiers_found = false;
@@ -272,7 +251,6 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
-        nh.param<float>("safety_coeff", safety_coeff, 0.9);
         nh.param<float>("queue_distance", queue_distance, 7.0);
         nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
         //ROS_ERROR("%f", queue_distance);
@@ -711,12 +689,6 @@ class Explorer
                    }
                    
                 received_battery_info = true;
-                   
-//                if(conservative_maximum_available_distance < 0 || conservative_maximum_available_distance < conservative_available_distance(next_available_distance)) {
-//                    ROS_INFO("setting maximum distance");
-////                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance); 
-//                    conservative_maximum_available_distance = conservative_available_distance(next_available_distance);
-//                }
                    
                 if(robot_state == robot_state::CHARGING_COMPLETED) {
                     ROS_INFO("using max distance");
@@ -1208,7 +1180,6 @@ class Explorer
                                     finalize_exploration();
                             }
 
-//                                else if(dist > available_distance * safety_coeff) 
                             else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance) ) {
                                 //robot cannot reach next next DS, it must recharge at current one
 //                                    if(robot_state == robot_state::CHARGING_COMPLETED)
@@ -1305,13 +1276,6 @@ class Explorer
                         // goal_determined = exploration->determine_goal_staying_alive(1, 2,
                         // available_distance, &final_goal, count, &robot_str, -1);
                         //ROS_ERROR("available_distance: %f", available_distance);
-//                        if(DEBUG)
-//                            goal_determined = exploration->determine_goal_staying_alive_2(
-//                                1, 2, available_distance * SAFETY_COEFF +
-//                                          available_distance * SAFETY_COEFF * INCR * number_of_recharges,
-//                                &final_goal, count, &robot_str, -1);
-//                        else
-                            //goal_determined = exploration->determine_goal_staying_alive_2(1, 2, available_distance, &final_goal, count, &robot_str, -1);
  
                         ros::spinOnce(); // to update available_distance
 
@@ -1360,7 +1324,6 @@ class Explorer
                         /* Check if the robot has found a reachable frontier */
                         if (goal_determined == true)
                         {
-                        
                             //this can be true if we are at the end of the DS path (i.e., we have reached the last DS and we have 
 //                            if(moving_along_path) {
 //                                ROS_INFO("Finished path traversal");
@@ -1369,45 +1332,11 @@ class Explorer
 //                                pub_next_ds.publish(msg);
 //                            }
                         
-                            /* The robot has found a reachable frontier: it can move toward it */
-                            
-                            //update_robot_state_2(coordinated_exploration); //TODO
-                            //ROS_ERROR("STARTING NEGOTIATION");
-                            
-                            //ROS_ERROR("start frontier negotiation!");
-//                            exploration->my_negotiate();
-//                     
-//                            for(int i = 0; i < auction_timeout/0.1; i++) {
-//                                ros::Duration(0.1).sleep();
-//                                ros::spinOnce();
-//                            }
-                            
-                            //ROS_ERROR("End of negotiation");
-                            //ros::spinOnce();
-                            
-//                            if(exploration->winner_of_auction)
-//                            {
-                                explorations++;
-//                                ROS_ERROR("%d", explorations);
-//                                if(explorations == 3 && robot_id == 0) {
-//                                    move_robot(counter, 0, 12);    
-//                                    update_robot_state_2(robot_state::LEAVING_DS);
-//                                    continue;
-//                                }
-//                                if( ((explorations == 3 || explorations == 4)&& robot_id == 0) || (explorations == 4 && robot_id == 1) ) {
-//                                    ROS_ERROR("robot_state::AUCTIONING");
-//                                    update_robot_state_2(robot_state::AUCTIONING);    
-//                                }
-//                                else {
-//                                    ROS_ERROR("%d", explorations);
-                                    update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
-                                    retries3 = 0;
-                                    retries5 = 0;
-//                                }
-                                    
-                                //exploration->clean_frontiers_under_auction();
-                                
-//                            } 
+                            /* The robot has found a reachable frontier: it can move toward it */                            
+                            explorations++;
+                            update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
+                            retries3 = 0;
+                            retries5 = 0;
                             
                             // TODO(minor) ...
                             if (exit_countdown != EXIT_COUNTDOWN)
@@ -1417,8 +1346,6 @@ class Explorer
                                           "value; something must have gone wrong however, "
                                           "because this shoulw never happen...");
                             }
-
-                            // TODO(minor) useless
                             // charge_countdown = EXIT_COUNTDOWN;
                             
                             ROS_DEBUG("reset retries counter");
@@ -2063,16 +1990,6 @@ class Explorer
 //            finalize_exploration();
 //        }
 
-        if (robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3) {
-            need_to_recharge = true;
-            ROS_INFO("setting need_to_recharge to true");   
-        }
-
-        else if (robot_state == robot_state::LEAVING_DS || robot_state == robot_state::CHARGING_COMPLETED) {
-            ROS_INFO("setting need_to_recharge to false");   
-            need_to_recharge = false;
-        }
-
         if(robot_state == robot_state::CHARGING_ABORTED || robot_state == robot_state::CHARGING_COMPLETED) {
             update_robot_state_2(robot_state::LEAVING_DS);
         }
@@ -2206,7 +2123,7 @@ class Explorer
                   "global_map_explored_cells,discovered_free_cells_count,"
                   "local_map_explored_cells,total_number_of_free_cells"
 //                  ",battery_state,"
-//                  "recharge_cycles,energy_consumption,frontier_selection_strategy,coeff_a,coeff_b"
+//                  "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << "sim_time,wall_time"
                << std::endl;
         fs_csv.close();
@@ -2415,8 +2332,6 @@ class Explorer
 //        double size_global_map =
 //            map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
 
-//        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
-
         std::string tmp_log;
         if (!final)
         {
@@ -2572,8 +2487,6 @@ class Explorer
                   exploration->number_of_completed_auctions, exploration->number_of_uncompleted_auctions);
         ROS_DEBUG("******************************************");
         ROS_DEBUG("******************************************");
-
-//        double efficiency_value = (exploration_time) / (number_of_robots * navigation_goals_required);
 
         /*
          * WRITE LOG FILE
@@ -2984,7 +2897,6 @@ class Explorer
     }
     
     double conservative_available_distance(double available_distance) {
-        //return available_distance * coeff_a - max_av_distance * coeff_b;
         return available_distance;
     }
 
@@ -3023,15 +2935,6 @@ class Explorer
         goal_msgs.target_pose.pose.orientation.y = 0;
         goal_msgs.target_pose.pose.orientation.z = 0;
         goal_msgs.target_pose.pose.orientation.w = 1;
-
-        // TODO(minor) needed???
-        // ROS_ERROR("\n\t\e[1;34mFinally moving!\e[0m");
-        // if(robot_state == robot_state::LEAVING_DS)
-        // if(robot_state::LEAVING_DS) {
-        //    std_msgs::Empty empty_msg;
-        //    pub_vacant_ds.publish(empty_msg);
-        //    robot_state::LEAVING_DS = false;
-        //}
 
         /* Get distance from goal */
         double remaining_distance = exploration->distance_from_robot(position_x, position_y);
@@ -4066,7 +3969,7 @@ class Explorer
     std::vector<int> clusters_available_in_pool;
 
     int home_position_x, home_position_y;
-    int robot_id, number_of_robots;
+    int robot_id;
     int frontier_selection, costmap_width, global_costmap_iteration, number_unreachable_frontiers_for_cluster;
     int counter_waiting_for_clusters;
 
@@ -4094,11 +3997,9 @@ class Explorer
 
     int number_of_recharges = 0;
 
-    bool test;
-    ros::Publisher pub_robot_pos, pub_check_vacancy;
-    ros::Subscriber sub_vacant_ds, sub_occupied_ds, sub_check_vacancy;
+    ros::Publisher pub_check_vacancy;
+    ros::Subscriber sub_check_vacancy;
 
-    ros::Subscriber sub_going_charging, sub_going_queue, sub_exploring;
     ros::Subscriber sub_lost_own_auction, sub_won_auction, sub_lost_other_robot_auction;
 
     robot_state::robot_state_t robot_state, previous_state;
@@ -4116,9 +4017,6 @@ class Explorer
         else
             return enum_string[enumVal];
     }
-
-    bool vacant_ds;
-    bool need_to_recharge;
 
     enum state_next_t
     {
@@ -4161,7 +4059,6 @@ class Explorer
     int feedback_value, feedback_succeed_value, rotation_counter, home_point_message, goal_point_message;
     int counter;
     bool recharging;
-    bool pioneer;
     int w1, w2, w3, w4;
 };
 
