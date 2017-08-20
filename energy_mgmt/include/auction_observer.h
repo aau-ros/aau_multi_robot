@@ -30,9 +30,10 @@ private:
 
     bool auction_already_started;
     double reauctioning_timeout, auction_timeout, extra_auction_time;
-    unsigned int robot_state;
+    unsigned int robot_state, prev_robot_state;
     bool new_victory;
     unsigned int last_auction_id, optimal_ds_id;
+    ros::Time change_time;
 
     void loadParameters();
     void initializeVariables();

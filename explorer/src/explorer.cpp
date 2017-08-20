@@ -1744,7 +1744,7 @@ class Explorer
                 
                 if(ros::Time::now() - auction_start_time >= ros::Duration(5*60)) {
                     log_major_error("auctioning was forced to stop!");
-                    update_robot_state_2(robot_state::GOING_IN_QUEUE);
+//                    update_robot_state_2(robot_state::GOING_IN_QUEUE);
                     ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
                     continue;   
                 }
@@ -3319,7 +3319,7 @@ class Explorer
 
         ROS_INFO("Timeout for vacancy check");
         if(robot_state == robot_state::CHECKING_VACANCY)
-            update_robot_state_2(robot_state::GOING_CHECKING_VACANCY);
+            update_robot_state_2(robot_state::GOING_CHARGING);
         else
             update_robot_state_2(robot_state::GOING_IN_QUEUE);
 

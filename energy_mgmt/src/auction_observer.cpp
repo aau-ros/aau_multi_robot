@@ -37,8 +37,17 @@ void AuctionObserver::createSubscribers() {
 
 void AuctionObserver::sanityChecks() {
     robot_state = getRobotState();
+    
+    if((robot_state == robot_state::AUCTIONING || robot_state == robot_state::auctioning_2) && prev_robot_state != robot_state) {
+        change_time = ros::Time::now(); //TODO use time_manager
+    }
+    prev_robot_state = robot_state;
 
-    auction_manager->lock();   
+    auction_manager->lock();
+
+    if((robot_state == robot_state::AUCTIONING || robot_state == robot_state::auctioning_2)  && (ros::Time::now() - change_time > ros::Duration(60))) {
+        ROS_FATAL("ROBOT IS STUCK IN AUCTIONING!!!");
+    }
 
     auction_t current_auction = auction_manager->getCurrentAuction();
     
@@ -65,6 +74,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     ROS_INFO("actAccordingToRobotStateAndAuctionResult");
 
     auction_manager->lock();
+    
     analyzeAuctionResult();
 
     ROS_INFO("locking");
@@ -95,8 +105,14 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 auction_already_started = true;
                 auction_manager->tryToAcquireDs();
             }
+            else {
+                ROS_INFO("checking auction result");
+                if(auction_manager->isRobotWinnerOfMostRecentAuction())
+                    setRobotState(robot_state::GOING_CHECKING_VACANCY);
+                else
+                    setRobotState(robot_state::GOING_IN_QUEUE);
+            }
         }
-
         else
             auction_already_started = false;
 
@@ -106,8 +122,10 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
             else {
                 auction_t current_auction = auction_manager->getCurrentAuction();
-                if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout)
+                if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout) {
+                    ROS_INFO("reauctioning");
                     auction_manager->tryToAcquireDs();
+                }
             }
         }
 
