@@ -1,2 +1,3 @@
 ---
 bool lock_released
+uint32 counter

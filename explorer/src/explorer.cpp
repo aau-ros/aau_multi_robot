@@ -196,8 +196,7 @@ class Explorer
         explorer_count = 0;
 
         /* Initial robot state */
-        robot_state = robot_state::COMPUTING_NEXT_GOAL;  // TODO(minor) what if instead it is not fully charged?
-//        robot_state = robot_state::CHARGING_COMPLETED; //robot_state::CHARGING_COMPLETED is then the robot is still occupying the DS
+        robot_state = robot_state::INITIALIZING;
 
         /* Robot state publishers */
         //pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);  // to publish vacancy check requests
@@ -643,6 +642,8 @@ class Explorer
             }
 
             ROS_INFO("****************** ACTING ACCORDING TO STATE ******************");
+            
+            ROS_INFO("robot_state is %s", get_text_for_enum(robot_state).c_str());
 
             // TODO(minor) better while loops
             // do nothing while recharging
@@ -1623,6 +1624,12 @@ class Explorer
             //exploration->visualize_Frontiers();
 
             /* Navigate robot to next frontier */
+            
+            if(robot_state == robot_state::INITIALIZING) {
+                ROS_INFO("end initialization");
+                update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                continue;
+            }
             
             
             if(robot_state == robot_state::COMPUTING_NEXT_GOAL) //happens when the robot lost the auction for the negotiation of the frontier

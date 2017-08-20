@@ -879,7 +879,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             robot_state_manager->lockRobotState();
             if(can_update_ds() || waiting_to_discover_a_ds)
             {
-                optimal_ds_mutex.lock();                
+//                optimal_ds_mutex.lock();                
 
                 waiting_to_discover_a_ds = false;
                 finished_bool = false; //TODO(minor) find better place...
@@ -900,8 +900,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 msg_optimal.y = get_optimal_ds_y();
                 pub_new_optimal_ds.publish(msg_optimal);
 
-                optimal_ds_mutex.unlock(); 
+//                optimal_ds_mutex.unlock(); 
             }
+            ROS_INFO("calling unlockState()");
             robot_state_manager->unlockRobotState();
         }
         else
@@ -946,7 +947,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
 void docking::log_optimal_ds() {
     ROS_INFO("logging");
-    optimal_ds_mutex.lock();
+//    optimal_ds_mutex.lock();
     /* Keep track of the optimal and target DSs in log file */
 //    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
     if(old_optimal_ds_id_for_log != get_optimal_ds_id() ) {
@@ -960,7 +961,7 @@ void docking::log_optimal_ds() {
         old_optimal_ds_id_for_log = get_optimal_ds_id();
 //        old_target_ds_id_for_log = get_target_ds_id();
     }
-    optimal_ds_mutex.unlock();
+//    optimal_ds_mutex.unlock();
 }
 
 double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean)

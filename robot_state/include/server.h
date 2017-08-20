@@ -35,6 +35,7 @@ private:
     boost::mutex mutex;
     bool state_locked;
     std::string locking_node;
+    unsigned int counter = 0;
     
 //    DataLogger dt;
     

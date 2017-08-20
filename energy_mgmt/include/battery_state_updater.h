@@ -40,6 +40,7 @@ private:
     double time_last_update;
     double prev_consumed_energy_A;
     boost::mutex mutex_traveled_distance;
+    bool recharging;
 
     std::string log_path;
     std::string info_file, battery_state_filename;

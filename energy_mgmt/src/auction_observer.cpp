@@ -67,6 +67,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     auction_manager->lock();
     analyzeAuctionResult();
 
+    ROS_INFO("locking");
     robot_state_manager->lockRobotState();
 
     robot_state = getRobotState();
@@ -118,6 +119,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     else
         ROS_INFO("robot is under auction");
 
+    ROS_INFO("unlocking");
     robot_state_manager->unlockRobotState();
    
     auction_manager->unlock();

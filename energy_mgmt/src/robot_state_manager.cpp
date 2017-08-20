@@ -4,7 +4,8 @@ RobotStateManager::RobotStateManager(std::string node_name) {
     if(node_name.empty())
         ROS_FATAL("EMPTY NODE NAME");
     this->node_name = node_name;
-
+    counter = 0;
+    
     ros::NodeHandle nh;
     set_robot_state_sc = nh.serviceClient<robot_state::SetRobotState>("robot_state/set_robot_state");
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
@@ -31,23 +32,40 @@ void RobotStateManager::setRobotState(unsigned int robot_state) {
 void RobotStateManager::lockRobotState() {
     robot_state::TryToLockRobotState try_msg;
     try_msg.request.locking_node = node_name;
-    bool repeat, call_succeeded;
+    bool repeat = false, call_succeeded = false;
     do {
         ROS_INFO("trying to acquire lock on robot_state");
         call_succeeded = try_to_lock_robot_state_sc.call(try_msg);
         if(!call_succeeded) {
             ROS_ERROR("failed call to try_lock");
             repeat = true;
+            ros::Duration(1).sleep();
         }
-        if(!try_msg.response.lock_acquired) {
-            ROS_INFO("lock not acquired: retrying");
-            repeat = true;
+        else {
+            if(!try_msg.response.lock_acquired) {
+                ROS_INFO("lock not acquired: retrying");
+                repeat = true;
+                ros::Duration(1).sleep();
+            } else
+                repeat = false;
         }
     } while(repeat);
+    counter = try_msg.response.counter;
+    ROS_INFO("lock acquired; counter: %u", counter);
 }
 
 void RobotStateManager::unlockRobotState() {
     robot_state::UnlockRobotState unlock_msg;
-    while(!unlock_robot_state_sc.call(unlock_msg))
-        ROS_ERROR("call to unlock_robot_state failed!");
+    unlock_msg.response.lock_released = false;
+    bool lock_released = false;
+    while(!lock_released) {
+        while(!unlock_robot_state_sc.call(unlock_msg))
+            ROS_ERROR("call to unlock_robot_state failed!");
+        lock_released = unlock_msg.response.lock_released;
+        if(!lock_released)
+            ROS_ERROR("unlock_robot_state didn't release the lock");
+    }
+    if(counter != unlock_msg.response.counter)
+        ROS_ERROR("counter != unlock_msg.response.counter: %u != %u", counter, unlock_msg.response.counter);
+    ROS_INFO("lock released; counter: %u", counter);
 }

@@ -2,6 +2,6 @@ float32 soc
 float32 remaining_time_charge
 float32 remaining_time_run
 float32 remaining_distance
-float32 maximum_traveling_distance
 float32 consumed_energy_A
 float32 consumed_energy_B
+float32 maximum_traveling_distance

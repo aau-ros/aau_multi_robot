@@ -21,6 +21,7 @@ public:
 
 private:
     std::string node_name;
+    unsigned int counter;
     ros::ServiceClient get_robot_state_sc;
     ros::ServiceClient set_robot_state_sc;
     ros::ServiceClient try_to_lock_robot_state_sc;

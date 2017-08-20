@@ -223,8 +223,12 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
     } else
         ROS_FATAL("INVALID ROBOT STATE");
 
-    if(robot_state != robot_state::CHARGING)
+    if(robot_state != robot_state::CHARGING) {
         prev_consumed_energy_A = battery_state->consumed_energy_A;
+        recharging = false; //TODO bad...
+    }
+    else
+        recharging = true;
 
     updateRemainingUsableDistanceAndRunningTime();
 }
@@ -274,8 +278,10 @@ void BatteryStateUpdater::substractEnergyRequiredForLocomotion() {
 }
 
 void BatteryStateUpdater::subtractTraveledDistance() {
+    mutex_traveled_distance.lock();
     battery_state->remaining_distance -= last_traveled_distance;
     last_traveled_distance = 0;
+    mutex_traveled_distance.unlock();
 }
 
 void BatteryStateUpdater::rechargeBattery() {
@@ -311,7 +317,7 @@ void BatteryStateUpdater::rechargeBattery() {
 }
 
 void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
-    if(battery_state->consumed_energy_A <=0 && battery_state->consumed_energy_B <= 0)
+    if(recharging && battery_state->consumed_energy_A <=0 && battery_state->consumed_energy_B <= 0)
     {
         ROS_INFO("Recharging completed");
          
@@ -339,7 +345,8 @@ void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
             ROS_ERROR("this shouldn't happend");
 
         battery_state->remaining_time_charge = (battery_state->consumed_energy_A + battery_state->consumed_energy_B) / power_charging ;
-        battery_state->remaining_distance = ( (prev_consumed_energy_A - battery_state->consumed_energy_A) / prev_consumed_energy_A ) * maximum_traveling_distance;
+        if(recharging)
+            battery_state->remaining_distance = ( (prev_consumed_energy_A - battery_state->consumed_energy_A) / prev_consumed_energy_A ) * maximum_traveling_distance;
         if(battery_state->remaining_distance > maximum_traveling_distance) {
             ROS_ERROR("state.remaining_distance > maximum_traveling_distance");
             battery_state->remaining_distance = maximum_traveling_distance;

@@ -14,6 +14,7 @@ Server::Server()
 void Server::initializeRobotState() {
     robot_state = robot_state::INITIALIZING;
     state_locked = false;
+    counter = 0;
     locking_node = "";
 }
 
@@ -65,14 +66,14 @@ bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, rob
 bool Server::setRobotStateCallback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO_COND(LOG_SERVICE_CALL, "set_robot_state service required");
-    if(state_locked) {
-        if(locking_node == req.setting_node)
-            transitionToNextStateIfPossible(req, res);
-        else {
-            ROS_ERROR("Node %s has required to set the robot state, but the robot state is locked by node %s! Setting failed", req.setting_node.c_str(), locking_node.c_str());
-            res.set_succeeded = false;
-        }
-    } else
+//    if(state_locked) {
+//        if(locking_node == req.setting_node)
+//            transitionToNextStateIfPossible(req, res);
+//        else {
+//            ROS_ERROR("Node %s has required to set the robot state, but the robot state is locked by node %s! Setting failed", req.setting_node.c_str(), locking_node.c_str());
+//            res.set_succeeded = false;
+//        }
+//    } else
         transitionToNextStateIfPossible(req, res);
     ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
@@ -102,14 +103,18 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
             res.lock_acquired = false;
         }
         else {
-            ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
+            counter++;
+            if(counter > 1000000)
+                counter = 0;
             state_locked = true;
             locking_node = req.locking_node;
             res.lock_acquired = true;        
+            res.counter = counter;
+            ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
         }
     }
     else {
-        ROS_INFO("The robot state is currently under control of %s: locking failed", locking_node.c_str());
+        ROS_INFO("The robot state is currently under control of %s: locking from %s failed", locking_node.c_str(), req.locking_node.c_str());
         res.lock_acquired = false;
     }
     ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
@@ -122,8 +127,10 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
 bool Server::unlockRobotStateCallback(robot_state::UnlockRobotState::Request &req, robot_state::UnlockRobotState::Response &res) {
     mutex.lock();
     ROS_INFO_COND(LOG_SERVICE_CALL, "unlock_robot_state service required");
-    ROS_INFO("Lock on robot state released");
     state_locked = false;
+    res.lock_released = true;
+    res.counter = counter;
+    ROS_INFO("Lock on robot state released");
     ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;

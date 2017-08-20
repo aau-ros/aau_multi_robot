@@ -1,3 +1,4 @@
 string locking_node
 ---
 bool lock_acquired
+uint32 counter
