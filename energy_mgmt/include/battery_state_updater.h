@@ -70,6 +70,7 @@ private:
     void substractEnergyRequiredForLocomotion();
     void subtractTraveledDistance();
     void rechargeBattery();
+    void fullBattery();
 
     void avgSpeedCallback(const explorer::Speed &msg);
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);

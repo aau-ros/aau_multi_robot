@@ -51,6 +51,7 @@ void BatteryStateUpdater::initializeVariables() {
     last_traveled_distance = 0;
     total_traveled_distance = 0;
     prev_consumed_energy_A = 0;
+    time_last_update = 0;
 }
 
 void BatteryStateUpdater::subscribeToTopics() {
@@ -66,14 +67,18 @@ void BatteryStateUpdater::initializeBatteryState() {
         ROS_INFO("NULL!!!");
         ROS_FATAL("NULL!!");
     }
+    fullBattery();
+    ROS_INFO("Battery state successfully initialized");
+}
+
+void BatteryStateUpdater::fullBattery() {
     battery_state->soc = 1; // (adimensional) // TODO(minor) if we assume that the robot starts fully_charged
     battery_state->remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
     battery_state->remaining_distance = maximum_traveling_distance;
-    battery_state->remaining_time_run = maximum_traveling_distance * speed_avg_init; //s //TODO(minor) "maximum" is misleading: use "estimated"...
+    battery_state->remaining_time_run = maximum_traveling_distance * speed_avg; //s //TODO(minor) "maximum" is misleading: use "estimated"...
     battery_state->maximum_traveling_distance = maximum_traveling_distance;
     battery_state->consumed_energy_A = 0;
     battery_state->consumed_energy_B = 0;
-    ROS_INFO("Battery state successfully initialized");
 }
 
 void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
@@ -124,12 +129,10 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::CHOOSING_ACTION) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::COMPUTING_NEXT_GOAL) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
         substractEnergyRequiredForAdvancedComputations();
 
@@ -149,7 +152,6 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::CHECKING_VACANCY) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::GOING_CHARGING) {
@@ -166,12 +168,10 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::CHARGING_COMPLETED) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::CHARGING_ABORTED) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::LEAVING_DS) {
@@ -186,6 +186,7 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
         substractEnergyRequiredForLocomotion();
+        subtractTraveledDistance();
 
     } else if(robot_state == robot_state::IN_QUEUE) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -193,17 +194,18 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::AUCTIONING) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::auctioning_2) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::exploring_for_graph_navigation) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
+        substractEnergyRequiredForBasicComputations();
+
+    } else if(robot_state == robot_state::auctioning_3) {
+        substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::stopped) {
@@ -211,11 +213,6 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::stuck) {
         ;
-
-    } else if(robot_state == robot_state::auctioning_3) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
-        substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::finished) {
         ;
@@ -320,16 +317,9 @@ void BatteryStateUpdater::updateRemainingUsableDistanceAndRunningTime() {
     if(recharging && battery_state->consumed_energy_A <=0 && battery_state->consumed_energy_B <= 0)
     {
         ROS_INFO("Recharging completed");
-         
-        battery_state->consumed_energy_A = 0;
-        battery_state->consumed_energy_B = 0;
+        fullBattery();
         
-        // Set battery state to its maximum values 
-        battery_state->remaining_distance = maximum_traveling_distance;
-        battery_state->remaining_time_charge = 0;
-        battery_state->remaining_time_run = battery_state->remaining_distance * speed_avg;
-        battery_state->soc = 1;
-        
+        // set state
         robot_state_manager->lockRobotState();
         robot_state::robot_state_t robot_state;
         robot_state = static_cast<robot_state::robot_state_t>(robot_state_manager->getRobotState());

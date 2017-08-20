@@ -169,16 +169,16 @@ if(CATKIN_ENABLE_TESTING)
     )
 
     #TODO use sub-cmakelists files
-    add_rostest_gtest(battery_state_updater_test
-        test/battery_state_updater_test.launch # apparently the launch file must be the first, or won't compile
-        test/battery_state_updater_test.cpp        
+    add_rostest_gtest(battery_state_updater_utest
+        test/battery_state_updater_utest.launch # apparently the launch file must be the first, or won't compile
+        test/battery_state_updater_utest.cpp        
     )
-    target_link_libraries(battery_state_updater_test
+    target_link_libraries(battery_state_updater_utest
         battery_state_updater
-#        mock_time_manager        
+        robot_state_manager2
         ${catkin_LIBRARIES}
     )
-    add_dependencies(battery_state_updater_test
+    add_dependencies(battery_state_updater_utest
         explorer_generate_messages_cpp
         explorer_gencpp #TODO do we need both gencpp and generate_*?
         ${PROJECT_NAME}_generate_messages_cpp
@@ -238,6 +238,20 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
 
+    add_rostest_gtest(missing_utests
+        test/missing_utests.launch
+        test/missing_utests.cpp        
+    )
+    target_link_libraries(missing_utests
+        robot_state_manager_energy
+        battery_simulate
+        docking
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(missing_utests
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
 #    add_rostest_gtest(itest
 #        test/itest.launch
 #        test/itest.cpp              

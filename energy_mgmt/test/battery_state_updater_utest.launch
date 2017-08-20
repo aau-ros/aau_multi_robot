@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="battery_state_updater_utest" type="battery_state_updater_utest" >
+        <param name="power_charging" value="300" />
+        <param name="power_moving_fixed_cost" value="10" />
+        <param name="power_per_speed" value="8" />
+        <param name="power_microcontroller" value="40" />
+        <param name="power_sonar" value="5" />
+        <param name="power_laser" value="15" />
+        <param name="power_basic_computations" value="20" />
+        <param name="power_advanced_computations" value="30" />
+        <param name="maximum_traveling_distance" value="100" />
+        <param name="speed_avg_init" value="0.5" />
+        <param name="max_linear_speed" value="1.2" />
+        <param name="log_path" value="" />
+        <param name="robot_prefix" value="" />
+    </test>
+</launch>

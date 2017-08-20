@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="missing_utests" type="missing_utests" time-limit="120.0" >
+    </test>    
+</launch>
