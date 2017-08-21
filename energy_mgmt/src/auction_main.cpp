@@ -29,7 +29,6 @@ int main(int argc, char** argv)
     ConcreteSender cs;
 
     ros::NodeHandle nh_tilde("~");
-
     std::string robot_prefix;
     if(!nh_tilde.getParam("robot_prefix", robot_prefix))
         ROS_FATAL("robot_prefix not found!");
@@ -49,7 +48,6 @@ int main(int argc, char** argv)
     
     double rate = 10; // Hz
     ros::Rate loop_rate(rate);
-    
     
 //    ros::AsyncSpinner spinner(20);
 //    spinner.start();
