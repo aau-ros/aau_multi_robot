@@ -7,7 +7,7 @@ Server::Server()
     initializeRobotState();
     createServices();
     fillRobotStateStringsVector();
-//    dt.createLogFile(); //TODO
+    createLogFile();
     ROS_INFO("Instance correctly created");
 }
 
@@ -51,6 +51,21 @@ void Server::fillRobotStateStringsVector() {
     robot_state_strings.push_back("finished");
 }
 
+void Server::createLogFile() {
+    int robot_id;
+    std::string log_path;
+
+    ros::NodeHandle nh_tilde("~");
+    if(!nh_tilde.getParam("robot_id", robot_id))
+        ROS_FATAL("INVALID PARAM");
+    if(!nh_tilde.getParam("log_path", log_path))
+        ROS_FATAL("INVALID PARAM");
+
+//    data_logger = new DataLogger("robot_state", (unsigned int)robot_id, log_path);
+    std::string s = "robot_state.log";
+    data_logger->createLogFile(s, "#sim_time,wall_time,robot_state");
+}
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res) {
@@ -84,7 +99,7 @@ void Server::transitionToNextStateIfPossible(robot_state::SetRobotState::Request
     if(isNewStateValid(req.robot_state)) {
         //TODO check if the transition is a valid one... but here or in testing???
         ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str());
-//        dt.updateLogFile(); //TODO
+        updateLogFile();
         robot_state = req.robot_state;
         res.set_succeeded = true;
     }
@@ -92,6 +107,12 @@ void Server::transitionToNextStateIfPossible(robot_state::SetRobotState::Request
         ROS_ERROR("The next required robot state is invalid! Keeping current state (%s)", robotStateEnumToString(robot_state).c_str());
         res.set_succeeded = false;
     }
+}
+
+void Server::updateLogFile() {
+    std::stringstream stream;
+    stream << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << "," << robotStateEnumToString(robot_state).c_str() << std::endl;
+    data_logger->updateLogFile("robot_state.log", stream);
 }
 
 bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Request &req, robot_state::TryToLockRobotState::Response &res) {

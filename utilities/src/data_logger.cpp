@@ -1,29 +1,12 @@
 #include "utilities/data_logger.h"
 
-DataLogger::DataLogger(std::string node_name, std::string robot_name, std::string log_path) {
-    complete_dir_path = createCompletePath(node_name, robot_name, log_path);
+//TODO a lot of duplicated code
+DataLogger::DataLogger(const std::string &node_name, const std::string &robot_name, const std::string &log_path) {
+    complete_dir_path = composeCompletePath(node_name, robot_name, log_path);
     createDirectoryFromPathIfNotExists(complete_dir_path);
 }
 
-void DataLogger::createLogFile(std::string filename, std::stringstream &header) { //TODO raise exception
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
-    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs << header;
-    fs << header.str();
-    fs.close();
-}
-
-void DataLogger::updateLogFile(std::string filename, std::stringstream &new_sample) {
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
-    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs << new_sample;
-    fs << new_sample.str();
-    fs.close();
-}
-
-std::string DataLogger::createCompletePath(std::string node_name, std::string robot_name, std::string log_path) {
+std::string DataLogger::composeCompletePath(std::string node_name, std::string robot_name, std::string log_path) {
     return log_path.append("/" + node_name).append("/" + robot_name);
 }
 
@@ -48,4 +31,44 @@ void DataLogger::createDirectoryFromPathIfNotExists(std::string path) {
     }
     else
         ROS_INFO("Directory %s already exists: log files will be saved there", path.c_str());
+}
+
+void DataLogger::createLogFile(const std::string &filename, const std::string &header) { //TODO raise exception
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << header;
+    fs.close();
+}
+
+//void DataLogger::createLogFile(std::string filename, std::string &header) { //TODO raise exception
+//    std::string complete_file_path = complete_dir_path.append("/" + filename);
+//    std::fstream fs;
+//    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//    fs << header;
+//    fs.close();
+//}
+
+void DataLogger::createLogFile(const std::string &filename, std::stringstream &header) { //TODO raise exception
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << header.str();
+    fs.close();
+}
+
+void DataLogger::updateLogFile(const std::string &filename, const std::string &new_sample) {
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << new_sample;
+    fs.close();
+}
+
+void DataLogger::updateLogFile(const std::string &filename, std::stringstream &new_sample) {
+    std::string complete_file_path = complete_dir_path.append("/" + filename);
+    std::fstream fs;
+    fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs << new_sample.str();
+    fs.close();
 }

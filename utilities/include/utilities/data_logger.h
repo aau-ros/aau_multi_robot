@@ -9,14 +9,16 @@
 
 class DataLogger {
 public:
-    DataLogger(std::string node_name, std::string robot_name, std::string log_path);
-    void createLogFile(std::string filename, std::stringstream &header);
-    void updateLogFile(std::string filename, std::stringstream &new_sample);
+    DataLogger(const std::string &node_name, const std::string &robot_name, const std::string &log_path);
+    void createLogFile(const std::string &filename, const std::string &header);
+    void createLogFile(const std::string &filename, std::stringstream &header);
+    void updateLogFile(const std::string &filename, const std::string &new_sample);
+    void updateLogFile(const std::string &filename, std::stringstream &new_sample);
 
 private:
     std::string complete_dir_path;
 
-    std::string createCompletePath(std::string node_name, std::string robot_name, std::string log_path);
+    std::string composeCompletePath(std::string node_name, std::string robot_name, std::string log_path);
     void createDirectoryFromPathIfNotExists(std::string path);
 };
 

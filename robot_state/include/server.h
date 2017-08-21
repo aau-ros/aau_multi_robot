@@ -37,8 +37,7 @@ private:
     bool state_locked;
     std::string locking_node;
     unsigned int counter = 0;
-    
-//    DataLogger dt;
+    DataLogger *data_logger;
     
     ros::ServiceServer get_robot_state_ss;
     ros::ServiceServer set_robot_state_ss;
@@ -50,6 +49,8 @@ private:
     void createServices();
     void fillRobotStateStringsVector();
     bool isNewStateValid(int new_state);
+    void createLogFile();
+    void updateLogFile();
 
     bool getRobotStateCallback(robot_state::GetRobotState::Request &req, robot_state::GetRobotState::Response &res);
     bool setRobotStateCallback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res);

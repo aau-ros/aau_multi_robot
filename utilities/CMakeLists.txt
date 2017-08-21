@@ -14,11 +14,11 @@ find_package(catkin REQUIRED COMPONENTS
 #  MyMessage.msg
 #)
 
-add_service_files(
-    FILES
-    CreateLogFile.srv
-    UpdateLogFile.srv
-)
+#add_service_files(
+#    FILES
+#    CreateLogFile.srv
+#    UpdateLogFile.srv
+#)
 
 ## Generate actions in the 'action' folder
 # add_action_files(

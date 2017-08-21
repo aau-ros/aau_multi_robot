@@ -27,7 +27,6 @@ private:
     double power_microcontroller;       // W
     double power_basic_computations;    // W
     double power_advanced_computations; // W
-    double max_speed_linear;            // m/s
     double maximum_traveling_distance;  // m/s
 
     double last_pose_x, last_pose_y;

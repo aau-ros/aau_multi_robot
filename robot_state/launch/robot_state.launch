@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
-<launch> 
-    <node pkg="robot_state" type="robot_state" name="robot_state" output="screen" />
+<launch>
+    <arg name="output" default="log"/>
+    <arg name="robot_name"/>
+    <arg name="log_path"/>
+    <node pkg="robot_state" type="robot_state" name="robot_state" output="$(arg output)">
+        <param name="robot_name" value ="$(arg robot_prefix)" />
+        <param name="log_path" value="$(arg log_path)" />
+    </node>
 </launch>

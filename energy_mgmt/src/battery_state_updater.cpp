@@ -35,8 +35,6 @@ void BatteryStateUpdater::loadParameters() {
         ROS_FATAL("INVALID PARAM");
     if(!nh_tilde.getParam("power_advanced_computations", power_advanced_computations))
         ROS_FATAL("INVALID PARAM");
-    if(!nh_tilde.getParam("max_linear_speed", max_speed_linear))
-        ROS_FATAL("INVALID PARAM");
     if(!nh_tilde.getParam("maximum_traveling_distance", maximum_traveling_distance))
         ROS_FATAL("INVALID PARAM");
     if(!nh_tilde.getParam("log_path", log_path))
@@ -388,8 +386,8 @@ void BatteryStateUpdater::logMetadata() {
     info_file = log_path + std::string("metadata_battery.csv");
 
     fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,max_linear_speed,initial_speed_avg" << std::endl;
-    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << max_speed_linear << "," << speed_avg_init << std::endl;
+    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,initial_speed_avg" << std::endl;
+    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << speed_avg_init << std::endl;
     fs_info.close();
     ROS_INFO("Metadata successfully logged");
 }
