@@ -5,3 +5,5 @@ float32 remaining_distance
 float32 consumed_energy_A
 float32 consumed_energy_B
 float32 maximum_traveling_distance
+float32 last_traveled_distance
+float32 total_traveled_distance

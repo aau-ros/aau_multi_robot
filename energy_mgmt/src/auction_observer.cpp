@@ -74,8 +74,6 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     ROS_INFO("actAccordingToRobotStateAndAuctionResult");
 
     auction_manager->lock();
-    
-    analyzeAuctionResult();
 
     ROS_INFO("locking");
     robot_state_manager->lockRobotState();
@@ -84,6 +82,8 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
+
+        analyzeAuctionResult();
         
         if(robot_state == robot_state::CHOOSING_ACTION) {
             ROS_INFO("choosing_next_action state");
@@ -164,6 +164,7 @@ void AuctionObserver::setRobotStateManager(RobotStateManagerInterface *robot_sta
 }
 
 void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_INFO("AuctionObserver: received new optimal DS");
     optimal_ds_id = msg.get()->id;
     auction_manager->setOptimalDs(msg.get()->id);
 }

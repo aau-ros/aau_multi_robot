@@ -51,6 +51,7 @@ void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceSt
 }
 
 void ConcreteBidComputer::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_INFO("received new optimal DS");
     next_optimal_ds_x = msg.get()->x;
     next_optimal_ds_y = msg.get()->y;
     next_optimal_ds_set = true;

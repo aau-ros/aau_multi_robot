@@ -61,17 +61,18 @@ void battery_simulate::initializeRobotName() {
 
 void battery_simulate::logBatteryState()
 {    
-    ros::Duration sim_time = time_manager->simulationTimeNow() - sim_time_start;
-    ros::WallDuration wall_time = ros::WallTime::now() - wall_time_start;  
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << sim_time.toSec() << "," << wall_time.toSec() << "," << state->remaining_time_run << "," << state->remaining_time_charge << "," << state->remaining_distance << "," << "," << state->consumed_energy_A << "," << state->consumed_energy_B << "," 
-//    << last_traveled_distance << "," << total_traveled_distance << "," << time_manager->simulationTimeNow() << "," << ros::WallTime::now() 
-    << std::endl;
+
+    battery_state_fs << time_manager->simulationTimeNow().toSec() << "," << ros::WallTime::now().toSec() << "," 
+        << state->remaining_time_run << "," << state->remaining_time_charge << "," << state->remaining_distance << "," 
+        << state->consumed_energy_A << "," << state->consumed_energy_B << ","
+        << state->last_traveled_distance << "," << state->total_traveled_distance << std::endl;
+
     battery_state_fs.close();
 
     std::stringstream stream;
     stream << time_manager->simulationTimeNow() << "," << state->consumed_energy_A << "," << state->consumed_energy_B << std::endl;
-    data_logger->updateLogFile("metadata.csv", stream);
+    data_logger->updateLogFile("test.csv", stream);
 
 }
 
@@ -121,16 +122,16 @@ void battery_simulate::createLogFiles() {
     battery_state_filename = log_path + std::string("battery_state.csv");
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << "#elapsed_sim_time,elapsed_wall_time,state.remaining_time_run,state.remaining_time_charge,state.remaining_distance,consumed_energy_A,consumed_energy_B,last_traveled_distance,total_traveled_distance,sim_time,wall_time" << std::endl;
+    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,consumed_energy_A,consumed_energy_B" << std::endl;
     battery_state_fs.close();
     
     sim_time_start = ros::Time::now();
     wall_time_start = ros::WallTime::now();
 
-    data_logger = new DataLogger("energy_mgmt_test", robot_prefix, log_path);
+    data_logger = new DataLogger("energy_mgmt", robot_prefix, log_path); //TODO robot_prefix or robot_id?
     std::stringstream stream;
     stream << "#..." << std::endl;
-    data_logger->createLogFile("metadata.csv", stream);
+    data_logger->createLogFile("test.csv", stream);
 }
 
 void battery_simulate::publishBatteryState() {

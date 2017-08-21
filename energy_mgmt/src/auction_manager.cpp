@@ -363,7 +363,7 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
         if(!optimal_ds_is_set)
             ROS_INFO("Robot has not selected a DS yet, so it cannot take part to the auction");
         else
-            ROS_INFO("Robot is not interested in ds%d (it wants %d)", (unsigned int)msg.get()->docking_station, optimal_ds_id);
+            ROS_INFO("Robot is not interested in ds%d (it wants ds%d)", (unsigned int)msg.get()->docking_station, optimal_ds_id);
     }
 
     auction_mutex.unlock();

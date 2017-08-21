@@ -30,8 +30,6 @@ private:
     double maximum_traveling_distance;  // m/s
 
     double last_pose_x, last_pose_y;
-    double last_traveled_distance;
-    double total_traveled_distance;
     double speed_avg;
     double speed_linear;
     double speed_angular;

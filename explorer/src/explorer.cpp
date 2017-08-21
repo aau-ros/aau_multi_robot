@@ -1790,26 +1790,37 @@ class Explorer
                 //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
                 
                 ROS_DEBUG("Start checking for DS vacancy (timeout: %.1fs)", checking_vacancy_timeout);
-                checking_vacancy_timer.stop();
-                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
-                checking_vacancy_timer.start();
+//                checking_vacancy_timer.stop();
+//                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
+//                checking_vacancy_timer.start();
+
+                ros::Time start_check_time = ros::Time::now();
 
                 // TODO(minor) use a bterr way!!!
                 int i = 0; //just for safety
-                while (robot_state == robot_state::CHECKING_VACANCY && i < 30)
+                while (i < 30 && robot_state == robot_state::CHECKING_VACANCY && ((ros::Time::now() - start_check_time) < ros::Duration(checking_vacancy_timeout + 1)) )
                 {
-                    ros::Duration(1).sleep();
+                    ros::Duration(0.2).sleep();
                     ros::spinOnce();
                     update_robot_state();
                     i++;
                 }
-                if(i >= 30) {
-                    log_minor_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
-                    update_robot_state_2(robot_state::IN_QUEUE);   
-                }
+                if(i >= 30)
+                    log_major_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
+                state_mutex.lock();
+                ROS_INFO("finished vacancy check");
+                if(robot_state == CHECKING_VACANCY)
+                    update_robot_state_2(robot_state::GOING_CHARGING);
+                state_mutex.unlock();
+
+
+//                if(i >= 30) {
+//                    log_minor_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
+//                    update_robot_state_2(robot_state::IN_QUEUE);   
+//                }
                 
                 // Stop the timer, since I could have exited the while loop above due to a occupancy message
-                checking_vacancy_timer.stop();
+//                checking_vacancy_timer.stop();
                 
             }
 
@@ -2125,13 +2136,11 @@ class Explorer
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#elapsed_sim_time,elapsed_wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
+        fs_csv << "#sim_time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
                   "traveled_distance,"
                   "global_map_explored_cells,discovered_free_cells_count,"
                   "local_map_explored_cells,total_number_of_free_cells"
-//                  ",battery_state,"
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy"
-               << "sim_time,wall_time"
                << std::endl;
         fs_csv.close();
         
@@ -2147,7 +2156,6 @@ class Explorer
             print_mutex_info("map_info()", "lock");
 
             double time = ros::Time::now().toSec() - time_start.toSec();
-            double wall_time = ros::WallTime::now().toSec() - wall_time_start.toSec();
 
             map_progress.global_freespace = global_costmap_size();
             //map_progress.global_freespace = discovered_free_cells_count;
@@ -2179,12 +2187,12 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << map_progress.time << "," << wall_time << "," << percentage << "," << exploration_travel_path_global << ","
+            fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << "," 
+                   << percentage << "," << exploration_travel_path_global << ","
                    << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
-                   << map_progress.local_freespace << "," << free_cells_count << "," 
+                   << map_progress.local_freespace << "," << free_cells_count
 //                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << ","
-                   << ros::Time::now() << "," << ros::WallTime::now()
                    << std::endl;
             fs_csv.close();
 

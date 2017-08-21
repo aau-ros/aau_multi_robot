@@ -46,8 +46,6 @@ void BatteryStateUpdater::loadParameters() {
 void BatteryStateUpdater::initializeVariables() {
     speed_avg = speed_avg_init;
     last_pose_x = 0, last_pose_y = 0;
-    last_traveled_distance = 0;
-    total_traveled_distance = 0;
     prev_consumed_energy_A = 0;
     time_last_update = 0;
 }
@@ -66,6 +64,9 @@ void BatteryStateUpdater::initializeBatteryState() {
         ROS_FATAL("NULL!!");
     }
     fullBattery();
+    battery_state->last_traveled_distance = 0;
+    battery_state->total_traveled_distance = 0;
+    battery_state->maximum_traveling_distance = maximum_traveling_distance;
     ROS_INFO("Battery state successfully initialized");
 }
 
@@ -74,7 +75,6 @@ void BatteryStateUpdater::fullBattery() {
     battery_state->remaining_time_charge = 0; // since the robot is assumed to be fully charged when the exploration starts
     battery_state->remaining_distance = maximum_traveling_distance;
     battery_state->remaining_time_run = maximum_traveling_distance * speed_avg; //s //TODO(minor) "maximum" is misleading: use "estimated"...
-    battery_state->maximum_traveling_distance = maximum_traveling_distance;
     battery_state->consumed_energy_A = 0;
     battery_state->consumed_energy_B = 0;
 }
@@ -82,6 +82,7 @@ void BatteryStateUpdater::fullBattery() {
 void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
 {
     // if the average speed is very low, there is probably something wrong, set it to the value from the config file
+    ROS_INFO("Received avg speed");
     if (msg.avg_speed > speed_avg_init)
         speed_avg = msg.avg_speed;
     else
@@ -90,13 +91,14 @@ void BatteryStateUpdater::avgSpeedCallback(const explorer::Speed &msg)
 
 void BatteryStateUpdater::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {
     mutex_traveled_distance.lock();
+    ROS_INFO("Received robot pose");
 
     double pose_x = pose->pose.pose.position.x;
     double pose_y = pose->pose.pose.position.y;    
     
     double distance = sqrt( (last_pose_x-pose_x)*(last_pose_x-pose_x) + (last_pose_y-pose_y)*(last_pose_y-pose_y) ); //TODO use hypot
-    last_traveled_distance += distance;
-    total_traveled_distance += distance;
+    battery_state->last_traveled_distance += distance;
+    battery_state->total_traveled_distance += distance;
     
     last_pose_x = pose_x;
     last_pose_y = pose_y;
@@ -274,8 +276,8 @@ void BatteryStateUpdater::substractEnergyRequiredForLocomotion() {
 
 void BatteryStateUpdater::subtractTraveledDistance() {
     mutex_traveled_distance.lock();
-    battery_state->remaining_distance -= last_traveled_distance;
-    last_traveled_distance = 0;
+    battery_state->remaining_distance -= battery_state->last_traveled_distance;
+    battery_state->last_traveled_distance = 0;
     mutex_traveled_distance.unlock();
 }
 
