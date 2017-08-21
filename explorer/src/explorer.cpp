@@ -1798,26 +1798,20 @@ class Explorer
 
                 // TODO(minor) use a bterr way!!!
                 int i = 0; //just for safety
-                while (i < 30 && robot_state == robot_state::CHECKING_VACANCY && ((ros::Time::now() - start_check_time) < ros::Duration(checking_vacancy_timeout + 1)) )
+                while (i < 100 && robot_state == robot_state::CHECKING_VACANCY && ((ros::Time::now() - start_check_time) < ros::Duration(checking_vacancy_timeout + 1)) )
                 {
                     ros::Duration(0.2).sleep();
                     ros::spinOnce();
                     update_robot_state();
                     i++;
                 }
-                if(i >= 30)
+                if(i >= 100)
                     log_major_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
                 state_mutex.lock();
                 ROS_INFO("finished vacancy check");
                 if(robot_state == CHECKING_VACANCY)
                     update_robot_state_2(robot_state::GOING_CHARGING);
                 state_mutex.unlock();
-
-
-//                if(i >= 30) {
-//                    log_minor_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
-//                    update_robot_state_2(robot_state::IN_QUEUE);   
-//                }
                 
                 // Stop the timer, since I could have exited the while loop above due to a occupancy message
 //                checking_vacancy_timer.stop();
