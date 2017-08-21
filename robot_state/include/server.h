@@ -23,6 +23,7 @@
 #define LOG_FALSE   false
 #define LOG_ALL     true
 #define LOG_SERVICE_CALL false
+#define LOG_LOCKING_INFO true
 
 class Server
 {

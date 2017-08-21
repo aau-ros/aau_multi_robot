@@ -110,11 +110,11 @@ bool Server::tryToLockRobotStateCallback(robot_state::TryToLockRobotState::Reque
             locking_node = req.locking_node;
             res.lock_acquired = true;        
             res.counter = counter;
-            ROS_INFO("Lock on robot state acquired by %s", req.locking_node.c_str());
+            ROS_INFO_COND(LOG_LOCKING_INFO, "Lock on robot state acquired by %s", req.locking_node.c_str());
         }
     }
     else {
-        ROS_INFO("The robot state is currently under control of %s: locking from %s failed", locking_node.c_str(), req.locking_node.c_str());
+        ROS_WARN("The robot state is currently under control of %s: locking from %s failed", locking_node.c_str(), req.locking_node.c_str());
         res.lock_acquired = false;
     }
     ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
@@ -130,7 +130,7 @@ bool Server::unlockRobotStateCallback(robot_state::UnlockRobotState::Request &re
     state_locked = false;
     res.lock_released = true;
     res.counter = counter;
-    ROS_INFO("Lock on robot state released");
+    ROS_INFO_COND(LOG_LOCKING_INFO, "Lock on robot state released");
     ROS_INFO_COND(LOG_SERVICE_CALL, "Service response successfully sent");
     mutex.unlock();
     return true;

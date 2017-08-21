@@ -446,6 +446,7 @@ class Explorer
         enum_string.push_back("LEAVING_DS");
         enum_string.push_back("GOING_IN_QUEUE");
         enum_string.push_back("IN_QUEUE");
+        enum_string.push_back("AUCTIONING");
         enum_string.push_back("auctioning_2");
         enum_string.push_back("exploring_for_graph_navigation");
         enum_string.push_back("stopped");
@@ -1985,7 +1986,7 @@ class Explorer
             checked_percentage = true;
         }
         
-        if( (percentage >= 95.0 || (percentage >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+        if(robot_state != finished && (percentage >= 95.0 || (percentage >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
             finalize_exploration();
         }
         
@@ -4018,6 +4019,8 @@ class Explorer
     {
         if((unsigned int)enumVal >= enum_string.size()) {
             log_major_error("segmenv in get_text_for_enum");
+            ROS_ERROR("enumVal: %d", enumVal);
+            ROS_INFO("enumVal: %d", enumVal);
             return "";
         }
         else

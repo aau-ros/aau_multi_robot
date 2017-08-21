@@ -22,20 +22,17 @@ int main(int argc, char** argv)
     }
 
     // handle battery management for different robot platforms
-    std::string platform;
-    
-    /*
-    ros::get_environment_variable(platform, "ROBOT_PLATFORM");
-    if(platform.compare("turtlebot") == 0){
-        battery_turtle bat;
-    }
-    else if(platform.compare("pioneer3dx") == 0 || platform.compare("pioneer3at") == 0){
-        battery_pioneer bat;
-    }
-    else{
-        battery_simulate bat;
-    }
-    */
+//    std::string platform;
+//    ros::get_environment_variable(platform, "ROBOT_PLATFORM");
+//    if(platform.compare("turtlebot") == 0){
+//        battery_turtle bat;
+//    }
+//    else if(platform.compare("pioneer3dx") == 0 || platform.compare("pioneer3at") == 0){
+//        battery_pioneer bat;
+//    }
+//    else{
+//        battery_simulate bat;
+//    }
 
     explorer::battery_state bs;
 
@@ -52,8 +49,6 @@ int main(int argc, char** argv)
     bsu.createLogDirectory();
     bsu.logMetadata();
 
-
-
     bat.setTimeManager(&tm);
     bat.setBatteryStateUpdater(&bsu);
     bat.createLogDirectory();
@@ -64,18 +59,17 @@ int main(int argc, char** argv)
 
     ROS_INFO("Starting main loop");
     while(ros::ok()){
+        ROS_INFO("Starting new iteration");
         ros::spinOnce();
   
         bat.updateBatteryState();
         bat.logBatteryState();        
         bat.publishBatteryState();
 
-        // Sleep for 1/rate seconds
-        loop_rate.sleep();
-        ROS_INFO("End of main loop");
+        loop_rate.sleep(); // sleep for 1/rate seconds
     }
     
-    ROS_INFO("shutting down...");   
+    ROS_INFO("Exiting main loop: shutting down");   
     ros::shutdown();
         
     return 0;
