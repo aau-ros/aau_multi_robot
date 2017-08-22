@@ -61,7 +61,7 @@ void Server::createLogFile() {
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_FATAL("INVALID PARAM");
 
-//    data_logger = new DataLogger("robot_state", (unsigned int)robot_id, log_path);
+    data_logger = new DataLogger("robot_state", (unsigned int)robot_id, log_path);
     std::string s = "robot_state.log";
     data_logger->createLogFile(s, "#sim_time,wall_time,robot_state");
 }

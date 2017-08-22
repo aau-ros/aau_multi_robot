@@ -53,18 +53,27 @@ TEST(TestAuctionManager, testAuctionStartAndConclusion)
     MockBidComputer *mbd = new MockBidComputer();
     MockTimeManager *mtm = new MockTimeManager();
     MockSender *ms = new MockSender();
-    am.setSender(ms);
+    am.setSender(ms); //TODO i should use it to check that the sent bid is correct (bid sent to indicate auction start and auction winner)
     am.setBidComputer(mbd);
     am.setTimeManager(mtm);
     am.setOptimalDs(123);
     mbd->addBid(100);
     mtm->addTime(10);
-    mtm->addTime(10); //TODO check everywhere that the ending time is correct
+    mtm->addTime(20); //TODO check everywhere that the ending time is correct
 
     am.lock();
     am.tryToAcquireDs();
     EXPECT_TRUE(am.isRobotParticipatingToAuction());
     am.unlock();
+
+    auction_t current_auction = am.getCurrentAuction();
+
+    //TODO do these checks also in all other places
+    EXPECT_EQ(5, current_auction.auction_id);
+    EXPECT_EQ(10, current_auction.starting_time);
+    EXPECT_EQ(-1, current_auction.ending_time);
+    EXPECT_EQ(5, current_auction.auctioneer);
+    EXPECT_EQ(123, current_auction.docking_station_id);
 
     bool loop;
     do {
@@ -78,6 +87,14 @@ TEST(TestAuctionManager, testAuctionStartAndConclusion)
     am.lock();
     EXPECT_FALSE(am.isRobotParticipatingToAuction());
     am.unlock();
+
+    current_auction = am.getCurrentAuction();
+    EXPECT_EQ(20, current_auction.ending_time);
+    EXPECT_EQ(5, current_auction.winner_robot);
+
+    am.tryToAcquireDs();
+    current_auction = am.getCurrentAuction();
+    EXPECT_EQ(15, current_auction.auction_id);
 }
 
 //TEST(TestAuctionManager, testSleepingBetweenTwoAuctions) //TODO

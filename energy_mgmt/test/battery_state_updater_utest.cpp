@@ -91,8 +91,10 @@ TEST(TestSuite, testUpdateInMovingToFrontierState)
     ros::Duration(SENDING_SLEEP_TIME).sleep();
     ros::spinOnce();
     bsu.updateBatteryState();
-    EXPECT_EQ(30 + 150 * (power_microcontroller + power_basic_computations + power_sonar + power_laser), bt.consumed_energy_B);
-    EXPECT_EQ(50 + 150 * (power_per_speed * 11 + power_moving_fixed_cost), bt.consumed_energy_A);
+    double expected_consumed_energy_A = 50 + 150 * (power_per_speed * 11 + power_moving_fixed_cost);
+    double expected_consumed_energy_B = 30 + 150 * (power_microcontroller + power_basic_computations + power_sonar + power_laser);
+    EXPECT_EQ(expected_consumed_energy_A, bt.consumed_energy_A);
+    EXPECT_EQ(expected_consumed_energy_B, bt.consumed_energy_B);
     EXPECT_EQ(maximum_traveling_distance, bt.remaining_distance);
 
     geometry_msgs::PoseWithCovarianceStamped pose_msg;
@@ -105,12 +107,36 @@ TEST(TestSuite, testUpdateInMovingToFrontierState)
     pose_msg.pose.pose.position.x = 15;
     pose_msg.pose.pose.position.y = 15;
     amcl_pose_pub.publish(pose_msg);
-    
+
+    mtm.addTime(150+10);    
     ros::Duration(SENDING_SLEEP_TIME).sleep();
     ros::spinOnce();
-    mtm.addTime(150);
     bsu.updateBatteryState();
-    EXPECT_NEAR(maximum_traveling_distance - (10*sqrt(2) + 5 + 5), bt.remaining_distance, FLOAT_ABSOLUTE_ERROR);
+
+    expected_consumed_energy_A = expected_consumed_energy_A + 10 * (power_per_speed * 11 + power_moving_fixed_cost);
+    expected_consumed_energy_B = expected_consumed_energy_B + 10 * (power_microcontroller + power_basic_computations + power_sonar + power_laser);
+    EXPECT_EQ(expected_consumed_energy_A, bt.consumed_energy_A);
+    EXPECT_EQ(expected_consumed_energy_B, bt.consumed_energy_B);
+    double remaining_distance = maximum_traveling_distance - (10*sqrt(2) + 5 + 5);
+    EXPECT_EQ(expected_consumed_energy_A, bt.consumed_energy_A);
+    EXPECT_EQ(expected_consumed_energy_B, bt.consumed_energy_B);
+    EXPECT_NEAR(remaining_distance, bt.remaining_distance, FLOAT_ABSOLUTE_ERROR);
+
+    mtm.addTime(150+10+30);
+    msg.linear.x = 5.5;
+    cmd_vel_pub.publish(msg);
+    pose_msg.pose.pose.position.x = 22.5;
+    pose_msg.pose.pose.position.y = 15;
+    amcl_pose_pub.publish(pose_msg);
+    ros::Duration(SENDING_SLEEP_TIME).sleep();
+    ros::spinOnce();
+    bsu.updateBatteryState();
+    remaining_distance = remaining_distance - 7.5;
+    expected_consumed_energy_A = expected_consumed_energy_A + 30 * (power_per_speed * 5.5 + power_moving_fixed_cost);
+    expected_consumed_energy_B = expected_consumed_energy_B + 30 * (power_microcontroller + power_basic_computations + power_sonar + power_laser);
+    EXPECT_NEAR(expected_consumed_energy_A, bt.consumed_energy_A, FLOAT_ABSOLUTE_ERROR);
+    EXPECT_EQ(expected_consumed_energy_B, bt.consumed_energy_B);
+    EXPECT_NEAR(remaining_distance, bt.remaining_distance, FLOAT_ABSOLUTE_ERROR);
 }
 
 TEST(TestSuite, testUpdateInComputingNextGoalState)

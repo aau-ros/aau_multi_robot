@@ -34,6 +34,7 @@ private:
     bool new_victory;
     unsigned int last_auction_id, optimal_ds_id;
     ros::Time change_time;
+    bool first_auction;
 
     void loadParameters();
     void initializeVariables();

@@ -27,6 +27,7 @@ void AuctionObserver::initializeVariables() {
     error_1 = false, error_2 = false, error_3 = false;
     new_victory = false;
     last_auction_id = 0;
+    first_auction = true;
     robot_state = robot_state::INITIALIZING;
 }
 
@@ -35,7 +36,7 @@ void AuctionObserver::createSubscribers() {
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &AuctionObserver::newOptimalDsCallback, this);
 }
 
-void AuctionObserver::sanityChecks() {
+void AuctionObserver::sanityChecks() { //TODO should be better tested
     robot_state = getRobotState();
     
     if((robot_state == robot_state::AUCTIONING || robot_state == robot_state::auctioning_2) && prev_robot_state != robot_state) {
@@ -71,6 +72,7 @@ void AuctionObserver::sanityChecks() {
 }
 
 void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this function is quite ugly... we should use a visitor
+//TODO should be better tested, possibly with some refactoring since analyzeAuctionResult() changes the class state everytime it is called, so it is not very nice...
     ROS_INFO("actAccordingToRobotStateAndAuctionResult");
 
     auction_manager->lock();
@@ -89,7 +91,6 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
             else
                 setRobotState(robot_state::COMPUTING_NEXT_GOAL);
-
         }
 
         if(robot_state == robot_state::exploring_for_graph_navigation)
@@ -179,7 +180,9 @@ void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingS
 
 bool AuctionObserver::analyzeAuctionResult() {
     auction_t current_auction = auction_manager->getCurrentAuction();
-    if(last_auction_id != current_auction.auction_id) {
+    if(last_auction_id != 0)
+        first_auction = false;
+    if(last_auction_id != current_auction.auction_id || first_auction) {
         last_auction_id = current_auction.auction_id;
         if(optimal_ds_id != current_auction.docking_station_id) //since meanwhile docking could have changed optimal DS
             return false;

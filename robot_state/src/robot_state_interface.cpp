@@ -63,6 +63,7 @@ void RobotStateApi::setRobotState(RobotState *state) { //TODO raise exception
 
 void RobotStateApi::setRobotStateEnum(robot_state::robot_state_t state) { //TODO raise exception
     robot_state::SetRobotState set_srv_msg;
+    set_srv_msg.request.setting_node = "..."; //TODO
     set_srv_msg.request.robot_state = state;
     bool call_succeeded = set_robot_state_sc.call(set_srv_msg);
     while(!call_succeeded) { //TODO max number of retries

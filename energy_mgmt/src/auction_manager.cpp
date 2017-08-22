@@ -40,9 +40,9 @@ void AuctionManager::loadParameters() {
         ROS_ERROR("invalid reauctioning_timeout");
         reauctioning_timeout = 5;
     }
-    if(!nh_tilde.getParam("log_path", log_path)) {
-        ROS_ERROR("invalid log_path");
-    }
+    if(!nh_tilde.getParam("log_path", log_path))
+        ROS_ERROR("invalid log_path"); //TODO during tests this is printed, but why?
+
     nh_tilde.param<double>("sleep_time_between_two_participations", sleep_time_between_two_participations, 5); //s //TODO use
 }
 
@@ -99,55 +99,10 @@ void AuctionManager::logMetadata()
     fs << "#auction_duration,reauctioning_timeout,extra_auction_time" << std::endl;
     fs << auction_timeout << "," << reauctioning_timeout << "," << extra_auction_time << std::endl;
     fs.close();
-
-}
-
-void AuctionManager::setBidComputer(BidComputer *bid_computer) {
-    this->bid_computer = bid_computer;
-}
-
-void AuctionManager::setTimeManager(TimeManagerInterface *time_manager) {
-    this->time_manager = time_manager;
-}
-
-void AuctionManager::setSender(Sender *sender) {
-    this->sender = sender;
 }
 
 void AuctionManager::tryToAcquireDs() {
     ROS_INFO("Robot is going to try to start a new auction");
-
-    //TODO(IMPORTANT)
-//    if(wait_for_ds >= 100)
-//            return;
-
-//        if (!optimal_ds_is_set() && need_to_charge)
-//        {
-//            waiting_to_discover_a_ds = true;
-//            log_minor_error("The robot needs to recharge, but it doesn't know about any "
-//                      "existing DS!");
-//    //        compute_and_publish_path_on_ds_graph_to_home();
-//            wait_for_ds++;
-//            
-//            if(ros::Time::now() - starting_time > ros::Duration(5*60))
-//                log_major_error("robot seems unable to find DSs!!");
-//            
-//            if(wait_for_ds < 100) {
-//                timer_restart_auction.stop(); //reduntant?
-//                timer_restart_auction.setPeriod(ros::Duration(reauctioning_timeout), true);
-//                timer_restart_auction.start();
-//                
-//                // Force explorer in queue
-//                std_msgs::Empty msg;
-//                pub_force_in_queue.publish(msg);
-//                
-//            }
-//            else {
-//                log_major_error("robot cannot recharge: stopping...");
-//                std_msgs::Empty msg;
-//                pub_finish.publish(msg);
-//            }
-//        }
 
     if(auction_participation_state == PARTICIPATING)
         ROS_INFO("The robot is already participating to an auction: let's wait for the other auction to terminate");
@@ -193,6 +148,7 @@ void AuctionManager::terminateAuctionCallback(const ros::TimerEvent &event) {
         unsigned int winner_id = computeAuctionWinner();
         winner_of_auction = isThisRobotTheWinner(winner_id);
         current_auction.ending_time = time_manager->simulationTimeNow().toSec();
+        current_auction.winner_robot = winner_id;
 
         bid_t bid;
         bid.robot_id = winner_id;
@@ -276,13 +232,15 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
 }
 
 bool AuctionManager::isRobotParticipatingToAuction() {
+    if((auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING) && current_auction.ending_time > 0)
+        ROS_ERROR("impossible..."); //TODO better msg
     return ((auction_participation_state == PARTICIPATING || auction_participation_state == MANAGING) && current_auction.ending_time < 0);
 }
 
 bool AuctionManager::isRobotWinnerOfMostRecentAuction() {
     if(isRobotParticipatingToAuction())
         ROS_ERROR("Ideally, isRobotWinnerOfMostRecentAuction() shoud not be called when the robot is participating to an auction...");
-    return winner_of_auction; //TODO check also that current_auction.winner is this robot
+    return winner_of_auction; //TODO check also that current_auction.winner_robot is this robot
 }
 
 unsigned int AuctionManager::nextAuctionId()
@@ -298,7 +256,7 @@ unsigned int AuctionManager::nextAuctionId()
     return id;
 }
 
-void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg) {
+void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg) { //TODO check if completed tested (code coverage, calls of public functions, ...)
     auction_mutex.lock();
     if(auction_participation_state == PARTICIPATING) { //TODO check also id of the auction
         if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
@@ -322,14 +280,16 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
             winner_of_auction = false;
         }
 
-        auction_participation_state = IDLE;
         current_auction.ending_time = time_manager->simulationTimeNow().toSec();
+        current_auction.winner_robot = (unsigned int)msg.get()->robot;
+
+        auction_participation_state = IDLE;
     }    
 
     auction_mutex.unlock();
 }
 
-void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuction::ConstPtr &msg)
+void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuction::ConstPtr &msg) //TODO check if completed tested (code coverage, calls of public functions, ...)
 {
     auction_mutex.lock();
 
@@ -345,7 +305,7 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
                 ROS_INFO("... and the auction managed by the robot is more recent than the auction started by the other robot: ignoring the auction started by the other robot");
         }
         
-        else if(robot_cannot_participate_to_auctions)
+        else if(robot_cannot_participate_to_auctions) //TODO this is not tested properly, probably
             ROS_INFO("robot is searching for a path on graph: ignore auction");  
         else {
             double bid_double = bid_computer->getBid();
@@ -369,10 +329,12 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
     auction_mutex.unlock();
 }
 
+//TODO check if completed tested (code coverage, calls of public functions, ...)
 auction_t AuctionManager::participateToOtherRobotAuction(double bid_double, const adhoc_communication::EmAuction::ConstPtr &msg) { //TODO bad arg name
     ROS_INFO("Participating to auction started by another robot");
     auction_participation_state = PARTICIPATING;
-    terminate_auction_timer = nh.createTimer(ros::Duration(auction_timeout + extra_auction_time),                                             &AuctionManager::endAuctionParticipationCallback, this, true, true);
+    terminate_auction_timer = nh.createTimer(ros::Duration(auction_timeout + extra_auction_time), 
+                                             &AuctionManager::endAuctionParticipationCallback, this, true, true);
 
     auction_t new_auction;
     new_auction.auctioneer = msg.get()->robot;
@@ -391,11 +353,12 @@ auction_t AuctionManager::participateToOtherRobotAuction(double bid_double, cons
 
 void AuctionManager::endAuctionParticipationCallback(const ros::TimerEvent &event) 
 {
-    // FIXME it seems not to work correctly sometimes...
+    // FIXME it seems not to work correctly sometimes... keep checked (there is a sanity check in AuctionObserver)
     auction_mutex.lock();
     ROS_DEBUG("Force to consider auction concluded");
     auction_participation_state = IDLE;
     current_auction.ending_time = time_manager->simulationTimeNow().toSec();
+//    current_auction.winner_robot = ??? //TODO
     winner_of_auction = false;
     auction_mutex.unlock();
 }
@@ -423,4 +386,16 @@ void AuctionManager::allowParticipationToAuctions() {
 
 auction_t AuctionManager::getCurrentAuction() {
     return current_auction;
+}
+
+void AuctionManager::setBidComputer(BidComputer *bid_computer) {
+    this->bid_computer = bid_computer;
+}
+
+void AuctionManager::setTimeManager(TimeManagerInterface *time_manager) {
+    this->time_manager = time_manager;
+}
+
+void AuctionManager::setSender(Sender *sender) {
+    this->sender = sender;
 }
