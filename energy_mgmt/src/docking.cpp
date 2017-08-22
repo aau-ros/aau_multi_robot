@@ -155,7 +155,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* General services */
     //sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");  // TODO(minor)
-    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
     sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");
     //sc_distance_from_robot = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/distance_from_robot", true);
     //sc_reachable_target = nh.serviceClient<explorer::DistanceFromRobot>(my_prefix + "explorer/reachable_target", true);
@@ -165,7 +164,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
-//    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
+    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
     sub_jobs = nh.subscribe(my_prefix + "frontiers", 1000, &docking::cb_jobs, this);
 //    sub_robot = nh.subscribe(my_prefix + "explorer/robot", 1000, &docking::cb_robot, this);
     sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &docking::cb_docking_stations, this);
@@ -318,12 +317,11 @@ void docking::wait_for_explorer() {
     //ros::Duration(0.1).sleep();
     
     ros::service::waitForService("explorer/robot_pose");
-    //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);
     sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose");      
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_ERROR("No connection to service 'explorer/robot_pose': retrying...");
         ros::Duration(3).sleep();
-        //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose", true);   
     }
     ROS_INFO("Established persistent connection to service 'explorer/robot_pose'");    
     //ros::Duration(0.1).sleep();
@@ -2631,7 +2629,7 @@ void docking::update_robot_position()
     for(int i = 0; i < 10 && !sc_robot_pose; i++) {
         ROS_FATAL("NO MORE CONNECTION!");
         ros::Duration(1).sleep();
-        //sc_robot_pose = nh.serviceClient<fake_network::RobotPosition>(my_prefix + "explorer/robot_pose", true);   
+        sc_robot_pose = nh.serviceClient<fake_network::RobotPositionSrv>(my_prefix + "explorer/robot_pose", true);   
     }
     if (sc_robot_pose.call(srv_msg))
     {
@@ -2727,7 +2725,6 @@ void docking::update_reamining_distance() {
 
 //DONE++
 float docking::conservative_remaining_distance_with_return() {
-    //return (battery.remaining_distance / (double) 2.0 ) * safety_coeff;
     return current_remaining_distance / (double) 2.0;
 }
 
@@ -2740,8 +2737,6 @@ float docking::conservative_maximum_distance_with_return() {
 
 //DONE++
 float docking::conservative_remaining_distance_one_way() {
-    //return battery.remaining_distance * safety_coeff;
-    ROS_ERROR("we need the battery!!");
     return current_remaining_distance;
 }
 
@@ -3574,14 +3569,11 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
     battery.remaining_time_charge = msg.get()->remaining_time_charge;
     battery.remaining_time_run = msg.get()->remaining_time_run;
     battery.remaining_distance = msg.get()->remaining_distance;
-
+    battery.maximum_traveling_distance = msg.get()->maximum_traveling_distance; 
     next_remaining_distance = battery.remaining_distance;
     
     ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
     
-    //TODO(minor) very bad way to be sure to set maximum_travelling_distance...
-    if(maximum_travelling_distance < msg.get()->remaining_distance)
-        maximum_travelling_distance = msg.get()->remaining_distance;
 }
 
 bool docking::can_update_ds() {
