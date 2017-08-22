@@ -83,11 +83,9 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
 
-        analyzeAuctionResult();
-        
         if(robot_state == robot_state::CHOOSING_ACTION) {
             ROS_INFO("choosing_next_action state");
-            if(new_victory)
+            if(analyzeAuctionResult())
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
             else
                 setRobotState(robot_state::COMPUTING_NEXT_GOAL);
@@ -107,9 +105,13 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
             }
             else {
                 ROS_INFO("checking auction result");
-                if(auction_manager->isRobotWinnerOfMostRecentAuction())
+                //TODO optimal_ds cannot be changed by docking during the following states... but we should put some sanity checks (or make integration testing)
+//                if(auction_manager->isRobotWinnerOfMostRecentAuction() && optimal_ds_id == auction_manager->getCurrentAuction().docking_station_id)
+                if(auction_manager->isRobotWinnerOfMostRecentAuction()) {
+                    if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
+                        ROS_ERROR("this should NOT happen!");
                     setRobotState(robot_state::GOING_CHECKING_VACANCY);
-                else
+                } else
                     setRobotState(robot_state::GOING_IN_QUEUE);
             }
         }
@@ -118,9 +120,12 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
         if(robot_state == robot_state::IN_QUEUE) {
             ROS_INFO("in_queue state");
-            if(auction_manager->isRobotWinnerOfMostRecentAuction())
+//            if(auction_manager->isRobotWinnerOfMostRecentAuction() && optimal_ds_id == auction_manager->getCurrentAuction().docking_station_id)
+            if(auction_manager->isRobotWinnerOfMostRecentAuction()) {
+                if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
+                    ROS_ERROR("this should NOT happen!");
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
-            else {
+            } else {
                 auction_t current_auction = auction_manager->getCurrentAuction();
                 if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout) {
                     ROS_INFO("reauctioning");
@@ -129,9 +134,12 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
             }
         }
 
-        if(robot_state == robot_state::CHARGING)
-            if(!auction_manager->isRobotWinnerOfMostRecentAuction())
+        if(robot_state == robot_state::CHARGING) 
+            if(!auction_manager->isRobotWinnerOfMostRecentAuction()) {
+                if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
+                    ROS_ERROR("this should NOT happen!");
                 setRobotState(robot_state::CHARGING_ABORTED);
+            }
 
     }
     else
@@ -169,15 +177,15 @@ void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingS
     auction_manager->setOptimalDs(msg.get()->id);
 }
 
-void AuctionObserver::analyzeAuctionResult() {
+bool AuctionObserver::analyzeAuctionResult() {
     auction_t current_auction = auction_manager->getCurrentAuction();
     if(last_auction_id != current_auction.auction_id) {
         last_auction_id = current_auction.auction_id;
-        if(optimal_ds_id != current_auction.docking_station_id)
-            new_victory = false;
+        if(optimal_ds_id != current_auction.docking_station_id) //since meanwhile docking could have changed optimal DS
+            return false;
         else
-            new_victory = auction_manager->isRobotWinnerOfMostRecentAuction();
+            return auction_manager->isRobotWinnerOfMostRecentAuction();
     } else {
-        new_victory = false;
+        return false;
     }
 }

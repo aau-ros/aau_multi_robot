@@ -60,7 +60,7 @@ int main(int argc, char** argv)
         auction_observer.actAccordingToRobotStateAndAuctionResult();
         auction_observer.sanityChecks();
 
-        if(ros::Time::now() - last_udpate_llh > ros::Duration(3)) {
+        if(ros::Time::now() - last_udpate_llh >= ros::Duration(3)) {
             cbc.processMessages();
             cbc.updateLlh();
             last_udpate_llh = ros::Time::now();

@@ -40,7 +40,7 @@ private:
     void createSubscribers();
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
-    void analyzeAuctionResult();
+    bool analyzeAuctionResult();
     void newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 };
 

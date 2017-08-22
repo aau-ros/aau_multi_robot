@@ -282,7 +282,7 @@ bool AuctionManager::isRobotParticipatingToAuction() {
 bool AuctionManager::isRobotWinnerOfMostRecentAuction() {
     if(isRobotParticipatingToAuction())
         ROS_ERROR("Ideally, isRobotWinnerOfMostRecentAuction() shoud not be called when the robot is participating to an auction...");
-    return winner_of_auction;
+    return winner_of_auction; //TODO check also that current_auction.winner is this robot
 }
 
 unsigned int AuctionManager::nextAuctionId()

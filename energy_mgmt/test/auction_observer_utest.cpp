@@ -1,9 +1,10 @@
 #include <ros/ros.h>
 #include <gtest/gtest.h>
+#include <adhoc_communication/EmDockingStation.h>
+#include <utilities/mock_time_manager.h>
 #include "auction_observer.h"
 #include "robot_state_manager2.h"
 #include "mock_auction_manager.h"
-#include <utilities/mock_time_manager.h>
 
 double reauctioning_timeout;
 
@@ -204,15 +205,25 @@ TEST(TestAuctionObserver, testGoChargingOnlyIfNewAuctionWasWon)
     ao.setAuctionManager(&mam);
     ao.setTimeManager(&mtm);
 
-    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    ros::NodeHandle nh;
+    ros::Publisher new_optimal_ds_pub = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
+    adhoc_communication::EmDockingStation msg;
+
+    msg.id = 9;
+    new_optimal_ds_pub.publish(msg);
+    ros::Duration(0.1).sleep();
+    ros::spinOnce();
+
+    rsm.setRobotState(robot_state::MOVING_TO_FRONTIER);
     mam.current_auction_test.auction_id = 1;
+    mam.current_auction_test.docking_station_id = 9;
     mam.winner_test = true;
     ao.actAccordingToRobotStateAndAuctionResult();
-    EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
+    EXPECT_EQ(robot_state::MOVING_TO_FRONTIER, rsm.getRobotState());
 
     rsm.setRobotState(robot_state::CHOOSING_ACTION);
     ao.actAccordingToRobotStateAndAuctionResult();
-    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+    EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
 
     rsm.setRobotState(robot_state::CHOOSING_ACTION);
     mam.current_auction_test.auction_id = 2;
@@ -222,6 +233,18 @@ TEST(TestAuctionObserver, testGoChargingOnlyIfNewAuctionWasWon)
 
     rsm.setRobotState(robot_state::CHOOSING_ACTION);
     mam.current_auction_test.auction_id = 3;
+    mam.winner_test = true;
+    mam.current_auction_test.docking_station_id = 8;
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+
+    msg.id = 8;
+    new_optimal_ds_pub.publish(msg);
+    ros::Duration(0.1).sleep();
+    ros::spinOnce();
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    mam.current_auction_test.auction_id = 4;
     mam.winner_test = true;
     ao.actAccordingToRobotStateAndAuctionResult();
     EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
