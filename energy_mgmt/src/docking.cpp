@@ -163,9 +163,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
 
-//    ss_distance_robot_frontier_on_graph = nh.advertiseService("energy_mgmt/distance_on_graph", &docking::distance_robot_frontier_on_graph_callback, this);
-    //ROS_ERROR("%s", ss_distance_robot_frontier_on_graph.getService().c_str());
-
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
 //    sub_robots = nh.subscribe(my_prefix + "robots", 1000, &docking::cb_robots, this);
@@ -179,18 +176,18 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
 	sub_goal_ds_for_path_navigation = nh.subscribe("goal_ds_for_path_navigation", 1000, &docking::goal_ds_for_path_navigation_callback, this);
     sub_wait = nh.subscribe("explorer/im_ready", 1000, &docking::wait_for_explorer_callback, this);
     sub_path = nh.subscribe("error_path", 1000, &docking::path_callback, this);
+    sub_ds_with_EOs = nh.subscribe("ds_with_EOs", 1000, &docking::ds_with_EOs_callback, this);
     
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1000);
     pub_adhoc_new_best_ds =
-        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 10);
-    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 10);
+        nh.advertise<adhoc_communication::EmDockingStation>("adhoc_new_best_docking_station_selected", 1000);
+    pub_moving_along_path = nh.advertise<adhoc_communication::MmListOfPoints>("moving_along_path", 1000);
     pub_finish = nh.advertise<std_msgs::Empty>("explorer/finish", 10);
-	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
-	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 10);
+	pub_new_optimal_ds = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 1000);
+	pub_robot_absolute_position = nh.advertise<fake_network::RobotPosition>("fake_network/robot_absolute_position", 100);
 	pub_new_ds_on_graph = nh.advertise<adhoc_communication::EmDockingStation>("new_ds_on_graph", 1000);
-	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 10);
-	pub_force_in_queue = nh.advertise<std_msgs::Empty>("explorer/force_in_queue", 10);
+	pub_ds_count = nh.advertise<std_msgs::Int32>("ds_count", 100);
     pub_wait = nh.advertise<std_msgs::Empty>("explorer/are_you_ready", 10);
 
     /* Variable initializations */
@@ -531,15 +528,38 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 /* Check if there are reachable DSs (i.e., DSs that the robot can reach with the remaining battery life) with EOs */
                 double min_dist = numeric_limits<int>::max();
                 bool found_reachable_ds_with_eo = false, found_ds_with_eo = false;
-                for (unsigned int i = 0; i < ds.size(); i++)
-                    for (unsigned int j = 0; j < jobs_local_list.size(); j++)
-                    {
-                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
-                        if (dist < 0)
-                            continue;
-                        if (dist < conservative_maximum_distance_with_return())
-                        {
-                            /* We have found a DS with EOs */
+                for (unsigned int i = 0; i < ds.size(); i++) {
+//                    for (unsigned int j = 0; j < jobs_local_list.size(); j++)
+//                    {
+//                        double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
+//                        if (dist < 0)
+//                            continue;
+//                        if (dist < conservative_maximum_distance_with_return())
+//                        {
+//                            /* We have found a DS with EOs */
+//                            found_ds_with_eo = true;
+
+//                            //TODO(minor) maybe it will be more efficient to invert the checks? but am I sure taht it works considering the code later?
+//                            /* Check if that DS is also directly reachable (i.e., without
+//                             * recharging at intermediate DSs) */
+//                            double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+//                            if (dist2 < 0)
+//                                continue;
+//                            if (dist2 < conservative_remaining_distance_one_way())
+//                            {
+//                                /* We have found a DS that is directly reachable and with EOs */
+//                                found_reachable_ds_with_eo = true;
+
+//                                /* Check if it also the closest reachable DS with EOs */
+//                                if (dist2 < min_dist)  // TODO(minor) maybe another heuristics would be better...
+//                                {
+//                                    /* Update optimal DS */
+//                                    min_dist = dist2;
+//                                    next_optimal_ds_id = ds.at(i).id;
+//                                }
+//                            }
+//                        }
+                        if(ds.at(i).has_EOs) {
                             found_ds_with_eo = true;
 
                             //TODO(minor) maybe it will be more efficient to invert the checks? but am I sure taht it works considering the code later?
@@ -756,20 +776,26 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             {
                 /* If the currently optimal DS has still EOs, keep using it, otherwise use
                  * "closest" policy */
-                bool existing_eo = false;
-                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
-                {
-                    double dist = distance(get_optimal_ds_x(), get_optimal_ds_y(), jobs_local_list.at(i).x_coordinate, jobs_local_list.at(i).y_coordinate);
-                    if (dist < 0) {
-                        //ROS_ERROR("Computation of DS-frontier distance failed: ignore this frontier (i.e., do not consider it an EO)");
-                        continue;
+//                bool existing_eo = false;
+//                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
+//                {
+//                    double dist = distance(get_optimal_ds_x(), get_optimal_ds_y(), jobs_local_list.at(i).x_coordinate, jobs_local_list.at(i).y_coordinate);
+//                    if (dist < 0) {
+//                        //ROS_ERROR("Computation of DS-frontier distance failed: ignore this frontier (i.e., do not consider it an EO)");
+//                        continue;
+//                    }
+//                    if (dist < conservative_maximum_distance_with_return())
+//                    {
+//                        existing_eo = true;
+//                        break;
+//                    }
+//                }
+                bool existing_eo;
+                for(unsigned int i=0; i < ds.size(); i++)
+                    if(ds.at(i).id == get_optimal_ds_id()) {
+                        existing_eo = ds.at(i).has_EOs;
+                        break;                    
                     }
-                    if (dist < conservative_maximum_distance_with_return())
-                    {
-                        existing_eo = true;
-                        break;
-                    }
-                }
                 if (!existing_eo) {
                     ROS_DEBUG("Current optimal DS has no more EOs: use 'closest' policy to compute new optimal DS");
                     compute_closest_ds();
@@ -2366,6 +2392,7 @@ void docking::check_reachable_ds()
                     
             if(!already_inserted) {
             
+                it->has_EOs = true;
                 ds.push_back(*it);
             
             }
@@ -3559,4 +3586,13 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 
 bool docking::can_update_ds() {
     return robot_state != robot_state::CHOOSING_ACTION && robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE;
+}
+
+void docking::ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_INFO("received info on EOs for ds%d", msg.get()->id);
+    for(unsigned int i=0; i<ds.size(); i++)
+        if(ds.at(i).id == msg.get()->id) {
+            ds.at(i).has_EOs = msg.get()->has_EOs;
+            break;
+        }
 }

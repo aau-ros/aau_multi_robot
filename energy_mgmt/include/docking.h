@@ -70,6 +70,7 @@ struct ds_t
     double world_x, world_y; // coordinates of the DS in the /world frame (i.e., in case of a simulation, in the reference system of the simulator)
     bool vacant;
     double timestamp;
+    bool has_EOs;
 };
 
 class docking
@@ -526,8 +527,10 @@ class docking
     bool can_update_ds();
     void get_robot_state();
     void handle_robot_state();
+    void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     ros::ServiceClient get_robot_state_sc;
+    ros::Subscriber sub_ds_with_EOs;
 
 //    AuctionManager auction_manager; //TODO
 

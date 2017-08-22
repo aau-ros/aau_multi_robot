@@ -93,6 +93,7 @@ namespace explorationPlanner
         double x;
         double y;
         bool vacant;
+        bool has_EOs;
     };
 
 
@@ -386,6 +387,7 @@ namespace explorationPlanner
             void updateDistances(double max_available_distance, bool use_heuristic = true);
 //            std::vector<frontier_t>::const_iterator update_distances_index;
             bool use_theta;
+            void sendListDssWithEos();
 
             /***************
              ** Debugging **
@@ -520,6 +522,7 @@ namespace explorationPlanner
             bool erased;
             ds_t *min_ds_for_path_traversal;
             DistanceComputerInterface *distance_computer;
+            ros::Publisher ds_with_EOs_pub;
             
             // Debugging
             bool test_mode;

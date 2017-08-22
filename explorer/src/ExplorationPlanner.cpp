@@ -235,6 +235,10 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 //    pub_frontiers = nh_frontier.advertise <adhoc_communication::Frontier> ("frontiers", 10000);
 //    pub_visited_frontiers = nh_visited_frontier.advertise <adhoc_communication::Frontier> ("visited_frontiers", 10000);
     pub_frontiers = nh_frontier.advertise <adhoc_communication::ExpFrontier> ("frontiers", 10000);
+
+    ros::NodeHandle nh2;
+    ds_with_EOs_pub = nh2.advertise<adhoc_communication::EmDockingStation>("ds_with_EOs", 10000);
+
     pub_visited_frontiers = nh_visited_frontier.advertise <adhoc_communication::ExpFrontier> ("visited_frontiers", 10000);
 
     pub_visited_frontiers_points = nh_visited_Point.advertise <visualization_msgs::MarkerArray> ("visitedfrontierPoints", 2000, true);
@@ -5031,7 +5035,7 @@ bool ExplorationPlanner::my_sendToMulticast(std::string multi_cast_group, adhoc_
     }
     else
     {
-     ROS_WARN("Failed to call service sendToMulticast [%s]",ssendFrontier_2.getService().c_str());
+     ROS_ERROR("Failed to call service sendToMulticast [%s]",ssendFrontier_2.getService().c_str());
      return false;
     }
 }
@@ -7089,7 +7093,8 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
 //        for(int j=0; j < ds_list.size(); j++)
 //            ; //ROS_ERROR("%f", ds_graph[i][j]);
     
-    mutex_ds.lock();       
+    mutex_ds.lock();      
+    ds.has_EOs = true; 
     ds_list.push_back(ds);
 //    ROS_ERROR("%u", ds_list.size());
     mutex_ds.unlock();
@@ -9958,6 +9963,10 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
    // TODO we could improve a little bit, keeping an array of booleans, a boolean for each DS, and when no EOs are found for a DS, the boolean is set to false and that DS is never checked again... however we must be sure that it cannot happen that the boolean is set to false even when with a later check we could find EOs for the associated DS...
     //TODO we could use an hash/map maybe, to improve???
     //TODO it is not completely thread-safe (it is at least accoring to the current code...(?))
+
+    for(unsigned int i=0; i< ds_list.size(); i++)
+        ds_list.at(i).has_EOs = false;
+
     for(unsigned int frontier_index = frontiers.size() - 1; frontier_index >= 0; frontier_index--) { //start from the bottom not to penalize the newest frontiers
         for(unsigned int ds_index=0; ds_index < ds_list.size(); ds_index++) {
             acquire_mutex(&mutex_erase_frontier, __FUNCTION__);
@@ -9989,6 +9998,9 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
                 }
             }
 
+            if (frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+                ds_list.at(ds_index).has_EOs = true;
+
             release_mutex(&mutex_erase_frontier, __FUNCTION__);
         }
     }
@@ -10014,6 +10026,17 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
 ////    }
     
 }
+
+void ExplorationPlanner::sendListDssWithEos() {
+    ROS_FATAL("MISSING");
+    for(unsigned int i=0; i < ds_list.size(); i++) {
+        adhoc_communication::EmDockingStation msg;
+        msg.id = ds_list.at(i).id;
+        msg.has_EOs = ds_list.at(i).has_EOs;
+        ds_with_EOs_pub.publish(msg);
+    }
+}
+
 double ExplorationPlanner::computeTheta(double frontier_x, double frontier_y) {
     ROS_INFO("%.1f, %.1f, %.1f, %.1f, %.1f, %.1f", robot_last_y, robot_y, robot_last_x, robot_x, frontier_y, frontier_x);
     double theta_s = atan2(robot_last_y - robot_y, robot_last_x - robot_x);

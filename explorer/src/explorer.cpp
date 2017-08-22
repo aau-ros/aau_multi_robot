@@ -20,7 +20,6 @@
 #include <navfn/navfn_ros.h>
 #include <boost/filesystem.hpp>
 #include <map_merger/LogMaps.h>
-//#include "energy_mgmt/battery_state.h"
 #include "explorer/battery_state.h"
 #include "explorer/Speed.h"
 #include <std_msgs/Int32.h>
@@ -43,8 +42,6 @@
 #include "robot_state/SetRobotState.h"
 #include "robot_state/GetRobotState.h"
 
-//#define PROFILE
-
 #ifdef PROFILE
 #include "google/profiler.h"
 #include "google/heap-profiler.h"
@@ -52,10 +49,8 @@
 
 #define OPERATE_ON_GLOBAL_MAP true
 #define OPERATE_WITH_GOAL_BACKOFF true
-//#define EXIT_COUNTDOWN 5
-#define EXIT_COUNTDOWN 50  // F
-//#define STUCK_COUNTDOWN 10
-#define STUCK_COUNTDOWN 1000  // F
+#define EXIT_COUNTDOWN 50
+#define STUCK_COUNTDOWN 1000
 
 #define INCR 1.7
 #define OPP_ONLY_TWO_DS false
@@ -135,7 +130,6 @@ class Explorer
            ros::console::notifyLoggerLevelsChanged();
         }
         
-//        ros::NodeHandle nh("~");
         rotation_counter = 0;
         accessing_cluster = 0;
         cluster_element_size = 0;
@@ -168,7 +162,6 @@ class Explorer
         traveled_distance = 0;
         last_x = 0, last_y = 0;
     
-        // F
         moving_along_path = false;
         created = false;
         exploration = NULL;
@@ -199,7 +192,6 @@ class Explorer
         robot_state = robot_state::INITIALIZING;
 
         /* Robot state publishers */
-        //pub_check_vacancy = nh.advertise<std_msgs::Empty>("check_vacancy", 1);  // to publish vacancy check requests
         
         ros::NodeHandle nh2;
         sub_free_cells_count = nh2.subscribe("free_cells_count", 10, &Explorer::free_cells_count_callback, this);
@@ -210,7 +202,6 @@ class Explorer
         
         has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
         
-        //ROS_ERROR("%s", sub_free_cells_count.getTopic().c_str());
 
         /* Robot state subscribers */
 
@@ -225,8 +216,6 @@ class Explorer
             nh.subscribe("won_auction", 1, &Explorer::won_callback, this);  // to know when a robot won an auction
         sub_lost_other_robot_auction = nh.subscribe("lost_other_robot_auction", 10, &Explorer::lost_other_robot_callback,
                                                     this);  // to know when a robot lost another robot auction
-
-//        pub_robot = nh.advertise<adhoc_communication::EmRobot>("robot", 10);  // to publish robot state updates
         
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
@@ -238,7 +227,6 @@ class Explorer
         pub_next_ds = nh2.advertise<std_msgs::Empty>("next_ds", 1);
 
         ros::NodeHandle n;
-        //sc_get_robot_state = n.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
 
         /* Load parameters */
         nh.param("frontier_selection", frontier_selection, 1);
@@ -252,7 +240,6 @@ class Explorer
         nh.param("w4", w4, 0);
         nh.param<float>("queue_distance", queue_distance, 7.0);
         nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
-        //ROS_ERROR("%f", queue_distance);
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
         nh.param<float>("auction_timeout", auction_timeout, 3);
@@ -396,9 +383,7 @@ class Explorer
         {
             ROS_ERROR("Failed to get RobotPose");
         }
-        visualize_goal_point(robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
-        
-        //ROS_ERROR("origin: (%f, %f)", robotPose.getOrigin().getX(), robotPose.getOrigin().getY());
+        visualize_goal_point(robotPose.getOrigin().getX(), robotPose.getOrigin().getY());        
 
         // transmit three times, since rviz need at least 1 to buffer before
         // visualizing the point
@@ -490,18 +475,11 @@ class Explorer
 
         ros::Subscriber sub, sub2, sub3, pose_sub, sub_finish;
 
-//        ros::Subscriber my_sub =
-//            nh.subscribe("charging_completed", 10, &Explorer::battery_charging_completed_callback, this);
-
         ros::Subscriber sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
                                                          &Explorer::new_optimal_docking_station_selected_callback, this);
 
         ros::Subscriber sub_moving_along_path =
             nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
-            
-        //ROS_ERROR("%s", pub_next_ds.getTopic().c_str());
-
-//        ros::Publisher pub_occupied_ds = nh.advertise<std_msgs::Empty>("occupied_ds", 1);
         
         ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
         
@@ -534,11 +512,6 @@ class Explorer
             bool negotiation;
             int count = 0;
         
-//            if(robot_id == 0) {
-//                finalize_exploration();
-//                continue;
-//            }
-        
             /* Update robot state */
             update_robot_state();
             
@@ -557,10 +530,6 @@ class Explorer
                 if(!frontiers_found) {
                     ROS_INFO("****************** FRONTIER DETERMINATION ******************");
 
-    //                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    //                fs_exp_se_log << "0" << ": " << "Start new explore() loop iteration" << std::endl;
-    //                fs_exp_se_log.close();
-
                     /*
                     * Use mutex to lock the critical section (access to the costmap)
                     * since rosspin tries to update the costmap continuously
@@ -574,16 +543,7 @@ class Explorer
                     exploration->transformToOwnCoordinates_frontiers();
                     exploration->transformToOwnCoordinates_visited_frontiers();
 
-                    //ROS_ERROR("initialize planner");
                     exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global, NULL);
-                    //ROS_ERROR("planner initialized");
-                 
-            //                if(skip_findFrontiers) {
-            //                    ROS_INFO("skipping findFrontiers");
-            //                } else {
-    //                fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    //                fs_exp_se_log << "0" << ": " << "Find frontiers" << std::endl;
-    //                fs_exp_se_log.close();
                         
                     exploration->transformToOwnCoordinates_frontiers();
                     exploration->transformToOwnCoordinates_visited_frontiers();
@@ -592,12 +552,6 @@ class Explorer
                     exploration->clearVisitedFrontiers();
                     exploration->clearUnreachableFrontiers();
                     exploration->clearSeenFrontiers(costmap2d_global);
-                    
-//                            }  
- 
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << std::endl; //<< ": " << "Clear visisited/unreachable/seen frontiers" << std::endl;
-//                        fs_exp_se_log.close();
 
                     if(skip_findFrontiers)
                         exploration->clearVisitedFrontiers();
@@ -609,7 +563,6 @@ class Explorer
                     print_mutex_info("explore()", "unlock");
                     ROS_DEBUG("COSTMAP STUFF, lock released");
                 
-                //tf::Stamped<tf::Pose> robotPose;
                 }
                 
                 if(!created) {
@@ -635,8 +588,7 @@ class Explorer
                 /*
                  * Sleep to ensure that frontiers are exchanged
                  */
-//                ros::Duration(2).sleep();
-                ros::Duration(10).sleep();
+                ros::Duration(10).sleep(); //TODO reduce time?
                 
                 explorer_ready = true;
             
@@ -652,12 +604,7 @@ class Explorer
             {
                 ROS_INFO("Waiting for battery to charge...");
 
-                // NO! i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
-                // if (charge_time > 0)
-                //    ros::Duration(charge_time).sleep();
-                // else
-                //    ros::Duration(1).sleep();
-                // ros::spinOnce();  // update charge_time
+                // NB: here i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
 
                 ros::spinOnce();
                 ros::Duration(1).sleep();
@@ -797,8 +744,6 @@ class Explorer
                         }
                         else
                         {
-                            // negotiation =
-                            // exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
                             negotiation = true;
                             if (negotiation == true)
                             {
@@ -947,8 +892,6 @@ class Explorer
                         }
                         else
                         {
-                            // negotiation =
-                            // exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
                             negotiation = true;
                             if (negotiation == true)
                             {
@@ -971,8 +914,6 @@ class Explorer
                         }
                         else
                         {
-                            // negotiation =
-                            // exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
                             negotiation = true;
                             if (negotiation == true)
                             {
@@ -994,8 +935,6 @@ class Explorer
                         }
                         else
                         {
-                            // negotiation =
-                            // exploration->negotiate_Frontier(final_goal.at(0),final_goal.at(1),final_goal.at(2),final_goal.at(3),-1);
                             negotiation = true;
                             if (negotiation == true)
                             {
@@ -1152,8 +1091,6 @@ class Explorer
                             ros::spinOnce();
                             ROS_INFO("Trying to reach next DS");
                             ROS_INFO("ds_path_counter: %d; ds_path_size: %d", ds_path_counter, ds_path_size);
-                            //double next_ds_x = path[ds_path_counter+1][0];
-                            //double next_ds_y = path[ds_path_counter+1][0];
                             double next_ds_x = complex_path[ds_path_counter+1].x;
                             double next_ds_y = complex_path[ds_path_counter+1].y;
                             double dist = -1;
@@ -1183,8 +1120,6 @@ class Explorer
                             }
 
                             else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance) ) {
-                                //robot cannot reach next next DS, it must recharge at current one
-//                                    if(robot_state == robot_state::CHARGING_COMPLETED)
                                 if(full_battery)
                                 {
                                     if(fabs(dist - conservative_maximum_available_distance) > 7.0)
@@ -1252,21 +1187,6 @@ class Explorer
                         /* Sort frontiers, firstly from nearest to farthest and then by
                          * efficiency */
                         ROS_INFO("SORTING FRONTIERS...");
-                        
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort (and possibly cluster) frontiers with sort()" << std::endl;
-//                        fs_exp_se_log.close();
-                        
-                        //exploration->sort(2);
-                        //exploration->sort(3);
-                        //exploration->clusterFrontiers();
-                        //exploration->sort(4);
-                        
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Sort frontiers with sort_cost()" << std::endl;
-//                        fs_exp_se_log.close();
-                        
-                        //exploration->sort_cost_with_approach(battery_charge > 50, w1, w2, w3, w4);
 
                         /* Look for a frontier as goal */
                         ROS_INFO("DETERMINE GOAL...");
@@ -1274,21 +1194,12 @@ class Explorer
                         fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                         fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
                         fs_exp_se_log.close();
-                        
-                        // goal_determined = exploration->determine_goal_staying_alive(1, 2,
-                        // available_distance, &final_goal, count, &robot_str, -1);
-                        //ROS_ERROR("available_distance: %f", available_distance);
  
                         ros::spinOnce(); // to update available_distance
 
                         if(robot_state != robot_state::CHARGING_COMPLETED)
                             available_distance = next_available_distance;    
                         
-//                        if(conservative_available_distance(available_distance) <= 0)
-//                            goal_determined = false;
-//                        else {
-//                            exploration->updateOptimalDs();
-//                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, available_distance, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                             print_mutex_info("explore()", "acquiring");
                             costmap_mutex.lock();
                             print_mutex_info("explore()", "lock");
@@ -1301,7 +1212,6 @@ class Explorer
                                 log_major_error("robot pose not updated");
                                 goal_determined = false;
                             }
-//                        }
                         
                         ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                         
@@ -1317,11 +1227,6 @@ class Explorer
                         if(d > ros::Duration(5 * 60)) {
                             log_minor_error("very slow...");
                         }
-                       
-                        
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << std::endl;
-//                        fs_exp_se_log.close();
 
                         /* Check if the robot has found a reachable frontier */
                         if (goal_determined == true)
@@ -1347,7 +1252,6 @@ class Explorer
                                           "value; something must have gone wrong however, "
                                           "because this shoulw never happen...");
                             }
-                            // charge_countdown = EXIT_COUNTDOWN;
                             
                             ROS_DEBUG("reset retries counter");
                             retries = 0;
@@ -1439,10 +1343,6 @@ class Explorer
                                             
                                                 if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
                                                     ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                                    
-        //                                            std_msgs::Empty msg;
-        //                                            pub_next_ds.publish(msg);
-        //                                            ros::Duration(3).sleep();
                                                     
                                                     int result = -1;
                                                     exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
@@ -3950,7 +3850,8 @@ class Explorer
             ros::Duration(10).sleep();
             
         while(!exploration_finished) {
-            //exploration->updateDistances(conservative_maximum_available_distance);
+            exploration->updateDistances(conservative_maximum_available_distance);
+            exploration->sendListDssWithEos();
             ros::Duration(1).sleep();
         }
     }
@@ -4012,8 +3913,6 @@ class Explorer
     ros::Subscriber sub_lost_own_auction, sub_won_auction, sub_lost_other_robot_auction;
 
     robot_state::robot_state_t robot_state, previous_state;
-
-    // TODO
 
     std::vector<std::string> enum_string;
 
