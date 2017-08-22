@@ -61,7 +61,9 @@ void Server::createLogFile() {
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_FATAL("INVALID PARAM");
 
-    data_logger = new DataLogger("robot_state", (unsigned int)robot_id, log_path);
+    std::string robot_name = std::to_string(robot_id);
+
+    data_logger = new DataLogger("robot_state", robot_name, log_path);
     std::string s = "robot_state.log";
     data_logger->createLogFile(s, "#sim_time,wall_time,robot_state");
 }
@@ -81,6 +83,7 @@ bool Server::getRobotStateCallback(robot_state::GetRobotState::Request &req, rob
 bool Server::setRobotStateCallback(robot_state::SetRobotState::Request &req, robot_state::SetRobotState::Response &res) {
     mutex.lock();
     ROS_INFO_COND(LOG_SERVICE_CALL, "set_robot_state service required");
+    //TODO readd this part, but be sure that every node that call this service include its name in the request
 //    if(state_locked) {
 //        if(locking_node == req.setting_node)
 //            transitionToNextStateIfPossible(req, res);
