@@ -77,6 +77,7 @@ add_library(auction_observer src/auction_observer.cpp)
 add_library(docking_station_manager src/docking_station_manager.cpp)
 add_library(robot_state_manager2 src/robot_state_manager2.cpp)
 add_library(robot_state_manager_energy src/robot_state_manager.cpp)
+add_library(optimal_docking_station_selector src/optimal_docking_station_selector.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 add_dependencies(docking roslib energy_mgmt_gencpp)

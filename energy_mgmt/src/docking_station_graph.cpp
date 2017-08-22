@@ -1,0 +1,750 @@
+bool docking::find_path(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path)
+{
+    ROS_INFO("Searching for path from ds%d to ds%d...", start, end);
+    // Clear 'path', just for safety
+    path.clear();
+
+    // Call auxiliary function find_path_aux() to perform the search
+    bool path_found = find_path_aux(tree, start, end, path, start);
+
+    // If find_path_aux() found a path, the returned path is from 'end' to the node before 'start', so we need to manually push 'start' and then reverse the path
+    if (path_found) {
+        ROS_INFO("Path found");
+        
+        // Push the starting node
+        path.push_back(start);
+        
+        // Reverse the path (that now includes also 'start')
+        std::reverse(path.begin(), path.end());
+        
+        // Log the path (for debugging)
+        for(unsigned int i=0; i < path.size(); i++)
+            ROS_DEBUG("%d", path.at(i));
+    }
+    else
+        ROS_INFO("No path found");
+
+    // Tell the caller if a path was found or not
+    return path_found;
+}
+
+
+//DONE++
+bool docking::find_path_aux(std::vector<std::vector<int> > tree, int start, int end, std::vector<int> &path,
+                            int prev_node)
+{
+    /* Loop on all tree nodes */
+    for (unsigned int j = 0; j < tree.size(); j++)
+
+        /* Check if there is an edge from node 'start' to node 'j', and check if node 'j' is not the node just visited in the previous step of the recursive descending */
+        if (tree[start][j] > 0 && j != (unsigned int)prev_node)
+
+            /* If 'j' is the searched node ('end'), or if from 'j' there is a path that leads to 'end', we have to store 'j' as one of the node that must be visited to reach 'end' ('j' could be 'end' itself, but of course this is not a problem, since we have to visit 'end' to reach it), and then return true to tell the caller that a path to 'end' was found */
+            if (j == (unsigned int)end || find_path_aux(tree, j, end, path, start))
+            {
+                path.push_back(j);
+                return true;
+            }
+
+    /* If, even after considering all the nodes of the tree, we have not found a node that is connected to 'start' and from which it is possible to find a path leading to 'end', it means that no path from 'start' to 'end' exists: return false and, just for "cleaness", clear variable path */
+    path.clear();
+    return false;
+}
+
+bool docking::find_path_2(int start, int end, std::vector<int> &path) {
+    compute_MST_2(start);
+    return find_path(ds_mst, start, end, path);
+}
+
+void docking::compute_MST_2(int root)  // TODO(minor) check all functions related to MST
+{
+    int V = ds_graph.size();
+    //int N = ds.size();
+    //int graph_2[V][V];
+    int parent[V];   // Array to store constructed MST
+    float key[V];      // Key values used to pick minimum weight edge in cut
+    bool mstSet[V];  // To represent set of vertices not yet included in MST
+    
+    // Initialize all keys as INFINITE
+    for (int i = 0; i < V; i++) {
+        key[i] = INT_MAX;
+        mstSet[i] = false;
+        parent[i] = -1;
+    }
+    
+    /*
+    for(int i=0; i<V; i++)
+        for(int j=0; j<V; j++)
+            graph_2[i][j] = 0;
+    for(int i=0; i<V-1; i++)
+        for(int j=0; j<V-1; j++)
+            graph_2[i][j] = graph[i][j];
+            
+    graph_2[1][2] = 100;
+    graph_2[2][1] = 100;
+    graph_2[2][4] = 20;
+    graph_2[4][2] = 20;
+    
+*/    
+    
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ; //ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
+
+
+    // 'root' is our root of the MST
+    key[root] = 0;      // Make key 0 so that this vertex is picked as first vertex
+    parent[root] = -1;  // First node is always root of MST
+    
+    //for(int i=0; i<V; i++)
+    //    parent[i] = -1;
+    //ROS_INFO("Computing...");
+    // The MST will have V vertices
+    bool can_continue = true;
+    for (int count = 0; count < V - 1 && can_continue; count++)
+    {
+
+        // Pick the minimum key vertex from the set of vertices
+        // not yet included in MST
+        //int u = minKey(key, mstSet, V);
+        
+        
+        int min = INT_MAX, u = -1;
+        /*
+        for(int u=0; u < V; u++)
+            if(mstSet[u] == false) {
+                min_index = u;
+                break;
+            }
+        */
+        for (int v = 0; v < V; v++) {
+            //ROS_ERROR("%d", mstSet[v]);        
+            //ROS_ERROR("%d", key[v]);
+            if (mstSet[v] == false && key[v] < min) {
+                min = key[v];
+                u = v;
+            }
+        }
+        //ROS_INFO("u: %d", u);
+        if(u < 0) {
+            //ROS_INFO("DS graph has unconnected components!");
+            can_continue = false;
+            continue;
+            
+            /*
+            for(u=0; u < V; u++)
+            if(mstSet[u] == false)
+                break;
+            if(u >= V) {
+                ROS_FATAL("Strange DS graph... abort computation of MST");
+                return;
+            }
+            parent[u] = -1;
+            */
+        }
+
+        // Add the picked vertex to the MST Set
+        mstSet[u] = true;
+        
+        // Update key value and parent index of the adjacent vertices of
+        // the picked vertex. Consider only those vertices which are not yet
+        // included in MST
+        for (int v = 0; v < V; v++) {
+        
+            if((unsigned int)u >=    ds_graph.size() || (unsigned int)v >=  ds_graph[u].size())
+                log_major_error("size in compute_MST_2()");
+
+            // graph[u][v] is non zero only for adjacent vertices of m
+            // mstSet[v] is false for vertices not yet included in MST
+            // Update the key only if graph[u][v] is smaller than key[v]
+            if (ds_graph[u][v] > 0 && mstSet[v] == false && (key[u] + ds_graph[u][v]) < key[v]) {
+                parent[v] = u;
+                key[v] = key[u] + ds_graph[u][v];
+                //ROS_ERROR("%d has %d as parent; cost of %d is %f", v, parent[v], v, key[v]); 
+            }
+        }
+    }
+
+    // print the constructed MST
+    // printMST(parent, V, graph);
+    //int ds_mst_2[V][V];
+    
+    //reset MST
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ds_mst[i][j] = 0;
+
+    // TODO(minor) does not work if a DS is not connected to any other DS
+    for (int i = 0; i < V; i++)
+    {
+        if(parent[i] < 0) {
+            //ROS_INFO("node %d is not connected with other nodes", i);
+            /*
+            for(int j=0; j < V; j++) {
+                ds_mst[i][j] = -10;
+                ds_mst[j][i] = -10;
+            }
+            */
+            continue;
+        }
+        if((unsigned int)i >= ds_mst.size() || parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size()) {
+            log_major_error("SIZE!!!");
+            ROS_ERROR("%d", i);   
+            ROS_ERROR("%d", parent[i]);
+        }
+        //ROS_INFO("%d has %d as parent", i, parent[i]); 
+        ds_mst[i][parent[i]] = 1;  // parent[i] is the node closest to node i
+        ds_mst[parent[i]][i] = 1;
+    }
+
+    
+    for (int i = 0; i < V; i++)
+        for (int j = 0; j < V; j++)
+            ROS_DEBUG("(%d, %d): %d ", i, j, ds_mst[i][j]);
+    
+
+    /*
+    int k = 0;              // index of the closest recheable DS
+    int target = 4;         // the id of the DS that we want to reach
+    std::vector<int> path;  // sequence of nodes that from target leads to k;
+    i.e., if the vector is traversed in the
+                            // inverse order (from end to begin), it contains the
+    path to go from k to target
+
+    find_path(ds_mst, k, target, path);
+
+    std::vector<int>::iterator it;
+    for (it = path.begin(); it != path.end(); it++)
+        ROS_ERROR("%d - ", *it);
+        */
+}
+
+void docking::update_ds_graph() {
+
+    //ds_mutex.lock();
+    mutex_ds_graph.lock();
+    for (unsigned int i = 0; i < ds.size(); i++) {
+        for (unsigned int j = i; j < ds.size(); j++) {
+            //safety checks   
+            if( (unsigned int)ds[i].id >= ds_graph.size() || (unsigned int)ds[j].id >= (ds_graph[ds[i].id]).size() || ds[i].id < 0 || ds[j].id < 0)
+                log_major_error("SIZE ERROR!!! WILL CAUSE SEGMENTATION FAULT!!!");          
+            if (i == j)
+                ds_graph[ds[i].id][ds[j].id] = 0; //TODO(minor) maybe redundant...
+            else
+            {
+                double dist = -1;
+                dist = distance(ds.at(i).x, ds.at(i).y, ds.at(j).x, ds.at(j).y);
+                if (dist < 0)
+                {
+                    ROS_ERROR("Cannot compute DS graph at the moment: computation of distance between ds%d and ds%d failed; retring later", ds.at(i).id, ds.at(j).id);
+                    recompute_graph = true;
+                }
+                //ROS_ERROR("%f", dist);
+                //ROS_ERROR("%f", conservative_maximum_distance_one_way());
+                if(conservative_maximum_distance_one_way() <= 0){
+                    ROS_ERROR("Invalid value from conservative_maximum_distance_one_way() ...");
+                    recompute_graph = true;
+                }
+                if (dist < conservative_maximum_distance_one_way())
+                {
+                    //update distance only if it is better than the one already stored (which can happen if a new shorter path between two ds is found)
+//                    if (ds_graph[ds[i].id][ds[j].id] == -1 || dist < ds_graph[ds[i].id][ds[j].id])
+                    {
+                        ds_graph[ds[i].id][ds[j].id] = dist;
+                        ds_graph[ds[j].id][ds[i].id] = dist;
+                    }
+                }
+                else
+                {
+                    ds_graph[ds[i].id][ds[j].id] = 0;
+                    ds_graph[ds[j].id][ds[i].id] = 0;
+                }
+            }
+        }
+    }
+    recompute_graph = false;
+    mutex_ds_graph.unlock();
+    
+    if(!test_mode) {
+        graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
+        
+        graph_fs << "#sort according to DS ID" << std::endl;
+    //    for(int k=0; k < num_ds; k++) {
+    //        bool ok1 = false;
+    //        for(unsigned int i=0; i < ds.size(); i++)
+    //            if(ds.at(i).id == k) {
+    //                ok1 = true;
+    //                for(int h=0; h < num_ds; h++) {
+    //                    bool ok2 = false;
+    //                    for(unsigned int j=0; j < ds.size(); j++)
+    //                        if(ds.at(j).id == h) {
+    //                            ok2 = true;
+    //                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
+    //                        }
+    //                    if(!ok2)
+    //                        log_major_error("not ok2");
+    //                }
+    //            }
+    //        graph_fs << std::endl;
+    //        if(!ok1)
+    //            log_major_error("not ok1");
+    //    }
+        for(int i=0; i < num_ds; i++) {
+            graph_fs << std::setw(5);
+            for(int j=0; j < num_ds; j++)
+                graph_fs << (int)ds_graph[i][j] << "   ";
+            graph_fs << std::endl;
+        }
+        
+        graph_fs << std::endl;
+        
+        graph_fs << "#sort according to discovery order" << std::endl;
+        for(unsigned int i=0; i < ds.size(); i++) {
+            graph_fs << std::setw(5);
+            for(unsigned int j=0; j < ds.size(); j++)
+                graph_fs << (int)ds_graph[ds[i].id][ds[j].id] << "   ";
+            graph_fs << std::endl;
+        }
+        
+        graph_fs.close();
+    }
+    //ds_mutex.unlock();
+    
+}
+
+void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
+    ROS_INFO("Periodic recomputation of DS graph");
+    update_ds_graph();
+    //compute_MST();
+}
+
+void docking::compute_and_publish_path_on_ds_graph() {
+
+    ROS_INFO("computing path on DS graph");
+
+//    jobs.clear();
+//    adhoc_communication::ExpFrontierElement job;
+//    job.x_coordinate = 20;
+//    job.y_coordinate = 20;
+//    jobs.push_back(job);
+
+    jobs_mutex.lock();
+    std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
+    jobs_local_list = jobs; //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
+    jobs_mutex.unlock();
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+
+    ROS_DEBUG("%lu", (long unsigned int)jobs.size());
+    double min_dist = numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    int retry = 0;
+//    while (min_ds == NULL && retry < 5) { //OMG no!!! in this way we will never select the closest ds with eos, but just the first ds found with eos!!!
+        for (unsigned int i = 0; i < ds.size(); i++)
+        {
+            for (unsigned int j = 0; j < jobs_local_list.size(); j++)
+            {
+                double dist = distance(ds.at(i).x, ds.at(i).y, jobs_local_list.at(j).x_coordinate, jobs_local_list.at(j).y_coordinate);
+                if (dist < 0) {
+                    ROS_ERROR("Distance computation failed");
+                    continue;
+                }
+
+                if (dist < conservative_maximum_distance_with_return())
+                {
+                    double dist2 = distance_from_robot(ds.at(i).x, ds.at(i).y);
+                    if (dist2 < 0) {
+                        ROS_ERROR("Distance computation failed");
+                        continue;
+                    }
+
+                    if (dist2 < min_dist)
+                    {
+                        min_dist = dist2;
+                        min_ds = &ds.at(i);
+                    }
+                    
+                    break;
+                }
+            }
+        }
+        retry++;
+        if(min_ds == NULL)
+            ros::Duration(3).sleep();
+//    }
+    
+    
+    if (min_ds == NULL) {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        log_major_error("No DS with EOs was found"); //this shouldn't happen because auctioning_2 should be entered only if explorer thinks that there are EOs
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    }
+    
+//    boost::shared_lock< boost::shared_mutex > lock2(ds_mutex);
+
+    // compute closest DS
+    min_dist = numeric_limits<int>::max();
+    ds_t *closest_ds = NULL;
+    retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (unsigned int i = 0; i < ds.size(); i++)
+        {
+            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+            if (dist < 0) {
+                ROS_ERROR("Distance computation failed");
+                continue;
+            }
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds.at(i);
+            }
+        }
+        retry++;
+        if(closest_ds == NULL)
+            ros::Duration(3).sleep();
+    }
+    
+    if(closest_ds == NULL)  {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        log_major_error("impossible...");
+        return;
+    }
+
+    path.clear();
+    index_of_ds_in_path = 0;
+    
+    bool ds_found_with_mst = false;
+    if(closest_ds->id == min_ds->id) {
+        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+        ds_found_with_mst = true;
+        path_navigation_tries++;
+        path.push_back(closest_ds->id);
+    }
+    else {
+         ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+        path_navigation_tries = 0;    
+    }
+    
+    if(path_navigation_tries > 4) {
+        log_major_error("Too many times closest_ds->id == min_ds->id in a row");
+        ROS_INFO("finished_bool = true");
+//        finished_bool = true;
+        finalize();
+        return;
+    }
+         
+//    bool ds_found_with_mst = find_path_2(0, 2, path);
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+
+    if (ds_found_with_mst)
+    {
+        ROS_INFO("Found path on DS graph to reach a DS with EOs");
+        adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                       // maybe I can
+                                                       // pass directly
+                                                       // msg_path to
+                                                       // find_path...
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
+                    ROS_INFO("%d: ds%d (%.1f, %.1f)", i, ds[j].id, ds[j].x, ds[j].y);
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
+                break;
+            }
+    }
+    else {
+        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+    }
+}
+
+void docking::simple_compute_and_publish_path_on_ds_graph() {
+
+    ROS_INFO("simple computing path on DS graph");
+
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+
+    // compute closest DS
+    double min_dist = numeric_limits<int>::max();
+    ds_t *closest_ds = NULL;
+    int retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (unsigned int i = 0; i < ds.size(); i++)
+        {
+            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+            if (dist < 0) {
+                ROS_ERROR("Distance computation failed");
+                continue;
+            }
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds.at(i);
+            }
+        }
+        retry++;
+        if(closest_ds == NULL)
+            ros::Duration(3).sleep();
+    }
+    
+    if(closest_ds == NULL)  {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        log_major_error("impossible...");
+        return;
+    }
+
+    path.clear();
+    index_of_ds_in_path = 0;
+    
+    mutex_ds_graph.lock();
+    bool ds_found_with_mst = false;
+    if(closest_ds->id == goal_ds_path_id) {
+        log_minor_error("closest_ds->id == goal_ds_path_id, this should not happen...");
+        ds_found_with_mst = true;
+        path_navigation_tries++;
+        path.push_back(closest_ds->id);
+    }
+    else {
+         ds_found_with_mst = find_path_2(closest_ds->id, goal_ds_path_id, path);
+        path_navigation_tries = 0;    
+    }
+    mutex_ds_graph.unlock();
+    
+//    if(path_navigation_tries > 4) {
+//        log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
+//        ROS_INFO("finished_bool = true");
+//        finished_bool = true;
+//        finalize();
+//        return;
+//    }
+         
+//    bool ds_found_with_mst = find_path_2(0, 2, path);
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
+//    for (int i = 0; i < ds_mst.size(); i++)
+//        for (int j = 0; j < ds_mst.size(); j++)
+//            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
+
+    if (ds_found_with_mst)
+    {
+        ROS_INFO("Found path on DS graph to reach a DS with EOs");
+        adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                       // maybe I can
+                                                       // pass directly
+                                                       // msg_path to
+                                                       // find_path...
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
+                    ROS_INFO("%d: ds%d (%.1f, %.1f)", i, ds[j].id, ds[j].x, ds[j].y);
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
+                break;
+            }
+    }
+    else {
+//        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
+//        std_msgs::Empty msg;
+//        pub_finish.publish(msg);
+    }
+}
+
+void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    ROS_INFO("received goal ds for path navigation");
+    moving_along_path = true;
+    goal_ds_path_id = msg.get()->id;
+    simple_compute_and_publish_path_on_ds_graph();
+    if(finished_bool) {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+    } else {
+        ROS_INFO("Robot needs to recharge");
+        if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
+                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
+        {
+            ROS_ERROR("calling start_new_auction()");
+//            start_new_auction();
+        }
+        else {
+            ROS_INFO("going_to_ds is true, so we cannot start another auction");
+        }
+    }
+}
+
+void docking::compute_and_publish_path_on_ds_graph_to_home() {
+double min_dist = numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+    int retry = 0;
+    
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    
+//    while (min_ds == NULL && retry < 5) {
+        for (unsigned int i = 0; i < ds.size(); i++)
+        {
+                double dist = distance(ds.at(i).x, ds.at(i).y, 0, 0); //TODO use robot_home_x
+                if (dist < 0)
+                    continue;
+
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                    min_ds = &ds.at(i);
+                }
+                    
+        }
+        retry++;
+//    }
+    
+    if (min_ds == NULL) {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        log_major_error("impossible, min_ds == NULL for going home...");
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+        return;
+    }
+
+    // compute closest DS
+    min_dist = numeric_limits<int>::max();
+    ds_t *closest_ds = NULL;
+    retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (unsigned int i = 0; i < ds.size(); i++)
+        {
+            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
+            if (dist < 0)
+                continue;
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds.at(i);
+            }
+        }
+      
+      
+        retry++;
+    }
+    
+    if(closest_ds == NULL)  {
+        std_msgs::Empty msg;
+        pub_finish.publish(msg);
+        log_major_error("impossible, closest_ds == NULL for going home...");
+        return;
+    }
+
+    path.clear();
+    index_of_ds_in_path = 0;
+    bool ds_found_with_mst = find_path_2(closest_ds->id, min_ds->id, path);
+    
+    if (ds_found_with_mst)
+    {
+
+        adhoc_communication::MmListOfPoints msg_path;  // TODO(minor)
+                                                       // maybe I can
+                                                       // pass directly
+                                                       // msg_path to
+                                                       // find_path...
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
+                break;
+            }
+    }
+    else {
+        log_major_error("no path found to reach home!!!");
+        ROS_INFO("finished_bool = true");
+        finalize();        
+//        finished_bool = true;
+    }
+}
+
+void docking::next_ds_callback(const std_msgs::Empty &msg)
+{
+//    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
+    if(path.size() == 0)
+        log_major_error("path.size() == 0");
+    
+    if(index_of_ds_in_path < 0) {
+        log_major_error("index_of_ds_in_path");
+        return;
+    }
+    
+    if ((unsigned int)index_of_ds_in_path < path.size() - 1)
+    {
+        ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
+        index_of_ds_in_path++;
+        ROS_DEBUG("%d", index_of_ds_in_path);
+        for (unsigned int i = 0; i < ds.size(); i++)
+            if (path[index_of_ds_in_path] == ds[i].id)
+            {   
+                ROS_INFO("Next DS on path: ds%d", ds[i].id);
+//                set_target_ds_given_index(i);  // TODO(minor) probably ok...
+                set_optimal_ds_given_index(i);    // TODO(minor) VERY BAD!!!!
+                break;
+            }
+    }
+    else {
+        if(moving_along_path) {
+            ROS_INFO("We have reached the final DS and charged at it");
+            moving_along_path = false;
+        }
+        else {
+            log_major_error("we are not moving along path!!!");
+        }
+    }
+}
