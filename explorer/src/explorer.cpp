@@ -202,9 +202,7 @@ class Explorer
         
         has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
         
-
         /* Robot state subscribers */
-
         sub_check_vacancy =
             nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
                          this);  // to receive replies for vacancy checks
@@ -482,9 +480,6 @@ class Explorer
             nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
         
         ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
-        
-        
-
 
         /* Subscribe to battery management topic */
         sub = nh.subscribe("battery_state", 10, &Explorer::bat_callback, this);
@@ -582,8 +577,6 @@ class Explorer
                         
                     created = true;
                 }
-                
-                
 
                 /*
                  * Sleep to ensure that frontiers are exchanged
@@ -3273,19 +3266,12 @@ class Explorer
         ROS_INFO("Moving along path");
         moving_along_path = true;
         ds_path_counter = 0;
-        
-//        if(OPP_ONLY_TWO_DS) {
-//            path[0][0] = msg.get()->positions[0].x;
-//            path[0][1] = msg.get()->positions[0].y;
-//            path[1][0] = msg.get()->positions[1].x;
-//            path[1][1] = msg.get()->positions[1].y;
-//        }
-//        else {
-            complex_path.clear();
-            ds_path_size = msg.get()->positions.size();
-            for(int i=0; i < ds_path_size; i++)
-                complex_path.push_back(msg.get()->positions[i]);
-//        }
+
+        complex_path.clear();
+        ds_path_size = msg.get()->positions.size();
+        for(int i=0; i < ds_path_size; i++)
+            complex_path.push_back(msg.get()->positions[i]);
+
     }
 
     void bat_callback(const explorer::battery_state::ConstPtr &msg)
@@ -3298,17 +3284,9 @@ class Explorer
 
         if (battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
-
-        /* If the robot has run out of energy, it cannot move anymore: terminate exploration... */
-//        if (available_distance <= 0 && robot_state != robot_state::CHARGING)
-//        {
-//            log_major_error("Robot has run out of energy!");
-//            abort();
-//        }
         
         conservative_maximum_available_distance = msg->maximum_traveling_distance;
-            
-        
+
     }
     
     void shutdown() {
@@ -3405,15 +3383,7 @@ class Explorer
         res.x = robotPose.getOrigin().getX();
         res.y = robotPose.getOrigin().getY();
         return true;
-        
-        /*
-        double x, y;
-        if(!exploration->get_robot_position(&x, &y))
-            return false;
-        res.x = x;
-        res.y = y;
-        return true;
-        */
+
     }
        
     bool reachable_target_callback(explorer::DistanceFromRobot::Request &req,
@@ -3600,9 +3570,6 @@ class Explorer
                 
                 else {
                     //ROS_DEBUG("Robot is moving");
-                    //ROS_ERROR("state: %d - %d", prev_robot_state, robot_state);
-                    //ROS_ERROR("x: %f - %f", prev_robot_x, pose_x);
-                    //ROS_ERROR("y: %f - %f", prev_robot_y, pose_y);
                     //if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY) //TODO complete
                         countdown = ros::Duration(starting_value_moving);
                     //else
@@ -4023,6 +3990,7 @@ int main(int argc, char **argv)
      * FIXME
      * Which rate is required in order not to oversee
      * any callback data (frontiers, negotiation ...)
+     */
     while (ros::ok())
     {
         if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
@@ -4061,4 +4029,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
