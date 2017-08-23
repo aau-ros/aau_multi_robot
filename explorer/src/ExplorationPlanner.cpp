@@ -5342,7 +5342,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
             if(!test_mode) {
 
-                ROS_FATAL("MISSING");
                 //start auction
                 my_bid = sorted_frontiers.at(i).cost;
                 ROS_INFO("start frontier negotiation!");
