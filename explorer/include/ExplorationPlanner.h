@@ -523,6 +523,8 @@ namespace explorationPlanner
             ds_t *min_ds_for_path_traversal;
             DistanceComputerInterface *distance_computer;
             ros::Publisher ds_with_EOs_pub;
+            int num_robots;
+            frontier_t frontier_under_negotiation;
             
             // Debugging
             bool test_mode;

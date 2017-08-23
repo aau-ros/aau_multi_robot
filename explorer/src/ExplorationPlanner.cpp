@@ -347,6 +347,10 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     srand((unsigned)time(0));
     
     time_start = ros::Time::now();
+
+    ros::NodeHandle nh_tilde("~");
+    if(!nh_tilde.getParam("num_robots", num_robots))
+        ROS_FATAL("param not found");
     
 }
 
@@ -5084,20 +5088,20 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     ROS_DEBUG("New x: %f   y: %f", service_message.response.point.x, service_message.response.point.y);
 
     //acquire_mutex(&store_frontier_mutex, __FUNCTION__); //TODO maybe we need a mutex, but it causes deadlocks...
-    int index = -1;
-    for(int i=0; i<frontiers.size(); i++) //TODO inefficient (and the robot could be unable to send the frontier in time...)
-        if( fabs(frontiers.at(i).x_coordinate - service_message.response.point.x) < 1.0 && fabs(frontiers.at(i).y_coordinate - service_message.response.point.y) < 1.0 ) { //TODO correct?
-            index = i;
-            break;
-        }
-        
-    if(index < 0) {
-//        ROS_INFO("robot doesn't know the auctioned frontier: ignoring it");
-        ROS_INFO("robot does NOT know the auctioned frontier");
-//        return;
-    } else {
-        ROS_INFO("robot knows the auctioned frontier");
-    }
+//    int index = -1;
+//    for(int i=0; i<frontiers.size(); i++) //TODO inefficient (and the robot could be unable to send the frontier in time...)
+//        if( fabs(frontiers.at(i).x_coordinate - service_message.response.point.x) < 1.0 && fabs(frontiers.at(i).y_coordinate - service_message.response.point.y) < 1.0 ) { //TODO correct?
+//            index = i;
+//            break;
+//        }
+//        
+//    if(index < 0) {
+////        ROS_INFO("robot doesn't know the auctioned frontier: ignoring it");
+//        ROS_INFO("robot does NOT know the auctioned frontier");
+////        return;
+//    } else {
+//        ROS_INFO("robot knows the auctioned frontier");
+//    }
     
     frontier_t new_frontier;
     new_frontier.x_coordinate = service_message.response.point.x;
@@ -5113,8 +5117,8 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     adhoc_communication::ExpFrontier negotiation_list;
     adhoc_communication::ExpFrontierElement negotiation_element;
     //negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
-    //negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
-    //negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
+    negotiation_element.x_coordinate = msg.get()->frontier_element[0].x_coordinate;
+    negotiation_element.y_coordinate = msg.get()->frontier_element[0].y_coordinate;
     //negotiation_element.id = my_selected_frontier->id;
     negotiation_element.bid = cost;
     negotiation_list.frontier_element.push_back(negotiation_element);
@@ -5182,9 +5186,14 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
 }
 
 void ExplorationPlanner::my_replyToNegotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg) {
-    ROS_DEBUG("%f vs %f", my_bid, msg.get()->frontier_element[0].bid);
-    if(my_bid > msg.get()->frontier_element[0].bid ) //they are cost, so the higher, the worse
-        winner_of_auction = false;    
+    if(fabs(frontier_under_negotiation.x_coordinate - msg.get()->frontier_element[0].x_coordinate) < 0.1 && fabs(frontier_under_negotiation.y_coordinate - msg.get()->frontier_element[0].y_coordinate) < 0.1) {
+        ROS_DEBUG("%f vs %f", my_bid, msg.get()->frontier_element[0].bid);
+        if(my_bid > msg.get()->frontier_element[0].bid ) //they are cost, so the higher, the worse
+            winner_of_auction = false;
+    }
+    else {
+        ROS_INFO("received reply for a frontier not currently under auction by this robot: ignoring");
+    }    
 }
 
 void ExplorationPlanner::clean_frontiers_under_auction() {
@@ -5340,6 +5349,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         return false;
     }
 
+    unsigned int skipped = 0;
     if(frontier_selected || APPROACH == 0) {
         frontier_selected = false;
         for(unsigned int i=0; i < sorted_frontiers.size(); i++)
@@ -5356,17 +5366,26 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
                 //start auction
                 my_bid = sorted_frontiers.at(i).cost;
-                ROS_INFO("start frontier negotiation!");
-                my_negotiate();
-//         
-                for(int j = 0; j < auction_timeout/0.1; j++) {
-                    ros::Duration(0.1).sleep();
-                    ros::spinOnce();
-                }
-                
-                if(!winner_of_auction) {
-                    ROS_INFO("frontier under auction: skip");
-                    continue;
+
+                if(i == sorted_frontiers.size()-1 && (skipped + 1) >= num_robots)
+                    ROS_INFO("this is the only frontier for the robot: no auctioning");
+                else 
+                {
+                    ROS_INFO("start frontier negotiation");
+                    frontier_under_negotiation.x_coordinate = my_selected_frontier->x_coordinate;
+                    frontier_under_negotiation.y_coordinate = my_selected_frontier->y_coordinate;
+                    my_negotiate();
+    //         
+                    for(int j = 0; j < auction_timeout; j++) {
+                        ros::Duration(1).sleep();
+                        ros::spinOnce();
+                    }
+                    
+                    if(!winner_of_auction) {
+                        ROS_INFO("frontier under auction: skip");
+                        skipped++;
+                        continue;
+                    }
                 }
                 
                 frontiers_under_auction.clear();
@@ -9113,13 +9132,6 @@ unsigned char ExplorationPlanner::getCost(costmap_2d::Costmap2DROS *costmap, uns
 double ExplorationPlanner::euclidean_distance(float x1, float y1, float x2, float y2) {
     return sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) );
 }
-
-//float ExplorationPlanner::new_optimal_ds(int id, float new_optimal_ds_x, float new_optimal_ds_y) {
-//    optimal_ds_id = id;
-//    optimal_ds_x = new_optimal_ds_x; 
-//    optimal_ds_y = new_optimal_ds_y;
-//    optimal_ds_set = true;
-//}
 
 /* Try to acquire (lock) the mutex passed as argument */
 void ExplorationPlanner::acquire_mutex(boost::mutex *mutex, std::string function_name) {
