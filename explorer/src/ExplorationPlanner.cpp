@@ -5106,6 +5106,11 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     frontier_t new_frontier;
     new_frontier.x_coordinate = service_message.response.point.x;
     new_frontier.y_coordinate = service_message.response.point.y;
+    
+    if(!my_check_efficiency_of_goal(available_distance, &new_frontier)) {
+        ROS_INFO("this frontier is currently not reachable by the robot: do not reply");
+        return;
+    }
 
     ROS_INFO("Replying to frontier auction");
 //    double cost = frontier_cost(&frontiers.at(index));
@@ -5367,7 +5372,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
                 //start auction
                 my_bid = sorted_frontiers.at(i).cost;
 
-                if(i == sorted_frontiers.size()-1 && (skipped + 1) >= num_robots)
+                if(i == sorted_frontiers.size()-1 || (skipped + 1) >= num_robots)
                     ROS_INFO("this is the only frontier for the robot: no auctioning");
                 else 
                 {
@@ -10021,7 +10026,7 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
                 }
             }
 
-            if (frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+            if (frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && (frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) * 2) < max_available_distance)
                 ds_list.at(ds_index).has_EOs = true;
 
             release_mutex(&mutex_erase_frontier, __FUNCTION__);
@@ -10051,7 +10056,6 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
 }
 
 void ExplorationPlanner::sendListDssWithEos() {
-    ROS_FATAL("MISSING");
     for(unsigned int i=0; i < ds_list.size(); i++) {
         adhoc_communication::EmDockingStation msg;
         msg.id = ds_list.at(i).id;

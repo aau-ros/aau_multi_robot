@@ -52,16 +52,16 @@ void Server::fillRobotStateStringsVector() {
 }
 
 void Server::createLogFile() {
-    int robot_id;
+    std::string robot_name;
     std::string log_path;
 
     ros::NodeHandle nh_tilde("~");
-    if(!nh_tilde.getParam("robot_id", robot_id))
+    if(!nh_tilde.getParam("robot_name", robot_name))
         ROS_FATAL("INVALID PARAM");
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_FATAL("INVALID PARAM");
 
-    std::string robot_name = std::to_string(robot_id);
+//    std::string robot_name = std::to_string(robot_id);
 
     data_logger = new DataLogger("robot_state", robot_name, log_path);
     std::string s = "robot_state.log";

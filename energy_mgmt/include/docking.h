@@ -420,8 +420,6 @@ class docking
     float conservative_remaining_distance_one_way();
     float conservative_maximum_distance_one_way();
     
-    float maximum_travelling_distance;
-    
     void full_battery_info_callback(const explorer::battery_state::ConstPtr &msg);
     
     bool explorer_ready;

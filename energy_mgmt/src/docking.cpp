@@ -204,7 +204,6 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     group_name = "mc_robot_0";
     //group_name = "";
     my_counter = 0;
-    maximum_travelling_distance = -1;
     old_optimal_ds_id = -100;
 //    old_target_ds_id = -200;
     next_optimal_ds_id = old_optimal_ds_id;
@@ -274,6 +273,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     fs_info.close();
     
     get_robot_state_sc = nh.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
+    
+    battery.maximum_traveling_distance = -1;
     
 }
 
@@ -1346,6 +1347,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
     }
     
     robot_mutex.unlock();
+    ROS_DEBUG("end cb_robots");
     
 }
 
@@ -2730,9 +2732,7 @@ float docking::conservative_remaining_distance_with_return() {
 
 //DONE++
 float docking::conservative_maximum_distance_with_return() {
-    //ROS_ERROR("%f", maximum_travelling_distance);
-    //return (maximum_travelling_distance / (double) 2.0 ) * safety_coeff;
-    return maximum_travelling_distance / (double) 2.0;
+    return battery.maximum_traveling_distance / (double) 2.0;
 }
 
 //DONE++
@@ -2742,14 +2742,12 @@ float docking::conservative_remaining_distance_one_way() {
 
 //DONE++
 float docking::conservative_maximum_distance_one_way() {
-    //ROS_ERROR("%f", maximum_travelling_distance);
-    //return maximum_travelling_distance * safety_coeff;
-    return maximum_travelling_distance;
+    return battery.maximum_traveling_distance;
 }
 
 void docking::full_battery_info_callback(const explorer::battery_state::ConstPtr &msg) {
     ROS_INFO("Received!"); //TODO(minor) it seems that this message is not even sent... i think that it's because the instance of battery is created before the isntance of docking, and so when the message is published, there is still no subscriber to receive it... the best way should be to create a una tantum function for abttery, that is called after that both bat and doc objects are created...
-    maximum_travelling_distance = msg.get()->remaining_distance;
+    battery.maximum_traveling_distance = msg.get()->remaining_distance;
 }
 
 bool docking::optimal_ds_is_set() {
@@ -2761,8 +2759,9 @@ bool docking::optimal_ds_is_set() {
 //}
 
 void docking::wait_battery_info() {
-    while(maximum_travelling_distance <= 0) {
+    while(battery.maximum_traveling_distance <= 0) {
         ROS_ERROR("Waiting battery information...");
+        ROS_INFO("Waiting battery information...");
         ros::Duration(1).sleep();
         ros::spinOnce();
     }

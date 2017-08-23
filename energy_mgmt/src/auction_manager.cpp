@@ -130,7 +130,7 @@ auction_t AuctionManager::startNewAuction() {
     new_auction.ending_time = -1;
     new_auction.docking_station_id = optimal_ds_id;
     if(!optimal_ds_is_set)
-        ROS_FATAL("Optimal DS is not set!!!");
+        ROS_FATAL("OPTIMAL DS IS NOT SET!!!");
     return new_auction;
 }
 
