@@ -4983,8 +4983,8 @@ bool ExplorationPlanner::my_negotiate()
     adhoc_communication::ExpFrontier negotiation_list;
     adhoc_communication::ExpFrontierElement negotiation_element;
     //negotiation_element.detected_by_robot_str = 
-    //negotiation_element.detected_by_robot = robot_name;
-    negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
+    negotiation_element.detected_by_robot = robot_name;
+//    negotiation_element.detected_by_robot = my_selected_frontier->detected_by_robot;
     negotiation_element.x_coordinate = my_selected_frontier->x_coordinate;
     negotiation_element.y_coordinate = my_selected_frontier->y_coordinate;
     negotiation_element.id = my_selected_frontier->id;
@@ -5042,7 +5042,7 @@ bool ExplorationPlanner::my_sendToMulticast(std::string multi_cast_group, adhoc_
 
 void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFrontier::ConstPtr& msg)
 {
-    ROS_DEBUG("Received frontier (%.2f, %.2f)", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate);
+    ROS_DEBUG("Received frontier (%.2f, %.2f) by robot %d", msg.get()->frontier_element[0].x_coordinate,  msg.get()->frontier_element[0].y_coordinate, msg.get()->frontier_element[0].detected_by_robot);
 
     double robot_x, robot_y;
     
@@ -5072,13 +5072,16 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     
     //ROS_ERROR("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
 
-    ROS_INFO("calling map_merger service");
+    ROS_INFO("calling map_merger service to translate coordinates");
     if(client.call(service_message))
         ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
     else {
         ROS_ERROR("FAILED call to translate coordinates for frontier negotiation!");
         return;   
     }
+    
+    ROS_DEBUG("Old x: %f   y: %f", msg.get()->frontier_element[0].x_coordinate, msg.get()->frontier_element[0].y_coordinate);
+    ROS_DEBUG("New x: %f   y: %f", service_message.response.point.x, service_message.response.point.y);
 
     //acquire_mutex(&store_frontier_mutex, __FUNCTION__); //TODO maybe we need a mutex, but it causes deadlocks...
     int index = -1;
@@ -5087,13 +5090,22 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
             index = i;
             break;
         }
-    if(index < 0 || !my_check_efficiency_of_goal(this->available_distance, &frontiers.at(index))) {
-        ROS_INFO("robot doesn't know the auctioned frontier: ignoring it");
-        return;
+        
+    if(index < 0) {
+//        ROS_INFO("robot doesn't know the auctioned frontier: ignoring it");
+        ROS_INFO("robot does NOT know the auctioned frontier");
+//        return;
+    } else {
+        ROS_INFO("robot knows the auctioned frontier");
     }
+    
+    frontier_t new_frontier;
+    new_frontier.x_coordinate = service_message.response.point.x;
+    new_frontier.y_coordinate = service_message.response.point.y;
 
     ROS_INFO("Replying to frontier auction");
-    double cost = frontier_cost(&frontiers.at(index));
+//    double cost = frontier_cost(&frontiers.at(index));
+    double cost = frontier_cost(&new_frontier);
     //release_mutex(&store_frontier_mutex, __FUNCTION__);
    
     //ROS_ERROR("%d + %d + %d + %f", d_g, d_gb, d_gbe, theta);
@@ -5145,7 +5157,7 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
     if(client.call(service_message))
         ; //ROS_ERROR("New x: %.1f   y: %.1f", service_message.response.point.x, service_message.response.point.y);
     else {
-        //ROS_ERROR("FAILED!");
+        ROS_ERROR("call to translate FAILED!");
         return;
     }   
     
@@ -5342,7 +5354,6 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
             if(!test_mode) {
 
-                ROS_FATAL("MISSING");
                 //start auction
                 my_bid = sorted_frontiers.at(i).cost;
                 ROS_INFO("start frontier negotiation!");

@@ -122,7 +122,7 @@ void battery_simulate::createLogFiles() {
     battery_state_filename = log_path + std::string("battery_state.csv");
     
     battery_state_fs.open(battery_state_filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,consumed_energy_A,consumed_energy_B" << std::endl;
+    battery_state_fs << "#sim_time,wall_time,remaining_time_run,remaining_time_charge,remaining_distance,consumed_energy_A,consumed_energy_B,last_traveled_distance,total_traveled_distance" << std::endl;
     battery_state_fs.close();
     
     sim_time_start = ros::Time::now();
