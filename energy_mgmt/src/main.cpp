@@ -38,6 +38,8 @@ int main(int argc, char** argv)
     while(ros::ok() && !doc.finished_bool){
         ros::spinOnce();
 
+        doc.get_robot_state();
+        doc.handle_robot_state();
         doc.update_robot_position();
         doc.send_robot();
         doc.update_reamining_distance();

@@ -4971,7 +4971,7 @@ void ExplorationPlanner::new_optimal_ds_callback(const adhoc_communication::EmDo
 }
 
 void ExplorationPlanner::updateOptimalDs() {
-    if(next_optimal_ds_id > 0)
+    if(next_optimal_ds_id >= 0)
         setOptimalDs(next_optimal_ds_id, next_optimal_ds_x, next_optimal_ds_y);
 }
 
@@ -5107,7 +5107,7 @@ void ExplorationPlanner::my_negotiationCallback(const adhoc_communication::ExpFr
     new_frontier.x_coordinate = service_message.response.point.x;
     new_frontier.y_coordinate = service_message.response.point.y;
     
-    if(!my_check_efficiency_of_goal(available_distance, &new_frontier)) {
+    if(!my_check_efficiency_of_goal(available_distance_for_reply, &new_frontier)) {
         ROS_INFO("this frontier is currently not reachable by the robot: do not reply");
         return;
     }
@@ -5181,8 +5181,8 @@ void ExplorationPlanner::robot_next_goal_callback(const adhoc_communication::Exp
     {
         frontier_t new_goal;
         new_goal.detected_by_robot = msg.get()->frontier_element[0].detected_by_robot;
-        new_goal.x_coordinate = msg.get()->frontier_element[0].x_coordinate;
-        new_goal.y_coordinate = msg.get()->frontier_element[0].y_coordinate;
+        new_goal.x_coordinate = service_message.response.point.x;
+        new_goal.y_coordinate = service_message.response.point.y;
         new_goal.timestamp = ros::Time::now();
         mutex_last_robot_auctioned_frontier_list.lock();
         last_robot_auctioned_frontier_list.push_back(new_goal);

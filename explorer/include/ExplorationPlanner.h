@@ -388,6 +388,7 @@ namespace explorationPlanner
 //            std::vector<frontier_t>::const_iterator update_distances_index;
             bool use_theta;
             void sendListDssWithEos();
+            double available_distance_for_reply;
 
             /***************
              ** Debugging **

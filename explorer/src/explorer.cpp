@@ -3818,6 +3818,7 @@ class Explorer
         while(!exploration_finished) {
             exploration->updateDistances(conservative_maximum_available_distance);
             exploration->sendListDssWithEos();
+            exploration->available_distance_for_reply = next_available_distance;
             ros::Duration(1).sleep();
         }
     }

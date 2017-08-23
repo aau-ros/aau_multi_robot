@@ -128,6 +128,8 @@ class docking
     void create_log_files();
     void ds_management();
     void setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {this->robot_state_manager = robot_state_manager;};
+    void get_robot_state();
+    void handle_robot_state();
 
   private:
     /**
@@ -523,8 +525,6 @@ class docking
     void conclude_auction();
     void send_optimal_ds();
     bool can_update_ds();
-    void get_robot_state();
-    void handle_robot_state();
     void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     ros::ServiceClient get_robot_state_sc;

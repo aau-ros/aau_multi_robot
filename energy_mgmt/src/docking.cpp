@@ -1389,9 +1389,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         return;   
     }
 
-    ROS_INFO("received ds%d", msg.get()->id);
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
-    ds_mutex.lock();
     
     // Safety check on the received DS
     if(msg.get()->id < 0 || msg.get()->id > num_ds) {
@@ -1399,6 +1397,9 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
         ROS_ERROR("%d", msg.get()->id);
         return;
     }
+
+    ds_mutex.lock();
+    ROS_INFO("received ds%d", msg.get()->id);
 
     /* Check if DS is in list already */
     bool new_ds = true;
