@@ -403,3 +403,30 @@ void docking::set_optimal_ds_vacant(bool vacant)
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), (vacant ? "occupied" : "vacant"), (vacant ? "vacant" : "occupied"));
 
 }
+
+void setOptimalDockingStation() {
+    ...
+    log_optimal_ds();
+}
+
+void getOptimalDockingStation() {
+//    return ...;
+}
+
+void docking::log_optimal_ds() {
+    ROS_INFO("logging");
+//    optimal_ds_mutex.lock();
+    /* Keep track of the optimal and target DSs in log file */
+//    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
+    if(old_optimal_ds_id_for_log != get_optimal_ds_id() ) {
+        ros::Duration time = ros::Time::now() - time_start;
+        fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+//        ROS_DEBUG("%d", target_ds_id);
+        fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << ","
+            << get_optimal_ds_id() << std::endl;
+        fs_csv.close();
+        old_optimal_ds_id_for_log = get_optimal_ds_id();
+//        old_target_ds_id_for_log = get_target_ds_id();
+    }
+//    optimal_ds_mutex.unlock();
+}

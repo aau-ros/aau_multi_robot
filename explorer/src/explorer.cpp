@@ -208,8 +208,17 @@ class Explorer
                          this);  // to receive replies for vacancy checks
 
         // TODO(minor) improve this
+        sub_lost_own_auction = nh.subscribe("lost_own_auction", 10, &Explorer::lost_own_auction_callback,
+                                            this);  // to know when a robot lost its own auction
+        sub_won_auction =
+            nh.subscribe("won_auction", 1, &Explorer::won_callback, this);  // to know when a robot won an auction
+        sub_lost_other_robot_auction = nh.subscribe("lost_other_robot_auction", 10, &Explorer::lost_other_robot_callback,
+                                                    this);  // to know when a robot lost another robot auction
+        
         sub_wait = nh.subscribe("are_you_ready", 10, &Explorer::wait_for_explorer_callback, this);
         pub_wait = nh.advertise<std_msgs::Empty>("im_ready", 10);
+        
+        sub_force_in_queue = nh.subscribe("force_in_queue", 10, &Explorer::force_in_queue_callback, this);
         
         pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
         pub_finished_exploration_id = nh2.advertise<adhoc_communication::EmRobot>("finished_exploration_id", 10);
@@ -516,38 +525,7 @@ class Explorer
                 if(!frontiers_found) {
                     ROS_INFO("****************** FRONTIER DETERMINATION ******************");
 
-                    /*
-                    * Use mutex to lock the critical section (access to the costmap)
-                    * since rosspin tries to update the costmap continuously
-                    */
-                    ROS_DEBUG("COSTMAP STUFF");
-                    print_mutex_info("explore()", "acquiring");
-                    costmap_mutex.lock();
-                    ROS_DEBUG("COSTMAP STUFF, lock aquired");
-                    print_mutex_info("explore()", "lock");
-
-                    exploration->transformToOwnCoordinates_frontiers();
-                    exploration->transformToOwnCoordinates_visited_frontiers();
-
-                    exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global, NULL);
-                        
-                    exploration->transformToOwnCoordinates_frontiers();
-                    exploration->transformToOwnCoordinates_visited_frontiers();
-                      
-                    exploration->findFrontiers();
-                    exploration->clearVisitedFrontiers();
-                    exploration->clearUnreachableFrontiers();
-                    exploration->clearSeenFrontiers(costmap2d_global);
-
-                    if(skip_findFrontiers)
-                        exploration->clearVisitedFrontiers();
-                    exploration->clearUnreachableFrontiers(); //should remove frontiers that are marked as unreachable from 'frontiers' vector
-                    if(skip_findFrontiers)
-                        exploration->clearSeenFrontiers(costmap2d_global);
-
-                    costmap_mutex.unlock();
-                    print_mutex_info("explore()", "unlock");
-                    ROS_DEBUG("COSTMAP STUFF, lock released");
+                    frontier_finder->findFrontiers();
                 
                 }
                 
@@ -671,851 +649,29 @@ class Explorer
 
                     
                 ROS_INFO("START FRONTIER SELECTION");
-                    
-                /**********************
-                 * FRONTIER SELECTION *
-                 **********************/
-
-                /*********** EXPLORATION STRATEGIES ************
-                * 0 ... Navigate to nearest frontier TRAVEL PATH
-                * 1 ... Navigate using auctioning with cluster selection using NEAREST
-                *       selection (Kuhn-Munkres)
-                * 2 ... Navigate to furthest frontier
-                * 3 ... Navigate to nearest frontier EUCLIDEAN DISTANCE
-                * 4 ... Navigate to random frontier
-                * 5 ... Cluster frontiers, then navigate to nearest cluster using
-                *       EUCLIDEAN DISTANCE (with and without negotiation)
-                * 6 ... Cluster frontiers, then navigate to random cluster (with and
-                *       without negotiation)
-                *
-                * ENERGY AWARE STRATEGIES:
-                * 7 ... Navigate to frontier that satisfies energy efficient cost
-                *       function with staying-alive path planning
-                * 8 ... Navigate to leftmost frontier (Mei et al. 2006) with
-                *       staying-alive path planning
-                * 9 ... Just like strategy 0 but with staying-alive path planning
-                */
-
-                /*************** SORTING METHODS ***************
-                * Choose which strategy to take.
-                * 1 ... Sort the buffer from furthest to nearest frontier
-                * 2 ... Sort the buffer from nearest to furthest frontier, normalized to
-                *       the robots actual position (EUCLIDEAN DISTANCE)
-                * 3 ... Sort the last 10 entries to shortest TRAVEL PATH
-                * 4 ... Sort all cluster elements from nearest to furthest (EUCLIDEAN
-                *       DISTANCE)
-                * 5 ... (missing description)
-                * 6 ... (missing description)
-                * 7 ... Sort frontiers in sensor range clock wise (starting from left of
-                *       robot) and sort the remaining frontiers from nearest to furthest
-                *       (EUCLIDEAN DISTANCE)
-                */
-
-                /* Compute next frontier to be explored according to the selected
-                 * exploration strategy */
-                if (frontier_selection == 0)
-                {
-                    exploration->sort(2);
-                    exploration->sort(3);
-
-                    while (true)
-                    {
-                        goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                        ROS_DEBUG("Goal_determined: %d   counter: %d", goal_determined, count);
-                        if (goal_determined == false)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            negotiation = true;
-                            if (negotiation == true)
-                            {
-                                break;
-                            }
-                            count++;
-                        }
-                    }
-                }
-                else if (frontier_selection == 1)
-                {
-                    costmap_mutex.lock();
-                    if (cluster_initialize_flag == true)
-                    {
-                        exploration->clearVisitedAndSeenFrontiersFromClusters();
-                    }
-                    else
-                    {
-                        /*
-                        * This is only necessary for the first run
-                        */
-
-                        exploration->sort(2);
-                        cluster_initialize_flag = true;
-                    }
-
-                    exploration->clusterFrontiers();
-                    exploration->sort(4);
-                    exploration->sort(5);
-
-                    costmap_mutex.unlock();
-
-                    exploration->visualizeClustersConsole();
-
-                    while (true)
-                    {
-                        final_goal.clear();
-                        robot_str.clear();
-                        goal_determined = exploration->determine_goal(5, &final_goal, 0, cluster_element, &robot_str);
-
-                        ROS_ERROR("Cluster element: %d", cluster_element);
-
-                        int cluster_vector_position = -1;
-
-                        if (cluster_element != -1)
-                        {
-                            if (exploration->clusters.size() > 0)
-                            {
-                                for (unsigned int i = 0; i < exploration->clusters.size(); i++)
-                                {
-                                    if (exploration->clusters.at(i).id == cluster_element)
-                                    {
-                                        if (exploration->clusters.at(i).cluster_element.size() > 0)
-                                        {
-                                            cluster_vector_position = i;
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        ROS_ERROR("Cluster vector position: %d", cluster_vector_position);
-
-                        if (cluster_vector_position >= 0)
-                        {
-                            if (exploration->clusters.at(cluster_vector_position).unreachable_frontier_count >=
-                                number_unreachable_frontiers_for_cluster)
-                            {
-                                goal_determined = false;
-                                ROS_ERROR("Cluster inoperateable");
-                            }
-                            else
-                            {
-                                ROS_ERROR("Cluster operateable");
-                            }
-                        }
-
-                        if (goal_determined == false)
-                        {
-                            ROS_INFO("No goal was determined, cluster is empty. Bid for "
-                                     "another one");
-
-                            final_goal.clear();
-                            robot_str.clear();
-                            clusters_available_in_pool.clear();
-
-                            bool auctioning =
-                                exploration->auctioning(&final_goal, &clusters_available_in_pool, &robot_str);
-                            if (auctioning == true)
-                            {
-                                goal_determined = true;
-                                cluster_element = final_goal.at(4);
-                                counter_waiting_for_clusters = 0;
-                                break;
-                            }
-                            else
-                            {
-                                if (exploration->clusters.size() > 0)  // clusters_available_in_pool.size() > 0)
-                                {
-                                    ROS_INFO("No cluster was selected but other robots are "
-                                             "operating ... waiting for new clusters");
-                                    counter_waiting_for_clusters++;
-                                    break;
-                                }
-                                else
-                                {
-                                    /*
-                                    * If NO goals are selected at all, iterate over the global
-                                    * map to find some goals.
-                                    */
-                                    ROS_ERROR("No goals are available at all");
-                                    cluster_element = -1;
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            ROS_INFO("Still some goals in current cluster, finish this job first");
-                            break;
-                        }
-                    }
-                }
-                else if (frontier_selection == 2)
-                {
-                    exploration->sort(1);
-
-                    /*
-                    * Choose which strategy to take.
-                    * 1 ... least to first goal in list
-                    * 2 ... first to last goal in list
-                    *
-                    * Determine_goal() takes world coordinates stored in
-                    * the frontiers list(which contain every found frontier with
-                    *sufficient
-                    * spacing in between) and returns the most attractive one, based on
-                    *the
-                    * above defined strategies.
-                    */
-                    while (true)
-                    {
-                        goal_determined = exploration->determine_goal(1, &final_goal, count, 0, &robot_str);
-                        if (goal_determined == false)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            negotiation = true;
-                            if (negotiation == true)
-                            {
-                                break;
-                            }
-                            count++;
-                        }
-                    }
-                }
-                else if (frontier_selection == 3)
-                {
-                    exploration->sort(2);
-
-                    while (true)
-                    {
-                        goal_determined = exploration->determine_goal(2, &final_goal, count, 0, &robot_str);
-                        if (goal_determined == false)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            negotiation = true;
-                            if (negotiation == true)
-                            {
-                                break;
-                            }
-                            count++;
-                        }
-                    }
-                }
-                else if (frontier_selection == 4)
-                {
-                    while (true)
-                    {
-                        goal_determined = exploration->determine_goal(3, &final_goal, count, 0, &robot_str);
-                        ROS_DEBUG("Goal_determined: %d   counter: %d", goal_determined, count);
-                        if (goal_determined == false)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            negotiation = true;
-                            if (negotiation == true)
-                            {
-                                break;
-                            }
-                            count++;
-                        }
-                    }
-                }
-                else if (frontier_selection == 5)
-                {
-                    if (cluster_initialize_flag == true)
-                    {
-                        exploration->clearVisitedAndSeenFrontiersFromClusters();
-                    }
-                    else
-                    {
-                        /*
-                        * This is necessary for the first run
-                        */
-                        if (robot_id == 0)
-                            ros::Duration(10).sleep();
-
-                        exploration->sort(2);
-                    }
-
-                    exploration->clusterFrontiers();
-                    exploration->sort(4);
-                    exploration->sort(5);
-
-                    clusters_available_in_pool.clear();
-                    while (true)
-                    {
-                        final_goal.clear();
-                        goal_determined =
-                            exploration->determine_goal(4, &final_goal, count, cluster_element, &robot_str);
-
-                        if (goal_determined == false)
-                        {
-                            ROS_INFO("Another cluster is not available, no cluster determined");
-                            break;
-                        }
-                        else
-                        {
-                            if (cluster_initialize_flag == false)
-                            {
-                                /*
-                                *  todo ... just to reduce the selection of the same
-                                * clusters since no auctioning is implemented jet.
-                                */
-                                if (robot_id == 1)
-                                {
-                                    ros::Duration(5).sleep();
-                                }
-
-                                cluster_initialize_flag = true;
-                            }
-
-                            /*
-                            * If negotiation is not needed, simply uncomment
-                            * and set the negotiation to TRUE.
-                            */
-                            negotiation =
-                                exploration->negotiate_Frontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
-                                                                final_goal.at(3), final_goal.at(4));
-                            if (negotiation == true)
-                            {
-                                ROS_DEBUG("Negotiation was successful");
-                                cluster_element = final_goal.at(4);
-                                counter_waiting_for_clusters = 0;
-                                break;
-                            }
-                            else
-                            {
-                                cluster_element = final_goal.at(4);
-                                counter_waiting_for_clusters++;
-                                ROS_ERROR("Negotiation was not successful, try next cluster");
-                            }
-                            count++;
-                            /*
-                            * In order to make one robot wait until the other finds
-                            * another cluster to operate in, one have to fill the
-                            * clusters_available_in_pool
-                            * vector if count is increased at least once which determines
-                            * that at least one cluster
-                            */
-                            clusters_available_in_pool.push_back(1);
-                        }
-                    }
-                }
-                else if (frontier_selection == 6)
-                {
-                    if (cluster_initialize_flag == true)
-                    {
-                        exploration->clearVisitedAndSeenFrontiersFromClusters();
-                    }
-
-                    exploration->clusterFrontiers();
-                    exploration->sort(6);
-                    exploration->visualizeClustersConsole();
-
-                    if (cluster_initialize_flag == false)
-                    {
-                        ros::Duration(2).sleep();
-                    }
-                    cluster_initialize_flag = true;
-
-                    while (true)
-                    {
-                        goal_determined =
-                            exploration->determine_goal(4, &final_goal, count, cluster_element, &robot_str);
-
-                        if (goal_determined == false)
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            /*
-                            * If negotiation is not needed, simply uncomment
-                            * and set the negotiation to TRUE.
-                            */
-                            negotiation =
-                                exploration->negotiate_Frontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
-                                                                final_goal.at(3), final_goal.at(4));
-
-                            if (negotiation == true)
-                            {
-                                cluster_element = final_goal.at(4);
-                                break;
-                            }
-                            else
-                            {
-                                cluster_element = int(exploration->clusters.size() * rand() / (RAND_MAX));
-                                ROS_INFO("Random cluster_element: %d  from available %lu clusters", cluster_element,
-                                         (long unsigned int)exploration->clusters.size());
-                            }
-                            count++;
-                        }
-                    }
-                }
 
                 /* 7 ... Navigate to frontier that satisfies energy efficient cost
                    function with staying-alive path planning */
-                else if (frontier_selection == 17) //TODO
+                if (frontier_selection == 17) //TODO
                     ;
                 
                 else if (frontier_selection == 7 || frontier_selection == 10)
                 {  
-                    if(moving_along_path) {
-                        ROS_INFO("moving along DS path");
-                        if(ds_path_counter < ds_path_size - 1)
-                        {
-                            ros::spinOnce();
-                            ROS_INFO("Trying to reach next DS");
-                            ROS_INFO("ds_path_counter: %d; ds_path_size: %d", ds_path_counter, ds_path_size);
-                            double next_ds_x = complex_path[ds_path_counter+1].x;
-                            double next_ds_y = complex_path[ds_path_counter+1].y;
-                            double dist = -1;
-                            ROS_INFO("Compute distance");
-                            for(int i=0; i<5 && dist < 0; i++) {
-                                dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
-                                if(dist<0)
-                                    ros::Duration(1).sleep();
-                            }
-                            ROS_INFO("Distance computed");
-                            
-                            if(dist < 0) {
-                                log_major_error("unable to compute distance to reach next DS!!!");
-                                if(retry_recharging_current_ds < 3) {
-                                    ROS_INFO("unable to compute distance");
-                                    ROS_ERROR("reauction for current one");
-                                    ROS_INFO("reauction for current one");
-                                    counter++;
-                                    move_robot_away(counter);
-                                    update_robot_state_2(robot_state::AUCTIONING);
-                                    retry_recharging_current_ds++;
-                                }
-                                else
-                                    log_major_error("finished because cannot reach next ds in path");
-                                    update_robot_state_2(stopped);
-                                    finalize_exploration();
-                            }
-
-                            else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance) ) {
-                                if(full_battery)
-                                {
-                                    if(fabs(dist - conservative_maximum_available_distance) > 7.0)
-                                        log_major_error("MAJOR ERROR WITH DS GRAPH");
-                                    else
-                                        log_minor_error("minor error with ds graph");
-                                    ROS_DEBUG("distance to next DS: %.2f", dist);
-                                    ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_maximum_available_distance);
-                                    
-                                    // we force to move to next ds
-                                    retry_recharging_current_ds = 0;
-                                    ds_path_counter++;
-                                    optimal_ds_x = complex_path[ds_path_counter].x; 
-                                    optimal_ds_y = complex_path[ds_path_counter].y; 
-//                                    double world_x, world_y;
-//                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
-//                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
-                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                    std_msgs::Empty msg;
-                                    pub_next_ds.publish(msg);
-                                    update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
-                                    
-                                }
-                                else {
-                                    ROS_INFO("Cannot reach next DS on the path: reauction for current one");
-                                    counter++;
-                                    move_robot_away(counter);
-                                    update_robot_state_2(robot_state::AUCTIONING);
-                                }
-                            } else {
-                                retry_recharging_current_ds = 0;
-                                ds_path_counter++;
-                                optimal_ds_x = complex_path[ds_path_counter].x; 
-                                optimal_ds_y = complex_path[ds_path_counter].y; 
-//                                    double world_x, world_y;
-//                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
-//                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
-                                ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                std_msgs::Empty msg;
-                                pub_next_ds.publish(msg);
-                                update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
-                            }
-                            
-                            continue;
-                            
-                        }
-                        else 
-                        {
-                            ROS_INFO("Finished path traversal");
-                            moving_along_path = false;
-                            std_msgs::Empty msg;
-                            pub_next_ds.publish(msg);
-                            
-                            if(going_home) {
-                                //move_home_if_possible();
-                                move_home();
-                            } else
-                                continue;
-                            
-                        }
-                    }
-
-                    {
-                        // TODO(minor) do those sorting works correclty?
-                        /* Sort frontiers, firstly from nearest to farthest and then by
-                         * efficiency */
-                        ROS_INFO("SORTING FRONTIERS...");
-
-                        /* Look for a frontier as goal */
-                        ROS_INFO("DETERMINE GOAL...");
-                        
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
-                        fs_exp_se_log.close();
- 
-                        ros::spinOnce(); // to update available_distance
-
-                        if(robot_state != robot_state::CHARGING_COMPLETED)
-                            available_distance = next_available_distance;    
-                        
-                            print_mutex_info("explore()", "acquiring");
-                            costmap_mutex.lock();
-                            print_mutex_info("explore()", "lock");
-                            
-                            if(exploration->updateRobotPose()) {
-                                exploration->updateOptimalDs();
-                                goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
-                            }
-                            else {
-                                log_major_error("robot pose not updated");
-                                goal_determined = false;
-                            }
-                        
-                        ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
-                        
-                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_exp_se_log << ros::Time::now() - time << ": " << "Finished" << std::endl;
-                        fs_exp_se_log.close();
-                        
-                        fs_computation_time.open(computation_time_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-                        fs_computation_time << exploration->frontier_selected << "," << exploration->number_of_frontiers << "," << exploration->sort_time << "," << exploration->selection_time << std::endl;
-                        fs_computation_time.close();
-                        
-                        ros::Duration d = ros::Time::now() - time_2;
-                        if(d > ros::Duration(5 * 60)) {
-                            log_minor_error("very slow...");
-                        }
-
-                        /* Check if the robot has found a reachable frontier */
-                        if (goal_determined == true)
-                        {
-                            //this can be true if we are at the end of the DS path (i.e., we have reached the last DS and we have 
-//                            if(moving_along_path) {
-//                                ROS_INFO("Finished path traversal");
-//                                moving_along_path = false;
-//                                std_msgs::Empty msg;
-//                                pub_next_ds.publish(msg);
-//                            }
-                        
-                            /* The robot has found a reachable frontier: it can move toward it */                            
-                            update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
-                            retries3 = 0;
-                            retries5 = 0;
-                            
-                            // TODO(minor) ...
-                            if (exit_countdown != EXIT_COUNTDOWN)
-                            {
-                                exit_countdown = EXIT_COUNTDOWN;
-                                ROS_ERROR("To be safe, resetting exit countdown at starting "
-                                          "value; something must have gone wrong however, "
-                                          "because this shoulw never happen...");
-                            }
-                            
-                            ROS_DEBUG("reset retries counter");
-                            retries = 0;
-                        }
-
-                        else
-                        {
-                        
-//                            if(exploration->recomputeGoal() && retries < 7) { //TODO(IMPORTANT)
-//                                ROS_ERROR("Goal not found due to some computation failure, trying to recompute goal...");
-//                                ROS_INFO("Goal not found due to some computation failure, trying to recompute goal...");
-////                                ROS_ERROR("Goal not found due to some computation failure, start auction...");
-////                                ROS_INFO("Goal not found due to some computation failure, start auction...");
-//                                retries++;
-//                                ROS_DEBUG("%d", retries);
-//                                
-//                                ros::Duration(3).sleep();
-//                                costmap_mutex.unlock();
-//                                print_mutex_info("explore()", "unlock");
-////                                update_robot_state_2(robot_state::AUCTIONING);
-//                                continue;                             
-//                            }
-                            ROS_INFO("goal not determined: selecting next action...");
-                            
-                            if(!optima_ds_set) {
-                                ROS_ERROR("no optimal ds: forcing to go in queue..."); //done by energy_mgmt;
-                                update_robot_state_2(robot_state::AUCTIONING);
-                            }
-                            else {
-                                
-    //                            if(moving_along_path) {
-    //                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
-    //                                counter++;
-    //                                move_robot_away(counter);
-    //                                update_robot_state_2(robot_state::AUCTIONING);
-    //                                std_msgs::Empty msg;
-    //                                pub_next_ds.publish(msg);
-    //                            }
-                                
-                                if(retries >= 4)
-                                    log_major_error("too many retries, this shouldn't happend");
-                                
-                                //if the robot is not fully charged, recharge it, since the checks to detect if there is a reachable frontier can be very computational expensive
-    //                            if(robot_state != robot_state::CHARGING_COMPLETED) {
-    //                                update_robot_state_2(robot_state::AUCTIONING);
-    //                                costmap_mutex.unlock();
-    //                                print_mutex_info("explore()", "unlock");
-    //                                continue;
-    //                            } 
-                                
-                                //TODO we could think aabout moving this part in docking.cpp.. but then we have to be sure that explorer won't continue to think that there are reachable frontiers in another part of the enviroment while energy_mgmt will publish the path for another
-    //                            if(retries2 < 4 && retries3 < 5 && retries5 < 10) {
-                                if(retries2 < 1 && retries3 < 5 && retries5 < 10) {
-    //                                retries5++;
-                                    bool error = false;
-                                    ros::spinOnce(); //to udpate available_distance
-                                    if( !exploration->existFrontiers() ) {
-                                        ROS_INFO("No more frontiers: moving home...");
-                                        move_home_if_possible();
-                                    
-                                    //TODO use 0.99 as coefficient?
-                                    } 
-                                    else
-                                    {
-                                        if(exploration->discovered_new_frontier)
-                                            retries6 = 0;
-                                        else
-                                            retries6++;
-                                        ROS_INFO("retries6: %d", retries6);
-                                        if(retries6 >= 3) {
-                                            log_major_error("tried too many times to navigate graph: retries6 >= 3");
-                                            move_home_if_possible();
-                                        }
-                                        else
-                                        {
-                                            exploration->discovered_new_frontier = false;
-                                            exploration->updateOptimalDs();
-                                            if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
-                                                ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
-                                                counter++;
-                                                move_robot_away(counter);
-                                                update_robot_state_2(robot_state::AUCTIONING);
-                                                retries4 = 0;
-                                            }
-                                            else {
-                                            
-                                                update_robot_state_2(exploring_for_graph_navigation);
-                                                ros::Duration(1).sleep();
-                                            
-                                                if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
-                                                    ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
-                                                    
-                                                    int result = -1;
-                                                    exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
-                                                    if(result == 0) //TODO very very orrible idea, using result...
-                                                    {
-                                                        ROS_INFO("path successfully found");
-                                                        
-                                                        counter++;
-                                                        move_robot_away(counter);
-                                                        update_robot_state_2(auctioning_2);
-                                                        retries2 = 0;
-                                                        retries4 = 0;
-                                                    }
-                                                    else {
-                                                        retries2++;
-                                                        update_robot_state_2(auctioning_2);
-                                                        if(result == 1)
-                                                            log_major_error("No DS with EOs was found");
-                                                        else if(result == 2)
-                                                            log_major_error("impossible, no closest ds found...");
-                                                        else if(result == 3) {
-                                                            log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
-                                                            counter++;
-                                                            move_robot_away(counter);
-                                                            update_robot_state_2(auctioning_2);
-                                                            retries3++;
-                                                        }
-                                                        else
-                                                            log_major_error("invalid result value");
-                                                    }
-                                                }
-                                                else {
-                                                    ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
-                                                    if(error) {
-                                                        ROS_ERROR("Failure in checking if reachable frontiers still exists: retrying...");
-                                                        ROS_INFO("Failure in checking if reachable frontiers still exists: retrying...");
-                                                        ros::Duration(3).sleep();
-                                                        retries2++;
-                                                        costmap_mutex.unlock();
-                                                        print_mutex_info("explore()", "unlock");
-                                                        update_robot_state_2(robot_state::CHOOSING_ACTION);
-                                                        continue;
-                                                    }
-                                                    else {
-                                                        retries4++;
-                                                        if(retries4 < 3) {
-                                                            ROS_INFO("retrying to search if one of the remaining frontiers is reachable");
-                                                            costmap_mutex.unlock();
-                                                            print_mutex_info("explore()", "unlock");
-                                                            update_robot_state_2(robot_state::CHOOSING_ACTION);
-                                                            continue;
-                                                        }
-                                                        else
-                                                        {
-                                                            log_minor_error("There are still unvisited frontiers, but the robot cannot reach them even with full battery: exploration can be concluded; robot will go home...");
-                                                            move_home_if_possible();
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                         }
-                                     }
-                                }
-                                else {
-                                    if(retries2 >= 4)
-                                        log_major_error("tried too many times to navigate graph: retries2 >= 4");
-                                    else if(retries3 >=5)
-                                        log_major_error("tried too many times to navigate graph: retries3 >= 5");
-                                    else
-                                        log_major_error("tried too many times to navigate graph: retries5 >= 10");
-                                    move_home_if_possible();
-                                }
-                            }
-                        }
-                        
-                        costmap_mutex.unlock();
-                        print_mutex_info("explore()", "unlock");
-                    }
+                    selectFrontier();
+                    
                 }
 
-                else if (frontier_selection == 8)
-                {
-                    // sort frontiers clock wise starting from left
-                    exploration->sort(7);
-
-                    // look for a frontier as goal
-                    ROS_INFO("DETERMINE GOAL...");
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal,
-                                                                                count, &robot_str, -1);
-                    ROS_INFO("Goal_determined: %d   counter: %d", goal_determined, count);
-
-                    // found a frontier, go there
-                    if (goal_determined == true)
-                    {
-                        robot_state = robot_state::COMPUTING_NEXT_GOAL;
-                        exit_countdown = EXIT_COUNTDOWN;
-                        charge_countdown = EXIT_COUNTDOWN;
-                    }
-
-                    // robot cannot reach any frontier, even if fully charged
-                    // simulation is over
-                    else if (recharging == false || robot_state == robot_state::CHARGING_COMPLETED)
-                    {
-                        exit_countdown--;
-                        ROS_ERROR("Shutdown in: %d", exit_countdown);
-                        if (exit_countdown <= 0)
-                            finalize_exploration();
-                        continue;
-                    }
-
-                    // robot cannot reach any frontier
-                    // go charging
-                    else
-                    {
-                        charge_countdown--;
-                        if (charge_countdown <= 0)
-                        {
-                            ROS_INFO("Could not determine goal, need to recharge!");
-                            robot_state = robot_state::GOING_CHARGING;
-                        }
-                        else
-                            continue;
-                    }
-                }
-                else if (frontier_selection == 9)
-                {
-                    // sort the frontiers from near to far
-                    exploration->sort(2);
-                    exploration->sort(3);
-
-                    // look for a frontier as goal
-                    goal_determined = exploration->determine_goal_staying_alive(1, 2, available_distance, &final_goal,
-                                                                                count, &robot_str, -1);
-                    ROS_DEBUG("Goal_determined: %d   counter: %d", goal_determined, count);
-
-                    // found a frontier
-                    // go there
-                    if (goal_determined == true)
-                    {
-                        robot_state = robot_state::COMPUTING_NEXT_GOAL;
-                        exit_countdown = EXIT_COUNTDOWN;
-                        charge_countdown = EXIT_COUNTDOWN;
-                    }
-
-                    // robot cannot reach any frontier, even if fully charged
-                    // simulation is over
-                    else if (recharging == false || robot_state == robot_state::CHARGING_COMPLETED)
-                    {
-                        exit_countdown--;
-                        ROS_ERROR("Shutdown in: %d", exit_countdown);
-                        if (exit_countdown <= 0)
-                            finalize_exploration();
-                        continue;
-                    }
-
-                    // robot cannot reach any frontier
-                    // go charging
-                    else
-                    {
-                        charge_countdown--;
-                        if (charge_countdown <= 0)
-                        {
-                            ROS_INFO("Could not determine goal, need to recharge!");
-                            robot_state = robot_state::GOING_CHARGING;
-                        }
-                        else
-                            continue;
-                    }
-                }
+                
             }
-
-            /*************************
-             * FRONTIER COORDINATION *
-             *************************/
              
             ROS_INFO("FRONTIER COORDINATION");
-
-            /* Produce frontier/cluster points for rviz */
-            //exploration->visualize_Cluster_Cells();
-            //exploration->visualize_Frontiers();
 
             /* Navigate robot to next frontier */
             
             if(robot_state == robot_state::INITIALIZING) {
-                ROS_INFO("end initialization");
-                update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                initializingState();
                 continue;
             }
-            
             
             if(robot_state == robot_state::COMPUTING_NEXT_GOAL) //happens when the robot lost the auction for the negotiation of the frontier
             {
@@ -1523,183 +679,27 @@ class Explorer
                 continue;
             }
             
-            
+            bool navigate_to_goal;
             if (robot_state == robot_state::MOVING_TO_FRONTIER)
             {
-                ROS_INFO("Navigating to Goal"); 
-//                if (OPERATE_WITH_GOAL_BACKOFF == true)
-//                {
-//                    ROS_INFO("Doing smartGoalBackoff");
-////                    ROS_INFO("final_goal size: %lu", final_goal.size());
-//                    if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
-//                                                      &backoffGoal))
-//                    {
-//                        ROS_INFO("Navigate to backoff goal (%.2f,%.2f) --> (%.2f,%.2f)", final_goal.at(0),
-//                                 final_goal.at(1), backoffGoal.at(0), backoffGoal.at(1));
-//                        navigate_to_goal = navigate(backoffGoal);
-//                    }
-//                    else
-//                    {
-//                        /* Failed to Failed to find backoff goal */
-//                        ROS_ERROR("Failed to find backoff goal, mark original goal "
-//                                  "(%.2f,%.2f) as unreachable",
-//                                  final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
-//                        navigate_to_goal = false;  // navigate(final_goal);
-////                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-////                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
-////                        fs_exp_se_log.close();
-//                    }
-//                }
-//                else
-//                {
-//                    if (!exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global, &backoffGoal))
-//                        ROS_ERROR("Failed to find backoff goal for goal (%.2f,%.2f)", final_goal.at(0), final_goal.at(1));
-//                    ROS_INFO("Navigate to goal");
-//                    navigate_to_goal = navigate(final_goal);
-//                }
-                // TODO(minor) what is this part???
-                if (OPERATE_WITH_GOAL_BACKOFF == true)
-                {
-                    ROS_INFO("Doing smartGoalBackoff");
-                    if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
-                                                      &backoffGoal))
-                    {
-                        ROS_INFO("Navigate to backoff goal (%.2f,%.2f) --> (%.2f,%.2f)", final_goal.at(0),
-                                 final_goal.at(1), backoffGoal.at(0), backoffGoal.at(1));
-                        navigate_to_goal = navigate(backoffGoal);
-                    }
-                    else
-                    {
-                        /* Failed to Failed to find backoff goal */
-                        ROS_ERROR("Failed to find backoff goal: move to original goal (%.2f,%.2f)",
-                                  final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
-//                        fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                        fs_exp_se_log << ros::Time::now() - time << ": " << "Failed to find backoff goal, mark original goal (" << final_goal.at(0) << "," << final_goal.at(1) << ") as unreachable" << std::endl;
-//                        fs_exp_se_log.close();
-                        ROS_INFO("Navigate to goal");
-                        navigate_to_goal = navigate(final_goal);
-                    }
-                }
+                navigate_to_goal = movingToFrontierState();
             }
 
             // TODO(minor) hmm... here??
             if (robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 )
             {
-//                double distance = -1;
-//                int i = 0;
-//                while(distance < 0 && i < 10) {
-//                    exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
-//                    i++;
-//                    ros::Duration(2).sleep();
-//                }
-//                if(distance < 0)
-//                    ROS_INFO("cannot comptue distance between robot and DS: leaving robot where it is");
-//                else
-//                    if (distance <
-//                            min_distance_queue_ds)  // TODO could the DS change meanwhile???
-//                            {
-//                                ROS_INFO("ROBOT TOO CLOSE TO DS to start an auction: moving a little bit farther...");
-//                                ROS_DEBUG("distance: %.2f; min_distance_queue_ds: %.2f", distance, min_distance_queue_ds);
-//                                update_robot_state_2(moving_away_from_ds);
-//                                fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//                                fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
-//                                fs_csv_state.close();
-//                                move_robot_away();  // TODO(minor) move robot away also if in queue and too close...
-//                                ROS_INFO("NOW it is ok...");
-//                            }
-                
-                ros::Time auction_start_time = ros::Time::now();
-                
-                if(moving_along_path) {
-                    log_major_error("'moving_along_path' should be false!!!");
-                    moving_along_path = false;
-                }
-                    
-                
-                while ( (robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3) && 
-                    ros::Time::now() - auction_start_time < ros::Duration(5*60) )  // TODO(minor) better management of the while loop
-                {
-                    ROS_INFO("Auctioning...");
-                    ROS_INFO("ros::Time::now(): %f", ros::Time::now().toSec());
-                    ROS_INFO("auction_start_time: %f", auction_start_time.toSec());
-                    ros::Duration(1).sleep();
-                    ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
-                    update_robot_state();
-                }
-                
-                if(ros::Time::now() - auction_start_time >= ros::Duration(5*60)) {
-                    log_major_error("auctioning was forced to stop!");
-//                    update_robot_state_2(robot_state::GOING_IN_QUEUE);
-                    ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
-                    continue;   
-                }
-                
-                ROS_INFO("Auction completed");
+                auctioningState();
             }
 
             // TODO(minor) hmm... here??
             if (robot_state == robot_state::IN_QUEUE)
             {
-                if(moving_along_path) {
-                    // it could be interesting to try to move to the next DS... but when moving toward it the robot could consume a lot of energy, and if when it reaches the next DS it has to go in queue because there are many robots with a lower battery life, it could be "dangerous"
-                
-                }
-            
-                int i = 0;
-                while (robot_state == robot_state::IN_QUEUE && i < 10)  // TODO(minor) better management of the while loop
-                {
-                    ROS_DEBUG("Waiting in queue...");
-                    ros::Duration(0.1).sleep();  // TODO(minor) are all these sleeps necessary? and do they have the
-                                                 // corrent sleep time???
-                    ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
-
-                    if (exploration->distance_from_robot(optimal_ds_x, optimal_ds_y) < min_distance_queue_ds) {
-                        ROS_INFO("robot too close to DS for being in queue...");
-                        counter++;
-                        move_robot_away(counter);
-                    }
-
-                    update_robot_state();
-//                    i++; //if we use the "idle" mode when the robot is in queue, we don't have to perform recomputations...
-                }
-                if(robot_state == robot_state::IN_QUEUE)
-                    continue; //to force the recomputations of the frontiers
-                else 
-                    ROS_DEBUG("No more in queue");
+                inQueueState();
             }
 
             if (robot_state == robot_state::CHECKING_VACANCY)
             {
-                /* Robot reached frontier */
-                //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
-                
-                ROS_DEBUG("Start checking for DS vacancy (timeout: %.1fs)", checking_vacancy_timeout);
-//                checking_vacancy_timer.stop();
-//                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
-//                checking_vacancy_timer.start();
-
-                ros::Time start_check_time = ros::Time::now();
-
-                // TODO(minor) use a bterr way!!!
-                int i = 0; //just for safety
-                while (i < 100 && robot_state == robot_state::CHECKING_VACANCY && ((ros::Time::now() - start_check_time) < ros::Duration(checking_vacancy_timeout + 1)) )
-                {
-                    ros::Duration(0.2).sleep();
-                    ros::spinOnce();
-                    update_robot_state();
-                    i++;
-                }
-                if(i >= 100)
-                    log_major_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
-                state_mutex.lock();
-                ROS_INFO("finished vacancy check");
-                if(robot_state == CHECKING_VACANCY)
-                    update_robot_state_2(robot_state::GOING_CHARGING);
-                state_mutex.unlock();
-                
-                // Stop the timer, since I could have exited the while loop above due to a occupancy message
-//                checking_vacancy_timer.stop();
-                
+                checkingVacancyState();
             }
 
             // navigate robot home for recharging
@@ -1709,20 +709,7 @@ class Explorer
             // TODO(minor) am I sure???
             if (robot_state == robot_state::GOING_IN_QUEUE || robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::GOING_CHARGING)
             {
-                if (robot_state == robot_state::GOING_CHECKING_VACANCY)
-                    ROS_INFO("Approaching ds%d (%f, %f) to check if it is free", -1, optimal_ds_x, optimal_ds_y);
-                else if (robot_state == robot_state::GOING_IN_QUEUE)
-                    ROS_INFO("Travelling to DS to go in queue");
-                else
-                    if(failures_going_to_DS != 0)
-                        ROS_INFO("Robot can finally prepare itself to recharge");
-                    else
-                        ROS_INFO("tying to reach DS");
-
-                counter++;
-                moving_to_ds = true;          
-                navigate_to_goal = move_robot(counter, optimal_ds_x, optimal_ds_y);
-                moving_to_ds = false;
+                goingState();
             }
 
             /* NAVIGATION COMPLETED */ //F
@@ -1915,14 +902,6 @@ class Explorer
             log_major_error("stucked after auction!!!");
         if(robot_state == stuck &&  previous_state == robot_state::GOING_CHARGING)
             log_major_error("stuck when going_charging!!!");
-            
-        
-        //TODO move this in update_robot_state, where the state is set to finished
-//        if(robot_state == finished || robot_state == dead || robot_state == stuck) {
-//            std_msgs::Empty msg;
-//            pub_finished_exploration.publish(msg);
-//            exploration_finished = true;
-//        }   
 
         robot_state::SetRobotState set_msg;
         set_msg.request.robot_state = robot_state;
@@ -1950,59 +929,7 @@ class Explorer
             return;
         } 
         
-        // TODO(minor) do we need the spin?
         ros::spinOnce();
-     
-    }
-
-    void frontiers()
-    {
-        while(!explorer_ready)
-            ros::Duration(10).sleep();
-    
-        ros::Duration(10).sleep();
-        ROS_INFO("Can start periodical recomputation and publishing of frontiers"); //TODO probably now the findFrontiers, etc., in explorer are useless... but we have to be sure that when we search for a frontier we have an updated map
-        
-        while (ros::ok())
-        {
-            ros::Rate(0.1).sleep();
-            
-//            if(robot_state == robot_state::IN_QUEUE) //idle mode
-//                continue;
-
-            //ROS_DEBUG("frontiers(): acquiring lock");
-            print_mutex_info("frontiers()", "acquiring");
-            costmap_mutex.lock();
-            //ROS_DEBUG("frontiers(): lock acquired");
-            print_mutex_info("frontiers()", "lock");
-            
-            exploration->transformToOwnCoordinates_frontiers();
-            exploration->transformToOwnCoordinates_visited_frontiers();
-            
-            exploration->initialize_planner("exploration planner", costmap2d_local, costmap2d_global, NULL);
-
-            exploration->findFrontiers();
-            exploration->clearVisitedFrontiers();
-            exploration->clearUnreachableFrontiers();
-            exploration->clearSeenFrontiers(costmap2d_global);
-            
-            //ROS_INFO("publish_frontier_list and visualize them in rviz");
-            exploration->publish_frontier_list();
-//            exploration->publish_visited_frontier_list();  // TODO(minor) this doesn0t work really well since it publish
-                                                           // only the frontier visited by this robot...
-
-            /* Publish frontier points for rviz */
-            exploration->visualize_Frontiers();
-            //exploration->visualize_Clusters();
-            //visualize
-
-            costmap_mutex.unlock();
-            //ROS_DEBUG("frontiers(): lock released");
-            print_mutex_info("frontiers()", "unlock");
-            
-            frontiers_found = true;
-
-        }
     }
 
     void map_info()
@@ -2093,18 +1020,7 @@ class Explorer
         }
     }
     
-    void log_map() {
-        while (ros::ok() && !exploration_finished) {
-            // call map_merger to log data
-            map_merger::LogMaps log;
-            log.request.log = 12;  /// request local and global map progress
-            ROS_INFO("Calling map_merger service logOutput");
-            if (!mm_log_client.call(log))
-                ROS_ERROR("Could not call map_merger service to store log.");
-            ROS_DEBUG("Finished service call.");
-            ros::Duration(30).sleep();
-        }
-    }
+
 
     int global_costmap_size()
     {
@@ -2179,162 +1095,6 @@ class Explorer
         }
     }
 
-    void initLogPath()
-    {
-        /*
-         * CREATE LOG PATH
-         * Following code enables to write the output to a file
-         * which is localized at the log_path
-         */
-
-        nh.param<std::string>("log_path", log_path, "");
-
-        original_log_path = log_path;
-
-        std::stringstream robot_number;
-        robot_number << robot_id;
-        std::string prefix = "/robot_";
-        std::string robo_name = prefix.append(robot_number.str());
-
-        log_path = log_path.append("/explorer");
-        log_path = log_path.append(robo_name);
-        ROS_INFO("Logging files to %s", log_path.c_str());
-
-        boost::filesystem::path boost_log_path(log_path.c_str());
-        if (!boost::filesystem::exists(boost_log_path))
-            try
-            {
-                if (!boost::filesystem::create_directories(boost_log_path))
-                    ROS_ERROR("Cannot create directory %s.", log_path.c_str());
-            }
-            catch (const boost::filesystem::filesystem_error &e)
-            {
-                ROS_ERROR("Cannot create path %s.", log_path.c_str());
-            }
-
-        log_path = log_path.append("/");
-    }
-
-    void save_progress(bool final = false)
-    {
-        ros::Duration ros_time = ros::Time::now() - time_start;
-
-        double exploration_time = ros_time.toSec();
-        int navigation_goals_required = counter;
-        double exploration_travel_path = (double)exploration->exploration_travel_path_global_meters;
-//        double size_global_map =
-//            map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
-
-        std::string tmp_log;
-        if (!final)
-        {
-            tmp_log = log_file + std::string(".tmp");
-            fs.open(tmp_log.c_str(), std::fstream::in | std::fstream::trunc | std::fstream::out);
-        }
-        else
-        {
-            tmp_log = log_file;
-            fs.open(tmp_log.c_str(), std::fstream::in | std::fstream::trunc | std::fstream::out);
-        }
-
-        /*
-         * WRITE LOG FILE
-         * Write all the output to the log file
-         */
-        time_t raw_time;
-        struct tm *timeinfo;
-        time(&raw_time);
-        timeinfo = localtime(&raw_time);
-
-        fs << "[Exploration]" << std::endl;
-        fs << "time_file_written    			= " << asctime(timeinfo);  // << std::endl;
-        fs << "start_time           			= " << time_start << std::endl;
-        fs << "end_time             			= " << ros::Time::now() << std::endl;
-        fs << "exploration_time    	            = " << exploration_time << std::endl;
-        fs << "required_goals                   = " << navigation_goals_required << std::endl;
-        fs << "unreachable_goals                = " << exploration->unreachable_frontiers.size() << std::endl;
-        fs << "travel_path_overall  	        = " << exploration_travel_path << std::endl;
-        fs << "number_of_completed_auctions     = " << exploration->number_of_completed_auctions << std::endl;
-        fs << "number_of_uncompleted_auctions   = " << exploration->number_of_uncompleted_auctions << std::endl;
-        fs << "frontier_selection_strategy      = " << frontier_selection << std::endl;
-        fs << "costmap_size                     = " << costmap_width << std::endl;
-        fs << "global costmap iterations        = " << global_costmap_iteration << std::endl;
-        fs << "number of recharges              = " << recharge_cycles << std::endl;
-        fs << "energy_consumption               = " << energy_consumption << std::endl;
-        fs << "maximum_available_distance       = " << conservative_maximum_available_distance << std::endl;
-        fs << "w1                               = " << w1 << std::endl;
-        fs << "w2                               = " << w2 << std::endl;
-        fs << "w3                               = " << w3 << std::endl;
-        fs << "w4                               = " << w4 << std::endl;
-        fs << "queue_distance                   = " << queue_distance << std::endl;
-        fs << "auction_timeout                  = " << auction_timeout << std::endl;
-        fs << "checking_vacancy_timeout         = " << checking_vacancy_timeout << std::endl;
-
-        double param_double;
-        int param_int;
-        std::string param;
-        /*param = robot_prefix + "/explorer/local_costmap/height";
-            ros::param::get(param,param_double);*/
-        nh.param<int>("local_costmap/height", param_int, -1);
-        fs << "explorer_local_costmap_height 		= " << param_int << std::endl;
-
-        /*param = robot_prefix + "/explorer/local_costmap/width";
-            ros::param::get(param,param_double);*/
-        nh.param<int>("local_costmap/width", param_int, -1);
-        fs << "explorer_local_costmap_width 		= " << param_int << std::endl;
-
-        param = robot_prefix + "/move_base/local_costmap/height";
-        ros::param::get(param, param_double);
-        fs << "move_base_local_costmap_height 		= " << param_double << std::endl;
-
-        param = robot_prefix + "/move_base/local_costmap/width";
-        ros::param::get(param, param_double);
-        fs << "move_base_local_costmap_width 		= " << param_double << std::endl;
-
-        param = robot_prefix + "/move_base/global_costmap/obstacle_layer/raytrace_range";
-        ros::param::get(param, param_double);
-        fs << "move_base_raytrace_range 		= " << param_double << std::endl;
-
-        param = robot_prefix + "/move_base/global_costmap/obstacle_layer/obstacle_range";
-        ros::param::get(param, param_double);
-        fs << "move_base_obstacle_range 		= " << param_double << std::endl;
-
-        //	    param = robot_prefix +
-        //"/navigation/global_costmap/obstacle_layer/raytrace_range";
-        nh.getParam("/global_costmap/obstacle_layer/raytrace_range", param_double);
-        ros::param::get(param, param_double);
-        fs << "explorer_raytrace_range 		= " << param_double << std::endl;
-
-        // param = robot_prefix +
-        // "/navigation/global_costmap/obstacle_layer/obstacle_range";
-        //    ros::param::get(param,param_double);
-        nh.getParam("/global_costmap/obstacle_layer/obstacle_range", param_double);
-        fs << "explorer_obstacle_range 		= " << param_double << std::endl;
-
-        if (final)
-            fs << "complete             			= "
-               << "1" << std::endl;
-        else
-            fs << "complete             			= "
-               << "0" << std::endl;
-
-        fs.close();
-        //            ROS_INFO("Wrote file %s\n", log_file.c_str());
-
-        /*
-         * Inform map_merger to save maps
-         */
-
-        if (final)
-        {
-            map_merger::LogMaps log;
-            log.request.log = 3;  /// request local and global map
-            ROS_INFO("Logging");
-            if (!mm_log_client.call(log))
-                ROS_ERROR("Could not call map_merger service to store log.");
-        }
-    }
-
     void finalize_exploration()
     {
     
@@ -2353,109 +1113,7 @@ class Explorer
 
         ROS_INFO("Shutting down...");
         shutdown();
-    }
-
-    void exploration_has_finished()
-    {
-        ros::Duration ros_time = ros::Time::now() - time_start;
-
-        double exploration_time = ros_time.toSec();
-        int navigation_goals_required = counter;
-        double exploration_travel_path = (double)exploration->exploration_travel_path_global * 0.02;
-        double size_global_map =
-            map_progress_during_exploration.at(map_progress_during_exploration.size() - 1).global_freespace;
-        ROS_INFO("overall freespace in the global map: %f", size_global_map);
-
-        for (unsigned int i = 0; i < map_progress_during_exploration.size(); i++)
-        {
-            ROS_INFO("map progress: %f",
-                     (map_progress_during_exploration.at(i).global_freespace / size_global_map) * 100);
-        }
-
-        ROS_DEBUG("******************************************");
-        ROS_DEBUG("******************************************");
-        ROS_DEBUG("TIME: %f sec  GOALS: %d  PATH: %f  COMPLETED AUCTIONS: %d  "
-                  "UNCOMPLETED AUCTIONS: %d",
-                  exploration_time, navigation_goals_required, exploration_travel_path,
-                  exploration->number_of_completed_auctions, exploration->number_of_uncompleted_auctions);
-        ROS_DEBUG("******************************************");
-        ROS_DEBUG("******************************************");
-
-        /*
-         * WRITE LOG FILE
-         * Write all the output to the log file
-         */
-        save_progress(true);
-        ROS_INFO("Wrote file %s\n", log_file.c_str());
-
-        /*
-         * Inform map_merger to save maps
-         */
-
-        map_merger::LogMaps log;
-        log.request.log = 3;  /// request local and global map
-        ROS_INFO("Logging");
-        if (!mm_log_client.call(log))
-            ROS_ERROR("Could not call map_merger service to store log.");
-
-        //#ifdef PROFILE
-        // HeapProfilerStop();
-        // ProfilerStop();
-        //#endif
-    }
-
-    void indicateSimulationEnd()
-    {
-        /// FIXME: remove this stuff once ported to multicast
-        
-        std::stringstream robot_number;
-        robot_number << robot_id;
-
-        std::string prefix = "/robot_";
-        
-        std::string status_directory = "/simulation_status";
-        std::string robo_name = prefix.append(robot_number.str());
-        std::string file_suffix(".finished");
-
-        std::string ros_package_path = ros::package::getPath("multi_robot_analyzer");
-        std::string status_path = ros_package_path + status_directory;
-        std::string status_file = status_path + robo_name + file_suffix;
-
-        // TODO(minor): check whether directory exists
-        boost::filesystem::path boost_status_path(status_path.c_str());
-        if(!boost::filesystem::exists(boost_status_path))
-            if(!boost::filesystem::create_directories(boost_status_path))
-                ROS_ERROR("Cannot create directory %s.", status_path.c_str());
-        
-        ROS_INFO("Creating file %s to indicate end of exploration.", status_file.c_str());
-        std::ofstream outfile(status_file.c_str());
-        outfile.close();
-        if(!boost::filesystem::exists(status_file)) {
-            log_major_error("cannot create status file!!!");
-            //exit(-1);   
-        } else
-            ROS_INFO("Status file created successfully");
-        
-        if(percentage < 90 && robot_state != stuck) {
-            log_major_error("low percentage (<90%)!!!");
-        }
-        
-        if(percentage < 95 && robot_state != stuck) {
-            log_minor_error("percentage < 95%");
-        }
-        
-        ros::Duration(10).sleep();
-        
-        adhoc_communication::EmRobot msg;
-        msg.id = robot_id;
-        pub_finished_exploration_id.publish(msg);
-        
-        std_msgs::Empty msg2;
-        pub_finished_exploration.publish(msg2);
-        
-        exploration_finished = true;
-        
-    }
+    }    
 
     // TODO(minor) interesting function
     /**
@@ -2494,100 +1152,100 @@ class Explorer
 
         // exploration->visualize_Frontiers();
 
-        if (frontier_selection < 5 && frontier_selection != 1)
-        {
-            exploration->sort(2);
+//        if (frontier_selection < 5 && frontier_selection != 1)
+//        {
+//            exploration->sort(2);
 
-            while (true)
-            {
-                exploration_flag = exploration->determine_goal(2, global_goal, counter, -1, robot_str);
+//            while (true)
+//            {
+//                exploration_flag = exploration->determine_goal(2, global_goal, counter, -1, robot_str);
 
-                if (exploration_flag == false)
-                {
-                    break;
-                }
-                else
-                {
-                    bool negotiation = true;
-                    negotiation = exploration->negotiate_Frontier(global_goal->at(0), global_goal->at(1),
-                                                                  global_goal->at(2), global_goal->at(3), -1);
+//                if (exploration_flag == false)
+//                {
+//                    break;
+//                }
+//                else
+//                {
+//                    bool negotiation = true;
+//                    negotiation = exploration->negotiate_Frontier(global_goal->at(0), global_goal->at(1),
+//                                                                  global_goal->at(2), global_goal->at(3), -1);
 
-                    if (negotiation == true)
-                    {
-                        return true;
-                    }
-                    counter++;
-                }
-            }
-        }
+//                    if (negotiation == true)
+//                    {
+//                        return true;
+//                    }
+//                    counter++;
+//                }
+//            }
+//        }
 
-        else if (frontier_selection == 1 || frontier_selection == 6 || frontier_selection == 5)
-        {
-            costmap_mutex.lock();
-            exploration->clearVisitedAndSeenFrontiersFromClusters();
+//        else if (frontier_selection == 1 || frontier_selection == 6 || frontier_selection == 5)
+//        {
+//            costmap_mutex.lock();
+//            exploration->clearVisitedAndSeenFrontiersFromClusters();
 
-            exploration->clusterFrontiers();
+//            exploration->clusterFrontiers();
 
-            exploration->sort(4);
-            exploration->sort(5);
+//            exploration->sort(4);
+//            exploration->sort(5);
 
-            costmap_mutex.unlock();
+//            costmap_mutex.unlock();
 
-            cluster_element = -1;
+//            cluster_element = -1;
 
-            while (true)
-            {
-                std::vector<double> goal_vector;
-                std::vector<std::string> robot_str_name;
-                std::vector<int> clusters_used_by_others;
+//            while (true)
+//            {
+//                std::vector<double> goal_vector;
+//                std::vector<std::string> robot_str_name;
+//                std::vector<int> clusters_used_by_others;
 
-                goal_determined = exploration->determine_goal(5, &goal_vector, 0, cluster_element, robot_str);
+//                goal_determined = exploration->determine_goal(5, &goal_vector, 0, cluster_element, robot_str);
 
-                if (goal_determined == false)
-                {
-                    ROS_INFO("No goal was determined, cluster is empty. Bid for another one");
+//                if (goal_determined == false)
+//                {
+//                    ROS_INFO("No goal was determined, cluster is empty. Bid for another one");
 
-                    goal_vector.clear();
-                    bool auctioning = exploration->auctioning(&goal_vector, &clusters_used_by_others, &robot_str_name);
-                    if (auctioning == true)
-                    {
-                        goal_determined = true;
-                        cluster_element = goal_vector.at(4);
+//                    goal_vector.clear();
+//                    bool auctioning = exploration->auctioning(&goal_vector, &clusters_used_by_others, &robot_str_name);
+//                    if (auctioning == true)
+//                    {
+//                        goal_determined = true;
+//                        cluster_element = goal_vector.at(4);
 
-                        global_goal->push_back(goal_vector.at(0));
-                        global_goal->push_back(goal_vector.at(1));
-                        global_goal->push_back(goal_vector.at(2));
-                        global_goal->push_back(goal_vector.at(3));
-                        global_goal->push_back(goal_vector.at(4));
+//                        global_goal->push_back(goal_vector.at(0));
+//                        global_goal->push_back(goal_vector.at(1));
+//                        global_goal->push_back(goal_vector.at(2));
+//                        global_goal->push_back(goal_vector.at(3));
+//                        global_goal->push_back(goal_vector.at(4));
 
-                        robot_str->push_back(robot_str_name.at(0));
-                        return true;
-                    }
-                    else
-                    {
-                        /*
-                        * If NO goals are selected at all, iterate over the global
-                        * map to find some goals.
-                        */
-                        ROS_ERROR("No goals are available at all");
-                        cluster_element = -1;
-                        break;
-                    }
-                }
-                else
-                {
-                    ROS_INFO("Still some goals in current cluster, finish this job first");
-                    break;
-                }
-            }
+//                        robot_str->push_back(robot_str_name.at(0));
+//                        return true;
+//                    }
+//                    else
+//                    {
+//                        /*
+//                        * If NO goals are selected at all, iterate over the global
+//                        * map to find some goals.
+//                        */
+//                        ROS_ERROR("No goals are available at all");
+//                        cluster_element = -1;
+//                        break;
+//                    }
+//                }
+//                else
+//                {
+//                    ROS_INFO("Still some goals in current cluster, finish this job first");
+//                    break;
+//                }
+//            }
 
-            exploration->visualize_Cluster_Cells();
-        }
+//            exploration->visualize_Cluster_Cells();
+//        }
 
-        else
-        {
-            ROS_ERROR("Could not iterate over map, wrong strategy!");
-        }
+//        else
+//        {
+//            ROS_ERROR("Could not iterate over map, wrong strategy!");
+//        }
 
         global_iterations++;
         return false;
@@ -3169,6 +1827,24 @@ class Explorer
         return true;
     }
 
+    void lost_own_auction_callback(const std_msgs::Empty::ConstPtr &msg)
+    {
+        ROS_INFO("lost_own_auction_callback");
+        ROS_ERROR("shouldn't be called anymore!");
+    }
+
+    void won_callback(const std_msgs::Empty::ConstPtr &msg)
+    {
+        ROS_INFO("won_callback");
+        ROS_ERROR("shouldn't be called anymore!");
+    }
+
+    void lost_other_robot_callback(const std_msgs::Empty::ConstPtr &msg)
+    {
+        ROS_INFO("lost_other_robot_callback");
+        ROS_ERROR("shouldn't be called anymore!");
+    }
+
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
         state_mutex.lock();
@@ -3197,42 +1873,10 @@ class Explorer
 
     void new_optimal_docking_station_selected_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
     {
-//        if (robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::GOING_CHECKING_VACANCY &&
-//                robot_state != robot_state::CHECKING_VACANCY) {
-//            optimal_ds_id = msg.get()->id;
             optima_ds_set = true;
             optimal_ds_x = msg.get()->x;
             optimal_ds_y = msg.get()->y;
             ROS_DEBUG("Storing new optimal DS position, which is placed at (%f, %f)", optimal_ds_x, optimal_ds_y);
-//            exploration->new_optimal_ds(optimal_ds_x, optimal_ds_y);
-//        } else {
-//            //it could happen that the node is moving to a DS for checking if it is vacant, and that meanwhile it wins an auction for another DS, but the robot should ignore this other auction (in fact, even if it won the auction, we cannot be sure that the auctioned DS is really vacant, so there is no point in changing the target DS)
-//             ROS_INFO("The robot is already approaching a DS, so I cannot change it now...");
-//        }
-       
-
-        // TODO(minor)
-        /*
-        map_merger::TransformPoint point;
-        if (robot_prefix == "/robot_1")
-            point.request.point.src_robot = "robot_0";
-        else if (robot_prefix == "/robot_0")
-            point.request.point.src_robot = "robot_1";
-        else
-            ;  // ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        point.request.point.x = optimal_ds_x;
-        point.request.point.y = optimal_ds_y;
-
-        ros::ServiceClient sc_trasform = nh.serviceClient<map_merger::TransformPoint>("map_merger/transformPoint");
-        if (!sc_trasform.call(point))
-            ;  // ROS_ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-               // ROS_ERROR("\e[1;34mCalling: %s\e[0m",
-               // sc_trasform.getService().c_str());sc_trasform.call(point);
-               // ROS_ERROR("\e[1;34mOriginal point:   (%f, %f)\e[0m",
-               // point.request.point.x, point.request.point.y);
-               // ROS_ERROR("\e[1;34mTansformed point: (%f, %f)\e[0m",
-               // point.response.point.x, point.response.point.y);
-               */
     }
 
     void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
@@ -3366,25 +2010,6 @@ class Explorer
         res.reachable = exploration->reachable_target(req.x, req.y);
         return true;
     }
-    
-    
-
-    bool distance_from_robot_callback(explorer::DistanceFromRobot::Request &req,
-                                      explorer::DistanceFromRobot::Response &res)
-    {
-        res.distance = exploration->distance_from_robot(req.x, req.y);
-        if(res.distance >= 0)
-            return true;
-        return false;
-    }
-    
-    bool distance(explorer::Distance::Request &req, explorer::Distance::Response &res)
-    {
-        res.distance = exploration->distance(req.x1, req.y1, req.x2, req.y2);
-        if(res.distance >= 0)
-            return true;
-        return false;
-    }
 
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose)
     {
@@ -3423,17 +2048,6 @@ class Explorer
     {
         feedback_value = msg.get()->status.status;
         feedback_succeed_value = msg.get()->feedback.base_position.pose.orientation.w;
-    }
-
-    bool target_reached(void)
-    {
-//        ros::NodeHandle nh_sub_move_base;
-//        sub_move_base = nh_sub_move_base.subscribe("feedback", 1000, &Explorer::feedbackCallback, this);
-
-//        while (feedback_value != feedback_succeed_value)
-//            ;
-
-        return true;
     }
     
     bool robot_is_moving() {
@@ -3619,8 +2233,6 @@ class Explorer
                     prints_count = 0;
                 }
             }
-            
-            //ROS_ERROR("%f, %f", pose_x, pose_y);
 
             if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
                 ;
@@ -3709,60 +2321,6 @@ class Explorer
         
     }
     
-    void move_home_if_possible() {
-        ros::spinOnce();
-        if(exploration->home_is_reachable(available_distance)) {
-            bool completed_navigation = false;
-            for (int i = 0; i < 5; i++)
-            {
-                if (completed_navigation == false)
-                {
-                    counter++;
-                    going_home = true;
-                    completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                    going_home = false;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            finalize_exploration();
-        }
-        else {
-            going_home = true;
-            counter++;
-            move_robot_away(counter);
-            update_robot_state_2(auctioning_3);
-        }
-    }
-    
-   void move_home() {
-        ros::spinOnce();
-        if(exploration->home_is_reachable(available_distance)) {
-            bool completed_navigation = false;
-            for (int i = 0; i < 5; i++)
-            {
-                if (completed_navigation == false)
-                {
-                    counter++;
-                    going_home = true;
-                    completed_navigation = move_robot(counter, home_point_x, home_point_y);
-                    going_home = false;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            finalize_exploration();
-        }
-        else {
-            log_major_error("robot has finished the exploration but cannot reach home!");
-            finalize_exploration();
-        }
-    }
-    
     void print_mutex_info(std::string function_name, std::string action) {
         log_mutex.lock();
         lock_file = log_path + std::string("lock.log");
@@ -3780,11 +2338,6 @@ class Explorer
         starting_y = pose_y;
     }
     
-    void force_in_queue_callback(const std_msgs::Empty msg) {
-        ROS_INFO("forced to go idle by another node");
-        update_robot_state_2(robot_state::IN_QUEUE);
-    }
-    
     void update_distances() {
         while(!explorer_ready)
             ros::Duration(10).sleep();
@@ -3792,6 +2345,7 @@ class Explorer
         while(!exploration_finished) {
             exploration->updateDistances(conservative_maximum_available_distance);
             exploration->sendListDssWithEos();
+            exploration->available_distance_for_reply = next_available_distance;
             ros::Duration(1).sleep();
         }
     }
@@ -3915,91 +2469,142 @@ class Explorer
 /********
  * MAIN *
  ********/
-int main(int argc, char **argv)
-{
-#ifdef PROFILE
-    const char fname[3] = "TS";
-    ProfilerStart(fname);
-    HeapProfilerStart(fname);
-#endif
 
-    exploration_finished = false;
+void initializingState() {
+    ROS_INFO("end initialization");
+    update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+}
 
-    /*
-     * ROS::init() function needs argc and argv to perform
-     * any argument and remapping that is provided by the
-     * command line. The third argument is the name of the node
-     */
-    ros::init(argc, argv, "simple_navigation");
-
-    /*
-     * Create instance of Explorer
-     */
-    tf::TransformListener tf(ros::Duration(10));
-    Explorer explorer(tf);
-
-    /*
-     * The ros::spin command is needed to wait for any call-back. This could for
-     * example be a subscription on another topic. Do this to be able to receive a
-     * message.
-     */
-    boost::thread thr_explore(boost::bind(&Explorer::explore, &explorer));
-
-    /*
-     * The following thread is only necessary to log simulation results.
-     * Otherwise it produces unused output.
-     */
-    boost::thread thr_map(boost::bind(&Explorer::map_info, &explorer));
-    
-    boost::thread thr_log_map(boost::bind(&Explorer::log_map, &explorer));
-
-    /* Create thread to periodically publish unexplored frontiers */
-    boost::thread thr_frontiers(boost::bind(&Explorer::frontiers, &explorer));
-    
-    boost::thread thr_safety_checks(boost::bind(&Explorer::safety_checks, &explorer));
-    
-    boost::thread thr_update_distances(boost::bind(&Explorer::update_distances, &explorer));
-
-    /*
-     * FIXME
-     * Which rate is required in order not to oversee
-     * any callback data (frontiers, negotiation ...)
-     */
-    while (ros::ok())
+bool movingToFrontierState() {
+ROS_INFO("Navigating to Goal"); 
+    // TODO(minor) what is this part???
+    if (OPERATE_WITH_GOAL_BACKOFF == true)
     {
-        if(!exploration_finished) { //TODO actually we should termine the thread when the exploration is over...
-            //explorer.print_mutex_info("main()", "acquiring");
-            //ROS_DEBUG("acquiring");
-            //costmap_mutex.lock();  
-            //explorer.print_mutex_info("main()", "lock");
-            //ROS_DEBUG("lock");
-            ros::spinOnce();
-            //costmap_mutex.unlock();
-            //explorer.print_mutex_info("main()", "unlock");
-            //ROS_DEBUG("unlock");
+        ROS_INFO("Doing smartGoalBackoff");
+        if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
+                                          &backoffGoal))
+        {
+            ROS_INFO("Navigate to backoff goal (%.2f,%.2f) --> (%.2f,%.2f)", final_goal.at(0),
+                     final_goal.at(1), backoffGoal.at(0), backoffGoal.at(1));
+            navigate_to_goal = navigate(backoffGoal);
         }
-        ros::Duration(0.1).sleep();
+        else
+        {
+            /* Failed to Failed to find backoff goal */
+            ROS_ERROR("Failed to find backoff goal: move to original goal (%.2f,%.2f)",
+                      final_goal.at(0), final_goal.at(1)); // which is done later, when the robot noticed that it couldn't reach a goal
+            ROS_INFO("Navigate to goal");
+            navigate_to_goal = navigate(final_goal);
+        }
+    }
+}
+
+void auctioningState() {
+    move_robot_away_before_auctioning();
+
+    ros::Time auction_start_time = ros::Time::now();
+    
+    if(moving_along_path) {
+        log_major_error("'moving_along_path' should be false!!!");
+        moving_along_path = false;
+    }
+        
+    
+    while ( (robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3) && 
+        ros::Time::now() - auction_start_time < ros::Duration(5*60) )  // TODO(minor) better management of the while loop
+    {
+        ROS_INFO("Auctioning...");
+        ROS_INFO("ros::Time::now(): %f", ros::Time::now().toSec());
+        ROS_INFO("auction_start_time: %f", auction_start_time.toSec());
+        ros::Duration(1).sleep();
+        ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State or in main() already?
+        update_robot_state();
+    }
+    
+    if(ros::Time::now() - auction_start_time >= ros::Duration(5*60)) {
+        log_major_error("auctioning was forced to stop!");
+//                    update_robot_state_2(robot_state::GOING_IN_QUEUE);
+        ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
+        continue;   
+    }
+    
+    ROS_INFO("Auction completed");
+}
+
+void inQueueState() {
+    if(moving_along_path) {
+        // it could be interesting to try to move to the next DS... but when moving toward it the robot could consume a lot of energy, and if when it reaches the next DS it has to go in queue because there are many robots with a lower battery life, it could be "dangerous"
+    
     }
 
-    /* Terminate threads */
-    thr_explore.interrupt();
-    thr_map.interrupt();
-    thr_explore.join();
-    thr_map.join();
-    thr_log_map.interrupt();
-    thr_log_map.join();
-    thr_update_distances.interrupt();
-    thr_update_distances.join();
-    thr_safety_checks.interrupt();
-    thr_safety_checks.join();
-    thr_frontiers.interrupt();
-    thr_frontiers.join();
-    // TODO thr_frontiers...
+    int i = 0;
+    while (robot_state == robot_state::IN_QUEUE && i < 10)  // TODO(minor) better management of the while loop
+    {
+        ROS_DEBUG("Waiting in queue...");
+        ros::Duration(0.1).sleep();  // TODO(minor) are all these sleeps necessary? and do they have the
+                                     // corrent sleep time???
+        ros::spinOnce();  // TODO(minor) is spin necessary? isn't it called by update_robot_State already?
 
-#ifdef PROFILE
-    HeapProfilerStop();
-    ProfilerStop();
-#endif
+        if (exploration->distance_from_robot(optimal_ds_x, optimal_ds_y) < min_distance_queue_ds) {
+            ROS_INFO("robot too close to DS for being in queue...");
+            counter++;
+            move_robot_away(counter);
+        }
 
-    return 0;
+        update_robot_state();
+//                    i++; //if we use the "idle" mode when the robot is in queue, we don't have to perform recomputations...
+    }
+    if(robot_state == robot_state::IN_QUEUE)
+        continue; //to force the recomputations of the frontiers
+    else 
+        ROS_DEBUG("No more in queue");
+}
+
+void checkingVacancyState() {
+    /* Robot reached frontier */
+    //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
+    
+    ROS_DEBUG("Start checking for DS vacancy (timeout: %.1fs)", checking_vacancy_timeout);
+//                checking_vacancy_timer.stop();
+//                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
+//                checking_vacancy_timer.start();
+
+    ros::Time start_check_time = ros::Time::now();
+
+    // TODO(minor) use a bterr way!!!
+    int i = 0; //just for safety
+    while (i < 100 && robot_state == robot_state::CHECKING_VACANCY && ((ros::Time::now() - start_check_time) < ros::Duration(checking_vacancy_timeout + 1)) )
+    {
+        ros::Duration(0.2).sleep();
+        ros::spinOnce();
+        update_robot_state();
+        i++;
+    }
+    if(i >= 100)
+        log_major_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
+    state_mutex.lock();
+    ROS_INFO("finished vacancy check");
+    if(robot_state == CHECKING_VACANCY)
+        update_robot_state_2(robot_state::GOING_CHARGING);
+    state_mutex.unlock();
+    
+    // Stop the timer, since I could have exited the while loop above due to a occupancy message
+//                checking_vacancy_timer.stop();
+}
+
+void goingState() {
+    if (robot_state == robot_state::GOING_CHECKING_VACANCY)
+        ROS_INFO("Approaching ds%d (%f, %f) to check if it is free", -1, optimal_ds_x, optimal_ds_y);
+    else if (robot_state == robot_state::GOING_IN_QUEUE)
+        ROS_INFO("Travelling to DS to go in queue");
+    else
+        if(failures_going_to_DS != 0)
+            ROS_INFO("Robot can finally prepare itself to recharge");
+        else
+            ROS_INFO("tying to reach DS");
+
+    counter++;
+    moving_to_ds = true;          
+    navigate_to_goal = move_robot(counter, optimal_ds_x, optimal_ds_y);
+    moving_to_ds = false;
 }

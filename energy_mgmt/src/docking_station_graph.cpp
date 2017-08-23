@@ -71,26 +71,6 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
         mstSet[i] = false;
         parent[i] = -1;
     }
-    
-    /*
-    for(int i=0; i<V; i++)
-        for(int j=0; j<V; j++)
-            graph_2[i][j] = 0;
-    for(int i=0; i<V-1; i++)
-        for(int j=0; j<V-1; j++)
-            graph_2[i][j] = graph[i][j];
-            
-    graph_2[1][2] = 100;
-    graph_2[2][1] = 100;
-    graph_2[2][4] = 20;
-    graph_2[4][2] = 20;
-    
-*/    
-    
-    for (int i = 0; i < V; i++)
-        for (int j = 0; j < V; j++)
-            ; //ROS_ERROR("(%d, %d): %f", i, j, ds_graph[i][j]);
-
 
     // 'root' is our root of the MST
     key[root] = 0;      // Make key 0 so that this vertex is picked as first vertex
@@ -130,17 +110,6 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
             //ROS_INFO("DS graph has unconnected components!");
             can_continue = false;
             continue;
-            
-            /*
-            for(u=0; u < V; u++)
-            if(mstSet[u] == false)
-                break;
-            if(u >= V) {
-                ROS_FATAL("Strange DS graph... abort computation of MST");
-                return;
-            }
-            parent[u] = -1;
-            */
         }
 
         // Add the picked vertex to the MST Set
@@ -164,10 +133,6 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
             }
         }
     }
-
-    // print the constructed MST
-    // printMST(parent, V, graph);
-    //int ds_mst_2[V][V];
     
     //reset MST
     for (int i = 0; i < V; i++)
@@ -179,12 +144,6 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
     {
         if(parent[i] < 0) {
             //ROS_INFO("node %d is not connected with other nodes", i);
-            /*
-            for(int j=0; j < V; j++) {
-                ds_mst[i][j] = -10;
-                ds_mst[j][i] = -10;
-            }
-            */
             continue;
         }
         if((unsigned int)i >= ds_mst.size() || parent[i] >= V || (unsigned int)parent[i] >= ds_mst[i].size()) {
@@ -201,22 +160,7 @@ void docking::compute_MST_2(int root)  // TODO(minor) check all functions relate
     for (int i = 0; i < V; i++)
         for (int j = 0; j < V; j++)
             ROS_DEBUG("(%d, %d): %d ", i, j, ds_mst[i][j]);
-    
 
-    /*
-    int k = 0;              // index of the closest recheable DS
-    int target = 4;         // the id of the DS that we want to reach
-    std::vector<int> path;  // sequence of nodes that from target leads to k;
-    i.e., if the vector is traversed in the
-                            // inverse order (from end to begin), it contains the
-    path to go from k to target
-
-    find_path(ds_mst, k, target, path);
-
-    std::vector<int>::iterator it;
-    for (it = path.begin(); it != path.end(); it++)
-        ROS_ERROR("%d - ", *it);
-        */
 }
 
 void docking::update_ds_graph() {
@@ -269,26 +213,6 @@ void docking::update_ds_graph() {
         graph_fs.open(graph_file.c_str(), std::ofstream::out | std::ofstream::trunc);
         
         graph_fs << "#sort according to DS ID" << std::endl;
-    //    for(int k=0; k < num_ds; k++) {
-    //        bool ok1 = false;
-    //        for(unsigned int i=0; i < ds.size(); i++)
-    //            if(ds.at(i).id == k) {
-    //                ok1 = true;
-    //                for(int h=0; h < num_ds; h++) {
-    //                    bool ok2 = false;
-    //                    for(unsigned int j=0; j < ds.size(); j++)
-    //                        if(ds.at(j).id == h) {
-    //                            ok2 = true;
-    //                            graph_fs << ds_graph[ds[i].id][ds[j].id] << "   ";
-    //                        }
-    //                    if(!ok2)
-    //                        log_major_error("not ok2");
-    //                }
-    //            }
-    //        graph_fs << std::endl;
-    //        if(!ok1)
-    //            log_major_error("not ok1");
-    //    }
         for(int i=0; i < num_ds; i++) {
             graph_fs << std::setw(5);
             for(int j=0; j < num_ds; j++)
@@ -321,12 +245,6 @@ void docking::timer_callback_recompute_ds_graph(const ros::TimerEvent &event) {
 void docking::compute_and_publish_path_on_ds_graph() {
 
     ROS_INFO("computing path on DS graph");
-
-//    jobs.clear();
-//    adhoc_communication::ExpFrontierElement job;
-//    job.x_coordinate = 20;
-//    job.y_coordinate = 20;
-//    jobs.push_back(job);
 
     jobs_mutex.lock();
     std::vector<adhoc_communication::ExpFrontierElement> jobs_local_list;
@@ -535,22 +453,6 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
         path_navigation_tries = 0;    
     }
     mutex_ds_graph.unlock();
-    
-//    if(path_navigation_tries > 4) {
-//        log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
-//        ROS_INFO("finished_bool = true");
-//        finished_bool = true;
-//        finalize();
-//        return;
-//    }
-         
-//    bool ds_found_with_mst = find_path_2(0, 2, path);
-//    for (int i = 0; i < ds_mst.size(); i++)
-//        for (int j = 0; j < ds_mst.size(); j++)
-//            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
-//    for (int i = 0; i < ds_mst.size(); i++)
-//        for (int j = 0; j < ds_mst.size(); j++)
-//            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
 
     if (ds_found_with_mst)
     {
@@ -586,6 +488,7 @@ void docking::simple_compute_and_publish_path_on_ds_graph() {
 //        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
 //        std_msgs::Empty msg;
 //        pub_finish.publish(msg);
+        ;
     }
 }
 
@@ -660,7 +563,6 @@ double min_dist = numeric_limits<int>::max();
                 closest_ds = &ds.at(i);
             }
         }
-      
       
         retry++;
     }

@@ -20,20 +20,29 @@ int main(int argc, char** argv)
     doc.setRobotStateManager(&rsm);
 
     doc.create_log_files();
+    
+    ROS_INFO("calling wait_for_explorer");
     doc.wait_for_explorer();  
+    
+    ROS_INFO("wait_battery_info");
     doc.wait_battery_info(); //only ok if threat thr_battery is active
+    
+    ROS_INFO("thr_ds_management");
     boost::thread thr_ds_management(boost::bind(&docking::ds_management, &doc));  
 
     // Frequency of loop
     double rate = 1; // Hz
     ros::Rate loop_rate(rate);
       
+    ROS_INFO("Entering main loop");
     while(ros::ok() && !doc.finished_bool){
         ros::spinOnce();
 
         doc.update_robot_position();
         doc.send_robot();
         doc.update_reamining_distance();
+// get_robot_state()
+// handle_robot_state()
 //        doc.recompute_MST();
 
         // Sleep for 1/rate seconds

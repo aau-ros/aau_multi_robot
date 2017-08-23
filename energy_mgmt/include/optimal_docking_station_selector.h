@@ -5,6 +5,7 @@ class OptimalDockingStationSelector {
 public:
     OptimalDockingStationSelector();
     void setDockingStationManager();
+    void getOptimalDockingStation();
 
 private:
     unsigned int num_robots;
