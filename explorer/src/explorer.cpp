@@ -593,6 +593,18 @@ class Explorer
 
             // TODO(minor) better while loops
             // do nothing while recharging
+            if(robot_state == robot_state::CHARGING_ABORTED || robot_state == robot_state::CHARGING_COMPLETED) {
+                if(robot_state == robot_state::CHARGING_ABORTED)
+                    ROS_INFO("charging aborted");
+
+                if(robot_state == robot_state::CHARGING_COMPLETED)
+                    ROS_INFO("charging completed");
+                    
+                update_robot_state_2(robot_state::LEAVING_DS);
+                continue;
+            }
+            
+            
             if (robot_state == robot_state::CHARGING)
             {
                 ROS_INFO("Waiting for battery to charge...");
@@ -1893,10 +1905,6 @@ class Explorer
 //            move_home_if_possible();
 //            finalize_exploration();
 //        }
-
-        if(robot_state == robot_state::CHARGING_ABORTED || robot_state == robot_state::CHARGING_COMPLETED) {
-            update_robot_state_2(robot_state::LEAVING_DS);
-        }
         
         if(robot_state == robot_state::CHARGING || robot_state == robot_state::IN_QUEUE)
             if(exploration != NULL) {
@@ -1953,9 +1961,8 @@ class Explorer
             ROS_INFO("call to get_robot_state failed");
 
         if(robot_state != srv.response.robot_state) {
-            ROS_INFO("robot state changed by another robot");
+            ROS_INFO("robot state changed by another node");
             update_robot_state_2(srv.response.robot_state);
-            return;
         } 
         
         // TODO(minor) do we need the spin?
