@@ -8,6 +8,7 @@ Server::Server()
     createServices();
     fillRobotStateStringsVector();
     createLogFile();
+    updateLogFile();
     ROS_INFO("Instance correctly created");
 }
 
@@ -65,7 +66,7 @@ void Server::createLogFile() {
 
     data_logger = new DataLogger("robot_state", robot_name, log_path);
     std::string s = "robot_state.log";
-    data_logger->createLogFile(s, "#sim_time,wall_time,robot_state");
+    data_logger->createLogFile(s, "#sim_time,wall_time,robot_state\n");
 }
 
 #pragma GCC diagnostic push

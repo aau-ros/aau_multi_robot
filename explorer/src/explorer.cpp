@@ -222,7 +222,7 @@ class Explorer
         
         pub_finished_exploration = nh2.advertise<std_msgs::Empty>("finished_exploration", 10);
         pub_finished_exploration_id = nh2.advertise<adhoc_communication::EmRobot>("finished_exploration_id", 10);
-        pub_next_ds = nh2.advertise<std_msgs::Empty>("next_ds", 1);
+        pub_next_ds = nh2.advertise<adhoc_communication::EmDockingStation>("next_ds", 1);
 
         ros::NodeHandle n;
 
@@ -1143,7 +1143,9 @@ class Explorer
 //                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
 //                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
                                     ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                    std_msgs::Empty msg;
+                                    adhoc_communication::EmDockingStation msg;
+                                    msg.x = optimal_ds_x;
+                                    msg.y = optimal_ds_y;
                                     pub_next_ds.publish(msg);
                                     update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
                                     
@@ -1163,7 +1165,9 @@ class Explorer
 //                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
 //                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
                                 ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                std_msgs::Empty msg;
+                                adhoc_communication::EmDockingStation msg;
+                                msg.x = optimal_ds_x;
+                                msg.y = optimal_ds_y;
                                 pub_next_ds.publish(msg);
                                 update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
                             }
@@ -1175,7 +1179,9 @@ class Explorer
                         {
                             ROS_INFO("Finished path traversal");
                             moving_along_path = false;
-                            std_msgs::Empty msg;
+                            adhoc_communication::EmDockingStation msg;
+                            msg.x = optimal_ds_x;
+                            msg.y = optimal_ds_y;
                             pub_next_ds.publish(msg);
                             
                             if(going_home) {
@@ -1630,10 +1636,10 @@ class Explorer
                 
                 ros::Time auction_start_time = ros::Time::now();
                 
-                if(moving_along_path) {
-                    log_major_error("'moving_along_path' should be false!!!");
-                    moving_along_path = false;
-                }
+//                if(moving_along_path) {
+//                    log_major_error("'moving_along_path' should be false!!!");
+//                    moving_along_path = false;
+//                }
                     
                 
                 while ( (robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3) && 

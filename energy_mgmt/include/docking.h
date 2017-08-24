@@ -398,7 +398,7 @@ class docking
     std::vector<int> path;
     int index_of_ds_in_path;
     
-    void next_ds_callback(const std_msgs::Empty &msg);
+    void next_ds_callback(const adhoc_communication::EmDockingStation &msg);
     
     ros::Subscriber sub_next_ds, sub_full_battery_info;
     

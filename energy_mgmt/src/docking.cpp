@@ -904,28 +904,32 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
             robot_state_manager->lockRobotState();
             if(can_update_ds() || waiting_to_discover_a_ds)
             {
-//                optimal_ds_mutex.lock();                
-
-                waiting_to_discover_a_ds = false;
-                finished_bool = false; //TODO(minor) find better place...
-//                changed = true;
-                set_optimal_ds(next_optimal_ds_id);
+                optimal_ds_mutex.lock();
                 
-                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
-                    log_major_error("OH NO!!!!!!!!!!!!");
-                    ROS_INFO("%d", get_optimal_ds_id());
+                if(!moving_along_path) {                
+
+                    waiting_to_discover_a_ds = false;
+                    finished_bool = false; //TODO(minor) find better place...
+    //                changed = true;
+                    set_optimal_ds(next_optimal_ds_id);
+                    
+                    if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
+                        log_major_error("OH NO!!!!!!!!!!!!");
+                        ROS_INFO("%d", get_optimal_ds_id());
+                    }
+
+                    old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
+                    
+                    /* Notify explorer about the optimal DS change */
+                    adhoc_communication::EmDockingStation msg_optimal;
+                    msg_optimal.id = get_optimal_ds_id();
+                    msg_optimal.x = get_optimal_ds_x();
+                    msg_optimal.y = get_optimal_ds_y();
+                    pub_new_optimal_ds.publish(msg_optimal);
+               
                 }
 
-                old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
-                
-                /* Notify explorer about the optimal DS change */
-                adhoc_communication::EmDockingStation msg_optimal;
-                msg_optimal.id = get_optimal_ds_id();
-                msg_optimal.x = get_optimal_ds_x();
-                msg_optimal.y = get_optimal_ds_y();
-                pub_new_optimal_ds.publish(msg_optimal);
-
-//                optimal_ds_mutex.unlock(); 
+                optimal_ds_mutex.unlock(); 
             }
             ROS_INFO("calling unlockState()");
             robot_state_manager->unlockRobotState();
@@ -1055,7 +1059,7 @@ void docking::handle_robot_state()
 {
     // TODO(minor) better update...
         
-    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::LEAVING_DS && next_robot_state != finished)) {
+    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::CHARGING_COMPLETED && next_robot_state != robot_state::CHARGING_ABORTED)) {
         log_major_error("invalid state after robot_state::CHARGING!!!");
         ROS_INFO("current state: robot_state::CHARGING");   
         ROS_INFO("next state: %d", next_robot_state);
@@ -1117,7 +1121,7 @@ void docking::handle_robot_state()
         need_to_charge = true;
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
-            ROS_ERROR("calling start_new_auction()");
+            ROS_INFO("calling start_new_auction()");
 //            start_new_auction(); 
 
         if(!optimal_ds_is_set())
@@ -1138,7 +1142,7 @@ void docking::handle_robot_state()
 		                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
 		        {
 		            ros::Duration(1).sleep();
-		            ROS_ERROR("calling start_new_auction()");
+		            ROS_INFO("calling start_new_auction()");
 //		            start_new_auction();
 		        }
 			}
@@ -1179,7 +1183,7 @@ void docking::handle_robot_state()
                                           // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
                 {
                     ros::Duration(10).sleep();
-                    ROS_ERROR("calling start_new_auction()");
+                    ROS_INFO("calling start_new_auction()");
 //                    start_new_auction();
                 }
             }
@@ -2282,7 +2286,7 @@ void docking::debug_timer_callback_2(const ros::TimerEvent &event)
 }
 
 //DONE+
-void docking::next_ds_callback(const std_msgs::Empty &msg)
+void docking::next_ds_callback(const adhoc_communication::EmDockingStation &msg)
 {
 //    boost::shared_lock< boost::shared_mutex > lock(ds_mutex);
     if(path.size() == 0)
@@ -2306,6 +2310,16 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
                 set_optimal_ds_given_index(i);    // TODO(minor) VERY BAD!!!!
                 break;
             }
+            
+            bool found = false;
+            for(unsigned int i=0; i< ds.size(); i++)
+                if(fabs(ds.at(i).x - msg.x) < 0.1 && fabs(ds.at(i).y - msg.y) < 0.1) {
+                    found = true;
+                    break;
+                }
+            if(!found)
+                log_major_error("the next DS is invalid!!!");
+                
     }
     else {
         if(moving_along_path) {
@@ -2314,6 +2328,19 @@ void docking::next_ds_callback(const std_msgs::Empty &msg)
         }
         else {
             log_major_error("we are not moving along path!!!");
+            optimal_ds_mutex.lock();
+            moving_along_path = true;
+            bool found = false;
+            for(unsigned int i=0; i< ds.size(); i++)
+                if(fabs(ds.at(i).x - msg.x) < 0.1 && fabs(ds.at(i).y - msg.y) < 0.1) {
+                    ROS_INFO("forcing optimal DS to be ds%d", ds.at(i).id);
+                    set_optimal_ds(ds.at(i).id);
+                    found = true;
+                    break;
+                }
+            if(!found)
+                log_major_error("the next DS is invalid!!! (2)");
+            optimal_ds_mutex.unlock();
         }
     }
 }
@@ -3226,7 +3253,7 @@ void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::Em
         if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
                                   // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
         {
-            ROS_ERROR("calling start_new_auction()");
+            ROS_INFO("calling start_new_auction()");
 //            start_new_auction();
         }
         else {
