@@ -116,6 +116,7 @@ class Explorer
     double traveled_distance, last_x, last_y;
     bool optima_ds_set;
     bool explorer_count;
+    int optimal_ds_id;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer charging_complete_ss;
@@ -1137,6 +1138,7 @@ class Explorer
                                     // we force to move to next ds
                                     retry_recharging_current_ds = 0;
                                     ds_path_counter++;
+//                                    optimal_ds_id = complex_path[ds_path_counter].id;
                                     optimal_ds_x = complex_path[ds_path_counter].x; 
                                     optimal_ds_y = complex_path[ds_path_counter].y; 
 //                                    double world_x, world_y;
@@ -1159,6 +1161,7 @@ class Explorer
                             } else {
                                 retry_recharging_current_ds = 0;
                                 ds_path_counter++;
+//                                optimal_ds_id = complex_path[ds_path_counter].id;
                                 optimal_ds_x = complex_path[ds_path_counter].x; 
                                 optimal_ds_y = complex_path[ds_path_counter].y; 
 //                                    double world_x, world_y;
@@ -1717,6 +1720,7 @@ class Explorer
                 }
                 if(i >= 100)
                     log_major_error("robot was saved from stucking in robot_state::CHECKING_VACANCY");
+
                 state_mutex.lock();
                 ROS_INFO("finished vacancy check");
                 if(robot_state == CHECKING_VACANCY)
@@ -3213,7 +3217,11 @@ class Explorer
         state_mutex.lock();
 
         if(robot_state == robot_state::CHECKING_VACANCY) { //TODO is it possible to received a message about vacancy when not performing vacancy checks? probably yes due to broadcasting
-            ROS_INFO("Target DS is (going to be) occupied by robot %d", msg.get()->used_by_robot_id);
+
+            if(optimal_ds_id != msg.get()->id)
+                log_major_error("optimal_ds_id != msg.get()->id");
+
+            ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
             //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
              //TODO this check should be already in update_robot_state() probably...
             update_robot_state_2(robot_state::GOING_IN_QUEUE);            
@@ -3238,10 +3246,10 @@ class Explorer
     {
 //        if (robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::GOING_CHECKING_VACANCY &&
 //                robot_state != robot_state::CHECKING_VACANCY) {
-//            optimal_ds_id = msg.get()->id;
             optima_ds_set = true;
             optimal_ds_x = msg.get()->x;
             optimal_ds_y = msg.get()->y;
+            optimal_ds_id = msg.get()->id;
             ROS_DEBUG("Storing new optimal DS position, which is placed at (%f, %f)", optimal_ds_x, optimal_ds_y);
 //            exploration->new_optimal_ds(optimal_ds_x, optimal_ds_y);
 //        } else {

@@ -32,17 +32,19 @@ private:
     double reauctioning_timeout, auction_timeout, extra_auction_time;
     unsigned int robot_state, prev_robot_state;
     bool new_victory;
-    unsigned int last_auction_id, optimal_ds_id;
+    unsigned int last_used_auction_id, optimal_ds_id, current_auction_id;
     ros::Time change_time;
     bool first_auction;
+    bool winner_of_new_auction;
 
     void loadParameters();
     void initializeVariables();
     void createSubscribers();
     unsigned int getRobotState();
     void setRobotState(unsigned int robot_state);
-    bool analyzeAuctionResult();
+    void analyzeAuctionResult();
     void newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    bool winnerOfNewAuction();
 };
 
 #endif // AUCTION_OBSERVER_H
