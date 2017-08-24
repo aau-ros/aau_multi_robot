@@ -34,8 +34,7 @@ void DataLogger::createDirectoryFromPathIfNotExists(std::string path) {
 }
 
 void DataLogger::createLogFile(const std::string &filename, const std::string &header) { //TODO raise exception
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
+    complete_file_path = complete_dir_path.append("/" + filename);
     fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs << header;
     fs.close();
@@ -50,24 +49,19 @@ void DataLogger::createLogFile(const std::string &filename, const std::string &h
 //}
 
 void DataLogger::createLogFile(const std::string &filename, std::stringstream &header) { //TODO raise exception
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
+    complete_file_path = complete_dir_path.append("/" + filename);
     fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs << header.str();
     fs.close();
 }
 
 void DataLogger::updateLogFile(const std::string &filename, const std::string &new_sample) {
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
     fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs << new_sample;
     fs.close();
 }
 
 void DataLogger::updateLogFile(const std::string &filename, std::stringstream &new_sample) {
-    std::string complete_file_path = complete_dir_path.append("/" + filename);
-    std::fstream fs;
     fs.open(complete_file_path.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs << new_sample.str();
     fs.close();

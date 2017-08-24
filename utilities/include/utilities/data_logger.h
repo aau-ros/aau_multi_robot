@@ -17,6 +17,8 @@ public:
 
 private:
     std::string complete_dir_path;
+    std::string complete_file_path;
+    std::fstream fs;
 
     std::string composeCompletePath(std::string node_name, std::string robot_name, std::string log_path);
     void createDirectoryFromPathIfNotExists(std::string path);
