@@ -1,6 +1,7 @@
 #include "utilities/data_logger.h"
 
 //TODO a lot of duplicated code
+//TODO maybe we could use RAII
 DataLogger::DataLogger(const std::string &node_name, const std::string &robot_name, const std::string &log_path) {
     complete_dir_path = composeCompletePath(node_name, robot_name, log_path);
     createDirectoryFromPathIfNotExists(complete_dir_path);
