@@ -1059,11 +1059,11 @@ void docking::handle_robot_state()
 {
     // TODO(minor) better update...
         
-    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::CHARGING_COMPLETED && next_robot_state != robot_state::CHARGING_ABORTED)) {
-        log_major_error("invalid state after robot_state::CHARGING!!!");
-        ROS_INFO("current state: robot_state::CHARGING");   
-        ROS_INFO("next state: %d", next_robot_state);
-    }
+//    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::CHARGING_COMPLETED && next_robot_state != robot_state::CHARGING_ABORTED)) {
+//        log_major_error("invalid state after robot_state::CHARGING!!!");
+//        ROS_INFO("current state: robot_state::CHARGING");   
+//        ROS_INFO("next state: %d", next_robot_state);
+//    }
     
     if(has_to_free_optimal_ds && next_robot_state == robot_state::LEAVING_DS) {
 //        set_optimal_ds_vacant(true);
