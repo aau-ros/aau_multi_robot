@@ -6121,3 +6121,25 @@ bool ExplorationPlanner::publish_negotiation_list(frontier_t negotiation_frontie
 
     first_negotiation_run = false;
 }
+
+std::vector< std::vector<int> > array_to_matrix(int* m, int rows, int cols) {
+    int i,j;
+    std::vector< std::vector<int> > r;
+    r.resize(rows, std::vector<int>(cols, 0));
+
+    for(i=0;i<rows;i++)
+    {
+        for(j=0;j<cols;j++)
+            r[i][j] = m[i*cols+j];
+    }
+    return r;
+}
+
+bool sortCluster(const ExplorationPlanner::cluster_t &lhs, const ExplorationPlanner::cluster_t &rhs)
+{
+    if(lhs.cluster_element.size() > 1 && rhs.cluster_element.size() > 1)
+    {
+        return lhs.cluster_element.front().dist_to_robot < rhs.cluster_element.front().dist_to_robot;
+    }
+    return false; //F
+}

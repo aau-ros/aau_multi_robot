@@ -9,6 +9,7 @@
 #include "robot_state_manager.h"
 #include "concrete_sender.h"
 
+//TODO use a "common main" for all main files
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "auction_mgmt");
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
     auction_observer.setRobotStateManager(&rsm);
     auction_observer.setTimeManager(&tm);
     
-    double rate = 10; // Hz
+    double rate = 1; // Hz //TODO parameter, and in common among the other mains
     ros::Rate loop_rate(rate);
     
 //    ros::AsyncSpinner spinner(20);

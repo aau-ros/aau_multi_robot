@@ -67,23 +67,23 @@ include_directories( # note: this path is relative to the CMakeLists.txt locatio
 )
 
 add_library(battery_simulate src/battery_simulate.cpp)
-add_library(docking src/docking.cpp)
+#add_library(docking src/docking.cpp)
 #add_library(time_manager src/time_manager.cpp)
 add_library(battery_state_updater src/battery_state_updater.cpp)
 add_library(concrete_bid_computer src/concrete_bid_computer.cpp)
 add_library(concrete_sender src/concrete_sender.cpp)
 add_library(auction_manager src/auction_manager.cpp)
 add_library(auction_observer src/auction_observer.cpp)
-add_library(docking_station_manager src/docking_station_manager.cpp)
+#add_library(docking_station_manager src/docking_station_manager.cpp)
 add_library(robot_state_manager2 src/robot_state_manager2.cpp)
 add_library(robot_state_manager_energy src/robot_state_manager.cpp)
-add_library(optimal_docking_station_selector src/optimal_docking_station_selector.cpp)
+#add_library(optimal_docking_station_selector src/optimal_docking_station_selector.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
-add_dependencies(docking roslib energy_mgmt_gencpp)
-add_dependencies(docking map_merger_cpp)
+#add_dependencies(docking roslib energy_mgmt_gencpp)
+#add_dependencies(docking map_merger_cpp)
 
-add_executable(ds_mgmt src/main.cpp)
+#add_executable(ds_mgmt src/main.cpp)
 add_executable(auction_mgmt src/auction_main.cpp)
 add_executable(battery_mgmt src/battery_main.cpp)
 
@@ -91,7 +91,7 @@ add_dependencies(robot_state_manager2 ${catkin_EXPORTED_TARGETS})
 add_dependencies(robot_state_manager_energy ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_bid_computer robot_state adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(concrete_sender adhoc_communication adhoc_communication_gencpp adhoc_communication_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(ds_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(ds_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(battery_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -117,19 +117,19 @@ target_link_libraries(battery_simulate
   ${catkin_LIBRARIES}
 )
 
-target_link_libraries(docking
-  auction_manager
-  docking_station_manager
-  ${Boost_LIBRARIES}
-  ${catkin_LIBRARIES}
-)
+#target_link_libraries(docking
+#  auction_manager
+#  docking_station_manager
+#  ${Boost_LIBRARIES}
+#  ${catkin_LIBRARIES}
+#)
 
-target_link_libraries(ds_mgmt
-  docking
-  robot_state_manager_energy
-  ${Boost_LIBRARIES}
-  ${catkin_LIBRARIES}
-)
+#target_link_libraries(ds_mgmt
+#  docking
+#  robot_state_manager_energy
+#  ${Boost_LIBRARIES}
+#  ${catkin_LIBRARIES}
+#)
 
 target_link_libraries(battery_mgmt
   #  battery
