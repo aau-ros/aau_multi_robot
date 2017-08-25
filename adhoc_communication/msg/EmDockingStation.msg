@@ -8,5 +8,3 @@ int32 used_by_robot_id
 uint32 request_id
 int32 request_by_robot_id
 bool has_EOs
-
-
