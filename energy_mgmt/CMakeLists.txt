@@ -78,6 +78,8 @@ add_library(auction_observer src/auction_observer.cpp)
 add_library(robot_state_manager2 src/robot_state_manager2.cpp)
 add_library(robot_state_manager_energy src/robot_state_manager.cpp)
 #add_library(optimal_docking_station_selector src/optimal_docking_station_selector.cpp)
+add_library(graph src/graph.cpp)
+add_library(path_finder src/path_finder.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 #add_dependencies(docking roslib energy_mgmt_gencpp)
@@ -95,6 +97,12 @@ add_dependencies(concrete_sender adhoc_communication adhoc_communication_gencpp 
 add_dependencies(battery_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(path_finder
+  graph
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
 
 target_link_libraries(auction_manager
   concrete_bid_computer
@@ -235,6 +243,33 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_LIBRARIES}
     )
     add_dependencies(concrete_bid_computer_utest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(graph_utest
+        test/graph_utest.launch
+        test/graph_utest.cpp        
+    )
+    target_link_libraries(graph_utest
+        graph
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(graph_utest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(path_finder_utest
+        test/path_finder_utest.launch
+        test/path_finder_utest.cpp        
+    )
+    target_link_libraries(path_finder_utest
+        path_finder
+        graph
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(path_finder_utest
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )

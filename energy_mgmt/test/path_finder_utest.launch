@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="path_finder_utest" type="path_finder_utest" />
+</launch>

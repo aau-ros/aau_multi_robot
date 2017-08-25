@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="graph_utest" type="graph_utest" />
+</launch>
