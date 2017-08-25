@@ -110,8 +110,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
             else {
                 ROS_INFO("checking auction result");
                 //TODO optimal_ds cannot be changed by docking during the following states... but we should put some sanity checks (or make integration testing)
-//                if(auction_manager->isRobotWinnerOfMostRecentAuction() && optimal_ds_id == auction_manager->getCurrentAuction().docking_station_id)
-                if(auction_manager->isRobotWinnerOfMostRecentAuction()) {
+                if(winnerOfNewAuction()) {
                     if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                         ROS_ERROR("this should NOT happen!");
                     setRobotState(robot_state::GOING_CHECKING_VACANCY);
@@ -124,7 +123,6 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
         if(robot_state == robot_state::IN_QUEUE) {
             ROS_INFO("in_queue state");
-//            if(auction_manager->isRobotWinnerOfMostRecentAuction() && optimal_ds_id == auction_manager->getCurrentAuction().docking_station_id)
             if(winnerOfNewAuction()) {
                 if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                     ROS_ERROR("this should NOT happen!");

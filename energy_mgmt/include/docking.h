@@ -530,6 +530,8 @@ class docking
     ros::ServiceClient get_robot_state_sc;
     ros::Subscriber sub_ds_with_EOs;
 
+    unsigned int request;
+
 //    AuctionManager auction_manager; //TODO
 
     /* DEBUGGING */

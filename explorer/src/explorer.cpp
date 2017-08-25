@@ -117,6 +117,7 @@ class Explorer
     bool optima_ds_set;
     bool explorer_count;
     int optimal_ds_id;
+    unsigned int request;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer charging_complete_ss;
@@ -188,6 +189,7 @@ class Explorer
         frontiers_found = false;
         optima_ds_set = false;
         explorer_count = 0;
+        request = 0;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -1930,6 +1932,9 @@ class Explorer
 
         if(robot_state == robot_state::MOVING_TO_FRONTIER) 
             already_navigated_DS_graph = false;
+
+        if(robot_state == robot_state::CHECKING_VACANCY) 
+            request++;
         
         ros::Duration time = ros::Time::now() - time_start;
 
@@ -3216,15 +3221,19 @@ class Explorer
     {
         state_mutex.lock();
 
-        if(robot_state == robot_state::CHECKING_VACANCY) { //TODO is it possible to received a message about vacancy when not performing vacancy checks? probably yes due to broadcasting
+        if(robot_state == robot_state::CHECKING_VACANCY) { 
+            if(robot_id == msg.get()->request_by_robot_id) {
+                ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
+                update_robot_state_2(robot_state::GOING_IN_QUEUE);
+            }
+            else 
+                ROS_DEBUG("reply to vacancy check not for this robot");
 
             if(optimal_ds_id != msg.get()->id)
                 log_major_error("optimal_ds_id != msg.get()->id");
 
-            ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
-            //checking_vacancy_timer.stop(); //TODO it doesn't work here... why???
-             //TODO this check should be already in update_robot_state() probably...
-            update_robot_state_2(robot_state::GOING_IN_QUEUE);            
+            if(request != msg.get()->request_id)
+                log_major_error("request_id != msg.get()->request_id");
         }
 
         state_mutex.unlock();

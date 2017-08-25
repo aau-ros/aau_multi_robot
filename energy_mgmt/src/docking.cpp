@@ -204,6 +204,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     group_name = "mc_robot_0";
     //group_name = "";
     my_counter = 0;
+    request = 0;
     old_optimal_ds_id = -100;
 //    old_target_ds_id = -200;
     next_optimal_ds_id = old_optimal_ds_id;
@@ -1111,6 +1112,9 @@ void docking::handle_robot_state()
         srv_msg.request.dst_robot = group_name;
 //        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
         srv_msg.request.docking_station.id = get_optimal_ds_id();  // target_ds, not best_ds!!!!!
+        request++;
+        srv_msg.request.docking_station.request_id = request;  // target_ds, not best_ds!!!!!
+        srv_msg.request.docking_station.request_by_robot_id = robot_id;  // target_ds, not best_ds!!!!!
         srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("adhoc_communication/check_vacancy");
         srv_msg.request.docking_station.header.sender_robot = robot_id;
         sc_send_docking_station.call(srv_msg);
@@ -1567,9 +1571,10 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
             srv_msg.request.dst_robot = group_name;
-//            srv_msg.request.docking_station.id = get_target_ds_id();
             srv_msg.request.docking_station.id = get_optimal_ds_id();
             srv_msg.request.docking_station.used_by_robot_id = robot_id;
+            srv_msg.request.docking_station.request_by_robot_id = msg.get()->request_by_robot_id;
+            srv_msg.request.docking_station.request_id = msg.get()->request_id;
             sc_send_docking_station.call(srv_msg);
             ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
         }
