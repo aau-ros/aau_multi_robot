@@ -164,9 +164,23 @@ TEST(TestAuctionObserver, testFromInQueueToGoingCheckingVacancy)
     EXPECT_EQ(robot_state::IN_QUEUE, rsm.getRobotState());
     EXPECT_FALSE(mam.auction_started_test);
 
+    ros::NodeHandle nh;
+    ros::Publisher new_optimal_ds_pub = nh.advertise<adhoc_communication::EmDockingStation>("explorer/new_optimal_ds", 10);
+    adhoc_communication::EmDockingStation msg;
+
+    msg.id = 9;
+    new_optimal_ds_pub.publish(msg);
+    ros::Duration(0.1).sleep();
+    ros::spinOnce();
+
     mam.winner_test = true;
+    mam.current_auction_test.docking_station_id = 9;
     ao.actAccordingToRobotStateAndAuctionResult();
     EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::IN_QUEUE);
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::IN_QUEUE, rsm.getRobotState());
 }
 
 TEST(TestAuctionObserver, testReauctioning)
@@ -226,8 +240,16 @@ TEST(TestAuctionObserver, testGoChargingOnlyIfNewAuctionWasWon)
     EXPECT_EQ(robot_state::GOING_CHECKING_VACANCY, rsm.getRobotState());
 
     rsm.setRobotState(robot_state::CHOOSING_ACTION);
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
     mam.current_auction_test.auction_id = 2;
     mam.winner_test = false;
+    ao.actAccordingToRobotStateAndAuctionResult();
+    EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
+
+    rsm.setRobotState(robot_state::CHOOSING_ACTION);
     ao.actAccordingToRobotStateAndAuctionResult();
     EXPECT_EQ(robot_state::COMPUTING_NEXT_GOAL, rsm.getRobotState());
 

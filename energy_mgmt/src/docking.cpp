@@ -460,17 +460,6 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
                                                                                                   // very well the
                                                                                                   // choices
 {
-    // Safety check on the received DS
-    if(msg.get()->id < 0) {
-        ROS_ERROR("Invalid DS id: %d", msg.get()->id);
-        log_major_error("received invalid DS from a robot...");
-        return;
-    }
-
-    if(!checkAndUpdateReceivedMessageId("check_vacancy", msg.get()->header.message_id, msg.get()->header.sender_robot))
-        log_major_error("missed a vacancy check message!!");
-        
-
     ROS_INFO("Received request for vacancy check for ds%d", msg.get()->id); //TODO(minor) complete
 
     /* If the request for vacancy check is not about the target DS of the robot,
@@ -484,6 +473,8 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
          * (or may be, or will be) occupying the DS */
         if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
             robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::LEAVING_DS)
+//        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
+//            robot_state == robot_state::CHECKING_VACANCY)
         {
             /* Print some debut text */
             if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING)
@@ -498,9 +489,10 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
             adhoc_communication::SendEmDockingStation srv_msg;
             srv_msg.request.topic = "explorer/adhoc_communication/reply_for_vacancy";
             srv_msg.request.dst_robot = group_name;
-//            srv_msg.request.docking_station.id = get_target_ds_id();
             srv_msg.request.docking_station.id = get_optimal_ds_id();
             srv_msg.request.docking_station.used_by_robot_id = robot_id;
+            srv_msg.request.docking_station.request_by_robot_id = msg.get()->request_by_robot_id;
+            srv_msg.request.docking_station.request_id = msg.get()->request_id;
             sc_send_docking_station.call(srv_msg);
             ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
         }

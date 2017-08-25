@@ -128,6 +128,8 @@ class docking
     void create_log_files();
     void ds_management();
     void setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {this->robot_state_manager = robot_state_manager;};
+    void get_robot_state();
+    void handle_robot_state();
 
   private:
     /**
@@ -396,7 +398,7 @@ class docking
     std::vector<int> path;
     int index_of_ds_in_path;
     
-    void next_ds_callback(const std_msgs::Empty &msg);
+    void next_ds_callback(const adhoc_communication::EmDockingStation &msg);
     
     ros::Subscriber sub_next_ds, sub_full_battery_info;
     
@@ -419,8 +421,6 @@ class docking
     float conservative_maximum_distance_with_return();
     float conservative_remaining_distance_one_way();
     float conservative_maximum_distance_one_way();
-    
-    float maximum_travelling_distance;
     
     void full_battery_info_callback(const explorer::battery_state::ConstPtr &msg);
     
@@ -525,12 +525,12 @@ class docking
     void conclude_auction();
     void send_optimal_ds();
     bool can_update_ds();
-    void get_robot_state();
-    void handle_robot_state();
     void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     ros::ServiceClient get_robot_state_sc;
     ros::Subscriber sub_ds_with_EOs;
+
+    unsigned int request;
 
 //    AuctionManager auction_manager; //TODO
 
