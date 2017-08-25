@@ -3225,15 +3225,17 @@ class Explorer
             if(robot_id == msg.get()->request_by_robot_id) {
                 ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
                 update_robot_state_2(robot_state::GOING_IN_QUEUE);
+                
+                if(optimal_ds_id != msg.get()->id)
+                log_major_error("optimal_ds_id != msg.get()->id");
+
+                if(request != msg.get()->request_id)
+                    log_major_error("request_id != msg.get()->request_id");
+                
             }
             else 
                 ROS_DEBUG("reply to vacancy check not for this robot");
 
-            if(optimal_ds_id != msg.get()->id)
-                log_major_error("optimal_ds_id != msg.get()->id");
-
-            if(request != msg.get()->request_id)
-                log_major_error("request_id != msg.get()->request_id");
         }
 
         state_mutex.unlock();

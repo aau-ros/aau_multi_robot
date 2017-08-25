@@ -176,6 +176,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sub_wait = nh.subscribe("explorer/im_ready", 1000, &docking::wait_for_explorer_callback, this);
     sub_path = nh.subscribe("error_path", 1000, &docking::path_callback, this);
     sub_ds_with_EOs = nh.subscribe("ds_with_EOs", 1000, &docking::ds_with_EOs_callback, this);
+    sub_reply_check_vacancy = nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &docking::reply_for_vacancy_callback, this);  // to receive replies for vacancy checks
     
     /* Publishers */
     pub_ds = nh.advertise<std_msgs::Empty>("docking_station_detected", 1000);
@@ -3619,4 +3620,21 @@ void docking::ds_with_EOs_callback(const adhoc_communication::EmDockingStation::
             ds.at(i).has_EOs = msg.get()->has_EOs;
             break;
         }
+}
+
+void docking::reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
+    if(robot_state == robot_state::CHECKING_VACANCY) { 
+        if(robot_id == msg.get()->request_by_robot_id) {
+            
+            if(optimal_ds_id != msg.get()->id)
+            log_major_error("docking: optimal_ds_id != msg.get()->id");
+
+            if(request != msg.get()->request_id)
+                log_major_error("docking: request_id != msg.get()->request_id");
+            
+        }
+        else 
+            ROS_DEBUG("reply to vacancy check not for this robot");
+
+    }
 }

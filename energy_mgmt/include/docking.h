@@ -528,9 +528,10 @@ class docking
     void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     ros::ServiceClient get_robot_state_sc;
-    ros::Subscriber sub_ds_with_EOs;
+    ros::Subscriber sub_ds_with_EOs, sub_reply_check_vacancy;
 
     unsigned int request;
+    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
 //    AuctionManager auction_manager; //TODO
 
