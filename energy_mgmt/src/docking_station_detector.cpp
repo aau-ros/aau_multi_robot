@@ -28,7 +28,10 @@ void DockingStationDetector::preloadDockingStations()
         new_ds.id = index;
         new_ds.world_x = x, new_ds.world_y = y;
         new_ds.timestamp = ros::Time::now().toSec();
+
+//        coordinate_translator->localToGlobal(x, y, new_ds.x, new_ds.y);
         abs_to_rel(x, y, &(new_ds.x), &(new_ds.y));
+
         new_ds.vacant = true;  // TODO(minor) param...
         undiscovered_dss.push_back(new_ds);
 
