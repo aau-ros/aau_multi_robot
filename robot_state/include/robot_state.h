@@ -25,8 +25,7 @@ namespace robot_state
         GOING_IN_QUEUE,
         IN_QUEUE,
         AUCTIONING,
-        // to be removed
-        auctioning_2,
+        auctioning_2, //to be removed, this and the following ones
         exploring_for_graph_navigation,
         stopped,
         stuck,

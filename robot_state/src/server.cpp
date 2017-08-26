@@ -8,6 +8,7 @@ Server::Server()
     createServices();
     fillRobotStateStringsVector();
     createLogFile();
+    updateLogFile();
     ROS_INFO("Instance correctly created");
 }
 
@@ -65,7 +66,7 @@ void Server::createLogFile() {
 
     data_logger = new DataLogger("robot_state", robot_name, log_path);
     std::string s = "robot_state.log";
-    data_logger->createLogFile(s, "#sim_time,wall_time,robot_state");
+    data_logger->createLogFile(s, "#sim_time,wall_time,robot_state\n");
 }
 
 #pragma GCC diagnostic push
@@ -102,8 +103,8 @@ void Server::transitionToNextStateIfPossible(robot_state::SetRobotState::Request
     if(isNewStateValid(req.robot_state)) {
         //TODO check if the transition is a valid one... but here or in testing???
         ROS_DEBUG("Robot state transiction: %s -> %s", robotStateEnumToString(robot_state).c_str(), robotStateEnumToString(req.robot_state).c_str());
-        updateLogFile();
         robot_state = req.robot_state;
+        updateLogFile();
         res.set_succeeded = true;
     }
     else {

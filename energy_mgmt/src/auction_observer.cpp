@@ -81,12 +81,11 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
     ROS_INFO("locking");
     robot_state_manager->lockRobotState();
 
-    analyzeAuctionResult();
-
-    robot_state = getRobotState();
-
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
+
+        analyzeAuctionResult();
+        robot_state = getRobotState();
 
         if(robot_state == robot_state::CHOOSING_ACTION) {
             ROS_INFO("choosing_next_action state");
