@@ -9,6 +9,15 @@
 #include "battery_state_updater.h"
 #include "robot_state_manager.h"
 
+#include <std_msgs/Empty.h>
+
+bool finished_bool;
+
+void finished_exploration_callback(const std_msgs::Empty msg) {
+    ROS_INFO("finished_exploration_callback");
+    finished_bool = true;
+}
+
 int main(int argc, char** argv)
 {
     std::string node = "battery_mgmt";
@@ -53,12 +62,15 @@ int main(int argc, char** argv)
     bat.setBatteryStateUpdater(&bsu);
     bat.createLogDirectory();
     bat.createLogFiles();
+    
+    ros::Subscriber sub = nh.subscribe("finished_exploration", 10 , &finished_exploration_callback);
+    finished_bool = false;
 
     double rate = 1; // Hz
     ros::Rate loop_rate(rate);
 
     ROS_INFO("Starting main loop");
-    while(ros::ok()){
+    while(ros::ok() && !finished_bool){
         ROS_INFO("Starting new iteration");
         ros::spinOnce();
   
@@ -69,7 +81,8 @@ int main(int argc, char** argv)
         loop_rate.sleep(); // sleep for 1/rate seconds
     }
     
-    ROS_INFO("Exiting main loop: shutting down");   
+    ROS_INFO("Exiting main loop: shutting down");
+    ros::Duration(3).sleep();
     ros::shutdown();
         
     return 0;

@@ -49,12 +49,16 @@ int main(int argc, char** argv)
         loop_rate.sleep();        
         ROS_INFO("End of main loop");
     }
+    
+    thr_ds_management.join();
+    thr_ds_management.interrupt();
 
     ROS_INFO("shutting down...");
+    ros::Duration(3).sleep();
     ros::shutdown();
     
-    while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
-        ros::Duration(10).sleep();
+//    while(ros::ok()) //just to keep the node going but without doing nothing... used for collecting simulation data, can be removed otherwise
+//        ros::Duration(10).sleep();
         
     return 0;
 }

@@ -9,6 +9,15 @@
 #include "robot_state_manager.h"
 #include "concrete_sender.h"
 
+#include <std_msgs/Empty.h>
+
+bool finished_bool;
+
+void finished_exploration_callback(const std_msgs::Empty msg) {
+    ROS_INFO("finished_exploration_callback");
+    finished_bool = true;
+}
+
 //TODO use a "common main" for all main files
 int main(int argc, char** argv)
 {
@@ -47,6 +56,9 @@ int main(int argc, char** argv)
     auction_observer.setRobotStateManager(&rsm);
     auction_observer.setTimeManager(&tm);
     
+    ros::Subscriber sub = nh.subscribe("finished_exploration", 10 , &finished_exploration_callback);
+    finished_bool = false;
+    
     double rate = 1; // Hz //TODO parameter, and in common among the other mains
     ros::Rate loop_rate(rate);
     
@@ -56,7 +68,7 @@ int main(int argc, char** argv)
     ros::Time last_udpate_llh = ros::Time::now();
     
     ROS_INFO("Starting main loop");
-    while(ros::ok()){
+    while(ros::ok() && !finished_bool){
         ros::spinOnce();
         auction_observer.actAccordingToRobotStateAndAuctionResult();
         auction_observer.sanityChecks();
@@ -75,6 +87,7 @@ int main(int argc, char** argv)
     
 //    spinner.stop();
     
+    ros::Duration(3).sleep();
     ros::shutdown();
         
     return 0;

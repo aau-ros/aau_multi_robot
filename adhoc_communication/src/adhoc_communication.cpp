@@ -798,16 +798,9 @@ int main(int argc, char **argv)
         ros::spinOnce();
     }
     
-    ros::Duration(10).sleep();
-    ros::shutdown();
-    
-    while (ros::ok())
-    {
-        ros::Duration(10).sleep();
-    }
-
-
+    ros::Duration(3).sleep();
     ROS_INFO("Node terminating...");
+    ros::shutdown();
 
     return 0;
 }

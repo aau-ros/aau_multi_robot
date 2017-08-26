@@ -533,6 +533,7 @@ class docking
 
     unsigned int request;
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
+    bool already_sent_vacancy_check_request;
 
 //    AuctionManager auction_manager; //TODO
 

@@ -229,6 +229,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     waiting_to_discover_a_ds = false;
     changed_state_time = ros::Time::now();
     test_mode = false;
+    already_sent_vacancy_check_request = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -247,7 +248,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     ROS_INFO("Instance of Docking class correctly created");
     
-//    sub_finalize_exploration = nh.subscribe("finalize_exploration", 10 , &docking::finalize_exploration_callback, this);
+    sub_finalize_exploration = nh.subscribe("finished_exploration", 10 , &docking::finalize_exploration_callback, this);
     
     DsGraph mygraph;
     mygraph.addEdge(1,2,10);
@@ -282,10 +283,10 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
 }
 
-//void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
-//    ROS_INFO("finalize_exploration_callback");
-//    finished_bool = true;
-//}
+void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
+    ROS_INFO("finished_exploration_callback");
+    finished_bool = true;
+}
 
 
 void docking::wait_for_explorer() {
@@ -1063,12 +1064,6 @@ double docking::distance(double start_x, double start_y, double goal_x, double g
 void docking::handle_robot_state()
 {
     // TODO(minor) better update...
-        
-//    if(robot_state == robot_state::CHARGING && (next_robot_state != robot_state::CHARGING_COMPLETED && next_robot_state != robot_state::CHARGING_ABORTED)) {
-//        log_major_error("invalid state after robot_state::CHARGING!!!");
-//        ROS_INFO("current state: robot_state::CHARGING");   
-//        ROS_INFO("next state: %d", next_robot_state);
-//    }
     
     if(has_to_free_optimal_ds && next_robot_state == robot_state::LEAVING_DS) {
 //        set_optimal_ds_vacant(true);
@@ -1078,12 +1073,6 @@ void docking::handle_robot_state()
         
     if (next_robot_state != robot_state::GOING_CHECKING_VACANCY) //TODO(minor) very bad... maybe in if(... == robot_state::CHECKING_VACANCY) would be better...
         going_to_ds = false;
-        
-//    if (has_to_free_optimal_ds && next_robot_state != fully_charged && next_robot_state != robot_state::LEAVING_DS) //TODO maybe since we put the DS as occupied only when we start charging, we could put it as free when we leave it already (put are we sure that this doens't cause problems somewhere else?)... although the robot_state::LEAVING_DS state is so short that it makes almost no different
-//     {
-//            has_to_free_optimal_ds = false;
-//            set_optimal_ds_vacant(true);
-//    }
 
     if (next_robot_state == robot_state::IN_QUEUE)
     {
@@ -1103,25 +1092,23 @@ void docking::handle_robot_state()
     {
         ;  // ROS_ERROR("\n\t\e[1;34m going checking vacancy!!!\e[0m");
     }
-    else if (next_robot_state == robot_state::CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY)
+    else if (next_robot_state == robot_state::CHECKING_VACANCY)
     {
-//        if(get_target_ds_id() < 0 || get_target_ds_id() >= num_ds) {
-//            log_major_error("sending invalid DS id 5!!!");
-//            ROS_ERROR("%d",  get_target_ds_id());  
-//        }
-    
-        ;  // ROS_ERROR("\n\t\e[1;34m checking vacancy!!!\e[0m");
-        adhoc_communication::SendEmDockingStation srv_msg;
-        srv_msg.request.topic = "adhoc_communication/check_vacancy";
-        srv_msg.request.dst_robot = group_name;
-//        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
-        srv_msg.request.docking_station.id = get_optimal_ds_id();  // target_ds, not best_ds!!!!!
-        request++;
-        srv_msg.request.docking_station.request_id = request;  // target_ds, not best_ds!!!!!
-        srv_msg.request.docking_station.request_by_robot_id = robot_id;  // target_ds, not best_ds!!!!!
-        srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("adhoc_communication/check_vacancy");
-        srv_msg.request.docking_station.header.sender_robot = robot_id;
-        sc_send_docking_station.call(srv_msg);
+        if(!already_sent_vacancy_check_request) {
+            already_sent_vacancy_check_request = true;
+            
+            adhoc_communication::SendEmDockingStation srv_msg;
+            srv_msg.request.topic = "adhoc_communication/check_vacancy";
+            srv_msg.request.dst_robot = group_name;
+    //        srv_msg.request.docking_station.id = get_target_ds_id();  // target_ds, not best_ds!!!!!
+            srv_msg.request.docking_station.id = get_optimal_ds_id();  // target_ds, not best_ds!!!!!
+            request++;
+            srv_msg.request.docking_station.request_id = request;  // target_ds, not best_ds!!!!!
+            srv_msg.request.docking_station.request_by_robot_id = robot_id;  // target_ds, not best_ds!!!!!
+            srv_msg.request.docking_station.header.message_id = getAndUpdateMessageIdForTopic("adhoc_communication/check_vacancy");
+            srv_msg.request.docking_station.header.sender_robot = robot_id;
+            sc_send_docking_station.call(srv_msg);
+        }
     }
     else if (next_robot_state == robot_state::AUCTIONING)
     {
@@ -1233,6 +1220,22 @@ void docking::handle_robot_state()
     {
         ;
     }
+    else if (next_robot_state == CHARGING_COMPLETED)
+    {
+        ;
+    }
+    else if (next_robot_state == CHARGING_ABORTED)
+    {
+        ;
+    }
+    else if (next_robot_state == auctioning_3)
+    {
+        ;
+    }
+    else if (next_robot_state == CHOOSING_ACTION)
+    {
+        ;
+    }
     else
     {
         ROS_FATAL("\n\t\e[1;34m none of the above!!!\e[0m");
@@ -1240,6 +1243,9 @@ void docking::handle_robot_state()
     }
     
     
+    if (next_robot_state != robot_state::CHECKING_VACANCY) {
+        already_sent_vacancy_check_request = false;
+    }
     
     
 //    if(robot->state == robot_state::CHARGING && next_robot_state != robot_state::CHARGING)
@@ -1547,49 +1553,45 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
     }
 
     if(!checkAndUpdateReceivedMessageId("check_vacancy", msg.get()->header.message_id, msg.get()->header.sender_robot))
-        log_major_error("missed a vacancy check message!!");
-        
+        log_major_error("missed a vacancy check message!!");     
 
     ROS_INFO("Received request for vacancy check for ds%d", msg.get()->id); //TODO(minor) complete
 
-//    /* If the request for vacancy check is not about the target DS of the robot,
-//     * for sure the robot is not occupying it
-//     */
-////    if (target_ds_is_set() && msg.get()->id == get_target_ds_id())
-//    if (optimal_ds_is_set() && msg.get()->id == get_optimal_ds_id())
+    /* If the request for vacancy check is not about the target DS of the robot,
+     * for sure the robot is not occupying it
+     */
+    if (optimal_ds_is_set() && msg.get()->id == get_optimal_ds_id())
 
-//        /* If the robot is going to or already charging, or if it is going to check
-//         * already checking for vacancy, it is
-//         * (or may be, or will be) occupying the DS */
-//        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
-//            robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::LEAVING_DS)
-////        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
-////            robot_state == robot_state::CHECKING_VACANCY)
-//        {
-//            /* Print some debut text */
-//            if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING)
-//                ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
-//            else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY)
-//                ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
-//            else if (robot_state == robot_state::LEAVING_DS)
-//                ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
+        /* If the robot is going to or already charging, or if it is going to check
+         * already checking for vacancy, it is
+         * (or may be, or will be) occupying the DS */
+        if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
+            robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::CHARGING_ABORTED)
+        {
+            /* Print some debut text */
+            if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING)
+                ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
+            else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY)
+                ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
+            else if (robot_state == robot_state::LEAVING_DS)
+                ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
 
-//            /* Reply to the robot that asked for the check, telling it that the DS is
-//             * occupied */
-//            adhoc_communication::SendEmDockingStation srv_msg;
-//            srv_msg.request.topic = "adhoc_communication/reply_for_vacancy";
-//            srv_msg.request.dst_robot = group_name;
-//            srv_msg.request.docking_station.id = get_optimal_ds_id();
-//            srv_msg.request.docking_station.used_by_robot_id = robot_id;
-//            srv_msg.request.docking_station.request_by_robot_id = msg.get()->request_by_robot_id;
-//            srv_msg.request.docking_station.request_id = msg.get()->request_id;
-//            sc_send_docking_station.call(srv_msg);
-//            ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
-//        }
-//        else
-//            ROS_DEBUG("target ds, but currently not used by the robot");
-//    else
-//        ROS_DEBUG("robot is not targetting that ds");
+            /* Reply to the robot that asked for the check, telling it that the DS is
+             * occupied */
+            adhoc_communication::SendEmDockingStation srv_msg;
+            srv_msg.request.topic = "adhoc_communication/reply_for_vacancy";
+            srv_msg.request.dst_robot = group_name;
+            srv_msg.request.docking_station.id = get_optimal_ds_id();
+            srv_msg.request.docking_station.used_by_robot_id = robot_id;
+            srv_msg.request.docking_station.request_by_robot_id = msg.get()->request_by_robot_id;
+            srv_msg.request.docking_station.request_id = msg.get()->request_id;
+            sc_send_docking_station.call(srv_msg);
+            ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
+        }
+        else
+            ROS_DEBUG("target ds, but currently not used by the robot");
+    else
+        ROS_DEBUG("robot is not targetting that ds");
 }
 
 void docking::create_log_files()
@@ -3451,13 +3453,8 @@ void docking::free_ds(int id) {
 
     ROS_INFO("Updated own information about ds%d state (%s -> %s)", get_optimal_ds_id(), "occupied", "vacant");
 
-//    update_l1();
 }
 
-//void docking::finished_exploration_callback(const std_msgs::Empty msg) {
-//    ROS_INFO("finished_exploration_callback");
-//    finished_bool = true;
-//}
 
 void docking::spinOnce() {
     spinOnce();

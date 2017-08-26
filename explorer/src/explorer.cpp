@@ -97,7 +97,7 @@ class Explorer
     float auction_timeout, checking_vacancy_timeout;
     bool already_navigated_DS_graph;
     int free_cells_count, discovered_free_cells_count;
-    float percentage;
+    float percentage, percentage_2;
     int failures_going_to_DS;
     int approximate_success;
     bool going_home, checked_percentage;
@@ -443,7 +443,7 @@ class Explorer
         enum_string.push_back("auctioning_3");
         enum_string.push_back("finished");
         
-        checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
+//        checking_vacancy_timer = nh.createTimer(ros::Duration(checking_vacancy_timeout), &Explorer::vacancy_callback, this, true, false);
 
     }
 
@@ -1547,6 +1547,7 @@ class Explorer
             if(robot_state == robot_state::INITIALIZING) {
                 ROS_INFO("end initialization");
                 update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                indicateSimulationEnd();
                 continue;
             }
             
@@ -1708,10 +1709,7 @@ class Explorer
                 //ROS_ERROR("\n\t\e[1;34mchecking_for_vacancy...\e[0m");
                 
                 ROS_DEBUG("Start checking for DS vacancy (timeout: %.1fs)", checking_vacancy_timeout);
-//                checking_vacancy_timer.stop();
-//                checking_vacancy_timer.setPeriod(ros::Duration(checking_vacancy_timeout), true);
-//                checking_vacancy_timer.start();
-
+                
                 ros::Time start_check_time = ros::Time::now();
 
                 // TODO(minor) use a bterr way!!!
@@ -1731,9 +1729,6 @@ class Explorer
                 if(robot_state == CHECKING_VACANCY)
                     update_robot_state_2(robot_state::GOING_CHARGING);
                 state_mutex.unlock();
-                
-                // Stop the timer, since I could have exited the while loop above due to a occupancy message
-//                checking_vacancy_timer.stop();
                 
             }
 
@@ -1901,16 +1896,16 @@ class Explorer
         robot_state = static_cast<robot_state::robot_state_t>(new_state);
 //        pub_robot.publish(msg);
 
-        if(percentage >= 100 && !checked_percentage && robot_state != finished) {
-            if(percentage > 100.1) {
+        if(percentage_2 >= 100 && !checked_percentage && robot_state != finished) {
+            if(percentage_2 > 100.1) {
                 log_major_error("Exploration percentage is higher that 100.0");
-                ROS_ERROR("percentage: %.1f", percentage);
+                ROS_ERROR("percentage: %.1f", percentage_2);
             }
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             checked_percentage = true;
         }
         
-        if(robot_state != finished && (percentage >= 95.0 || (percentage >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+        if(robot_state != finished && (percentage_2 >= 95.0 || (percentage_2 >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
             finalize_exploration();
         }
         
@@ -2047,7 +2042,7 @@ class Explorer
         ros::Publisher publisher_speed = nh_pub_speed.advertise<explorer::Speed>("avg_speed", 1);
 
         fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv << "#sim_time,wall_time,global_map_progress_percentage,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
+        fs_csv << "#sim_time,wall_time,global_map_progress_percentage,percentage_2,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
                   "traveled_distance,"
                   "global_map_explored_cells,discovered_free_cells_count,"
                   "local_map_explored_cells,total_number_of_free_cells"
@@ -2080,11 +2075,14 @@ class Explorer
             last_moving_instant = ros::Time::now().toSec();
             
             map_progress_during_exploration.push_back(map_progress);
-            if(free_cells_count <= 0 || discovered_free_cells_count <= 0)
+            if(free_cells_count <= 0 || discovered_free_cells_count <= 0 || map_progress.global_freespace < 0) {
                 percentage = -1;
-            else
+                percentage_2 = -1;
+            }
+            else {
                 percentage = (float) (discovered_free_cells_count * 100) / free_cells_count; //this makes sense only if the environment has no cell that are free but unreachable (e.g.:if there is rectangle in the environment, if it's surface is not completely black, the cells inside its perimeters are considered as free cells but they are obviously unreachable...); to solve this problem we would need a smart way to exclude cells that are free but unreachable...
-
+                percentage_2 = (float) (map_progress.global_freespace * 100) / free_cells_count;
+            }
             //ROS_ERROR("%.0f", map_progress.global_freespace);
             //ROS_ERROR("%d", free_cells_count);
             //ROS_ERROR("%f", percentage);
@@ -2099,7 +2097,7 @@ class Explorer
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
             fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << "," 
-                   << percentage << "," << exploration_travel_path_global << ","
+                   << percentage << "," << percentage_2 << "," << exploration_travel_path_global << ","
                    << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
                    << map_progress.local_freespace << "," << free_cells_count
@@ -2141,9 +2139,9 @@ class Explorer
 
     int global_costmap_size()
     {
-        //occupancy_grid_global = costmap2d_global->getCostmap()->getCharMap();
-        //int num_map_cells_ =
-        //    costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY();
+//        occupancy_grid_global = costmap2d_global->getCostmap()->getCharMap();
+//        int num_map_cells_ =
+//            costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY();
         int free = 0;
 
         /*
@@ -2469,15 +2467,13 @@ class Explorer
         } else
             ROS_INFO("Status file created successfully");
         
-        if(percentage < 90 && robot_state != stuck) {
+        if(percentage < 90 && percentage_2 < 90 && robot_state != stuck) {
             log_major_error("low percentage (<90%)!!!");
         }
         
-        if(percentage < 95 && robot_state != stuck) {
+        if(percentage < 95 && percentage_2 < 95 && robot_state != stuck) {
             log_minor_error("percentage < 95%");
         }
-        
-        ros::Duration(10).sleep();
         
         adhoc_communication::EmRobot msg;
         msg.id = robot_id;
@@ -2486,8 +2482,8 @@ class Explorer
         std_msgs::Empty msg2;
         pub_finished_exploration.publish(msg2);
         
+        ros::Duration(3).sleep();
         exploration_finished = true;
-        
     }
 
     // TODO(minor) interesting function
@@ -3656,7 +3652,7 @@ class Explorer
                         */
                             ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
                             ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                            if(percentage > 90)
+                            if(percentage_2 > 90)
                                 log_minor_error("deadlock / slow execution / waiting for auction result? BUT with percentage>90%!");
                             else
                                 log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
