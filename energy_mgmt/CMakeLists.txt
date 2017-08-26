@@ -183,6 +183,21 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
 
+    add_library(mock_docking_station_manager test/mock_docking_station_manager.cpp)
+    target_link_libraries(mock_docking_station_manager ${catkin_LIBRARIES})
+    add_dependencies(mock_docking_station_manager
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_library(mock_distance_computer test/mock_distance_computer.cpp)
+    target_link_libraries(mock_distance_computer ${catkin_LIBRARIES})
+    add_dependencies(mock_distance_computer
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+
     #TODO use sub-cmakelists files
     add_rostest_gtest(battery_state_updater_utest
         test/battery_state_updater_utest.launch # apparently the launch file must be the first, or won't compile
@@ -276,6 +291,21 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_LIBRARIES}
     )
     add_dependencies(path_finder_utest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(docking_station_detector_utest
+        test/docking_station_detector_utest.launch
+        test/docking_station_detector_utest.cpp        
+    )
+    target_link_libraries(docking_station_detector_utest
+        docking_station_detector
+        mock_docking_station_manager
+        mock_distance_computer
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(docking_station_detector_utest
         ${PROJECT_NAME}_generate_messages_cpp
         ${catkin_EXPORTED_TARGETS}
     )

@@ -1,3 +1,6 @@
+#ifndef DS_STRUCTS_H
+#define DS_STRUCTS_H
+
 struct ds_t
 {
     int id;
@@ -7,3 +10,5 @@ struct ds_t
     double timestamp;
     bool has_EOs;
 };
+
+#endif // DS_STRUCTS_H

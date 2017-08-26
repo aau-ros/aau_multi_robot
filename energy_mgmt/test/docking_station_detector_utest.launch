@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="docking_station_detector_utest" type="docking_station_detector_utest" >
+        <rosparam file="$(find energy_mgmt)/test/docking_stations.yaml" command="load"/>
+    </test>    
+</launch>
