@@ -41,6 +41,7 @@
 #include <robot_state/robot_state_management.h>
 #include "robot_state/SetRobotState.h"
 #include "robot_state/GetRobotState.h"
+#include <std_srvs/Empty.h>
 
 #ifdef PROFILE
 #include "google/profiler.h"
@@ -117,10 +118,10 @@ class Explorer
     bool optima_ds_set;
     bool explorer_count;
     int optimal_ds_id;
-    unsigned int request;
+    unsigned int request_id;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
-    ros::ServiceServer charging_complete_ss;
+    ros::ServiceServer ss_check_vacancy;
 
     /*******************
      * CLASS FUNCTIONS *
@@ -189,7 +190,7 @@ class Explorer
         frontiers_found = false;
         optima_ds_set = false;
         explorer_count = 0;
-        request = 0;
+        request_id = 0;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -206,9 +207,11 @@ class Explorer
         has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
         
         /* Robot state subscribers */
-        sub_check_vacancy =
-            nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
-                         this);  // to receive replies for vacancy checks
+//        sub_check_vacancy =
+//            nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
+//                         this);  // to receive replies for vacancy checks
+
+        ss_check_vacancy = nh2.advertiseService("explorer/reply_for_vacancy", &Explorer::reply_for_vacancy_callback_2, this);
 
         // TODO(minor) improve this
         sub_lost_own_auction = nh.subscribe("lost_own_auction", 10, &Explorer::lost_own_auction_callback,
@@ -1934,7 +1937,7 @@ class Explorer
             already_navigated_DS_graph = false;
 
         if(robot_state == robot_state::CHECKING_VACANCY) 
-            request++;
+            request_id++;
         
         ros::Duration time = ros::Time::now() - time_start;
 
@@ -3217,28 +3220,41 @@ class Explorer
         ROS_ERROR("shouldn't be called anymore!");
     }
 
-    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
+//    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
+//    {
+//        state_mutex.lock();
+
+//        if(robot_state == robot_state::CHECKING_VACANCY) { 
+////            if(robot_id == msg.get()->request_by_robot_id) {
+////                ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
+//                update_robot_state_2(robot_state::GOING_IN_QUEUE);
+//                
+////                if(optimal_ds_id != msg.get()->id)
+////                log_major_error("optimal_ds_id != msg.get()->id");
+
+////                if(request_id != msg.get()->request_id)
+////                    log_major_error("request_id != msg.get()->request_id");
+//                
+//            }
+//            else 
+//                ROS_DEBUG("reply to vacancy check not for this robot");
+
+//        }
+
+//        state_mutex.unlock();
+//    }
+
+    bool reply_for_vacancy_callback_2(std_srvs::Empty::Response &res, std_srvs::Empty::Request &req)
     {
         state_mutex.lock();
+        
+        ROS_INFO("reply_for_vacancy_callback_2");
 
-        if(robot_state == robot_state::CHECKING_VACANCY) { 
-            if(robot_id == msg.get()->request_by_robot_id) {
-                ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
-                update_robot_state_2(robot_state::GOING_IN_QUEUE);
-                
-                if(optimal_ds_id != msg.get()->id)
-                log_major_error("optimal_ds_id != msg.get()->id");
-
-                if(request != msg.get()->request_id)
-                    log_major_error("request_id != msg.get()->request_id");
-                
-            }
-            else 
-                ROS_DEBUG("reply to vacancy check not for this robot");
-
-        }
+        if(robot_state == robot_state::CHECKING_VACANCY)
+            update_robot_state_2(robot_state::GOING_IN_QUEUE);
 
         state_mutex.unlock();
+        return true;
     }
     
     void vacancy_callback(const ros::TimerEvent &event) {

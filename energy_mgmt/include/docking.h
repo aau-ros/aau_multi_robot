@@ -43,6 +43,7 @@
 #include "robot_state/GetRobotState.h"
 #include "robot_state/robot_state_management.h"
 #include "robot_state_manager_interface.h"
+#include <std_srvs/Empty.h>
 
 #include "gtest/gtest_prod.h"
 
@@ -527,7 +528,7 @@ class docking
     bool can_update_ds();
     void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
-    ros::ServiceClient get_robot_state_sc;
+    ros::ServiceClient get_robot_state_sc, sc_reply_vacancy;
     ros::Subscriber sub_ds_with_EOs, sub_reply_check_vacancy;
 
     unsigned int request;
