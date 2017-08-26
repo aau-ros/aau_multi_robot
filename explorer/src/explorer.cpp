@@ -2044,12 +2044,13 @@ class Explorer
         fs_csv << "#sim_time,wall_time,global_map_progress_percentage,percentage_2,exploration_travel_path_global_meters," //TODO(minor) maybe there is a better way to obtain exploration_travel_path_global_meters without modifying ExplorationPlanner...
                   "traveled_distance,"
                   "global_map_explored_cells,discovered_free_cells_count,"
-                  "local_map_explored_cells,total_number_of_free_cells"
+                  "total_number_of_free_cells"
 //                  "recharge_cycles,energy_consumption,frontier_selection_strategy"
                << std::endl;
         fs_csv.close();
         
         double last_moving_instant = 0;
+        ros::Time last_computation = ros::Time(0);
 
         while (ros::ok() && !exploration_finished)
         {
@@ -2062,9 +2063,13 @@ class Explorer
 
             double time = ros::Time::now().toSec() - time_start.toSec();
 
-            map_progress.global_freespace = global_costmap_size();
+            if(ros::Time::now() - last_computation >= ros::Duration(3)) {
+                map_progress.global_freespace = global_costmap_size();
+                last_computation = ros::Time::now();
+            }
+            
             //map_progress.global_freespace = discovered_free_cells_count;
-            map_progress.local_freespace = local_costmap_size();
+//            map_progress.local_freespace = local_costmap_size();
             map_progress.time = time;
             
             if(robot_is_moving()) { //notice that since the loop is executed every N seconds, we won't have a very precise value, but given that we use approximation in computing the remaining battery life it is ok...
@@ -2099,7 +2104,7 @@ class Explorer
                    << percentage << "," << percentage_2 << "," << exploration_travel_path_global << ","
                    << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
-                   << map_progress.local_freespace << "," << free_cells_count
+                   << free_cells_count
 //                   << battery_charge << "," << recharge_cycles << "," << energy_consumption << ","
                    << std::endl;
             fs_csv.close();
@@ -2156,14 +2161,14 @@ class Explorer
         
         //ROS_ERROR("%d", costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY());
         
-//        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap2d_global->getCostmap()->getMutex()));
+        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap2d_global->getCostmap()->getMutex()));
         for (unsigned int i = 0; i < costmap2d_global->getCostmap()->getSizeInCellsX(); i++)
             for (unsigned int j = 0; j < costmap2d_global->getCostmap()->getSizeInCellsY(); j++)
             {
                 if (costmap2d_global->getCostmap()->getCost(i,j) == costmap_2d::FREE_SPACE)
                     free++;
             }
-//        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap2d_global->getCostmap()->getMutex()));
+        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap2d_global->getCostmap()->getMutex()));
         
         //ROS_ERROR("%d", free);
         return free;
