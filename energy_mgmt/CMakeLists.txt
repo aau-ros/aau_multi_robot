@@ -281,7 +281,7 @@ if(CATKIN_ENABLE_TESTING)
     target_link_libraries(missing_utests
         robot_state_manager_energy
         battery_simulate
-        docking
+#        docking
         ${catkin_LIBRARIES}
     )
     add_dependencies(missing_utests

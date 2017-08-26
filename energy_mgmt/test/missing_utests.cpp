@@ -4,7 +4,7 @@
 #include "robot_state_manager.h"
 #include "battery_simulate.h"
 #include "battery_state_updater.h"
-#include "docking.h"
+//#include "docking.h"
 
 TEST(TestAuctionManager, testMissing)
 {
@@ -12,7 +12,7 @@ TEST(TestAuctionManager, testMissing)
     battery_simulate bs;
     explorer::battery_state state;
     BatteryStateUpdater bsu(&state);
-    docking d;
+//    docking d;
 }
 
 int main(int argc, char **argv){

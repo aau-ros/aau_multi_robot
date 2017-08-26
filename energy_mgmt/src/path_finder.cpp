@@ -9,6 +9,12 @@ bool PathFinder::findShortestPath(unsigned int start, unsigned int end, std::vec
 {
     path.clear();
 
+    if(start == end) {
+        ROS_WARN("Starting node coincides with ending node");
+        path.push_back(start);
+        return true;
+    }
+
     std::vector<unsigned int> nodes = graph->getNodeVector(); //TODO how to avoid the copy AND to handle the case of graph modified during path computation?
     unsigned int V = nodes.size();
 

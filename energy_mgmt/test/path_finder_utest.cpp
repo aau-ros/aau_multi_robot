@@ -81,6 +81,20 @@ TEST(TestPathFinder, testFindShortestPath2)
     EXPECT_EQ(4, path.at(4));
 }
 
+TEST(TestPathFinder, testFindShortestPath3)
+{
+    PathFinder pf;
+    Graph graph;
+    pf.setGraph(&graph);
+
+    graph.addNode(5);
+
+    std::vector<unsigned int> path;
+    ASSERT_TRUE(pf.findShortestPath(5, 5, path));
+    ASSERT_EQ(1, path.size());
+    EXPECT_EQ(5, path.at(0));
+}
+
 TEST(TestPathFinder, testFindShortestPathWithNonSequentialIdentifiers)
 {
     PathFinder pf;
