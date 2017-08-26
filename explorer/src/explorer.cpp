@@ -1547,7 +1547,6 @@ class Explorer
             if(robot_state == robot_state::INITIALIZING) {
                 ROS_INFO("end initialization");
                 update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
-                indicateSimulationEnd();
                 continue;
             }
             
@@ -2157,12 +2156,14 @@ class Explorer
         
         //ROS_ERROR("%d", costmap2d_global->getCostmap()->getSizeInCellsX() * costmap2d_global->getCostmap()->getSizeInCellsY());
         
+//        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(costmap2d_global->getCostmap()->getMutex()));
         for (unsigned int i = 0; i < costmap2d_global->getCostmap()->getSizeInCellsX(); i++)
             for (unsigned int j = 0; j < costmap2d_global->getCostmap()->getSizeInCellsY(); j++)
             {
                 if (costmap2d_global->getCostmap()->getCost(i,j) == costmap_2d::FREE_SPACE)
                     free++;
             }
+//        boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap2d_global->getCostmap()->getMutex()));
         
         //ROS_ERROR("%d", free);
         return free;
