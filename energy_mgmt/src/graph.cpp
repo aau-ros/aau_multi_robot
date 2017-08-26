@@ -20,7 +20,8 @@ void Graph::addNode(unsigned int node) {
 
 void Graph::addEdge(unsigned int node_A, unsigned int node_B, double cost) {
     if(node_A == node_B) {
-        ROS_ERROR("node_A and node_B are equal, this is not allowed: ignoring call");
+        if(cost != 0)
+            ROS_ERROR("Self-loops with non-zero cost are not allowed! Ignoring");
         return;
     }
 

@@ -23,6 +23,14 @@ TEST(TestGraph, testGetNodeVector)
     EXPECT_EQ(7, nodes.at(2));
 }
 
+TEST(TestGraph, testSelfLoopWithNonZeroCost)
+{
+    Graph graph;
+    graph.addEdge(5, 5, 10);
+    std::vector<unsigned int> nodes = graph.getNodeVector();
+    EXPECT_EQ(0, nodes.size());
+}
+
 TEST(TestGraph, testGetEdgeCost)
 {
     Graph graph;

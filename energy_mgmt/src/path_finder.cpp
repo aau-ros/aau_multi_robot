@@ -60,9 +60,6 @@ bool PathFinder::findShortestPath(unsigned int start, unsigned int end, std::vec
             // the picked vertex. Consider only those vertices which are not yet
             // included in MST
             for (unsigned int v = 0; v < V; v++) {
-                // graph[u][v] is non zero only for adjacent vertices of m
-                // mstSet[v] is false for vertices not yet included in MST
-                // Update the key only if graph[u][v] is smaller than key[v]
                 double cost = graph->getEdgeCost(nodes[u], nodes[v]);
                 if (cost > 0 && !mstSet[v] && (keys[u] + cost < keys[v])) {
                     parents[v] = u;
