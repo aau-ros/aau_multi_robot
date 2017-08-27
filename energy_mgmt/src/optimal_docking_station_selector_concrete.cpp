@@ -39,10 +39,7 @@ void OptimalDockingStationSelectorConcrete::computeOptimalDs() //TODO(minor) bes
     else if (docking_station_selection_policy == 4)
         flockingOptimalDs();
 
-    ds_t new_ds;
-    docking_station_manager->setOptimalDockingStation(new_ds);
-    ROS_FATAL("MISSING");
-
+    docking_station_manager->setOptimalDockingStation(next_optimal_ds_id);
               
     ROS_INFO("end compute_optimal_ds()");          
 }
