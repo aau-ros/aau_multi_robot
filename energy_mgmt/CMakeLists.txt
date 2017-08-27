@@ -81,6 +81,7 @@ add_library(robot_state_manager_energy src/robot_state_manager.cpp)
 add_library(graph src/graph.cpp)
 add_library(path_finder src/path_finder.cpp)
 add_library(docking_station_detector src/docking_station_detector.cpp)
+add_library(optimal_docking_station_selector src/optimal_docking_station_selector_concrete.cpp)
 
 add_dependencies(battery_simulate energy_mgmt_gencpp)
 #add_dependencies(docking roslib energy_mgmt_gencpp)

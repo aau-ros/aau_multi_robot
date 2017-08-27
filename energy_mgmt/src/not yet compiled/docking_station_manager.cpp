@@ -323,6 +323,22 @@ void docking::set_optimal_ds_vacant(bool vacant)
 
 void setOptimalDockingStation() {
     ...
+//        if (optimal_docking_station.id != next_optimal_ds_id)
+//        {
+//            ROS_INFO("Changing optimal DS");
+//            old_optimal_ds_id = next_optimal_ds_id;
+//            docking_station_manager.set_optimal_ds(next_optimal_ds_id);
+//            
+//            /* Notify explorer about the optimal DS change */ //TODO use service to be sure
+//            adhoc_communication::EmDockingStation msg_optimal;
+//            msg_optimal.id = get_optimal_ds_id();
+//            msg_optimal.x = get_optimal_ds_x();
+//            msg_optimal.y = get_optimal_ds_y();
+//            pub_new_optimal_ds.publish(msg_optimal);
+//        }
+//        else
+//            ROS_INFO("Optimal DS unchanged");
+    ...
     log_optimal_ds();
 }
 
