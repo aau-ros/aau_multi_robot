@@ -526,7 +526,7 @@ class docking
     ros::Time changed_state_time;
     void conclude_auction();
     void send_optimal_ds();
-    bool can_update_ds();
+    bool can_update_ds(robot_state::robot_state_t current_state);
     void ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
 
     ros::ServiceClient get_robot_state_sc, sc_reply_vacancy;

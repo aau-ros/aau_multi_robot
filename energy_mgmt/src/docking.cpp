@@ -429,7 +429,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 
     /* Compute optimal DS only if at least one DS is reachable (just for efficiency and debugging) */
 
-    if (ds.size() > 0 && can_update_ds() && !moving_along_path && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
+    if (ds.size() > 0 && !moving_along_path && !going_to_ds) //TODO but in these way we are not updating the optimal_ds less frequently... and moreover it affects also explorer...
     {
 
         // copy content (notice that if jobs is modified later, the other vector is not affected: http://www.cplusplus.com/reference/vector/vector/operator=/)
@@ -941,7 +941,14 @@ void docking::update_optimal_ds() {
     optimal_ds_mutex.lock();
     if (old_optimal_ds_id != id_for_next_update)
     {
-        if(can_update_ds() || waiting_to_discover_a_ds) 
+    
+        robot_state_manager->lockRobotState();
+        
+        robot_state::GetRobotState msg;
+        while(!get_robot_state_sc.call(msg))
+            ROS_ERROR("get state failed");
+    
+        if(can_update_ds(static_cast<robot_state::robot_state_t>(msg.response.robot_state)) || waiting_to_discover_a_ds) { 
             if(!moving_along_path) {                
 
                 waiting_to_discover_a_ds = false;
@@ -960,6 +967,9 @@ void docking::update_optimal_ds() {
                 msg_optimal.y = get_optimal_ds_y();
                 pub_new_optimal_ds.publish(msg_optimal);
             }
+        }
+         
+        robot_state_manager->unlockRobotState();
     }
     else
         ROS_INFO("Optimal DS unchanged");
@@ -3603,8 +3613,8 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
     
 }
 
-bool docking::can_update_ds() {
-    return (robot_state != robot_state::CHOOSING_ACTION && robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE && robot_state != robot_state::CHARGING_COMPLETED && robot_state != robot_state::CHARGING_ABORTED);
+bool docking::can_update_ds(robot_state::robot_state_t current_state) {
+    return (current_state != robot_state::CHOOSING_ACTION && current_state != robot_state::AUCTIONING && current_state != auctioning_2 && current_state != robot_state::GOING_CHECKING_VACANCY && current_state != robot_state::CHECKING_VACANCY && current_state != robot_state::CHARGING && current_state != robot_state::GOING_IN_QUEUE && current_state != robot_state::IN_QUEUE && current_state != robot_state::CHARGING_COMPLETED && current_state != robot_state::CHARGING_ABORTED);
 }
 
 void docking::ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
