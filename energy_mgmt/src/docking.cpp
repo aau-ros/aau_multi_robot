@@ -1295,7 +1295,7 @@ void docking::handle_robot_state()
 
 void docking::check_other_robots_state() {
     for(auto it = robots.begin(); it != robots.end(); it++)
-        if(using_ds(it->state) && get_optimal_ds_id() == it->selected_ds)
+        if(using_ds(it->state) && get_optimal_ds_id() == it->selected_ds && (ros::Time::now().toSec() - it->timestamp) < 5 )
             inform_explorer_about_used_ds(); 
 }
 
@@ -1343,7 +1343,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
             robots[i].selected_ds = msg.get()->selected_ds;
-            
+            robots[i].timestamp = msg.get()->header.timestamp;
                 
             break;
         }
@@ -1359,6 +1359,7 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
         new_robot.x = msg.get()->x;
         new_robot.y = msg.get()->y;
         new_robot.selected_ds = msg.get()->selected_ds;
+        new_robot.timestamp = msg.get()->header.timestamp;
         robots.push_back(new_robot);
 
         /* Recompute number of robots */

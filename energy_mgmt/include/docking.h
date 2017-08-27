@@ -203,6 +203,7 @@ class docking
         double x, y, home_world_x, home_world_y;
         int selected_ds;
         int charging_ds;
+        double timestamp;
     };
     vector<robot_t> robots;
     robot_t *robot;
