@@ -458,9 +458,6 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
          * compute_optimal_ds() because the distances could have changed, but we
          * accept this. */
 
-        if(old_optimal_ds_id > 10000) //can happen sometimes... why? segmentation fault?
-            log_major_error("WHAT?????????????????????????");
-
         // TODO(minor) functions
         /* "Closest" policy */
         if (ds_selection_policy == 0) // TODO(minor) switch-case
@@ -3580,7 +3577,6 @@ void docking::ds_management() {
         discover_docking_stations();    
         check_reachable_ds();   
         compute_optimal_ds();
-        runtime_checks();
         if(ros::Time::now() - last_sent > ros::Duration(5)) {
             send_ds();
             send_robot();

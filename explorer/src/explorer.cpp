@@ -106,7 +106,7 @@ class Explorer
     int retry_recharging_current_ds;
     ros::Timer checking_vacancy_timer;
     bool ds_graph_navigation_allowed;
-    double conservative_maximum_available_distance;
+    double maximum_available_distance;
     bool moving_to_ds, home_point_set;
     unsigned int retries, retries2, retries3, retries4, retries5, retries6, retries_moving;
     double next_available_distance;
@@ -182,7 +182,7 @@ class Explorer
         skip_findFrontiers = false;
         retry_recharging_current_ds = 0;
         ds_graph_navigation_allowed = DS_GRAPG_NAVIGATION_ALLOWED;
-        conservative_maximum_available_distance = -1;
+        maximum_available_distance = -1;
         moving_to_ds = false;
         home_point_set = false;
         received_battery_info = false;
@@ -641,7 +641,7 @@ class Explorer
             
             if (robot_state == robot_state::COMPUTING_NEXT_GOAL || robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::LEAVING_DS)
             {
-                if(!received_battery_info && next_available_distance <= 0 && conservative_maximum_available_distance <= 0) {
+                if(!received_battery_info && next_available_distance <= 0 && maximum_available_distance <= 0) {
                     ROS_DEBUG("waiting battery info");
                     ros::Duration(3).sleep();
                     ros::spinOnce();
@@ -652,7 +652,7 @@ class Explorer
                    
                 if(robot_state == robot_state::CHARGING_COMPLETED) {
                     ROS_INFO("using max distance");
-                    available_distance = conservative_maximum_available_distance;
+                    available_distance = maximum_available_distance;
                 } else
                     available_distance = next_available_distance;
                    
@@ -683,8 +683,8 @@ class Explorer
 //                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
 //                                    fs_csv_state.close();
-                    counter++;
-                    move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
+//                    counter++;
+//                    move_robot_away(counter);  // TODO we should do this, but causes too many problems in selecting the enxt goal at the moment
 //                                    ROS_INFO("Now it is ok...");
 //                                }
 
@@ -1136,15 +1136,15 @@ class Explorer
                                     finalize_exploration();
                             }
 
-                            else if( (full_battery && dist > conservative_maximum_available_distance) || (!full_battery && dist > available_distance) ) {
+                            else if( (full_battery && dist > maximum_available_distance) || (!full_battery && dist > available_distance) ) {
                                 if(full_battery)
                                 {
-                                    if(fabs(dist - conservative_maximum_available_distance) > 7.0)
+                                    if(fabs(dist - maximum_available_distance) > 7.0)
                                         log_major_error("MAJOR ERROR WITH DS GRAPH");
                                     else
                                         log_minor_error("minor error with ds graph");
                                     ROS_DEBUG("distance to next DS: %.2f", dist);
-                                    ROS_DEBUG("maximum_traveling_distance: %.2f", conservative_maximum_available_distance);
+                                    ROS_DEBUG("maximum_traveling_distance: %.2f", maximum_available_distance);
                                     
                                     // we force to move to next ds
                                     retry_recharging_current_ds = 0;
@@ -1353,7 +1353,7 @@ class Explorer
                                     {
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
-                                        if( exploration->existFrontiersReachableWithFullBattery(conservative_maximum_available_distance, &error) ) {
+                                        if( exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error) ) {
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
                                             move_robot_away(counter);
@@ -1365,11 +1365,11 @@ class Explorer
                                             update_robot_state_2(exploring_for_graph_navigation);
                                             ros::Duration(1).sleep();
                                         
-                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.999*conservative_maximum_available_distance, &error) ) {
+                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.98*maximum_available_distance, &error) ) {
                                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                 
                                                 int result = -1;
-                                                exploration->compute_and_publish_ds_path(conservative_maximum_available_distance, &result);
+                                                exploration->compute_and_publish_ds_path(maximum_available_distance, &result);
                                                 if(result == 0) //TODO very very orrible idea, using result...
                                                 {
                                                     ROS_INFO("path successfully found");
@@ -2310,7 +2310,7 @@ class Explorer
         fs << "global costmap iterations        = " << global_costmap_iteration << std::endl;
         fs << "number of recharges              = " << recharge_cycles << std::endl;
         fs << "energy_consumption               = " << energy_consumption << std::endl;
-        fs << "maximum_available_distance       = " << conservative_maximum_available_distance << std::endl;
+        fs << "maximum_available_distance       = " << maximum_available_distance << std::endl;
         fs << "w1                               = " << w1 << std::endl;
         fs << "w2                               = " << w2 << std::endl;
         fs << "w3                               = " << w3 << std::endl;
@@ -3335,7 +3335,7 @@ class Explorer
         if (battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
         
-        conservative_maximum_available_distance = msg->maximum_traveling_distance;
+        maximum_available_distance = msg->maximum_traveling_distance;
 
     }
     
@@ -3874,7 +3874,7 @@ class Explorer
             ros::Duration(10).sleep();
             
         while(!exploration_finished) {
-            exploration->updateDistances(conservative_maximum_available_distance);
+            exploration->updateDistances(maximum_available_distance);
             exploration->sendListDssWithEos();
             exploration->available_distance_for_reply = next_available_distance;
             ros::Duration(1).sleep();

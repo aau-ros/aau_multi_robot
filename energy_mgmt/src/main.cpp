@@ -44,6 +44,7 @@ int main(int argc, char** argv)
         doc.update_robot_position();
         doc.send_robot();
         doc.update_reamining_distance();
+        doc.runtime_checks();
 //        doc.recompute_MST();
 
         // Sleep for 1/rate seconds
