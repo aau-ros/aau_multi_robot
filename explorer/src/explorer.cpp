@@ -2176,8 +2176,8 @@ class Explorer
 //                if (cost != costmap_2d::INSCRIBED_INFLATED_OBSTACLE && cost != costmap_2d::LETHAL_OBSTACLE && cost != costmap_2d::NO_INFORMATION)
                 if (cost != costmap_2d::LETHAL_OBSTACLE && cost != costmap_2d::NO_INFORMATION) {
                     free++;
-                    if (cost != costmap_2d::INSCRIBED_INFLATED_OBSTACLE && cost != costmap_2d::FREE_SPACE)
-                        ROS_ERROR("%u", (unsigned int) cost);
+//                    if (cost != costmap_2d::INSCRIBED_INFLATED_OBSTACLE && cost != costmap_2d::FREE_SPACE)
+//                        ROS_ERROR("%u", (unsigned int) cost);
                 }
             }
         boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap2d_global->getCostmap()->getMutex()));
@@ -3727,7 +3727,7 @@ class Explorer
     }
     
     double reference_percentage() {
-        return percentage;
+        return percentage_2;
     }
     
     void log_major_error(std::string text) {
