@@ -2876,7 +2876,7 @@ void docking::runtime_checks() {
     bool found = false;
     for(unsigned int i=0; i<robots.size()-1; i++)
         for(unsigned int j=i+1; j<robots.size(); j++)
-            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
+            if((ros::Time::now().toSec() - robots[i].timestamp) < 5 && (ros::Time::now().toSec() - robots[j].timestamp) < 5 && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
                 found = true;
                 if(!two_robots_at_same_ds_printed) {
                     log_major_error("two robots recharging at the same DS!!!");
