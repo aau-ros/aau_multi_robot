@@ -1360,10 +1360,13 @@ class Explorer
                                     {
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
-                                        if(exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error)) {
+                                        if(exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error, &final_goal)) {
 
-                                            if(full_battery)
+                                            if(full_battery) {
                                                 log_minor_error("existFrontiersReachableWithFullBattery with full battery");
+                                                update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
+                                                continue;
+                                            }
 
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;

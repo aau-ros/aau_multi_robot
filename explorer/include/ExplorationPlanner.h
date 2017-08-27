@@ -342,7 +342,7 @@ namespace explorationPlanner
 
             //F
             bool existFrontiers();
-            bool existFrontiersReachableWithFullBattery(float max_available_distance, bool *error);
+            bool existFrontiersReachableWithFullBattery(float max_available_distance, bool *error, std::vector<double> *final_goal);
             double distance_from_robot(double x, double y);
             double distance(double x1, double y1, double x2, double y2);
             bool getRobotPose(tf::Stamped < tf::Pose > &robotPose);

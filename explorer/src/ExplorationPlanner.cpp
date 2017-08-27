@@ -4948,7 +4948,7 @@ void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
     fs_csv.close();
 }
 
-bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error) {
+bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_available_distance, bool *error, std::vector<double> *final_goal) {
     ROS_INFO("existFrontiersReachableWithFullBattery");
     
     if(!optimal_ds_set)
@@ -4989,6 +4989,10 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         }
         if(distance * 2 < max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking... 
         {
+            final_goal->push_back(my_selected_frontier->x_coordinate);
+            final_goal->push_back(my_selected_frontier->y_coordinate);            
+            final_goal->push_back(my_selected_frontier->detected_by_robot);
+            final_goal->push_back(my_selected_frontier->id);
             release_mutex(&store_frontier_mutex, __FUNCTION__);
             return true;
         }

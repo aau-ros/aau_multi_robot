@@ -536,6 +536,9 @@ class docking
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     bool already_sent_vacancy_check_request;
     int id_for_next_update;
+    bool using_ds(robot_state::robot_state_t state);
+    void inform_explorer_about_used_ds();
+    void check_other_robots_state();
 
 //    AuctionManager auction_manager; //TODO
 

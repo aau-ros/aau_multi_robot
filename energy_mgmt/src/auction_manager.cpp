@@ -54,9 +54,9 @@ void AuctionManager::createSubscribers() {
     auction_result_topic = "adhoc_communication/send_em_auction/auction_result"; 
 
     std::string my_prefix = ""; //TODO
-    auction_starting_sub = nh.subscribe(my_prefix + auction_starting_topic, 1000, &AuctionManager::auctionStartingCallback, this);
-    auction_reply_sub = nh.subscribe(my_prefix + auction_reply_topic, 1000, &AuctionManager::auctionReplyCallback, this);
-    auction_result_sub = nh.subscribe(my_prefix + auction_result_topic, 1000, &AuctionManager::auctionResultCallback, this);
+    auction_starting_sub = nh.subscribe(auction_starting_topic, 1000, &AuctionManager::auctionStartingCallback, this);
+    auction_reply_sub = nh.subscribe(auction_reply_topic, 1000, &AuctionManager::auctionReplyCallback, this);
+    auction_result_sub = nh.subscribe(auction_result_topic, 1000, &AuctionManager::auctionResultCallback, this);
 }
 
 void AuctionManager::logMetadata()
