@@ -6,10 +6,11 @@
 class DockingStationManager {
 public:
     DockingStationManager();
-    ds_t getOptimalDockingStation();
-    void setOptimalDockingStation(ds_t ds);
-    void getDockingStationIterator(); //TODO put how to handle the fact that iterator can be invalidated?
-    void getDockingStationVector(); //TODO put how to handle the fact that iterator can be invalidated?
+    std::vector<ds_t> getDockingStations() override;
+    void addDockingStation(ds_t ds) override;
+    void setOptimalDockingStation(unsigned int id) override;
+    void setOptimalDockingStation(ds_t ds) override;
+    ds_t getOptimalDockingStation() override; //TODO put how to handle the fact that iterator can be invalidated?
 };
 
 #endif // DOCKING_STATION_MANAGER_H

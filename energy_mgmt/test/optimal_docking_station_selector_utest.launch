@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="optimal_docking_station_selector_utest" type="optimal_docking_station_selector_utest" >
+        <param name="ds_selection_policy" value="0" />
+    </test>    
+</launch>

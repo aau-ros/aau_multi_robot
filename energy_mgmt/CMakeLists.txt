@@ -311,6 +311,37 @@ if(CATKIN_ENABLE_TESTING)
         ${catkin_EXPORTED_TARGETS}
     )
 
+    add_rostest_gtest(optimal_docking_station_selector_utest
+        test/optimal_docking_station_selector_utest.launch
+        test/optimal_docking_station_selector_utest.cpp        
+    )
+    target_link_libraries(optimal_docking_station_selector_utest
+        mock_docking_station_manager
+        mock_distance_computer
+        optimal_docking_station_selector
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(optimal_docking_station_selector_utest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+    add_rostest_gtest(auction_manager_and_sender_itest
+        test/auction_manager_and_sender_itest.launch
+        test/auction_manager_and_sender_itest.cpp        
+    )
+    target_link_libraries(auction_manager_and_sender_itest
+        auction_manager
+        concrete_sender
+        ${catkin_LIBRARIES}
+    )
+    add_dependencies(auction_manager_and_sender_itest
+        ${PROJECT_NAME}_generate_messages_cpp
+        ${catkin_EXPORTED_TARGETS}
+    )
+
+
+
     add_rostest_gtest(missing_utests
         test/missing_utests.launch
         test/missing_utests.cpp        

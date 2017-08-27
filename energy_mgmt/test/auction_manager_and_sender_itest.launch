@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+    <test pkg="energy_mgmt" test-name="auction_manager_and_sender_itest" type="auction_manager_and_sender_itest" />
+</launch>

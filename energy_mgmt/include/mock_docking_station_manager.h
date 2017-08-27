@@ -8,9 +8,14 @@ class MockDockingStationManager : public DockingStationManagerInterface
 {
 public:
     MockDockingStationManager();
-    void getDockingStations() override;
-    std::vector<ds_t> getDockingStations2();
+    std::vector<ds_t> getDockingStations() override;
     void addDockingStation(ds_t ds) override;
+    void setOptimalDockingStation(unsigned int id) override;
+    void setOptimalDockingStation(ds_t ds) override;
+    ds_t getOptimalDockingStation() override;
+
+    std::vector<ds_t> getDockingStations2();
+    unsigned int getOptimalDockingStationId();
 
 private:
     std::vector<ds_t> docking_stations;

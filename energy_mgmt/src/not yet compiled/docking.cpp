@@ -410,22 +410,6 @@ void docking::update_reamining_distance() {
     current_remaining_distance = next_remaining_distance;
 }
 
-float docking::conservative_remaining_distance_with_return() {
-    return current_remaining_distance / (double) 2.0;
-}
-
-float docking::conservative_maximum_distance_with_return() {
-    return maximum_travelling_distance / (double) 2.0;
-}
-
-float docking::conservative_remaining_distance_one_way() {
-    return current_remaining_distance;
-}
-
-float docking::conservative_maximum_distance_one_way() {
-    return maximum_travelling_distance;
-}
-
 void docking::wait_battery_info() {
     while(maximum_travelling_distance <= 0) {
         ROS_ERROR("Waiting battery information...");

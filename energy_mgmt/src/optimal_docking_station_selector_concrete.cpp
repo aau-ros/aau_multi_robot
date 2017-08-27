@@ -9,7 +9,7 @@ OptimalDockingStationSelectorConcrete::OptimalDockingStationSelectorConcrete() {
 void OptimalDockingStationSelectorConcrete::loadParameters() {
     ros::NodeHandle nh_tilde("~");
     int tmp;
-    if(!nh_tilde.param<int>("ds_selection_policy", tmp))
+    if(!nh_tilde.getParam("ds_selection_policy", tmp))
         ROS_FATAL("PARAM NOT FOUND");
     docking_station_selection_policy = (unsigned int)tmp;
 }
@@ -23,6 +23,8 @@ void OptimalDockingStationSelectorConcrete::computeOptimalDs() //TODO(minor) bes
 //        jobs_local_list = jobs; //TODO we should do the same also when computing the parameters... although they are updated by a callback so it should be ok, but just to be safe...
 //        jobs_mutex.unlock();
 
+    ds = docking_station_manager->getDockingStations();
+
     if (docking_station_selection_policy == 0) // TODO(minor) switch-case
         closestPolicy();
 
@@ -35,22 +37,18 @@ void OptimalDockingStationSelectorConcrete::computeOptimalDs() //TODO(minor) bes
     else if (docking_station_selection_policy == 3)
         currentOptimalDs();
 
-    /* "Flocking" policy */
     else if (docking_station_selection_policy == 4)
         flockingOptimalDs();
 
-    docking_station_manager->setOptimalDockingStation(next_optimal_ds_id);
-              
-    ROS_INFO("end compute_optimal_ds()");          
+    docking_station_manager->setOptimalDockingStation(next_optimal_ds_id);         
 }
 
 void OptimalDockingStationSelectorConcrete::closestPolicy()
 {
-    ROS_FATAL("MISSING");
     double min_dist = std::numeric_limits<int>::max();
     for (auto it = ds.begin(); it != ds.end(); it++)
     {
-        double dist = distance_from_robot(it->x, it->y, false);
+        double dist = distance_computer->actualDistanceFromRobot(it->x, it->y);
         if (dist < 0)
             continue; //TODO sure?
         if (dist < min_dist)
@@ -59,48 +57,6 @@ void OptimalDockingStationSelectorConcrete::closestPolicy()
             next_optimal_ds_id = it->id;
         }
     }
-}
-
-double OptimalDockingStationSelectorConcrete::distance_from_robot(double goal_x, double goal_y, bool euclidean)
-{
-    ROS_FATAL("MISSING");
-    return 0;
-//    return distance(robot->x, robot->y, goal_x, goal_y, euclidean);
-}
-
-double OptimalDockingStationSelectorConcrete::distance(double start_x, double start_y, double goal_x, double goal_y, bool euclidean)
-{
-    ROS_FATAL("MISSING");
-    /* Use euclidean distance if required by the caller */
-//    if (euclidean)
-//    {
-//        double dx = (goal_x - start_x);
-//        double dy = (goal_y - start_y);
-//        return sqrt(dx * dx + dy * dy);
-//    }
-
-//    /* Otherwise, use actual distance: ask explorer node to compute it (using its costmap) */    
-//    explorer::Distance srv_msg;
-//    srv_msg.request.x1 = start_x;
-//    srv_msg.request.y1 = start_y;
-//    srv_msg.request.x2 = goal_x;
-//    srv_msg.request.y2 = goal_y;
-//    
-//    //ros::service::waitForService("explorer/distance");   
-//    for(int i = 0; i < 10 && !sc_distance; i++) {
-//        ROS_FATAL("NO MORE CONNECTION!");
-//        ros::Duration(1).sleep();
-//        //sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance", true);
-//    }
-//    for (int i = 0; i < 10; i++)
-//        if (sc_distance.call(srv_msg) && srv_msg.response.distance >= 0) {
-//            return srv_msg.response.distance;
-//        } else
-//            ros::Duration(1).sleep();
-//    
-//    /* If the service is not working at the moment, return invalid value */ //TODO(minor) raise exception?
-//    ROS_ERROR("Unable to compute distance at the moment...");
-    return -1;
 }
 
 void OptimalDockingStationSelectorConcrete::abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y)
@@ -130,6 +86,10 @@ void OptimalDockingStationSelectorConcrete::rel_to_abs(double relative_x, double
 
 void OptimalDockingStationSelectorConcrete::setDockingStationManager(DockingStationManagerInterface *docking_station_manager) {
     this->docking_station_manager = docking_station_manager;
+}
+
+void OptimalDockingStationSelectorConcrete::setDistanceComputer(DistanceComputerInterface *distance_computer) {
+    this->distance_computer = distance_computer;
 }
 
 void OptimalDockingStationSelectorConcrete::vacantPolicy() {
@@ -447,3 +407,19 @@ void OptimalDockingStationSelectorConcrete::flockingOptimalDs() {
 //        }
 //    }
 }
+
+//float docking::conservative_remaining_distance_with_return() {
+//    return current_remaining_distance / (double) 2.0;
+//}
+
+//float docking::conservative_maximum_distance_with_return() {
+//    return maximum_travelling_distance / (double) 2.0;
+//}
+
+//float docking::conservative_remaining_distance_one_way() {
+//    return current_remaining_distance;
+//}
+
+//float docking::conservative_maximum_distance_one_way() {
+//    return maximum_travelling_distance;
+//}

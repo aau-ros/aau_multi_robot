@@ -22,7 +22,7 @@ TEST(TestDockingStationDetector, testDetectDockingStations)
     dsd.detectNewDockingStations();
     dsd.detectNewDockingStations();
 
-    std::vector<ds_t> docking_stations = dsm.getDockingStations2();
+    std::vector<ds_t> docking_stations = dsm.getDockingStations();
     ASSERT_EQ(2, docking_stations.size());
     EXPECT_EQ(0, docking_stations.at(0).id);
     EXPECT_NEAR(4, docking_stations.at(0).x, NEAR_ERROR);
@@ -34,7 +34,7 @@ TEST(TestDockingStationDetector, testDetectDockingStations)
     dc.addReachablePoint(-2, 4.5);
 
     dsd.detectNewDockingStations();
-    docking_stations = dsm.getDockingStations2();
+    docking_stations = dsm.getDockingStations();
     ASSERT_EQ(3, docking_stations.size());
     EXPECT_EQ(0, docking_stations.at(0).id);
     EXPECT_NEAR(4, docking_stations.at(0).x, NEAR_ERROR);
