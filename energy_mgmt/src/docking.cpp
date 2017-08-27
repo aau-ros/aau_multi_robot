@@ -209,13 +209,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     my_counter = 0;
     request = 0;
     old_optimal_ds_id = -100;
-//    old_target_ds_id = -200;
+    id_for_next_update = old_optimal_ds_id;
     next_optimal_ds_id = old_optimal_ds_id;
-    old_optimal_ds_id_for_log = old_optimal_ds_id;
-//    old_target_ds_id_for_log = -1;
-//    target_ds_id = -1;
     time_start = ros::Time::now();
-//    id_next_target_ds = -1;
     path_navigation_tries = 0;
     next_remaining_distance = 0, current_remaining_distance = 0;
     has_to_free_optimal_ds = false;
@@ -903,45 +899,9 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
 //        bool changed = false;
         /* If a new optimal DS has been found, parameter l4 of the charging likelihood function must be updated. Notice that the other robots will be informed about this when the send_robot_information() function is called */
 //        if (!optimal_ds_is_set())
-//            ROS_DEBUG("No optimal DS has been selected yet");      
-        if (old_optimal_ds_id != next_optimal_ds_id)
-        {
-            ROS_INFO("calling lockState()");
-            robot_state_manager->lockRobotState();
-            if(can_update_ds() || waiting_to_discover_a_ds)
-            {
-                optimal_ds_mutex.lock();
-                
-                if(!moving_along_path) {                
+//            ROS_DEBUG("No optimal DS has been selected yet");
 
-                    waiting_to_discover_a_ds = false;
-                    finished_bool = false; //TODO(minor) find better place...
-    //                changed = true;
-                    set_optimal_ds(next_optimal_ds_id);
-                    
-                    if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //can happen sometimes... buffer overflow somewhere?
-                        log_major_error("OH NO!!!!!!!!!!!!");
-                        ROS_INFO("%d", get_optimal_ds_id());
-                    }
-
-                    old_optimal_ds_id = get_optimal_ds_id(); //TODO reduntant now, we could use get_optimal_ds_id also in the if...
-                    
-                    /* Notify explorer about the optimal DS change */
-                    adhoc_communication::EmDockingStation msg_optimal;
-                    msg_optimal.id = get_optimal_ds_id();
-                    msg_optimal.x = get_optimal_ds_x();
-                    msg_optimal.y = get_optimal_ds_y();
-                    pub_new_optimal_ds.publish(msg_optimal);
-               
-                }
-
-                optimal_ds_mutex.unlock(); 
-            }
-            ROS_INFO("calling unlockState()");
-            robot_state_manager->unlockRobotState();
-        }
-        else
-            ROS_INFO("Optimal DS unchanged");
+        id_for_next_update = next_optimal_ds_id;
             
 //        if(get_optimal_ds_id() != get_target_ds_id())  {
 //            if(robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::CHARGING && robot_state != in_queue) //TODO exclude also in_queue???
@@ -980,22 +940,42 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
     ROS_INFO("end compute_optimal_ds()");          
 }
 
+void docking::update_optimal_ds() {
+    optimal_ds_mutex.lock();
+    if (old_optimal_ds_id != id_for_next_update)
+    {
+        if(can_update_ds() || waiting_to_discover_a_ds) 
+            if(!moving_along_path) {                
+
+                waiting_to_discover_a_ds = false;
+                finished_bool = false; //TODO(minor) find better place...
+                set_optimal_ds(id_for_next_update);
+                
+                if(get_optimal_ds_id() < 0 || get_optimal_ds_id() >= num_ds) { //could happen in the past sometimes... buffer overflow somewhere?
+                    log_major_error("OH NO!!!!!!!!!!!!");
+                    ROS_INFO("%d", get_optimal_ds_id());
+                }
+                
+                /* Notify explorer about the optimal DS change */
+                adhoc_communication::EmDockingStation msg_optimal;
+                msg_optimal.id = get_optimal_ds_id();
+                msg_optimal.x = get_optimal_ds_x();
+                msg_optimal.y = get_optimal_ds_y();
+                pub_new_optimal_ds.publish(msg_optimal);
+            }
+    }
+    else
+        ROS_INFO("Optimal DS unchanged");
+    optimal_ds_mutex.unlock(); 
+}
+
 void docking::log_optimal_ds() {
     ROS_INFO("logging");
-//    optimal_ds_mutex.lock();
-    /* Keep track of the optimal and target DSs in log file */
-//    if(old_optimal_ds_id_for_log != get_optimal_ds_id() || old_target_ds_id_for_log != get_target_ds_id() ) {
-    if(old_optimal_ds_id_for_log != get_optimal_ds_id() ) {
-        ros::Duration time = ros::Time::now() - time_start;
-        fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-//        ROS_DEBUG("%d", target_ds_id);
-        fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << ","
-            << get_optimal_ds_id() << std::endl;
-        fs_csv.close();
-        old_optimal_ds_id_for_log = get_optimal_ds_id();
-//        old_target_ds_id_for_log = get_target_ds_id();
-    }
-//    optimal_ds_mutex.unlock();
+    ros::Duration time = ros::Time::now() - time_start;
+    fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
+    fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << ","
+        << get_optimal_ds_id() << std::endl;
+    fs_csv.close();
 }
 
 double docking::distance_from_robot(double goal_x, double goal_y, bool euclidean)
@@ -1566,14 +1546,18 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
          * already checking for vacancy, it is
          * (or may be, or will be) occupying the DS */
         if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY ||
-            robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::CHARGING_ABORTED)
+            robot_state == robot_state::CHECKING_VACANCY || robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::CHARGING_ABORTED ||
+            next_robot_state == robot_state::CHARGING || next_robot_state == robot_state::GOING_CHARGING || next_robot_state == robot_state::GOING_CHECKING_VACANCY ||
+            next_robot_state == robot_state::CHECKING_VACANCY || next_robot_state == robot_state::CHARGING_COMPLETED || next_robot_state == robot_state::CHARGING_ABORTED
+            )
         {
             /* Print some debut text */
-            if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING)
+            
+            if (robot_state == robot_state::CHARGING || robot_state == robot_state::GOING_CHARGING || next_robot_state == robot_state::CHARGING || next_robot_state == robot_state::GOING_CHARGING)
                 ROS_INFO("I'm using / going to use ds%d!!!!", msg.get()->id);
-            else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY)
+            else if (robot_state == robot_state::GOING_CHECKING_VACANCY || robot_state == robot_state::CHECKING_VACANCY || next_robot_state == robot_state::GOING_CHECKING_VACANCY || next_robot_state == robot_state::CHECKING_VACANCY)
                 ROS_INFO("I'm approachign ds%d too!!!!", msg.get()->id);
-            else if (robot_state == robot_state::LEAVING_DS)
+            else if (robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::CHARGING_ABORTED || next_robot_state == robot_state::CHARGING_COMPLETED || next_robot_state == robot_state::CHARGING_ABORTED)
                 ROS_INFO("I'm leaving ds%d, just wait a sec...", msg.get()->id);
 
             /* Reply to the robot that asked for the check, telling it that the DS is
@@ -1585,7 +1569,11 @@ void docking::check_vacancy_callback(const adhoc_communication::EmDockingStation
             srv_msg.request.docking_station.used_by_robot_id = robot_id;
             srv_msg.request.docking_station.request_by_robot_id = msg.get()->request_by_robot_id;
             srv_msg.request.docking_station.request_id = msg.get()->request_id;
-            sc_send_docking_station.call(srv_msg);
+            int i = 0;
+            while(!sc_send_docking_station.call(srv_msg) && i<5) {
+                ROS_ERROR("call to notify ds occupied failed!");
+                i++;   
+            }
             ROS_INFO("Notified other robot that ds%d is occupied by me", msg.get()->id);
         }
         else
@@ -2867,13 +2855,19 @@ bool docking::set_optimal_ds_given_index(int index) {
 //}
 
 void docking::runtime_checks() {
-//    for(unsigned int i=0; i<robots.size()-1; i++)
-//        for(unsigned int j=i+1; j<robots.size(); j++)
-//            if(!two_robots_at_same_ds_printed && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
-//                log_major_error("two robots recharging at the same DS!!!");
-//                ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
-//                two_robots_at_same_ds_printed = true;
-//            }
+    bool found = false;
+    for(unsigned int i=0; i<robots.size()-1; i++)
+        for(unsigned int j=i+1; j<robots.size(); j++)
+            if(robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
+                found = true;
+                if(!two_robots_at_same_ds_printed) {
+                    log_major_error("two robots recharging at the same DS!!!");
+                    ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
+                    two_robots_at_same_ds_printed = true;
+                }
+            }
+    if(!found) 
+       two_robots_at_same_ds_printed = false;            
     
     ds_mutex.lock();
     if(num_ds > 0)          
@@ -3399,6 +3393,7 @@ bool docking::set_optimal_ds(int id) {
         ROS_INFO("Change optimal DS: (none) -> ds%d", optimal_ds_id);
         
     optimal_ds_set = true;
+    log_optimal_ds();
     send_optimal_ds();
     return true;
 }
@@ -3586,7 +3581,6 @@ void docking::ds_management() {
         check_reachable_ds();   
         compute_optimal_ds();
         runtime_checks();
-        log_optimal_ds();
         if(ros::Time::now() - last_sent > ros::Duration(5)) {
             send_ds();
             send_robot();
@@ -3614,7 +3608,7 @@ void docking::cb_battery(const explorer::battery_state::ConstPtr &msg)
 }
 
 bool docking::can_update_ds() {
-    return robot_state != robot_state::CHOOSING_ACTION && robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE;
+    return (robot_state != robot_state::CHOOSING_ACTION && robot_state != robot_state::AUCTIONING && robot_state != auctioning_2 && robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_IN_QUEUE && robot_state != robot_state::IN_QUEUE && robot_state != robot_state::CHARGING_COMPLETED && robot_state != robot_state::CHARGING_ABORTED);
 }
 
 void docking::ds_with_EOs_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {

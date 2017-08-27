@@ -131,6 +131,7 @@ class docking
     void setRobotStateManager(RobotStateManagerInterface *robot_state_manager) {this->robot_state_manager = robot_state_manager;};
     void get_robot_state();
     void handle_robot_state();
+    void update_optimal_ds();
 
   private:
     /**
@@ -534,6 +535,7 @@ class docking
     unsigned int request;
     void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     bool already_sent_vacancy_check_request;
+    int id_for_next_update;
 
 //    AuctionManager auction_manager; //TODO
 

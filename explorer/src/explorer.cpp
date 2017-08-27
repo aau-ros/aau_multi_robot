@@ -208,7 +208,7 @@ class Explorer
         
         /* Robot state subscribers */
 //        sub_check_vacancy =
-//            nh.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
+//            nh2.subscribe("adhoc_communication/reply_for_vacancy", 10, &Explorer::reply_for_vacancy_callback,
 //                         this);  // to receive replies for vacancy checks
 
         ss_check_vacancy = nh2.advertiseService("explorer/reply_for_vacancy", &Explorer::reply_for_vacancy_callback_2, this);
@@ -3237,23 +3237,11 @@ class Explorer
 //    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 //    {
 //        state_mutex.lock();
+//        
+//        ROS_INFO("reply_for_vacancy_callback");
 
-//        if(robot_state == robot_state::CHECKING_VACANCY) { 
-////            if(robot_id == msg.get()->request_by_robot_id) {
-////                ROS_INFO("Target DS, which is %d, is (going to be) occupied by robot %d", msg.get()->used_by_robot_id,  msg.get()->id);
-//                update_robot_state_2(robot_state::GOING_IN_QUEUE);
-//                
-////                if(optimal_ds_id != msg.get()->id)
-////                log_major_error("optimal_ds_id != msg.get()->id");
-
-////                if(request_id != msg.get()->request_id)
-////                    log_major_error("request_id != msg.get()->request_id");
-//                
-//            }
-//            else 
-//                ROS_DEBUG("reply to vacancy check not for this robot");
-
-//        }
+//        if(robot_state == robot_state::CHECKING_VACANCY)
+//            update_robot_state_2(robot_state::GOING_IN_QUEUE);
 
 //        state_mutex.unlock();
 //    }

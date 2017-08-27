@@ -40,6 +40,7 @@ int main(int argc, char** argv)
 
         doc.get_robot_state();
         doc.handle_robot_state();
+        doc.update_optimal_ds();
         doc.update_robot_position();
         doc.send_robot();
         doc.update_reamining_distance();
