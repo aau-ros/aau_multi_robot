@@ -687,7 +687,13 @@ class Explorer
                     move_robot_away(counter);  // TODO(minor) move robot away also if in queue and too close...
 //                                    ROS_INFO("Now it is ok...");
 //                                }
-                        update_robot_state_2(robot_state::CHOOSING_ACTION);
+
+                        if(!moving_along_path)
+                            update_robot_state_2(robot_state::CHOOSING_ACTION);
+                        else
+                            update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                        
+                        
                         continue;
 //                    }
                 }
@@ -1895,16 +1901,16 @@ class Explorer
         robot_state = static_cast<robot_state::robot_state_t>(new_state);
 //        pub_robot.publish(msg);
 
-        if(percentage_2 >= 100 && !checked_percentage && robot_state != finished) {
-            if(percentage_2 > 100.1) {
+        if(reference_percentage() >= 100 && !checked_percentage && robot_state != finished) {
+            if(reference_percentage() > 100.1) {
                 log_major_error("Exploration percentage is higher that 100.0");
-                ROS_ERROR("percentage: %.1f", percentage_2);
+                ROS_ERROR("percentage: %.1f", reference_percentage());
             }
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             checked_percentage = true;
         }
         
-        if(robot_state != finished && (percentage_2 >= 95.0 || (percentage_2 >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+        if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
             finalize_exploration();
         }
         
@@ -2165,8 +2171,14 @@ class Explorer
         for (unsigned int i = 0; i < costmap2d_global->getCostmap()->getSizeInCellsX(); i++)
             for (unsigned int j = 0; j < costmap2d_global->getCostmap()->getSizeInCellsY(); j++)
             {
-                if (costmap2d_global->getCostmap()->getCost(i,j) == costmap_2d::FREE_SPACE)
+//                if (costmap2d_global->getCostmap()->getCost(i,j) == costmap_2d::FREE_SPACE)
+                unsigned char cost = costmap2d_global->getCostmap()->getCost(i,j);
+//                if (cost != costmap_2d::INSCRIBED_INFLATED_OBSTACLE && cost != costmap_2d::LETHAL_OBSTACLE && cost != costmap_2d::NO_INFORMATION)
+                if (cost != costmap_2d::LETHAL_OBSTACLE && cost != costmap_2d::NO_INFORMATION) {
                     free++;
+                    if (cost != costmap_2d::INSCRIBED_INFLATED_OBSTACLE && cost != costmap_2d::FREE_SPACE)
+                        ROS_ERROR("%u", (unsigned int) cost);
+                }
             }
         boost::unique_lock<costmap_2d::Costmap2D::mutex_t> unlock(*(costmap2d_global->getCostmap()->getMutex()));
         
@@ -2473,11 +2485,11 @@ class Explorer
         } else
             ROS_INFO("Status file created successfully");
         
-        if(percentage < 90 && percentage_2 < 90 && robot_state != stuck) {
+        if(reference_percentage() < 90 && robot_state != stuck) {
             log_major_error("low percentage (<90%)!!!");
         }
         
-        if(percentage < 95 && percentage_2 < 95 && robot_state != stuck) {
+        if(reference_percentage() < 95 && robot_state != stuck) {
             log_minor_error("percentage < 95%");
         }
         
@@ -3593,7 +3605,10 @@ class Explorer
                         else if(robot_state == robot_state::LEAVING_DS)
                         {
                             log_minor_error("Force the robot to think that it has left the target DS");
-                            update_robot_state_2(robot_state::CHOOSING_ACTION);
+                            if(!moving_along_path)
+                                update_robot_state_2(robot_state::CHOOSING_ACTION);
+                            else
+                                update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
                         }
                         else if(robot_state == robot_state::GOING_IN_QUEUE) {
                             log_minor_error("Force the robot to think that it reached the queue");
@@ -3711,6 +3726,10 @@ class Explorer
     
     }
     
+    double reference_percentage() {
+        return percentage;
+    }
+    
     void log_major_error(std::string text) {
         ROS_FATAL("%s", text.c_str());
         ROS_INFO("%s", text.c_str());
@@ -3809,7 +3828,8 @@ class Explorer
             going_home = true;
             counter++;
             move_robot_away(counter);
-            update_robot_state_2(auctioning_3);
+//            update_robot_state_2(auctioning_3);
+            finalize_exploration();
         }
     }
     

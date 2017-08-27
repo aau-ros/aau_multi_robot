@@ -1312,7 +1312,9 @@ void MapMerger::start()
     ros::Duration(1).sleep();
     ask_other_timer = nodeHandle->createTimer(ros::Duration(5),&MapMerger::callback_ask_other_robots,this);
     
-    while(!finished_exploration)
+//    while(!finished_exploration)
+//        ros::Duration(10).sleep();
+    while(ros::ok())
         ros::Duration(10).sleep();
         
     ROS_INFO("Stopping map_merger");
