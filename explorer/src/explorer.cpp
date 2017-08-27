@@ -600,13 +600,19 @@ class Explorer
             // TODO(minor) better while loops
             // do nothing while recharging
             if(robot_state == robot_state::CHARGING_ABORTED || robot_state == robot_state::CHARGING_COMPLETED) {
-                if(robot_state == robot_state::CHARGING_ABORTED)
+                if(robot_state == robot_state::CHARGING_ABORTED) {
                     ROS_INFO("charging aborted");
+                    update_robot_state_2(robot_state::LEAVING_DS);   
+                }
 
-                if(robot_state == robot_state::CHARGING_COMPLETED)
+                if(robot_state == robot_state::CHARGING_COMPLETED) { // TODO we should use LEAVINF_DS also after compelte charging, but causes too many problems in selecting the next goal at the moment
                     ROS_INFO("charging completed");
+                    if(!moving_along_path)
+                        update_robot_state_2(robot_state::CHOOSING_ACTION);
+                    else
+                        update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                }
                     
-                update_robot_state_2(robot_state::LEAVING_DS);
                 continue;
             }
             
@@ -656,8 +662,7 @@ class Explorer
                 } else
                     available_distance = next_available_distance;
                    
-                if(robot_state == robot_state::LEAVING_DS || robot_state == robot_state::CHARGING_COMPLETED )
-//                if(robot_state == robot_state::LEAVING_DS)
+                if(robot_state == robot_state::LEAVING_DS) 
                 {
                     //TODO
 //                    double distance = -1;
@@ -683,8 +688,8 @@ class Explorer
 //                                    fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
 //                                    fs_csv_state << time << "," << "moving_away_from_ds" << std::endl; //TODO make real state
 //                                    fs_csv_state.close();
-//                    counter++;
-//                    move_robot_away(counter);  // TODO we should do this, but causes too many problems in selecting the enxt goal at the moment
+                    counter++;
+                    move_robot_away(counter); 
 //                                    ROS_INFO("Now it is ok...");
 //                                }
 
@@ -1354,6 +1359,8 @@ class Explorer
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
                                         if( exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error) ) {
+                                            if(full_battery)
+                                                log_major_error("full_battery, but we didn't selct a goal!!!");
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
                                             move_robot_away(counter);
