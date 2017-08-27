@@ -4763,7 +4763,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
     
         for (unsigned int count = 0; count < ds_size && min_ds == NULL; count++)   // to loop through all ds_list
         {
-            if(closest_ds->id == min_ds->id)
+            if(closest_ds->id == ds_list.at(index).id)
                         continue;
         
             for (unsigned int j = 0; j < frontiers.size(); j++)
