@@ -119,6 +119,7 @@ class Explorer
     bool explorer_count;
     int optimal_ds_id;
     unsigned int request_id;
+    bool failure_with_full_battery;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -191,6 +192,7 @@ class Explorer
         optima_ds_set = false;
         explorer_count = 0;
         request_id = 0;
+        failure_with_full_battery = false;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -607,9 +609,9 @@ class Explorer
 
                 if(robot_state == robot_state::CHARGING_COMPLETED) { // TODO we should use LEAVINF_DS also after compelte charging, but causes too many problems in selecting the next goal at the moment
                     ROS_INFO("charging completed");
-                    if(!moving_along_path)
-                        update_robot_state_2(robot_state::CHOOSING_ACTION);
-                    else
+//                    if(!moving_along_path)
+//                        update_robot_state_2(robot_state::CHOOSING_ACTION);
+//                    else
                         update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
                 }
                     
@@ -1358,9 +1360,11 @@ class Explorer
                                     {
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
-                                        if( exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error) ) {
-                                            if(full_battery)
-                                                log_major_error("full_battery, but we didn't selct a goal!!!");
+                                        if(!failure_with_full_battery &&  exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error) ) {
+                                            if(full_battery) {
+                                                log_minor_error("full_battery, but we didn't selct a goal!!!");
+                                                failure_with_full_battery = true;
+                                            }
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
                                             counter++;
                                             move_robot_away(counter);
@@ -1368,6 +1372,9 @@ class Explorer
                                             retries4 = 0;
                                         }
                                         else {
+                                        
+                                            if(failure_with_full_battery)
+                                                failure_with_full_battery = false;
                                         
                                             update_robot_state_2(exploring_for_graph_navigation);
                                             ros::Duration(1).sleep();

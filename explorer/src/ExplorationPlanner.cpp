@@ -4715,12 +4715,41 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 ////            ros::Duration(3).sleep();
 //    }
 //    min_ds_for_path_traversal = min_ds;
-    
-    
-    
+
+// compute closest DS
     double min_dist = std::numeric_limits<int>::max();
-    ds_t *min_ds = NULL;
+    ds_t *closest_ds = NULL;
     int retry = 0;
+    while(closest_ds == NULL && retry < 10) {
+        for (unsigned int i = 0; i < ds_list.size(); i++)
+        {
+            double dist = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+            if (dist < 0) {
+                ROS_WARN("Distance computation failed");
+                continue;
+            }
+
+            if (dist < min_dist)
+            {
+                min_dist = dist;
+                closest_ds = &ds_list.at(i);
+            }
+        }
+        retry++;
+        if(closest_ds == NULL)
+            ros::Duration(3).sleep();
+    }
+    if(closest_ds == NULL)  {
+        ROS_ERROR("closest_ds == NULL");
+    }
+    
+    
+    
+//    double min_dist = std::numeric_limits<int>::max();
+    min_dist = std::numeric_limits<int>::max();
+    ds_t *min_ds = NULL;
+//    int retry = 0;
+    retry = 0;
     // search for the closest DS with EOs
 //    while (min_ds == NULL && retry < 5) {
 //    while (min_ds == NULL) 
@@ -4734,10 +4763,15 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
     
         for (unsigned int count = 0; count < ds_size && min_ds == NULL; count++)   // to loop through all ds_list
         {
+            if(closest_ds->id == min_ds->id)
+                        continue;
+        
             for (unsigned int j = 0; j < frontiers.size(); j++)
             {
                 // check if the DS has EOs
 //                double dist = distance(ds_list.at(i).x, ds_list.at(i).y, frontiers.at(j).x_coordinate, frontiers.at(j).y_coordinate);
+
+                
 
                 if(index < 0 || index >= ds_size)
                     ROS_FATAL("orrible values");
@@ -4783,7 +4817,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 //            ros::Duration(3).sleep();
     }
     min_ds_for_path_traversal = min_ds;
-    
+    closest_ds_for_path_traversal = closest_ds;
     
     
     release_mutex(&store_frontier_mutex, __FUNCTION__);
@@ -4793,9 +4827,9 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
 bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance, int *result) {
     //just compute the goal ds for the moment //TODO complete
     ROS_DEBUG("Searching path on DS graph; %u frontiers exist", frontiers.size());
-    double min_dist = std::numeric_limits<int>::max();
+//    double min_dist = std::numeric_limits<int>::max();
     ds_t *min_ds = NULL;
-    int retry = 0;
+//    int retry = 0;
     
     // "safety" initialization (if the caller gets -1 as a value, something went wrong)
     *result = -1;
@@ -4836,45 +4870,47 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
 //    }
 
     min_ds = min_ds_for_path_traversal;
-    
-    if (min_ds == NULL) {
-        ROS_INFO("min_ds == NULL");
-        *result = 1;
-        return false;
-        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
-    }
+//    
+//    if (min_ds == NULL) {
+//        ROS_INFO("min_ds == NULL");
+//        *result = 1;
+//        return false;
+//        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+//    }
 
-    // compute closest DS
-    min_dist = std::numeric_limits<int>::max();
+//    // compute closest DS
+//    min_dist = std::numeric_limits<int>::max();
     ds_t *closest_ds = NULL;
-    retry = 0;
-    while(closest_ds == NULL && retry < 10) {
-        for (unsigned int i = 0; i < ds_list.size(); i++)
-        {
-            double dist = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
-            if (dist < 0) {
-                ROS_WARN("Distance computation failed");
-                continue;
-            }
+//    retry = 0;
+//    while(closest_ds == NULL && retry < 10) {
+//        for (unsigned int i = 0; i < ds_list.size(); i++)
+//        {
+//            double dist = distance_from_robot(ds_list.at(i).x, ds_list.at(i).y);
+//            if (dist < 0) {
+//                ROS_WARN("Distance computation failed");
+//                continue;
+//            }
 
-            if (dist < min_dist)
-            {
-                min_dist = dist;
-                closest_ds = &ds_list.at(i);
-            }
-        }
-        retry++;
-        if(closest_ds == NULL)
-            ros::Duration(3).sleep();
-    }
-    if(closest_ds == NULL)  {
-        ROS_INFO("closest_ds == NULL");
-        *result = 2;
-        return false;
-    }
+//            if (dist < min_dist)
+//            {
+//                min_dist = dist;
+//                closest_ds = &ds_list.at(i);
+//            }
+//        }
+//        retry++;
+//        if(closest_ds == NULL)
+//            ros::Duration(3).sleep();
+//    }
+//    if(closest_ds == NULL)  {
+//        ROS_INFO("closest_ds == NULL");
+//        *result = 2;
+//        return false;
+//    }
+
+    closest_ds = closest_ds_for_path_traversal;
     
     if(closest_ds->id == min_ds->id) {
-        ROS_INFO("closest_ds->id == min_ds->id");
+        ROS_ERROR("closest_ds->id == min_ds->id");
         *result = 3;
 //        return false; //DO NOT RETURN!!! we can still find a path...
     }

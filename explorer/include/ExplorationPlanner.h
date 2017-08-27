@@ -521,7 +521,7 @@ namespace explorationPlanner
             std::fstream fs_csv;
             double simplifiedDistanceFromDs(unsigned int ds_index, unsigned int frontier_index);
             bool erased;
-            ds_t *min_ds_for_path_traversal;
+            ds_t *min_ds_for_path_traversal, *closest_ds_for_path_traversal;
             DistanceComputerInterface *distance_computer;
             ros::Publisher ds_with_EOs_pub;
             int num_robots;
