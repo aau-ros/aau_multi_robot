@@ -4871,12 +4871,12 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
 
     min_ds = min_ds_for_path_traversal;
 //    
-//    if (min_ds == NULL) {
-//        ROS_INFO("min_ds == NULL");
-//        *result = 1;
-//        return false;
-//        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
-//    }
+    if (min_ds == NULL) {
+        ROS_INFO("min_ds == NULL");
+        *result = 1;
+        return false;
+        // this could happen if distance() always fails... //TODO(IMPORTANT) what happen if I return and the explorer node needs to reach a frontier?
+    }
 
 //    // compute closest DS
 //    min_dist = std::numeric_limits<int>::max();
@@ -4901,13 +4901,14 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
 //        if(closest_ds == NULL)
 //            ros::Duration(3).sleep();
 //    }
-//    if(closest_ds == NULL)  {
-//        ROS_INFO("closest_ds == NULL");
-//        *result = 2;
-//        return false;
-//    }
 
     closest_ds = closest_ds_for_path_traversal;
+
+    if(closest_ds == NULL)  {
+        ROS_INFO("closest_ds == NULL");
+        *result = 2;
+        return false;
+    }
     
     if(closest_ds->id == min_ds->id) {
         ROS_ERROR("closest_ds->id == min_ds->id");
