@@ -4989,10 +4989,10 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float max_availa
         }
         if(distance * 2 < max_available_distance) // 0.9 just for safety, since the robot has to leave the DS and compute the next frontier... moreover it helps against continuous recharging at the current DS from docking... 
         {
-            final_goal->push_back(my_selected_frontier->x_coordinate);
-            final_goal->push_back(my_selected_frontier->y_coordinate);            
-            final_goal->push_back(my_selected_frontier->detected_by_robot);
-            final_goal->push_back(my_selected_frontier->id);
+            final_goal->push_back(frontiers.at(i).x_coordinate);
+            final_goal->push_back(frontiers.at(i).y_coordinate);            
+            final_goal->push_back(frontiers.at(i).detected_by_robot);
+            final_goal->push_back(frontiers.at(i).id);
             release_mutex(&store_frontier_mutex, __FUNCTION__);
             return true;
         }
