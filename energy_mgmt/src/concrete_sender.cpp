@@ -6,7 +6,7 @@ ConcreteSender::ConcreteSender() {
     send_auction_sc = nh.serviceClient<adhoc_communication::SendEmAuction>("adhoc_communication/send_em_auction");
 }
 
-void ConcreteSender::sendBid(bid_t bid, auction_t auction, std::string topic) {
+void ConcreteSender::sendBid(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id) {
     ROS_INFO("Sending bid for auction %u to other robots on topic %s", auction.auction_id, topic.c_str());
     adhoc_communication::SendEmAuction srv;
     srv.request.topic = topic;
@@ -14,7 +14,7 @@ void ConcreteSender::sendBid(bid_t bid, auction_t auction, std::string topic) {
 //group_name = "mc_robot_0";
     srv.request.dst_robot = "mc_robot_0";
     srv.request.auction.auction = auction.auction_id;
-    srv.request.auction.robot = auction.auctioneer;
+    srv.request.auction.robot = bid.robot_id;
     srv.request.auction.docking_station = auction.docking_station_id;
     srv.request.auction.bid = bid.bid;
     srv.request.auction.starting_time = auction.starting_time;

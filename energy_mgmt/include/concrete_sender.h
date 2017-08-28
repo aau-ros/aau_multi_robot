@@ -6,7 +6,7 @@
 class ConcreteSender : public Sender {
 public:
     ConcreteSender();
-    void sendBid(bid_t bid, auction_t auction, std::string topic);
+    void sendBid(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id);
 };
 
 # endif // CONCRETE_SENDER_H

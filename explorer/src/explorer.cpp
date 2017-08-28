@@ -604,7 +604,7 @@ class Explorer
             if(robot_state == robot_state::CHARGING_ABORTED || robot_state == robot_state::CHARGING_COMPLETED) {
                 if(robot_state == robot_state::CHARGING_ABORTED) {
                     ROS_INFO("charging aborted");
-                    update_robot_state_2(robot_state::LEAVING_DS);   
+//                    update_robot_state_2(robot_state::LEAVING_DS);   
                 }
 
                 if(robot_state == robot_state::CHARGING_COMPLETED) { // TODO we should use LEAVINF_DS also after compelte charging, but causes too many problems in selecting the next goal at the moment
@@ -612,8 +612,10 @@ class Explorer
 //                    if(!moving_along_path)
 //                        update_robot_state_2(robot_state::CHOOSING_ACTION);
 //                    else
-                        update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+//                        update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
                 }
+                
+                update_robot_state_2(robot_state::LEAVING_DS);   
                     
                 continue;
             }
@@ -1791,6 +1793,7 @@ class Explorer
                 /* ... */
                 else if(robot_state == robot_state::GOING_CHECKING_VACANCY)
                 {
+                    ros::Duration(2).sleep();
                     update_robot_state_2(robot_state::CHECKING_VACANCY);
                 }    
 
@@ -3729,7 +3732,7 @@ class Explorer
     }
     
     double reference_percentage() {
-        return percentage_2;
+        return percentage;
     }
     
     void log_major_error(std::string text) {

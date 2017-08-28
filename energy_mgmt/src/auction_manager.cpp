@@ -116,7 +116,7 @@ void AuctionManager::tryToAcquireDs() {
         bid.robot_id = robot_id;
         bid.bid = bid_computer->getBid();
         auction_bids.push_back(bid);
-        sender->sendBid(bid, current_auction, auction_starting_topic);
+        sender->sendBid(bid, current_auction, auction_starting_topic, robot_id);
 
         scheduleAuctionTermination();
     }
@@ -199,18 +199,22 @@ bool AuctionManager::isThisRobotTheWinner(unsigned int winner_id) {
 
 void AuctionManager::sendAuctionResult(bid_t bid) {
     ROS_INFO("Send results for auction %d to other robots", current_auction.auction_id);
-    sender->sendBid(bid, current_auction, auction_result_topic);
+    sender->sendBid(bid, current_auction, auction_result_topic, robot_id);
 }
 
 void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     auction_mutex.lock();
+    ROS_DEBUG("Received bid (%f) from robot %d for auction %u", msg.get()->bid, msg.get()->robot, (unsigned int)msg.get()->auction);
 
     if(auction_participation_state != MANAGING)
         ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
     
-    else if (current_auction.auction_id != (unsigned int)msg.get()->auction)
-        ROS_INFO("Received a bid that is not for the auction recently started by this robot: ignore it");
+//    else if (current_auction.auction_id != (unsigned int)msg.get()->auction) 
+//        ROS_INFO("Received a bid that is not for the auction recently started by this robot (current auction is %d): ignore it", current_auction.auction_id);
+    
+    else if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
+        ROS_INFO("Received a bid that is not for the docking station %u, which is not the one under auction (it's %u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
     
     else {
 //          // probably this is unnecessary, but jsut to be safe...
@@ -309,13 +313,13 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
             ROS_INFO("robot is searching for a path on graph: ignore auction");  
         else {
             double bid_double = bid_computer->getBid();
-            if (bid_double > msg.get()->bid)
-            {
-                ROS_INFO("The robot can place an higher bid than the one received");
+//            if (bid_double > msg.get()->bid)
+//            {
+//                ROS_INFO("The robot can place an higher bid than the one received");
                 current_auction = participateToOtherRobotAuction(bid_double, msg);
-            }
-            else
-                ROS_INFO("The robot has no chance to win, so it won't place a bid for this auction");
+//            }
+//            else
+//                ROS_INFO("The robot has no chance to win, so it won't place a bid for this auction");
         }
 
     }
@@ -346,7 +350,7 @@ auction_t AuctionManager::participateToOtherRobotAuction(double bid_double, cons
     bid_t bid;
     bid.robot_id = robot_id;
     bid.bid = bid_double;
-    sender->sendBid(bid, current_auction, auction_reply_topic);
+    sender->sendBid(bid, current_auction, auction_reply_topic, robot_id);
 
     return new_auction;
 }

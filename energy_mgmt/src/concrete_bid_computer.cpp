@@ -44,7 +44,7 @@ void ConcreteBidComputer::subscribeToTopics() { //TODO maybe we should have a se
 
 void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {        
     message_mutex.lock();
-    ROS_INFO("received robot position");
+//    ROS_INFO("received robot position");
     next_robot_x = pose->pose.pose.position.x;
     next_robot_y = pose->pose.pose.position.y;
     message_mutex.unlock();
@@ -267,7 +267,7 @@ double ConcreteBidComputer::distance(double start_x, double start_y, double goal
 
 void ConcreteBidComputer::cb_battery(const explorer::battery_state::ConstPtr &msg)
 {
-    ROS_DEBUG("Received battery state");
+//    ROS_DEBUG("Received battery state");
     next_battery = msg;    
 //    ROS_DEBUG("SOC: %d%%; rem. time: %.1f; rem. distance: %.1f", (int) (battery.soc * 100.0), battery.remaining_time_run, battery.remaining_distance);
 }
@@ -413,5 +413,6 @@ void ConcreteBidComputer::logMetadata()
 
 double ConcreteBidComputer::getBid() {
     llh = l1 * w1 + l2 * w2 + l3 * w3 + l4 * w4;
+    ROS_DEBUG("llh: %f", llh);
     return llh;
 }

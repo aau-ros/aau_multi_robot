@@ -1338,12 +1338,13 @@ void docking::cb_robots(const adhoc_communication::EmRobot::ConstPtr &msg)
 
             new_robot = false;
             
-
-            robots[i].state = static_cast<robot_state::robot_state_t>(msg.get()->state);
-            robots[i].x = msg.get()->x;
-            robots[i].y = msg.get()->y;
-            robots[i].selected_ds = msg.get()->selected_ds;
-            robots[i].timestamp = msg.get()->header.timestamp;
+            if(robots[i].timestamp < msg.get()->header.timestamp) {
+                robots[i].state = static_cast<robot_state::robot_state_t>(msg.get()->state);
+                robots[i].x = msg.get()->x;
+                robots[i].y = msg.get()->y;
+                robots[i].selected_ds = msg.get()->selected_ds;
+                robots[i].timestamp = msg.get()->header.timestamp;
+            }
                 
             break;
         }
@@ -1596,7 +1597,7 @@ void docking::inform_explorer_about_used_ds() {
 }
 
 bool docking::using_ds(robot_state::robot_state_t state) {
-    return (state == robot_state::CHARGING || state == robot_state::GOING_CHARGING || state == robot_state::GOING_CHECKING_VACANCY || state == robot_state::CHECKING_VACANCY || state == robot_state::CHARGING_COMPLETED || state == robot_state::CHARGING_ABORTED);
+    return (state == robot_state::CHARGING || state == robot_state::GOING_CHARGING || state == robot_state::GOING_CHECKING_VACANCY || state == robot_state::CHECKING_VACANCY); // || state == robot_state::CHARGING_COMPLETED || state == robot_state::CHARGING_ABORTED);
 }
 
 void docking::create_log_files()
@@ -2879,16 +2880,31 @@ bool docking::set_optimal_ds_given_index(int index) {
 
 void docking::runtime_checks() {
     bool found = false;
-    for(unsigned int i=0; i<robots.size()-1; i++)
-        for(unsigned int j=i+1; j<robots.size(); j++)
-            if((ros::Time::now().toSec() - robots[i].timestamp) < 5 && (ros::Time::now().toSec() - robots[j].timestamp) < 5 && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
-                found = true;
-                if(!two_robots_at_same_ds_printed) {
-                    log_major_error("two robots recharging at the same DS!!!");
-                    ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
-                    two_robots_at_same_ds_printed = true;
-                }
+//    for(unsigned int i=0; i<robots.size()-1; i++)
+//        for(unsigned int j=i+1; j<robots.size(); j++)
+//            if((ros::Time::now().toSec() - robots[i].timestamp) < 5 && (ros::Time::now().toSec() - robots[j].timestamp) < 5 && robots[i].selected_ds == robots[j].selected_ds && robots[i].state == robot_state::CHARGING && robots[j].state == robot_state::CHARGING) {
+//                found = true;
+//                if(!two_robots_at_same_ds_printed) {
+//                    log_major_error("two robots recharging at the same DS!!!");
+//                    ROS_DEBUG("robots are: %d, %d; ds is ds%d", robots.at(i).id, robots.at(j).id, robots[i].selected_ds);
+//                    two_robots_at_same_ds_printed = true;
+//                    
+//                    if(robots[i].id == robot_id || robots[j].id == robot_id)
+//                        robot_state_manager->setRobotState(robot_state::CHARGING_ABORTED);
+//                }
+//            }
+    for(unsigned int i=0; i<robots.size(); i++)
+        if(robots[i].id != robot_id && (ros::Time::now().toSec() - robots[i].timestamp) < 5 && robots[i].selected_ds == get_optimal_ds_id() && robots[i].state == robot_state::CHARGING && robot_state == robot_state::CHARGING) {
+            found = true;
+            if(!two_robots_at_same_ds_printed) {
+                log_major_error("two robots recharging at the same DS!!!");
+                ROS_DEBUG("the other robot is %d, at ds%d", robots.at(i).id, robots[i].selected_ds);
+                two_robots_at_same_ds_printed = true;
             }
+            
+//                robot_state_manager->lockRobotState();
+            robot_state_manager->setRobotState(robot_state::CHARGING_ABORTED);
+        }
     if(!found) 
        two_robots_at_same_ds_printed = false;            
     

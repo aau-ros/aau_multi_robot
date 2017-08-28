@@ -7,7 +7,7 @@
 
 class Sender {
 public:
-    virtual void sendBid(bid_t bid, auction_t auction, std::string topic) = 0;
+    virtual void sendBid(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id) = 0;
 
 protected:
     ros::ServiceClient send_auction_sc;
