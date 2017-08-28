@@ -1295,7 +1295,7 @@ void docking::handle_robot_state()
 
 void docking::check_other_robots_state() {
     for(auto it = robots.begin(); it != robots.end(); it++)
-        if(using_ds(it->state) && get_optimal_ds_id() == it->selected_ds && (ros::Time::now().toSec() - it->timestamp) < 5 )
+        if(it->id != robot_id && using_ds(it->state) && get_optimal_ds_id() == it->selected_ds && (ros::Time::now().toSec() - it->timestamp) < 5 )
             inform_explorer_about_used_ds(); 
 }
 
@@ -2258,6 +2258,11 @@ void docking::send_robot()
 //        ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0));
 //        ; ROS_ERROR("%f", distance(robot.x, robot.y, 0, 0, true));
 //    }
+
+    robot->selected_ds = get_optimal_ds_id();
+    robot->timestamp = ros::Time::now().toSec();
+
+
     adhoc_communication::SendEmRobot robot_msg;
     robot_msg.request.dst_robot = group_name;
     robot_msg.request.topic = "robots";
