@@ -189,8 +189,9 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         subtractTraveledDistance();
 
     } else if(robot_state == robot_state::IN_QUEUE) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForBasicComputations();
+        battery_state->consumed_energy_B += elapsed_time * 1;
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::AUCTIONING) {
         substractEnergyRequiredForKeepingRobotAlive();
