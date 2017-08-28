@@ -1363,12 +1363,12 @@ class Explorer
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
 //                                        final_goal.clear();
-                                        if(exploration->existFrontiersReachableWithFullBattery(maximum_available_distance-2, &error, &final_goal)) {
+                                        if(exploration->existFrontiersReachableWithFullBattery(maximum_available_distance-1, &error, &final_goal)) {
 
                                             if(full_battery) {
-                                                log_minor_error("existFrontiersReachableWithFullBattery with full battery");
+                                                log_major_error("existFrontiersReachableWithFullBattery with full battery");
 //                                                update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
-                                                continue;
+//                                                continue;
                                             }
 
                                             ROS_INFO("There are still frontiers that can be reached from the current DS: start auction for this DS...");
@@ -1382,7 +1382,7 @@ class Explorer
                                             update_robot_state_2(exploring_for_graph_navigation);
                                             ros::Duration(1).sleep();
                                         
-                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(maximum_available_distance-2.1, &error) ) {
+                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(maximum_available_distance-1.1, &error) ) {
                                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                 
                                                 int result = -1;
