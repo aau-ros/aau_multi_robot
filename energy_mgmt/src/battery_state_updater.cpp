@@ -151,15 +151,15 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         subtractTraveledDistance();
 
     } else if(robot_state == robot_state::CHECKING_VACANCY) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForBasicComputations();
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::GOING_CHARGING) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
-        substractEnergyRequiredForBasicComputations();
-        substractEnergyRequiredForLocomotion();
-        subtractTraveledDistance();
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForSensing();
+//        substractEnergyRequiredForBasicComputations();
+//        substractEnergyRequiredForLocomotion();
+//        subtractTraveledDistance();
 
     } else if(robot_state == robot_state::CHARGING) {
         substractEnergyRequiredForKeepingRobotAlive();
@@ -167,18 +167,18 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
         rechargeBattery();
 
     } else if(robot_state == robot_state::CHARGING_COMPLETED) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForBasicComputations();
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::CHARGING_ABORTED) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForBasicComputations();
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForBasicComputations();
 
     } else if(robot_state == robot_state::LEAVING_DS) {
-        substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
-        substractEnergyRequiredForBasicComputations();
-        substractEnergyRequiredForLocomotion();
+//        substractEnergyRequiredForKeepingRobotAlive();
+//        substractEnergyRequiredForSensing();
+//        substractEnergyRequiredForBasicComputations();
+//        substractEnergyRequiredForLocomotion();
         //subtractTraveledDistance(); //TODO(IMPORTANT) we should use this, but it complicates a lot the exstimations
 
     } else if(robot_state == robot_state::GOING_IN_QUEUE) {
