@@ -104,7 +104,7 @@ unsigned int ConcreteBidComputer::countActiveRobots() {
         if (robots[i].active)
             num_robots_active++;
     }
-    ROS_DEBUG("Number of active robots DS: %d", num_robots_active);
+    ROS_DEBUG("Number of active robots: %d", num_robots_active);
     robot_mutex.unlock();
     return num_robots_active;
 }
@@ -281,6 +281,7 @@ void ConcreteBidComputer::cb_robots(const adhoc_communication::EmRobot::ConstPtr
     {
         if (robots[i].id == msg.get()->id)
         {
+            new_robot = false;
             robots[i].active = isActiveState(static_cast<robot_state::robot_state_t>(msg.get()->state));
             robots[i].x = msg.get()->x;
             robots[i].y = msg.get()->y;
