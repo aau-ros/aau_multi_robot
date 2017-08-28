@@ -244,7 +244,7 @@ class Explorer
         nh.param("w2", w2, 0);
         nh.param("w3", w3, 0);
         nh.param("w4", w4, 0);
-        nh.param<float>("queue_distance", queue_distance, 7.0);
+        nh.param<float>("queue_distance", queue_distance, 3.0);
         nh.param<float>("min_distance_queue_ds", min_distance_queue_ds, 3.0);
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
@@ -1239,7 +1239,7 @@ class Explorer
                         
                         if(exploration->updateRobotPose()) {
                             exploration->updateOptimalDs();
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance)+3.0, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                         }
                         else {
                             log_major_error("robot pose not updated");
@@ -1362,11 +1362,12 @@ class Explorer
                                     {
                                         exploration->discovered_new_frontier = false;
                                         exploration->updateOptimalDs();
-                                        if(exploration->existFrontiersReachableWithFullBattery(0.99*maximum_available_distance, &error, &final_goal)) {
+//                                        final_goal.clear();
+                                        if(exploration->existFrontiersReachableWithFullBattery(maximum_available_distance-2, &error, &final_goal)) {
 
                                             if(full_battery) {
                                                 log_minor_error("existFrontiersReachableWithFullBattery with full battery");
-                                                update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
+//                                                update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
                                                 continue;
                                             }
 
@@ -1381,7 +1382,7 @@ class Explorer
                                             update_robot_state_2(exploring_for_graph_navigation);
                                             ros::Duration(1).sleep();
                                         
-                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(0.98*maximum_available_distance, &error) ) {
+                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(maximum_available_distance-2.1, &error) ) {
                                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                 
                                                 int result = -1;
@@ -1617,6 +1618,8 @@ class Explorer
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
                     ROS_INFO("Doing smartGoalBackoff");
+                    if(final_goal.size() < 2)
+                        log_major_error("final_goal.size() < 2");
                     if (exploration->smartGoalBackoff(final_goal.at(0), final_goal.at(1), costmap2d_global,
                                                       &backoffGoal))
                     {
