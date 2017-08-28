@@ -1239,7 +1239,7 @@ class Explorer
                         
                         if(exploration->updateRobotPose()) {
                             exploration->updateOptimalDs();
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance)+3.0, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance)+4.0, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
                         }
                         else {
                             log_major_error("robot pose not updated");
