@@ -1327,8 +1327,8 @@ void MapMerger::start()
 }
 
 void MapMerger::finished_exploration_callback(const std_msgs::Empty msg) {
-    ROS_INFO("received finished_exploration message");
-    finished_exploration = true;
+//    ROS_INFO("received finished_exploration message");
+//    finished_exploration = true;
 }
 
 void MapMerger::mergeMaps(nav_msgs::OccupancyGrid *mapToMerge, int min_x, int min_y, int max_x, int max_y)
