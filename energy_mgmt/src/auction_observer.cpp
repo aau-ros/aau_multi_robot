@@ -123,6 +123,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
         if(robot_state == robot_state::IN_QUEUE) {
             ROS_INFO("in_queue state");
             if(winnerOfNewAuction()) {
+                ROS_INFO("winner of new auction");
                 if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                     ROS_ERROR("this should NOT happen!");
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
