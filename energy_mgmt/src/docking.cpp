@@ -801,42 +801,58 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
         /* "Flocking" policy */
         else if (ds_selection_policy == 4) //TODO(minor) comments and possibly use functions...
         {   
-            /* Compute DS with minimal cost */
+            int sum_x = 0, sum_y = 0;
+            for (unsigned int i = 0; i < robots.size(); i++)
+            {
+                sum_x += robots.at(i).x;
+                sum_y += robots.at(i).y;
+            }
+            double flock_x = (double)sum_x / (double)num_robots;
+            double flock_y = (double)sum_y / (double)num_robots;
+
+
+            double max_distance_between_two_DSs = numeric_limits<int>::min();
+            double max_distance_between_DS_and_robot_flock = numeric_limits<int>::min();
+            for(unsigned int i=0; i < ds.size(); i++) {
+                for(unsigned int j=i+1; j < ds.size(); j++) {
+                    double dist = ds_graph[ds[i].id][ds[j].id];
+                    if(dist > 0)
+                        if(dist < conservative_maximum_distance_one_way())
+                            if(dist > max_distance_between_two_DSs)
+                                max_distance_between_two_DSs = dist;
+                }
+
+                double dist = distance(ds.at(i).x, ds.at(i).y, flock_x, flock_y);
+                if(dist >= 0)
+                    if(dist > max_distance_between_DS_and_robot_flock)
+                        max_distance_between_DS_and_robot_flock = dist;
+            }
+            if(max_distance_between_two_DSs == numeric_limits<int>::min())
+                max_distance_between_two_DSs = numeric_limits<int>::max();
+            if(max_distance_between_DS_and_robot_flock == numeric_limits<int>::min())
+                max_distance_between_DS_and_robot_flock = numeric_limits<int>::max();       
+
             double min_cost = numeric_limits<int>::max();
             for (unsigned int d = 0; d < ds.size(); d++)
             {
+                // Check that the candidate new optimal DS is reachable
+                double dist = distance_from_robot(ds.at(d).x, ds.at(d).y);
+                if (dist < 0 || dist >= conservative_maximum_distance_one_way())
+                    continue;
+
                 /* n_r */
                 int count = 0;
                 for (unsigned int i = 0; i < robots.size(); i++)
-                    if (optimal_ds_is_set() &&
-                        robots.at(i).selected_ds == get_optimal_ds_id())
+                    if (optimal_ds_is_set() && robots.at(i).selected_ds == get_optimal_ds_id())
                         count++;
                 double n_r = (double)count / (double)num_robots;
+                ROS_DEBUG("n_r: %.1f", n_r);
 
                 /* d_s */
-                int sum_x = 0, sum_y = 0;
-                for (unsigned int i = 0; i < robots.size(); i++)
-                {
-                    sum_x += robots.at(i).x;
-                    sum_y += robots.at(i).y;
-                }
-                double flock_x = (double)sum_x / (double)num_robots;
-                double flock_y = (double)sum_y / (double)num_robots;
-                double max_distance = numeric_limits<int>::min();
-                for(unsigned int h=0; h < ds.size(); h++) {
-                    double dist = distance(ds[d].x, ds[d].y, ds[h].x, ds[h].y);
-                    if(dist < 0)
-                        continue; //TODO(minor) hmm...
-                    if(dist < conservative_maximum_distance_one_way())
-                        if(dist > max_distance)
-                            max_distance = dist;
-                    
-                }
-                if(max_distance == numeric_limits<int>::min())
-                    continue; //TODO(minor) hmm
-                double d_s = distance(ds.at(d).x, ds.at(d).y, flock_x, flock_y) / max_distance;
+                double d_s = distance(ds.at(d).x, ds.at(d).y, flock_x, flock_y) / max_distance_between_DS_and_robot_flock;
                 if (d_s < 0)
                     continue;
+                ROS_DEBUG("d_s: %.1f", d_s);
 
                 /* theta_s */
                 double swarm_direction_x = 0, swarm_direction_y = 0;
@@ -861,31 +877,39 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
                 double theta_s = fabs(alpha - rho) / (double)180;
+                ROS_DEBUG("thetha_s: %.1f", theta_s);
+                if(theta_s < 0 || theta_s > 1)
+                    ROS_ERROR("invalid theta!");
 
                 /* d_f */
-                double d_f = numeric_limits<int>::max();
-                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
-                {
-                    double dist = distance(ds[d].x, ds[d].y, jobs_local_list[i].x_coordinate, jobs_local_list[i].y_coordinate);
-                    if (dist < 0)
-                        continue;
-                    if (dist < d_f)
-                        d_f = dist;
-                }
+                double d_f = 1.0;
+                double dist_next_ds_with_EOs = numeric_limits<int>::max();
+//                for (unsigned int i = 0; i < jobs_local_list.size(); i++)
+//                {
+//                    double dist = distance(ds[d].x, ds[d].y, jobs_local_list[i].x_coordinate, jobs_local_list[i].y_coordinate);
+//                    if (dist < 0)
+//                        continue;
+//                    if (dist < d_f)
+//                        d_f = dist;
+//                }
+                for(unsigned int h=0; h < ds.size(); h++)
+                    if(ds[h].id != ds[d].id && ds[h].has_EOs) {
+                        double dist = ds_graph[ds[d].id][ds[h].id];
+                        if(dist <= 0)
+                            continue;
+                        if(dist < dist_next_ds_with_EOs)
+                            dist_next_ds_with_EOs = dist;
+                    }
+                d_f = dist / max_distance_between_two_DSs;
+                ROS_DEBUG("d_f: %.1f", d_f);
 
                 /* resulting cost (as a sum of all the previously computed parameters) */
                 double cost = n_r + d_s + theta_s + d_f;
                 if (cost < min_cost)
                 {
-                    // Check that the candidate new optimal DS is reachable
-                    double dist = distance_from_robot(ds.at(d).x, ds.at(d).y);
-                    if (dist < 0 || dist >= conservative_maximum_distance_with_return())
-                        continue;
-                    else {
-                        // The candidate new optimal DS can be set as new optimal DS (until we don't find a better one)
-                        min_cost = cost;
-                        next_optimal_ds_id = ds.at(d).id;
-                    }                    
+                    // The candidate new optimal DS can be set as new optimal DS (until we don't find a better one)
+                    min_cost = cost;
+                    next_optimal_ds_id = ds.at(d).id;           
                 }
             }
         }
