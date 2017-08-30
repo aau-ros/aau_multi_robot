@@ -13,6 +13,7 @@
 #include <robot_state/robot_state_management.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "bid_computer.h"
+#include <utilities/data_logger.h>
 
 struct ds_t
 {
@@ -61,7 +62,8 @@ private:
     adhoc_communication::EmDockingStation::ConstPtr em_docking_station_msg;
     std::mutex robot_mutex, ds_mutex, message_mutex;
     explorer::battery_state::ConstPtr battery, next_battery;
-    std::string log_path, robot_name;
+    std::string log_path, robot_prefix;
+    DataLogger *data_logger;
 
     void loadParameters();
     void initializeVariables();

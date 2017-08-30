@@ -4,6 +4,8 @@ ConcreteBidComputer::ConcreteBidComputer() {
     loadParameters();
     initializeVariables();
     subscribeToTopics();
+    data_logger = new DataLogger("energy_mgmt", robot_prefix, log_path);
+    data_logger->createLogFile("sent_bids.csv", "#sim_time,llh,l1,l2,l3,l4\n");
 }
 
 void ConcreteBidComputer::loadParameters() {
@@ -20,7 +22,7 @@ void ConcreteBidComputer::loadParameters() {
         ROS_FATAL("parameter not found");
     if(!nh_tilde.getParam("y", origin_absolute_y))
         ROS_FATAL("parameter not found");
-    if(!nh_tilde.getParam("robot_prefix", robot_name))
+    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
         ROS_FATAL("parameter not found");
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_FATAL("parameter not found");
@@ -376,7 +378,7 @@ void ConcreteBidComputer::logMetadata()
 
     /* Create directory */
     log_path = log_path.append("/energy_mgmt");
-    log_path = log_path.append(robot_name);
+    log_path = log_path.append(robot_prefix);
     boost::filesystem::path boost_log_path(log_path.c_str());
     if (!boost::filesystem::exists(boost_log_path))
     {
@@ -415,5 +417,8 @@ void ConcreteBidComputer::logMetadata()
 double ConcreteBidComputer::getBid() {
     llh = l1 * w1 + l2 * w2 + l3 * w3 + l4 * w4;
     ROS_DEBUG("llh: %f", llh);
+    std::stringstream stream;
+    stream << ros::Time::now() << "," << llh << "," << l1 << "," << l2 << "," << l3 << "," << l4 << std::endl;
+    data_logger->updateLogFile("sent_bids.csv", stream);
     return llh;
 }
