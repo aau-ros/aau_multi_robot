@@ -7,7 +7,7 @@ AuctionManager::AuctionManager(unsigned int robot_id) {
     createSubscribers();
     ROS_INFO("Instance created successfully");
     data_logger = new DataLogger("energy_mgmt", robot_name, log_path);
-    data_logger->createLogFile("#auctions.log", "auction_id,sim_time,docking_station_id,robot_id_1,bid_1,...,winner,robot_winner\n");
+    data_logger->createLogFile("auctions.log", "#auction_id,sim_time,docking_station_id,robot_id_1,bid_1,...,winner,robot_winner\n");
 }
 
 void AuctionManager::initializeVariables(unsigned int robot_id) {
