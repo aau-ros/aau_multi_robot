@@ -120,6 +120,7 @@ class Explorer
     int optimal_ds_id;
     unsigned int request_id;
     bool failure_with_full_battery;
+    double simulation_timeout;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -249,6 +250,8 @@ class Explorer
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
         nh.param<float>("auction_timeout", auction_timeout, 3);
+        if(!nh.getParam("simulation_timeout", simulation_timeout))
+            ROS_FATAL("invalid timeout");
         nh.param<float>("checking_vacancy_timeout", checking_vacancy_timeout, 3);
 
         ROS_INFO("Costmap width: %d", costmap_width);
@@ -1929,10 +1932,7 @@ class Explorer
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             checked_percentage = true;
         }
-        
-        if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
-            finalize_exploration();
-        }
+           
         
 //        if(robot_state_next == finished_next) {
 //            ROS_INFO("Have to finish...");
@@ -2001,7 +2001,15 @@ class Explorer
         if(robot_state != srv.response.robot_state) {
             ROS_INFO("robot state changed by another node");
             update_robot_state_2(srv.response.robot_state);
-        } 
+        }
+        
+        if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+            finalize_exploration();
+        }
+        
+        if(ros::Time::now().toSec() > simulation_timeout) {
+            finalize_exploration();
+        }
         
         // TODO(minor) do we need the spin?
         ros::spinOnce();
