@@ -4,6 +4,7 @@
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include "auction_manager_interface.h"
+#include <utilities/data_logger.h>
 
 class AuctionManager : public AuctionManagerInterface {
 public:
@@ -47,6 +48,7 @@ private:
     unsigned int num_robots;
     std::string auction_starting_topic, auction_reply_topic, auction_result_topic;
     std::string log_path, robot_name;
+    DataLogger *data_logger;
 
     void initializeVariables(unsigned int robot_id);
     void loadParameters();

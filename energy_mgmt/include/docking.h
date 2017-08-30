@@ -540,6 +540,7 @@ class docking
     bool using_ds(robot_state::robot_state_t state);
     void inform_explorer_about_used_ds();
     void check_other_robots_state();
+    bool printed_invalid_message_id;
 
 //    AuctionManager auction_manager; //TODO
 

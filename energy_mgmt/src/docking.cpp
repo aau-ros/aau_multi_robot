@@ -226,6 +226,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     changed_state_time = ros::Time::now();
     test_mode = false;
     already_sent_vacancy_check_request = false;
+    printed_invalid_message_id = false;
 
     /* Function calls */
     preload_docking_stations();
@@ -1395,6 +1396,7 @@ void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::C
 
     if(!checkAndUpdateReceivedMessageId("docking_stations", msg.get()->header.message_id, msg.get()->header.sender_robot)) {
         log_major_error("invalid message id!");
+        printed_invalid_message_id = true;
         return;   
     }
     

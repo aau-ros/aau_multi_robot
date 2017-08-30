@@ -6,6 +6,8 @@ AuctionManager::AuctionManager(unsigned int robot_id) {
     loadParameters();
     createSubscribers();
     ROS_INFO("Instance created successfully");
+    data_logger = new DataLogger("energy_mgmt", robot_name, log_path);
+    data_logger->createLogFile("#auctions.log", "auction_id,sim_time,docking_station_id,robot_id_1,bid_1,...,winner,robot_winner\n");
 }
 
 void AuctionManager::initializeVariables(unsigned int robot_id) {
@@ -42,7 +44,8 @@ void AuctionManager::loadParameters() {
     }
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_ERROR("invalid log_path"); //TODO during tests this is printed, but why?
-
+    if(!nh_tilde.getParam("robot_prefix", robot_name))
+        ROS_ERROR("invalid robot_prefix");
     nh_tilde.param<double>("sleep_time_between_two_participations", sleep_time_between_two_participations, 5); //s //TODO use
 }
 
@@ -169,15 +172,20 @@ unsigned int AuctionManager::computeAuctionWinner() {
     winning_bid.robot_id = -1;
     winning_bid.bid = std::numeric_limits<float>::min();
 
+    std::stringstream stream;
+    stream << current_auction.auction_id << "," << ros::Time::now() << "," << current_auction.docking_station_id << ",";
     for (auto it = auction_bids.begin(); it != auction_bids.end(); it++)
     {
         ROS_DEBUG("robot_%d placed %.1f", it->robot_id, it->bid);
+        stream << it->robot_id << "," << it->bid << ",";
         if (it->bid > winning_bid.bid)
         {
             winning_bid.robot_id = it->robot_id;
             winning_bid.bid = it->bid;
         }
     }
+    stream << "winner," << winning_bid.robot_id << std::endl;
+    data_logger->updateLogFile("auctions.log", stream);
 
     if(winning_bid.robot_id < 0) // this should not happen, since at least the robot that started the auction must have placed a bid
         ROS_ERROR("No winner for auction %d has been found", current_auction.auction_id); //TODO raise exception?
@@ -212,9 +220,6 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
     if(auction_participation_state != MANAGING)
         ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
     
-//    else if (current_auction.auction_id != (unsigned int)msg.get()->auction) 
-//        ROS_INFO("Received a bid that is not for the auction recently started by this robot (current auction is %d): ignore it", current_auction.auction_id);
-    
     else if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
         ROS_INFO("Received a bid that is not for the docking station %u, which is not the one under auction (it's %u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
     
@@ -226,6 +231,9 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
 //                ROS_INFO("Received a bid that was already received before: ignore it");
 //                return;
 //            }
+
+        if (current_auction.auction_id != (unsigned int)msg.get()->auction) 
+            ROS_ERROR("Received a bid that is not for the auction recently started by this robot (current auction is %d): ignore it", current_auction.auction_id);
 
         ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid, msg.get()->robot, current_auction.auction_id);
         bid_t bid;
