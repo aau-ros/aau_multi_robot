@@ -1394,7 +1394,7 @@ void docking::cb_jobs(const adhoc_communication::ExpFrontier::ConstPtr &msg)
 void docking::cb_docking_stations(const adhoc_communication::EmDockingStation::ConstPtr &msg)
 {
 
-    if(!checkAndUpdateReceivedMessageId("docking_stations", msg.get()->header.message_id, msg.get()->header.sender_robot)) {
+    if(!printed_invalid_message_id && !checkAndUpdateReceivedMessageId("docking_stations", msg.get()->header.message_id, msg.get()->header.sender_robot)) {
         log_major_error("invalid message id!");
         printed_invalid_message_id = true;
         return;   
