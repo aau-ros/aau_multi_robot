@@ -2346,6 +2346,7 @@ class Explorer
         fs << "queue_distance                   = " << queue_distance << std::endl;
         fs << "auction_timeout                  = " << auction_timeout << std::endl;
         fs << "checking_vacancy_timeout         = " << checking_vacancy_timeout << std::endl;
+        fs << "simulation_timeout               = " << simulation_timeout << std::endl;
 
         double param_double;
         int param_int;
