@@ -1393,37 +1393,37 @@ class Explorer
                                                 complex_path.clear();
                                                 ds_path_counter = 0;
                                                 exploration->compute_and_publish_ds_path(maximum_available_distance, &result, &complex_path);
-//                                                if(result == 0) //TODO very very orrible idea, using result...
-//                                                {
-//                                                    ROS_INFO("path successfully found");
-//                                                    
-//                                                    counter++;
-//                                                    move_robot_away(counter);
-//                                                    moving_along_path = true;
-//                                                    ds_path_size = complex_path.size();
-//                                                    update_robot_state_2(auctioning_2);
-//                                                    retries2 = 0;
-//                                                    retries4 = 0;
-//                                                }
-//                                                else {
-//                                                    retries2++;
+                                                if(result == 0) //TODO very very orrible idea, using result...
+                                                {
+                                                    ROS_INFO("path successfully found");
+                                                    
+                                                    counter++;
+                                                    move_robot_away(counter);
+                                                    moving_along_path = true;
+                                                    ds_path_size = complex_path.size();
+                                                    update_robot_state_2(auctioning_2);
+                                                    retries2 = 0;
+                                                    retries4 = 0;
+                                                }
+                                                else {
+                                                    retries2++;
 ////                                                    update_robot_state_2(auctioning_2);
-//                                                    if(result == 1) {
-//                                                        log_major_error("No DS with EOs was found");
-//                                                    else if(result == 2)
-//                                                        log_major_error("impossible, no closest ds found...");
-//                                                    else if(result == 3) {
-//                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
-//                                                        counter++;
-//                                                        move_robot_away(counter);
-//                                                        moving_along_path = true;
-//                                                        ds_path_size = complex_path.size();
-//                                                        update_robot_state_2(auctioning_2);
-//                                                        retries3++;
-//                                                    }
-//                                                    else
-//                                                        log_major_error("invalid result value");
-//                                                }
+                                                    if(result == 1)
+                                                        log_major_error("No DS with EOs was found");
+                                                    else if(result == 2)
+                                                        log_major_error("impossible, no closest ds found...");
+                                                    else if(result == 3) {
+                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+                                                        counter++;
+                                                        move_robot_away(counter);
+                                                        moving_along_path = true;
+                                                        ds_path_size = complex_path.size();
+                                                        update_robot_state_2(auctioning_2);
+                                                        retries3++;
+                                                    }
+                                                    else
+                                                        log_major_error("invalid result value");
+                                                }
                                             }
                                             else {
                                                 ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
