@@ -3165,6 +3165,7 @@ void docking::compute_and_publish_path_on_ds_graph() {
 bool docking::simple_compute_and_publish_path_on_ds_graph(explorer::PathOnDsGraph::Request &req, explorer::PathOnDsGraph::Response &res) {
 
     ROS_INFO("simple computing path on DS graph");
+    moving_along_path = true;
 
 //    // compute closest DS
 //    double min_dist = numeric_limits<int>::max();
