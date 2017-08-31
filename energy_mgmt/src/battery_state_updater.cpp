@@ -1,4 +1,5 @@
 #include "battery_state_updater.h"
+#include <utilities/data_logger.h>
 
 BatteryStateUpdater::BatteryStateUpdater(explorer::battery_state *b) {
     ROS_INFO("Creating instance of BatteryStateUpdater");
@@ -356,41 +357,40 @@ void BatteryStateUpdater::setRobotStateManager(RobotStateManagerInterface *robot
 }
 
 void BatteryStateUpdater::createLogDirectory() {
-    log_path = log_path.append("/energy_mgmt");
-    log_path = log_path.append(robot_name);
-    boost::filesystem::path boost_log_path(log_path.c_str());
-    if (!boost::filesystem::exists(boost_log_path))
-    {
-        ROS_INFO("Creating directory %s", log_path.c_str());
-        try
-        {
-            if (!boost::filesystem::create_directories(boost_log_path))
-            {
-                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
-                exit(-1);
-            }
-        }
-        catch (const boost::filesystem::filesystem_error &e)
-        {
-            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
-            exit(-1);
-        }
-    }
-    else
-    {
-        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
-    }
+//    log_path = log_path.append("/energy_mgmt");
+//    log_path = log_path.append(robot_name);
+//    boost::filesystem::path boost_log_path(log_path.c_str());
+//    if (!boost::filesystem::exists(boost_log_path))
+//    {
+//        ROS_INFO("Creating directory %s", log_path.c_str());
+//        try
+//        {
+//            if (!boost::filesystem::create_directories(boost_log_path))
+//            {
+//                ROS_ERROR("Cannot create directory %s: aborting node...", log_path.c_str());
+//                exit(-1);
+//            }
+//        }
+//        catch (const boost::filesystem::filesystem_error &e)
+//        {
+//            ROS_ERROR("Cannot create path %saborting node...", log_path.c_str());
+//            exit(-1);
+//        }
+//    }
+//    else
+//    {
+//        ROS_INFO("Directory %s already exists: log files will be saved there", log_path.c_str());
+//    }
 }
 
 void BatteryStateUpdater::logMetadata() {
     ROS_INFO("Logging metadata");
-    /* Create file names */
-    log_path = log_path.append(robot_prefix + "/");
-    info_file = log_path + std::string("metadata_battery.csv");
+    DataLogger dt("energy_mgmt", robot_prefix, log_path);
+    dt.createLogFile("metadata_battery.csv", "#power_sonar,power_laser,power_basic_computations,power_advanced_computations,power_microcontroller,power_moving_fixed_cost, power_per_speed,power_charging,initial_speed_avg,maximum_traveling_distance\n");
 
-    fs_info.open(info_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_info << "#power_sonar, power_laser, power_basic_computations, power_advanced_computations, power_microcontroller, power_moving_fixed_cost, power_per_speed, power_charging,initial_speed_avg,maximum_traveling_distance" << std::endl;
-    fs_info << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << speed_avg_init << "," << maximum_traveling_distance << std::endl;
-    fs_info.close();
+    std::stringstream stream;
+    stream << power_sonar << "," << power_laser << "," << power_basic_computations << "," << power_advanced_computations << "," << power_microcontroller << "," << power_moving_fixed_cost << "," << power_per_speed << "," << power_charging << "," << speed_avg_init << "," << maximum_traveling_distance << std::endl;
+
+    dt.updateLogFile("metadata_battery.csv", stream);
     ROS_INFO("Metadata successfully logged");
 }
