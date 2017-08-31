@@ -487,8 +487,8 @@ class Explorer
         ros::Subscriber sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
                                                          &Explorer::new_optimal_docking_station_selected_callback, this);
 
-        ros::Subscriber sub_moving_along_path =
-            nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
+//        ros::Subscriber sub_moving_along_path =
+//            nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
         
         ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
 
@@ -1385,38 +1385,45 @@ class Explorer
                                             update_robot_state_2(exploring_for_graph_navigation);
                                             ros::Duration(1).sleep();
                                         
-                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(maximum_available_distance-1.1, &error) ) {
+                                            if( ds_graph_navigation_allowed && exploration->existReachableFrontiersWithDsGraphNavigation(maximum_available_distance-1.1, &error) )
+                                            {
                                                 ROS_INFO("There are frontiers that can be reached from other DSs: start moving along DS graph...");
                                                 
                                                 int result = -1;
-                                                exploration->compute_and_publish_ds_path(maximum_available_distance, &result);
-                                                if(result == 0) //TODO very very orrible idea, using result...
-                                                {
-                                                    ROS_INFO("path successfully found");
-                                                    
-                                                    counter++;
-                                                    move_robot_away(counter);
-                                                    update_robot_state_2(auctioning_2);
-                                                    retries2 = 0;
-                                                    retries4 = 0;
-                                                }
-                                                else {
-                                                    retries2++;
-                                                    update_robot_state_2(auctioning_2);
-                                                    if(result == 1)
-                                                        log_major_error("No DS with EOs was found");
-                                                    else if(result == 2)
-                                                        log_major_error("impossible, no closest ds found...");
-                                                    else if(result == 3) {
-                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
-                                                        counter++;
-                                                        move_robot_away(counter);
-                                                        update_robot_state_2(auctioning_2);
-                                                        retries3++;
-                                                    }
-                                                    else
-                                                        log_major_error("invalid result value");
-                                                }
+                                                complex_path.clear();
+                                                ds_path_counter = 0;
+                                                exploration->compute_and_publish_ds_path(maximum_available_distance, &result, &complex_path);
+//                                                if(result == 0) //TODO very very orrible idea, using result...
+//                                                {
+//                                                    ROS_INFO("path successfully found");
+//                                                    
+//                                                    counter++;
+//                                                    move_robot_away(counter);
+//                                                    moving_along_path = true;
+//                                                    ds_path_size = complex_path.size();
+//                                                    update_robot_state_2(auctioning_2);
+//                                                    retries2 = 0;
+//                                                    retries4 = 0;
+//                                                }
+//                                                else {
+//                                                    retries2++;
+////                                                    update_robot_state_2(auctioning_2);
+//                                                    if(result == 1) {
+//                                                        log_major_error("No DS with EOs was found");
+//                                                    else if(result == 2)
+//                                                        log_major_error("impossible, no closest ds found...");
+//                                                    else if(result == 3) {
+//                                                        log_minor_error("closest_ds->id == min_ds->id, this should not happen...");
+//                                                        counter++;
+//                                                        move_robot_away(counter);
+//                                                        moving_along_path = true;
+//                                                        ds_path_size = complex_path.size();
+//                                                        update_robot_state_2(auctioning_2);
+//                                                        retries3++;
+//                                                    }
+//                                                    else
+//                                                        log_major_error("invalid result value");
+//                                                }
                                             }
                                             else {
                                                 ROS_DEBUG("errors: %s", (error ? "yes" : "no") );
@@ -3340,18 +3347,18 @@ class Explorer
                */
     }
 
-    void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
-    {
-        ROS_INFO("Moving along path");
-        moving_along_path = true;
-        ds_path_counter = 0;
+//    void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
+//    {
+//        ROS_INFO("Moving along path");
+//        moving_along_path = true;
+//        ds_path_counter = 0;
 
-        complex_path.clear();
-        ds_path_size = msg.get()->positions.size();
-        for(int i=0; i < ds_path_size; i++)
-            complex_path.push_back(msg.get()->positions[i]);
+//        complex_path.clear();
+//        ds_path_size = msg.get()->positions.size();
+//        for(int i=0; i < ds_path_size; i++)
+//            complex_path.push_back(msg.get()->positions[i]);
 
-    }
+//    }
 
     void bat_callback(const explorer::battery_state::ConstPtr &msg)
     {

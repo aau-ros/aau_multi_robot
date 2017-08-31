@@ -238,6 +238,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
 
     ros::NodeHandle nh2;
     ds_with_EOs_pub = nh2.advertise<adhoc_communication::EmDockingStation>("ds_with_EOs", 10000);
+    goal_ds_for_path_navigation_sc = nh2.serviceClient<explorer::PathOnDsGraph>("energy_mgmt/graph_path", true);
 
     pub_visited_frontiers = nh_visited_frontier.advertise <adhoc_communication::ExpFrontier> ("visited_frontiers", 10000);
 
@@ -4824,7 +4825,7 @@ bool ExplorationPlanner::existReachableFrontiersWithDsGraphNavigation(double max
     return found_reachable_frontier;
 }
 
-bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance, int *result) {
+bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distance, int *result, std::vector<adhoc_communication::MmPoint> *complex_path) {
     //just compute the goal ds for the moment //TODO complete
     ROS_DEBUG("Searching path on DS graph; %u frontiers exist", frontiers.size());
 //    double min_dist = std::numeric_limits<int>::max();
@@ -4916,13 +4917,21 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
 //        return false; //DO NOT RETURN!!! we can still find a path...
     }
 
-    adhoc_communication::EmDockingStation msg;
-    msg.id = min_ds->id;
-    ROS_DEBUG("publishing path...");
-    publish_goal_ds_for_path_navigation.publish(msg);
+    explorer::PathOnDsGraph msg;
+    msg.request.goal_ds_id = min_ds->id;
+    msg.request.closest_ds_id = closest_ds->id;
     
+    ROS_DEBUG("requesting path...");
+    
+    while(!goal_ds_for_path_navigation_sc.call(msg))
+        ROS_ERROR("failed goal_ds_for_path_navigation_sc.call()!");
+    //publish_goal_ds_for_path_navigation.publish(msg);
+    for(int i=0; i < msg.response.positions.size(); i++)
+        complex_path->push_back(msg.response.positions[i]);
+         
     ROS_DEBUG("Finished compute_and_publish_ds_path()");
     *result = 0;
+    
     return true;
     
 }

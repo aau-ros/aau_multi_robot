@@ -1,0 +1,4 @@
+int32 goal_ds_id
+int32 closest_ds_id
+---
+adhoc_communication/MmPoint[] positions

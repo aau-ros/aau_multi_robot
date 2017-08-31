@@ -25,6 +25,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <explorer/Distance.h>
 #include <explorer/DistanceFromRobot.h>
+#include <explorer/PathOnDsGraph.h>
 #include <sstream>
 #include <math.h>
 #include <stdlib.h>
@@ -498,7 +499,7 @@ class docking
     boost::shared_mutex ds_mutex;
     ros::Subscriber sub_goal_ds_for_path_navigation;
     unsigned int  path_navigation_tries;
-    void simple_compute_and_publish_path_on_ds_graph();
+    bool simple_compute_and_publish_path_on_ds_graph(explorer::PathOnDsGraph::Request &req, explorer::PathOnDsGraph::Response &res);
     void goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg);
     int goal_ds_path_id;
     bool has_to_free_optimal_ds;
@@ -541,6 +542,7 @@ class docking
     void inform_explorer_about_used_ds();
     void check_other_robots_state();
     bool printed_invalid_message_id;
+    ros::ServiceServer goal_ds_for_path_navigation_ss;
 
 //    AuctionManager auction_manager; //TODO
 

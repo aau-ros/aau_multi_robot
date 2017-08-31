@@ -55,6 +55,7 @@
 #include <adhoc_communication/EmRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <adhoc_communication/MmPoint.h>
+#include <explorer/PathOnDsGraph.h>
 //#include <robot_state/GetRobotState.h>
 #include <std_msgs/Int32.h>
 #include <geometry_msgs/Twist.h>
@@ -379,7 +380,7 @@ namespace explorationPlanner
             bool my2_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
             bool home_is_reachable(double available_distance);
             bool existReachableFrontiersWithDsGraphNavigation(double available_distance, bool *error);
-            bool compute_and_publish_ds_path(double maximum_available_distance, int *result);
+            bool compute_and_publish_ds_path(double maximum_available_distance, int *result, std::vector<adhoc_communication::MmPoint> *complex_path);
             void logRemainingFrontiers(std::string csv_file);
             bool discovered_new_frontier;
             bool updateRobotPose();
@@ -526,6 +527,7 @@ namespace explorationPlanner
             ros::Publisher ds_with_EOs_pub;
             int num_robots;
             frontier_t frontier_under_negotiation;
+            ros::ServiceClient goal_ds_for_path_navigation_sc;
             
             // Debugging
             bool test_mode;
