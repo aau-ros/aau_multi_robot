@@ -641,8 +641,7 @@ class Explorer
                     ROS_INFO("moving along DS path");
                     if(ds_path_counter < ds_path_size - 1)
                     {
-                        ros::spinOnce();
-                        ROS_INFO("Trying to reach next DS");
+                        ROS_INFO("check if next ds in path is reachable");
                         ROS_INFO("ds_path_counter: %d; ds_path_size: %d", ds_path_counter, ds_path_size);
                         double next_ds_x = complex_path[ds_path_counter+1].x;
                         double next_ds_y = complex_path[ds_path_counter+1].y;
@@ -671,9 +670,9 @@ class Explorer
                             l5_already_zero = true;
                         }
                         
-                        continue;
                     }
                 }
+                
                 ros::spinOnce();
                 ros::Duration(1).sleep();
                 update_robot_state();
