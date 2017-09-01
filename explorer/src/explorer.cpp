@@ -1288,7 +1288,7 @@ class Explorer
                         
                         if(exploration->updateRobotPose()) {
                             exploration->updateOptimalDs();
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance)+4.0, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4);
+                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance)+4.0, &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4, full_battery);
                         }
                         else {
                             log_major_error("robot pose not updated");
@@ -2012,7 +2012,7 @@ class Explorer
         if(robot_state == robot_state::CHARGING_COMPLETED)
             full_battery = true;
             
-        if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE)
+        if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE || robot_state == robot_state::CHARGING_ABORTED)
             full_battery = false;
 
         if(robot_state == robot_state::MOVING_TO_FRONTIER) 

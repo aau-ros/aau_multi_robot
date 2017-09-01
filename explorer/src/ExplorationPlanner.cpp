@@ -2834,7 +2834,7 @@ bool ExplorationPlanner::my_quick_check_efficiency_of_goal(double available_dist
 }
 
 
-bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, frontier_t * frontier)
+bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, frontier_t * frontier, bool full_battery)
 {
     double distance, distance_eu;
     double total_distance, total_distance_eu;
@@ -2848,7 +2848,10 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
 //    }
     
     //check euclidean distances
-    total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
+    if(full_battery)
+        total_distance_eu = euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
+    else
+        total_distance_eu = euclidean_distance(x, y, robot_x, robot_y);
     if(optimal_ds_set)
         total_distance_eu += euclidean_distance(x, y, optimal_ds_x, optimal_ds_y);
     else
@@ -2857,7 +2860,10 @@ bool ExplorationPlanner::my_check_efficiency_of_goal(double available_distance, 
         return false;
     
     // distance to robot
-    total_distance = trajectory_plan_meters(x, y, robot_x, robot_y);
+    if(full_battery)
+        total_distance = trajectory_plan_meters(x, y, optimal_ds_x, optimal_ds_y);
+    else
+        total_distance = trajectory_plan_meters(x, y, robot_x, robot_y);
     if(total_distance < 0) {
         // if the distance between robot and target is less than a certain small value, consider the target reachable... this is necessary because sometimes goals too close to the robot are considered unreachable, which is a problem when the robot is starting the exploration, since it very often (almost every time) selects as first goal its starting position
         if(euclidean_distance(x, y, robot_x, robot_y) < 2) 
@@ -5309,7 +5315,7 @@ bool ExplorationPlanner::get_robot_position(double *x, double *y) { //F WRONG!!!
 */
 
 //TODO(IMPORTANT) safety coefficients
-bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
+bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4, bool full_battery)
 {
     errors = 0;
     ros::Time start_time;
@@ -5410,7 +5416,7 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
         for(unsigned int i=0; i < sorted_frontiers.size(); i++)
         {
             if(APPROACH == 0)
-                if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i))) {
+                if(!my_check_efficiency_of_goal(available_distance, &sorted_frontiers.at(i), full_battery)) {
                     ROS_INFO("frontier currentl unreachable: skipping");
                     continue;
                 }

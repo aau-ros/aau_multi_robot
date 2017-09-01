@@ -301,7 +301,7 @@ namespace explorationPlanner
 //            void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global);
             void initialize_planner(std::string name, costmap_2d::Costmap2DROS *costmap, costmap_2d::Costmap2DROS *costmap_global, DistanceComputerInterface *distance_computer);
             void findFrontiers();
-            bool my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4);
+            bool my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4, bool full_battery);
             bool determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             //bool determine_goal_staying_alive_2(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
             //bool determine_goal_staying_alive_2_reserve(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id);
@@ -496,7 +496,7 @@ namespace explorationPlanner
             void add_to_sorted_fontiers_list_if_convinient(frontier_t frontier);
             int auction_timeout;
             //std::vector<frontier_t> my_unreachable_frontiers;
-            bool my_check_efficiency_of_goal(double available_distance, frontier_t * frontier);
+            bool my_check_efficiency_of_goal(double available_distance, frontier_t * frontier, bool full_battery = false);
             bool selected_frontier;
             void my_select_4(double available_distance, bool energy_above_th, int w1, int w2, int w3, int w4, std::vector<double> *final_goal, std::vector<std::string> *robot_str_name);
             int errors;
