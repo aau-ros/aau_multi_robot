@@ -415,8 +415,8 @@ void ConcreteBidComputer::logMetadata()
     filename = log_path + std::string("llh.csv");
 
     fs.open(filename.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs << "#w1,w2,w3,w4" << std::endl;
-    fs << w1 << "," << w2 << "," << w3 << "," << w4 << std::endl;
+    fs << "#w1,w2,w3,w4,w5" << std::endl;
+    fs << w1 << "," << w2 << "," << w3 << "," << w4 << "," << w5 << std::endl;
     fs.close();
 }
 
@@ -427,6 +427,7 @@ double ConcreteBidComputer::getBid() {
 }
 
 bool ConcreteBidComputer::set_l5_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
+    ROS_INFO("set l5");
     if(req.data)
         l5 = 1;
     else
