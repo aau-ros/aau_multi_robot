@@ -14,6 +14,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "bid_computer.h"
 #include <utilities/data_logger.h>
+#include <std_srvs/SetBool.h>
 
 struct ds_t
 {
@@ -47,8 +48,8 @@ public:
     void logMetadata() override;
 
 private:
-    double w1, w2, w3, w4;
-    double l1, l2, l3, l4;
+    double w1, w2, w3, w4, w5;
+    double l1, l2, l3, l4, l5;
     double llh;
     double origin_absolute_x, origin_absolute_y;
     bool optimal_ds_is_set, next_optimal_ds_set;
@@ -64,6 +65,7 @@ private:
     explorer::battery_state::ConstPtr battery, next_battery;
     std::string log_path, robot_prefix;
     DataLogger *data_logger;
+    ros::ServiceServer set_l5_ss;
 
     void loadParameters();
     void initializeVariables();
@@ -87,6 +89,7 @@ private:
     void poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose);
     bool isActiveState(robot_state::robot_state_t state);
     void abs_to_rel(double absolute_x, double absolute_y, double *relative_x, double *relative_y);
+    bool set_l5_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
 };
 
 #endif // CONCRETE_BID_COMPUTER_H

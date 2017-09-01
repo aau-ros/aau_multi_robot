@@ -5,7 +5,7 @@ ConcreteBidComputer::ConcreteBidComputer() {
     initializeVariables();
     subscribeToTopics();
     data_logger = new DataLogger("energy_mgmt", robot_prefix, log_path);
-    data_logger->createLogFile("sent_bids.csv", "#sim_time,llh,l1,l2,l3,l4\n");
+    data_logger->createLogFile("sent_bids.csv", "#sim_time,llh,l1,l2,l3,l4,l5\n");  
 }
 
 void ConcreteBidComputer::loadParameters() {
@@ -29,7 +29,8 @@ void ConcreteBidComputer::loadParameters() {
 } 
     
 void ConcreteBidComputer::initializeVariables() {
-    l1 = 0, l2 = 0, l3 = 0, l4 = 0, llh=0;
+    l1 = 0, l2 = 0, l3 = 0, l4 = 0, llh=0, l5 = 0;
+    w5 = 10;
     optimal_ds_is_set = false;
 }
  
@@ -42,6 +43,8 @@ void ConcreteBidComputer::subscribeToTopics() { //TODO maybe we should have a se
     sub_docking_stations = nh.subscribe(my_prefix + "docking_stations", 1000, &ConcreteBidComputer::cb_docking_stations, this);
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &ConcreteBidComputer::newOptimalDsCallback, this);
     pose_sub = nh.subscribe("amcl_pose", 10, &ConcreteBidComputer::poseCallback, this);
+    
+    set_l5_ss = nh.advertiseService("energy_mgmt/set_l5", &ConcreteBidComputer::set_l5_callback, this);
 }
 
 void ConcreteBidComputer::poseCallback(const geometry_msgs::PoseWithCovarianceStampedConstPtr &pose) {        
@@ -65,7 +68,7 @@ void ConcreteBidComputer::updateLlh() {
     update_l3();
     update_l4();
     std::stringstream stream;
-    stream << ros::Time::now() << "," << llh << "," << l1 << "," << l2 << "," << l3 << "," << l4 << std::endl;
+    stream << ros::Time::now() << "," << llh << "," << l1 << "," << l2 << "," << l3 << "," << l4 << "," << l5 << std::endl;
     data_logger->updateLogFile("sent_bids.csv", stream);
 }
 
@@ -418,7 +421,15 @@ void ConcreteBidComputer::logMetadata()
 }
 
 double ConcreteBidComputer::getBid() {
-    llh = l1 * w1 + l2 * w2 + l3 * w3 + l4 * w4;
+    llh = l1 * w1 + l2 * w2 + l3 * w3 + l4 * w4 + l5 * w5;
     ROS_DEBUG("llh: %f", llh);
     return llh;
+}
+
+bool ConcreteBidComputer::set_l5_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
+    if(req.data)
+        l5 = 1;
+    else
+        l5 = 0;
+    return true;
 }

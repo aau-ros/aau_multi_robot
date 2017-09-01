@@ -42,6 +42,7 @@
 #include "robot_state/SetRobotState.h"
 #include "robot_state/GetRobotState.h"
 #include <std_srvs/Empty.h>
+#include <std_srvs/SetBool.h>
 
 #ifdef PROFILE
 #include "google/profiler.h"
@@ -90,7 +91,7 @@ class Explorer
     ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count, sub_force_in_queue;
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
-    ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc;
+    ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc, set_l5_sc;
     bool created;
     float queue_distance, min_distance_queue_ds, max_av_distance;
     float stored_robot_x, stored_robot_y;
@@ -121,6 +122,8 @@ class Explorer
     unsigned int request_id;
     bool failure_with_full_battery;
     double simulation_timeout;
+    unsigned int reauctions;
+    bool l5_already_zero;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -194,6 +197,8 @@ class Explorer
         explorer_count = 0;
         request_id = 0;
         failure_with_full_battery = false;
+        reauctions = 0;
+        l5_already_zero = false;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -208,6 +213,8 @@ class Explorer
         get_robot_state_sc = nh2.serviceClient<robot_state::GetRobotState>("robot_state/get_robot_state");
         
         has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
+        
+        set_l5_sc = nh2.serviceClient<std_srvs::SetBool>("energy_mgmt/set_l5");
         
         /* Robot state subscribers */
 //        sub_check_vacancy =
@@ -629,7 +636,44 @@ class Explorer
                 ROS_INFO("Waiting for battery to charge...");
 
                 // NB: here i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
+                
+                if(moving_along_path && l5_already_zero == false) {
+                    ROS_INFO("moving along DS path");
+                    if(ds_path_counter < ds_path_size - 1)
+                    {
+                        ros::spinOnce();
+                        ROS_INFO("Trying to reach next DS");
+                        ROS_INFO("ds_path_counter: %d; ds_path_size: %d", ds_path_counter, ds_path_size);
+                        double next_ds_x = complex_path[ds_path_counter+1].x;
+                        double next_ds_y = complex_path[ds_path_counter+1].y;
+                        double dist = -1;
+                        ROS_INFO("Compute distance");
+                        for(int i=0; i<5 && dist < 0; i++) {
+                            dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
+                            if(dist<0)
+                                ros::Duration(1).sleep();
+                        }
+                        ROS_INFO("Distance computed");
+                        
+                        if(dist < 0) {
+                           continue;
+                        }
 
+                        else if(dist > maximum_available_distance) {
+                            ROS_INFO("Cannot reach next DS on the path");
+                            
+                        } else {
+                            std_srvs::SetBool srv_msg;
+                            srv_msg.request.data = false;
+                            while(!set_l5_sc.call(srv_msg))
+                                ROS_ERROR("call to set_l5_to_zero_sc failed!");
+                            ROS_INFO("set l5 to zero");
+                            l5_already_zero = true;
+                        }
+                        
+                        continue;
+                    }
+                }
                 ros::spinOnce();
                 ros::Duration(1).sleep();
                 update_robot_state();
@@ -1148,7 +1192,9 @@ class Explorer
                                     finalize_exploration();
                             }
 
-                            else if( (full_battery && dist > maximum_available_distance) || (!full_battery && dist > available_distance) ) {
+                            else if(reauctions < 3 && ((full_battery && dist > maximum_available_distance) || (!full_battery && dist > available_distance)) ) {
+                                if(reauctions >= 3)
+                                    log_major_error("forcing moving to next ds in path!!");
                                 if(full_battery)
                                 {
                                     if(fabs(dist - maximum_available_distance) > 7.0)
@@ -1177,6 +1223,7 @@ class Explorer
                                 }
                                 else {
                                     ROS_INFO("Cannot reach next DS on the path: reauction for current one");
+                                    reauctions++;
                                     counter++;
                                     move_robot_away(counter);
                                     update_robot_state_2(robot_state::AUCTIONING);
@@ -1947,6 +1994,15 @@ class Explorer
 //            move_home_if_possible();
 //            finalize_exploration();
 //        }
+
+        if(robot_state == robot_state::CHARGING) {
+            std_srvs::SetBool srv_msg;
+            srv_msg.request.data = true;
+            while(!set_l5_sc.call(srv_msg))
+                ROS_ERROR("call to set_l5_to_zero_sc failed!");
+            ROS_INFO("l5 is now 1");
+            l5_already_zero = false;   
+        }
         
         if(robot_state == robot_state::CHARGING || robot_state == robot_state::IN_QUEUE)
             if(exploration != NULL) {
@@ -3311,6 +3367,7 @@ class Explorer
     {
 //        if (robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::GOING_CHECKING_VACANCY &&
 //                robot_state != robot_state::CHECKING_VACANCY) {
+        if(!moving_along_path) {
             optima_ds_set = true;
             optimal_ds_x = msg.get()->x;
             optimal_ds_y = msg.get()->y;
@@ -3321,7 +3378,7 @@ class Explorer
 //            //it could happen that the node is moving to a DS for checking if it is vacant, and that meanwhile it wins an auction for another DS, but the robot should ignore this other auction (in fact, even if it won the auction, we cannot be sure that the auctioned DS is really vacant, so there is no point in changing the target DS)
 //             ROS_INFO("The robot is already approaching a DS, so I cannot change it now...");
 //        }
-       
+       }
 
         // TODO(minor)
         /*
