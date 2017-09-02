@@ -127,6 +127,7 @@ class Explorer
     bool l5_already_zero;
     bool use_l5;
     bool ds_just_left;
+    double move_away_x, move_away_y;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -204,6 +205,7 @@ class Explorer
         l5_already_zero = false;
         use_l5 = USE_L5;
         ds_just_left = false;
+        move_away_x = 0, move_away_y = 0;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -1684,6 +1686,8 @@ class Explorer
                 // TODO(minor) what is this part???
                 if (OPERATE_WITH_GOAL_BACKOFF == true)
                 {
+                    move_away_x = final_goal.at(0);
+                    move_away_y = final_goal.at(1);
                     ROS_INFO("Doing smartGoalBackoff");
                     if(final_goal.size() < 2)
                         log_major_error("final_goal.size() < 2");
@@ -3169,7 +3173,7 @@ class Explorer
         
         double remaining_distance = exploration->distance_from_robot(optimal_ds_x, optimal_ds_y);
         
-        if(remaining_distance > queue_distance / 2.0 || exploration->distance_from_robot(home_point_x, home_point_y) < 1 ) {
+        if(remaining_distance > queue_distance / 2.0 || exploration->distance_from_robot(move_away_x, move_away_y) < 1 ) {
         
             ROS_INFO("alreayd away from DS"); // althought this could be false... in the sense that maybe the movement was simply aborted
 
