@@ -427,7 +427,7 @@ double ConcreteBidComputer::getBid() {
 }
 
 bool ConcreteBidComputer::set_l5_callback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
-    ROS_INFO("set l5");
+    ROS_INFO("set l5 to %s", req.data ? "true" : "false");
     if(req.data)
         l5 = 1;
     else
