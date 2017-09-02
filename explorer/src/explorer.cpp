@@ -1204,11 +1204,13 @@ class Explorer
                                     finalize_exploration();
                             }
 
-                            else if(reauctions < 3 && ((full_battery && dist > maximum_available_distance) || (!full_battery && dist > available_distance)) ) {
-                                if(reauctions >= 3)
-                                    log_major_error("forcing moving to next ds in path!!");
-                                if(full_battery)
+                            else if(((full_battery && dist > maximum_available_distance) || (!full_battery && dist > available_distance)) ) {
+//                                if(reauctions >= 3)
+//                                    log_major_error("forcing moving to next ds in path!!");
+                                if(full_battery || ds_just_left)
                                 {
+                                    if(ds_just_left)
+                                        log_major_error("ds_just_left: forcing moving to next ds in path!!");
                                     if(fabs(dist - maximum_available_distance) > 7.0)
                                         log_major_error("MAJOR ERROR WITH DS GRAPH");
                                     else
@@ -1235,7 +1237,7 @@ class Explorer
                                 }
                                 else {
                                     ROS_INFO("Cannot reach next DS on the path: reauction for current one");
-                                    reauctions++;
+//                                    reauctions++;
                                     counter++;
                                     move_robot_away(counter);
                                     update_robot_state_2(robot_state::AUCTIONING);
