@@ -115,6 +115,8 @@ void AuctionManager::tryToAcquireDs() {
 
         ROS_INFO("Starting new auction (%d)", current_auction.auction_id);
 
+        auction_bids.clear();
+
         bid_t bid;
         bid.robot_id = robot_id;
         bid.bid = bid_computer->getBid();
@@ -158,8 +160,6 @@ void AuctionManager::terminateAuctionCallback(const ros::TimerEvent &event) {
         bid_t bid;
         bid.robot_id = winner_id;
         sendAuctionResult(bid);
-
-        auction_bids.clear();
     }
 
     auction_participation_state = IDLE;
