@@ -232,7 +232,7 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
 //                return;
 //            }
 
-        if (current_auction.auction_id != (unsigned int)msg.get()->auction) 
+        if (current_auction.auction_id / pow(10, (ceil(log10(num_robots)))) != (unsigned int)msg.get()->auction / pow(10, (ceil(log10(num_robots))))) 
             ROS_ERROR("Received a bid that is not for the auction recently started by this robot (current auction is %d, received is %d): ignore it", current_auction.auction_id, msg.get()->auction);
         else {
             ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid, msg.get()->robot, current_auction.auction_id);
