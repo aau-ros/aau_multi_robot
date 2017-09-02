@@ -209,7 +209,10 @@ bool AuctionManager::isThisRobotTheWinner(unsigned int winner_id) {
 
 void AuctionManager::sendAuctionResult(bid_t bid) {
     ROS_INFO("Send results for auction %d to other robots", current_auction.auction_id);
-    sender->sendBid(bid, current_auction, auction_result_topic, robot_id);
+    std::vector<unsigned int> participants;
+    for(auto it = auction_bids.begin(); it != auction_bids.end(); it++)
+        participants.push_back(it->robot_id);
+    sender->sendResults(bid, current_auction, auction_result_topic, robot_id, participants);
 }
 
 void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::ConstPtr &msg)
@@ -275,6 +278,14 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
     auction_mutex.lock();
 
     if(current_auction.auction_id == msg.get()->auction) {
+    
+        bool found = false;
+        for(unsigned int i=0; i < msg.get()->participants.size() && !found; i++)
+            if(msg.get()->participants[i] == robot_id)
+                found = true;
+        if(!found)
+            ROS_ERROR("robot sent bid but was not received!!!");
+    
         if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
         {
             ROS_INFO("Winner of the auction started by another robot");
