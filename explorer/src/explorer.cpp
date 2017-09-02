@@ -1981,7 +1981,7 @@ class Explorer
         std_srvs::SetBool srv_msg;
         srv_msg.request.data = value;
         while(!set_l5_sc.call(srv_msg))
-            ROS_ERROR("call to set_l5_to_zero_sc failed!");
+            ROS_ERROR("call to set_l5_sc failed!");
         ROS_INFO("set l5 to %s", value ? "true" : "false");
         l5_already_zero = !value;
     }
@@ -2014,12 +2014,12 @@ class Explorer
 //            finalize_exploration();
 //        }
 
-        if(robot_state == robot_state::CHARGING) {
+        if(robot_state == robot_state::GOING_CHARGING) {
             if(use_l5) {
                 std_srvs::SetBool srv_msg;
                 srv_msg.request.data = true;
                 while(!set_l5_sc.call(srv_msg))
-                    ROS_ERROR("call to set_l5_to_zero_sc failed!");
+                    ROS_ERROR("call to set_l5_sc failed!");
                 ROS_INFO("l5 is now 1");
                 l5_already_zero = false;   
             }

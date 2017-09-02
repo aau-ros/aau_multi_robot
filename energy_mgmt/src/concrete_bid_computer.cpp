@@ -30,7 +30,9 @@ void ConcreteBidComputer::loadParameters() {
     
 void ConcreteBidComputer::initializeVariables() {
     l1 = 0, l2 = 0, l3 = 0, l4 = 0, llh=0, l5 = 0;
-    w5 = 10;
+    w5 = 1 + w1 + w2 + w3 + w4;
+    if(w5 < 10)
+        w5 = 10;
     optimal_ds_is_set = false;
 }
  
