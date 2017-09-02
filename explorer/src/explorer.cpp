@@ -1179,9 +1179,9 @@ class Explorer
                                 ROS_ERROR("fabs(optimal_ds_x - complex_path[ds_path_counter].x) > 0.1 || fabs(optimal_ds_y - complex_path[ds_path_counter].y) > 0.1");
                             for(int i=0; i<5 && dist < 0; i++) {
                                 if(ds_just_left)
-                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y); //TODO(minor) very bad way to check... -> parameter...
-                                else
                                     dist = exploration->distance(optimal_ds_x, optimal_ds_y, next_ds_x, next_ds_y);
+                                else                                    
+                                    dist = exploration->distance_from_robot(next_ds_x, next_ds_y);
                                 if(dist<0)
                                     ros::Duration(1).sleep();
                             }
