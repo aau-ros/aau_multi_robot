@@ -111,7 +111,6 @@ class Explorer
     double maximum_available_distance;
     bool moving_to_ds, home_point_set;
     unsigned int retries, retries2, retries3, retries4, retries5, retries6, retries_moving;
-    double next_available_distance;
     double moving_time;
     bool received_battery_info;
     ros::Publisher pub_next_ds;
@@ -170,7 +169,6 @@ class Explorer
         available_distance= 0;
         starting_x = 0, starting_y = 0;
         retries = 0, retries2 = 0, retries3 = 0, retries4 = 0, retries5 = 0, retries6 = 0, retries_moving = 0;
-        next_available_distance = -1;
         moving_time = 0;
         traveled_distance = 0;
         last_x = 0, last_y = 0;
@@ -647,7 +645,6 @@ class Explorer
                 // NB: here i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
                 
                 if(use_l5 && l5_already_zero == false) {
-                    available_distance = next_available_distance;
                     if(moving_along_path)
                      {
                         ROS_INFO("moving along DS path");
@@ -707,7 +704,7 @@ class Explorer
             
             if (robot_state == robot_state::COMPUTING_NEXT_GOAL || robot_state == robot_state::CHARGING_COMPLETED || robot_state == robot_state::LEAVING_DS)
             {
-                if(!received_battery_info && next_available_distance <= 0 && maximum_available_distance <= 0) {
+                if(!received_battery_info && available_distance <= 0 && maximum_available_distance <= 0) {
                     ROS_DEBUG("waiting battery info");
                     ros::Duration(3).sleep();
                     ros::spinOnce();
@@ -719,8 +716,7 @@ class Explorer
                 if(robot_state == robot_state::CHARGING_COMPLETED) {
                     ROS_INFO("using max distance");
                     available_distance = maximum_available_distance;
-                } else
-                    available_distance = next_available_distance;
+                }
                    
                 if(robot_state == robot_state::LEAVING_DS) 
                 {
@@ -1282,35 +1278,25 @@ class Explorer
                         }
                     }
 
-                    // TODO(minor) do those sorting works correclty?
-                    /* Sort frontiers, firstly from nearest to farthest and then by
-                     * efficiency */
-                    ROS_INFO("SORTING FRONTIERS...");
-
-                    /* Look for a frontier as goal */
                     ROS_INFO("DETERMINE GOAL...");
                     
                     fs_exp_se_log.open(exploration_start_end_log.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
                     fs_exp_se_log << ros::Time::now() - time << ": " << "Compute goal" << std::endl;
                     fs_exp_se_log.close();
 
-                    ros::spinOnce(); // to update available_distance
-
-                    if(robot_state != robot_state::CHARGING_COMPLETED)
-                        available_distance = next_available_distance;    
                     
-                        print_mutex_info("explore()", "acquiring");
-                        costmap_mutex.lock();
-                        print_mutex_info("explore()", "lock");
-                        
-                        if(exploration->updateRobotPose()) {
-                            exploration->updateOptimalDs();
-                            goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4, full_battery || ds_just_left);
-                        }
-                        else {
-                            log_major_error("robot pose not updated");
-                            goal_determined = false;
-                        }
+                    print_mutex_info("explore()", "acquiring");
+                    costmap_mutex.lock();
+                    print_mutex_info("explore()", "lock");
+                    
+                    if(exploration->updateRobotPose()) {
+                        exploration->updateOptimalDs();
+                        goal_determined = exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4, full_battery || ds_just_left);
+                    }
+                    else {
+                        log_major_error("robot pose not updated");
+                        goal_determined = false;
+                    }
                     
                     ROS_INFO("GOAL DETERMINED: %s; counter: %d", (goal_determined ? "yes" : "no"), count);
                     
@@ -2169,7 +2155,7 @@ class Explorer
             if(l5_already_zero == false && robot_state == CHARGING) {
                 bool error;
                 std::vector<double> v;
-                exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(next_available_distance, &error, &v); //TODO bad name for function
+                exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v); //TODO bad name for function
             }
         }
     }
@@ -3468,8 +3454,8 @@ class Explorer
         ROS_DEBUG("Received battery state");
         battery_charge = (int) (msg->soc * 100);
         charge_time = msg->remaining_time_charge;
-        next_available_distance = msg->remaining_distance;
-        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, next_available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
+        available_distance = msg->remaining_distance;
+        ROS_INFO("SOC: %d%%; available distance: %.2f; conservative av. distance: %.2f; time: %.2f", battery_charge, available_distance, conservative_available_distance(available_distance), msg->remaining_time_run);
 
         if (battery_charge == 100 && charge_time == 0)
             recharge_cycles++;  // TODO(minor) hmm... soc, charge, ...
@@ -4015,7 +4001,7 @@ class Explorer
         while(!exploration_finished) {
             exploration->updateDistances(maximum_available_distance);
             exploration->sendListDssWithEos();
-            exploration->available_distance_for_reply = next_available_distance;
+            exploration->available_distance_for_reply = available_distance;
             ros::Duration(1).sleep();
         }
     }
