@@ -273,7 +273,8 @@ unsigned int AuctionManager::nextAuctionId()
 
 void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction::ConstPtr &msg) { //TODO check if completed tested (code coverage, calls of public functions, ...)
     auction_mutex.lock();
-    if(auction_participation_state == PARTICIPATING) { //TODO check also id of the auction
+
+    if(current_auction.auction_id == msg.get()->auction) {
         if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
         {
             ROS_INFO("Winner of the auction started by another robot");
@@ -297,9 +298,10 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
 
         current_auction.ending_time = time_manager->simulationTimeNow().toSec();
         current_auction.winner_robot = (unsigned int)msg.get()->robot;
-
         auction_participation_state = IDLE;
-    }    
+
+    } else
+        ROS_INFO("Not the current auction, ignoring");
 
     auction_mutex.unlock();
 }
