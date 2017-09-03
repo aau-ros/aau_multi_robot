@@ -4975,7 +4975,6 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float available_
     acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     unsigned int ds_index = -1;
     mutex_ds.lock();
-    
         
     for(unsigned int i=0; i < ds_list.size(); i++)
         if(ds_list.at(i).id == optimal_ds_id) {
@@ -4989,14 +4988,7 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float available_
 
     // distance to next frontier
     for (int i = 0; i < frontiers.size(); i++) {
-        double distance;
-        
-        //check euclidean distances
-//        distance = euclidean_distance(optimal_ds_x, optimal_ds_y, frontiers.at(i).x_coordinate, frontiers.at(i).y_coordinate);
-//        if(distance * 2 > available_distance)
-//            continue;
-        
-        distance = simplifiedDistanceFromDs(ds_index, i);
+        double distance = simplifiedDistanceFromDs(ds_index, i);
         if(distance < 0){
             ROS_WARN("Failed to compute distance!");
             *error = true;

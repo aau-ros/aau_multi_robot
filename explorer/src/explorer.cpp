@@ -641,8 +641,6 @@ class Explorer
             if (robot_state == robot_state::CHARGING)
             {
                 ROS_INFO("Waiting for battery to charge...");
-
-                // NB: here i cannot put to sleep, since I have to detect if the charging process is interrupted!!!!
                 
                 if(use_l5 && l5_already_zero == false) {
                     if(moving_along_path)
@@ -675,7 +673,6 @@ class Explorer
                             
                         }
                     }
-//                    else if(exploration->my_determine_goal_staying_alive(1, 2, conservative_available_distance(available_distance), &final_goal, count, &robot_str, -1, battery_charge > 50, w1, w2, w3, w4, true))
                     else if (exist_frontiers_reachable_with_current_available_distance)
                         set_l5(false);
                 }
@@ -2152,12 +2149,21 @@ class Explorer
             
             frontiers_found = true;
 
+            
+        }
+    }
+
+    void check_for_l5() {
+        while(ros::ok())
             if(l5_already_zero == false && robot_state == CHARGING) {
+                ROS_INFO("check for l5");
                 bool error;
                 std::vector<double> v;
-                exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v); //TODO bad name for function
+                exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v) || !exploration->existFrontiersReachableWithFullBattery(maximum_available_distance, &error, &v); //TODO bad name for function
+                ros::Duration(3).sleep();
             }
-        }
+            else
+                ros::Duration(10).sleep();
     }
 
     void map_info()
@@ -4170,6 +4176,8 @@ int main(int argc, char **argv)
     
     boost::thread thr_update_distances(boost::bind(&Explorer::update_distances, &explorer));
 
+    boost::thread thr_check_for_l5(boost::bind(&Explorer::check_for_l5, &explorer));
+
     /*
      * FIXME
      * Which rate is required in order not to oversee
@@ -4204,6 +4212,8 @@ int main(int argc, char **argv)
     thr_safety_checks.join();
     thr_frontiers.interrupt();
     thr_frontiers.join();
+    thr_check_for_l5.interrupt();
+    thr_check_for_l5.join();
     // TODO thr_frontiers...
 
 #ifdef PROFILE
