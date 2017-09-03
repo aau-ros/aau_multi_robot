@@ -123,7 +123,7 @@ class Explorer
     bool failure_with_full_battery;
     double simulation_timeout;
     unsigned int reauctions;
-    bool l5_already_zero;
+    bool l5_is_true;
     bool use_l5;
     bool ds_just_left;
     double move_away_x, move_away_y;
@@ -201,7 +201,7 @@ class Explorer
         request_id = 0;
         failure_with_full_battery = false;
         reauctions = 0;
-        l5_already_zero = false;
+        l5_is_true = false;
         use_l5 = USE_L5;
         ds_just_left = false;
         move_away_x = 0, move_away_y = 0;
@@ -642,7 +642,7 @@ class Explorer
             {
                 ROS_INFO("Waiting for battery to charge...");
                 
-                if(use_l5 && l5_already_zero == false) {
+                if(use_l5 && l5_is_true) {
                     if(moving_along_path)
                      {
                         ROS_INFO("moving along DS path");
@@ -1974,7 +1974,7 @@ class Explorer
         while(!set_l5_sc.call(srv_msg))
             ROS_ERROR("call to set_l5_sc failed!");
         ROS_INFO("set l5 to %s", value ? "true" : "false");
-        l5_already_zero = !value;
+        l5_is_true = value;
     }
     
     void update_robot_state_2(int new_state)
@@ -2005,7 +2005,7 @@ class Explorer
 //            finalize_exploration();
 //        }
 
-        if(robot_state == robot_state::GOING_CHARGING) {
+        if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
             if(use_l5) {
                 set_l5(true);
                 exist_frontiers_reachable_with_current_available_distance = false;
@@ -2033,7 +2033,7 @@ class Explorer
         
         if(robot_state == CHARGING_ABORTED) {
             ROS_INFO("ds_just_left set to true");
-            if(!l5_already_zero)
+            if(l5_is_true)
                 log_major_error("l5 is not zero, but charging was aborted!");
             ds_just_left = true;
             full_battery = false;
@@ -2049,7 +2049,7 @@ class Explorer
         ros::Duration time = ros::Time::now() - time_start;
 
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv_state << time << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << "," << ros::Time::now() << "," << ros::WallTime::now() << std::endl;
+        fs_csv_state << ros::Time::now().toSec() << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << "," << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << std::endl;
         fs_csv_state.close();
         
         if(robot_state == stuck && (previous_state == robot_state::AUCTIONING || previous_state == auctioning_2 || robot_state == auctioning_3) )
@@ -2155,8 +2155,8 @@ class Explorer
     }
 
     void check_for_l5() {
-        while(ros::ok())
-            if(use_l5 && !(moving_along_path && ds_path_counter < ds_path_size - 1) && l5_already_zero == false && robot_state == CHARGING) {
+        while(ros::ok()) {
+            if(use_l5 && !(moving_along_path && ds_path_counter < ds_path_size - 1) && l5_is_true && robot_state == CHARGING) {
                 ROS_INFO("check for l5");
                 bool error;
                 std::vector<double> v;
@@ -2164,6 +2164,7 @@ class Explorer
                 
             }
             ros::Duration(5).sleep();
+        }
     }
 
     void map_info()

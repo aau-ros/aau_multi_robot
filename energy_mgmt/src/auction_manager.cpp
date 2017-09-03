@@ -198,11 +198,13 @@ bool AuctionManager::isThisRobotTheWinner(unsigned int winner_id) {
     if (winner_id == robot_id)
     {
         ROS_INFO("Winner of its own auction");  // TODO(minor) specify which auction
+        ROS_INFO("winner_of_auction = true");
         return true;
     }
     else
     {
         ROS_INFO("Robot lost its own auction");
+        ROS_INFO("winner_of_auction = false");
         return false;
     }
 }
@@ -282,18 +284,23 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
         {
             ROS_INFO("Winner of the auction started by another robot");
 
-            if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id)
+            if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id) {
                 winner_of_auction = true;
+                ROS_INFO("winner_of_auction = true");
+            }
             else {
                 ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
                 winner_of_auction = false;
+                ROS_INFO("winner_of_auction = false");
             }
         }
         else
         {
             ROS_INFO("Robot didn't win this auction started by another robot");
             winner_of_auction = false;
+            ROS_INFO("winner_of_auction = false");
         }
+        terminate_auction_timer.stop();
 
         current_auction.ending_time = time_manager->simulationTimeNow().toSec();
         current_auction.winner_robot = (unsigned int)msg.get()->winning_robot;
@@ -371,11 +378,14 @@ void AuctionManager::endAuctionParticipationCallback(const ros::TimerEvent &even
 {
     // FIXME it seems not to work correctly sometimes... keep checked (there is a sanity check in AuctionObserver)
     auction_mutex.lock();
-    ROS_DEBUG("Force to consider auction concluded");
-    auction_participation_state = IDLE;
-    current_auction.ending_time = time_manager->simulationTimeNow().toSec();
-//    current_auction.winner_robot = ??? //TODO
-    winner_of_auction = false;
+    if(auction_participation_state == PARTICIPATING) {
+        ROS_DEBUG("Force to consider auction concluded");
+        auction_participation_state = IDLE;
+        current_auction.ending_time = time_manager->simulationTimeNow().toSec();
+    //    current_auction.winner_robot = ??? //TODO
+        winner_of_auction = false;
+        ROS_INFO("winner_of_auction = false");
+    }
     auction_mutex.unlock();
 }
 
