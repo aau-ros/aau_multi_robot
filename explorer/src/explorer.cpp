@@ -2007,12 +2007,7 @@ class Explorer
 
         if(robot_state == robot_state::GOING_CHARGING) {
             if(use_l5) {
-                std_srvs::SetBool srv_msg;
-                srv_msg.request.data = true;
-                while(!set_l5_sc.call(srv_msg))
-                    ROS_ERROR("call to set_l5_sc failed!");
-                ROS_INFO("l5 is now 1");
-                l5_already_zero = false;   
+                set_l5(true);
                 exist_frontiers_reachable_with_current_available_distance = false;
             }
         }
@@ -2024,8 +2019,9 @@ class Explorer
             }
         
         if(robot_state == robot_state::CHARGING_COMPLETED) {
-        ROS_INFO("full_battery set to true");        
+            ROS_INFO("full_battery set to true");        
             full_battery = true;
+            set_l5(false);
         }
             
         if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE || robot_state == robot_state::CHARGING_ABORTED) {
@@ -2037,6 +2033,7 @@ class Explorer
         if(robot_state == CHARGING_ABORTED) {
             ROS_INFO("ds_just_left set to true");
             ds_just_left = true;
+            set_l5(false);
         }
 
         if(robot_state == robot_state::MOVING_TO_FRONTIER) 
@@ -2112,7 +2109,7 @@ class Explorer
         
         while (ros::ok())
         {
-            ros::Rate(0.1).sleep();
+            ros::Rate(0.2).sleep();
             
 //            if(robot_state == robot_state::IN_QUEUE) //idle mode
 //                continue;
@@ -2155,7 +2152,7 @@ class Explorer
 
     void check_for_l5() {
         while(ros::ok())
-            if(l5_already_zero == false && robot_state == CHARGING) {
+            if(use_l5 && !(moving_along_path && ds_path_counter < ds_path_size - 1) && l5_already_zero == false && robot_state == CHARGING) {
                 ROS_INFO("check for l5");
                 bool error;
                 std::vector<double> v;
