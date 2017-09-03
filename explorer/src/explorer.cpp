@@ -2160,10 +2160,9 @@ class Explorer
                 bool error;
                 std::vector<double> v;
                 exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v) || !exploration->existFrontiersReachableWithFullBattery(maximum_available_distance, &error, &v); //TODO bad name for function
-                ros::Duration(3).sleep();
+                
             }
-            else
-                ros::Duration(10).sleep();
+            ros::Duration(5).sleep();
     }
 
     void map_info()
