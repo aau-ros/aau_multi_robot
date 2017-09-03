@@ -1983,6 +1983,11 @@ class Explorer
         ROS_INFO_COND(LOG_STATE_TRANSITION, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
         
+       adhoc_communication::EmRobot msg;
+        msg.id = robot_id;
+        msg.state = new_state;
+        previous_state = robot_state;
+        robot_state = static_cast<robot_state::robot_state_t>(new_state);
 //        pub_robot.publish(msg);
 
         if(reference_percentage() >= 100 && !checked_percentage && robot_state != finished) {
@@ -2077,11 +2082,7 @@ class Explorer
             explorer_count++;
        }
        
-       adhoc_communication::EmRobot msg;
-        msg.id = robot_id;
-        msg.state = new_state;
-        previous_state = robot_state;
-        robot_state = static_cast<robot_state::robot_state_t>(new_state);
+
         
     }
 
