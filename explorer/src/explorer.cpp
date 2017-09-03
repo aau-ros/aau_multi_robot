@@ -2032,6 +2032,8 @@ class Explorer
         
         if(robot_state == CHARGING_ABORTED) {
             ROS_INFO("ds_just_left set to true");
+            if(!l5_already_zero)
+                log_major_error("l5 is not zero, but charging was aborted!");
             ds_just_left = true;
             set_l5(false);
         }
