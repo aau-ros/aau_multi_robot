@@ -36,6 +36,7 @@ unsigned char bcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};	/*Broadcast a
 #define FRAME_DATA_TYPE_CONTROLL_MSG       0x43 // C -> Control
 #define FRAME_TYPE_TRANSPORT_DATA          0x44 // D -> Data
 #define FRAME_DATA_TYPE_EM_AUCTION         0x45 // E -> Energy management auction
+#define FRAME_DATA_TYPE_EM_AUCTION_RESULT  0x4a // G -> Energy management auction result
 #define FRAME_DATA_TYPE_FRONTIER           0x46 // F -> Frontier
 #define FRAME_TYPE_MC_NACK                 0x4e // N -> Nack
 #define FRAME_DATA_TYPE_MAP                0x4d // M -> Map

@@ -70,6 +70,8 @@ find_package(catkin REQUIRED COMPONENTS
    CMgrDimensions.msg
    CMgrRobotUpdate.msg
    EmAuction.msg
+   EmAuctionResult.msg
+   EmBid.msg
    EmDockingStation.msg
    EmRobot.msg
     
@@ -100,6 +102,7 @@ find_package(catkin REQUIRED COMPONENTS
    BroadcastCMgrRobotUpdate.srv
    BroadcastString.srv
    SendEmAuction.srv
+   SendEmAuctionResult.srv
    SendEmDockingStation.srv
    SendEmRobot.srv
  )

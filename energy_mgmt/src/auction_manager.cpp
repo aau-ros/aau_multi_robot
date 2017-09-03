@@ -218,30 +218,22 @@ void AuctionManager::sendAuctionResult(bid_t bid) {
 void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::ConstPtr &msg)
 {
     auction_mutex.lock();
-    ROS_DEBUG("Received bid (%f) from robot %d for auction %u", msg.get()->bid, msg.get()->robot, (unsigned int)msg.get()->auction);
+    ROS_DEBUG("Received bid (%.2f) from robot %d for auction %u", msg.get()->bid.bid, msg.get()->bid.robot, (unsigned int)msg.get()->auction);
 
     if(auction_participation_state != MANAGING)
         ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
     
-    else if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
-        ROS_INFO("Received a bid that is not for the docking station %u, which is not the one under auction (it's %u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
-    
     else {
-//          // probably this is unnecessary, but jsut to be safe...
-//        for (auto it = auction_bids.begin(); it != auction_bids.end(); it++)
-//            if (it->robot_id == (unsigned int)msg.get()->robot)
-//            {
-//                ROS_INFO("Received a bid that was already received before: ignore it");
-//                return;
-//            }
-
-        if (current_auction.auction_id / pow(10, (ceil(log10(num_robots)))) != (unsigned int)msg.get()->auction / pow(10, (ceil(log10(num_robots))))) 
+//        if (current_auction.auction_id / pow(10, (ceil(log10(num_robots)))) != (unsigned int)msg.get()->auction / pow(10, (ceil(log10(num_robots))))) 
+        if (current_auction.auction_id != msg.get()->auction && robot_id == msg.get()->robot) 
             ROS_ERROR("Received a bid that is not for the auction recently started by this robot (current auction is %d, received is %d): ignore it", current_auction.auction_id, msg.get()->auction);
         else {
-            ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid, msg.get()->robot, current_auction.auction_id);
+            if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
+                ROS_ERROR("Received a bid that is not for the docking station %u, which is not the one under auction (it's %u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
+            ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid.bid, msg.get()->bid.robot, current_auction.auction_id);
             bid_t bid;
-            bid.robot_id = msg.get()->robot;
-            bid.bid = msg.get()->bid;
+            bid.robot_id = msg.get()->bid.robot;
+            bid.bid = msg.get()->bid.bid;
             auction_bids.push_back(bid);
         }
     }
@@ -284,22 +276,18 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
             if(msg.get()->participants[i] == robot_id)
                 found = true;
         if(!found)
-            ROS_ERROR("robot sent bid but was not received!!!");
+            ROS_ERROR("robot sent bid for auction %u by robot %u but was not received!!!", current_auction.auction_id, current_auction.auctioneer);
     
-        if ((unsigned int)msg.get()->robot == robot_id) //TODO all ids should be unsigned int
+        if ((unsigned int)msg.get()->winning_robot == robot_id) //TODO all ids should be unsigned int
         {
             ROS_INFO("Winner of the auction started by another robot");
 
-            if(current_auction.auction_id != msg.get()->auction) {
-                ROS_ERROR("actually, current_auction.auction_id != msg.get()->auction, which should not happend according to how AuctionManager has been designed:  ignoring auction result");
+            if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id)
+                winner_of_auction = true;
+            else {
+                ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
                 winner_of_auction = false;
-            } else
-                if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id)
-                    winner_of_auction = true;
-                else {
-                    ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
-                    winner_of_auction = false;
-                }
+            }
         }
         else
         {
@@ -308,7 +296,7 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
         }
 
         current_auction.ending_time = time_manager->simulationTimeNow().toSec();
-        current_auction.winner_robot = (unsigned int)msg.get()->robot;
+        current_auction.winner_robot = (unsigned int)msg.get()->winning_robot;
         auction_participation_state = IDLE;
 
     } else
@@ -374,7 +362,7 @@ auction_t AuctionManager::participateToOtherRobotAuction(double bid_double, cons
     bid_t bid;
     bid.robot_id = robot_id;
     bid.bid = bid_double;
-    sender->sendBid(bid, current_auction, auction_reply_topic, robot_id);
+    sender->sendBid(bid, new_auction, auction_reply_topic, robot_id);
 
     return new_auction;
 }

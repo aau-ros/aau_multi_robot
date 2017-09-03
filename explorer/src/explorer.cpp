@@ -2024,9 +2024,10 @@ class Explorer
             set_l5(false);
         }
             
-        if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE || robot_state == robot_state::CHARGING_ABORTED) {
+        if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE) {
             full_battery = false;
             ds_just_left = false;
+            set_l5(false);
             ROS_INFO("full_battery and ds_just_left set to false");
         }
         
@@ -2035,6 +2036,7 @@ class Explorer
             if(!l5_already_zero)
                 log_major_error("l5 is not zero, but charging was aborted!");
             ds_just_left = true;
+            full_battery = false;
             set_l5(false);
         }
 

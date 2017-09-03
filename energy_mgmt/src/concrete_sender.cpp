@@ -14,9 +14,10 @@ void ConcreteSender::sendBid(bid_t bid, auction_t auction, std::string topic, un
 //group_name = "mc_robot_0";
     srv.request.dst_robot = "mc_robot_0";
     srv.request.auction.auction = auction.auction_id;
-    srv.request.auction.robot = bid.robot_id;
+    srv.request.auction.robot = auction.auctioneer;
     srv.request.auction.docking_station = auction.docking_station_id;
-    srv.request.auction.bid = bid.bid;
+    srv.request.auction.bid.bid = bid.bid;
+    srv.request.auction.bid.robot = bid.robot_id;
     srv.request.auction.starting_time = auction.starting_time;
     ROS_DEBUG("Calling service: %s", send_auction_sc.getService().c_str());
     while(!send_auction_sc.call(srv))
@@ -32,10 +33,10 @@ void ConcreteSender::sendResults(bid_t bid, auction_t auction, std::string topic
 //group_name = "mc_robot_0";
     srv.request.dst_robot = "mc_robot_0";
     srv.request.auction.auction = auction.auction_id;
-    srv.request.auction.robot = bid.robot_id;
+    srv.request.auction.robot = auction.auctioneer;
     srv.request.auction.docking_station = auction.docking_station_id;
-    srv.request.auction.bid = bid.bid;
-    srv.request.auction.starting_time = auction.starting_time;
+//    srv.request.auction_result.winning_bid.bid = bid.bid;
+    srv.request.auction.winning_robot = bid.robot_id;
     for(auto it = participants.begin(); it != participants.end(); it++)
         srv.request.auction.participants.push_back(*it);
     ROS_DEBUG("Calling service: %s", send_auction_sc.getService().c_str());

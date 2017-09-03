@@ -50,6 +50,7 @@ using std::string;
 #include "adhoc_communication/CMgrDimensions.h"
 #include "adhoc_communication/CMgrRobotUpdate.h"
 #include "adhoc_communication/EmAuction.h"
+#include "adhoc_communication/EmAuctionResult.h"
 #include "adhoc_communication/EmDockingStation.h"
 #include "adhoc_communication/EmRobot.h"
 
@@ -73,6 +74,7 @@ using std::string;
 #include "adhoc_communication/BroadcastCMgrRobotUpdate.h"
 #include "adhoc_communication/BroadcastString.h"
 #include "adhoc_communication/SendEmAuction.h"
+#include "adhoc_communication/SendEmAuctionResult.h"
 #include "adhoc_communication/SendEmDockingStation.h"
 #include "adhoc_communication/SendEmRobot.h"
 

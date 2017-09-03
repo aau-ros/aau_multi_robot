@@ -146,6 +146,27 @@ bool SendEmAuction(adhoc_communication::SendEmAuction::Request &req, adhoc_commu
     return true;
 }
 
+bool SendEmAuctionResult(adhoc_communication::SendEmAuctionResult::Request &req, adhoc_communication::SendEmAuctionResult::Response &res)
+{
+    //ROS_ERROR("\n\t\e[1;34mSending auction...\e[0m\n");
+    /* Description:
+     * Service call to send an auction for energy management.
+     */
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    unsigned long time_call = getMillisecondsTime();
+#endif
+
+    ROS_DEBUG("Service called to send energy management auction...");
+    string s_msg = getSerializedMessage(req.auction_result);
+    /*Call the function sendPacket and with the serialized object and the frame payload type as parameter*/
+    res.status = sendPacket(req.dst_robot, s_msg, FRAME_DATA_TYPE_EM_AUCTION, req.topic);
+
+#ifdef PERFORMANCE_LOGGING_SERVICE_CALLS
+    Logging::logServiceCalls("SendEmAuctionResult", time_call, getMillisecondsTime(), s_msg.size(), res.status);
+#endif
+    return true;
+}
+
 bool SendEmDockingStation(adhoc_communication::SendEmDockingStation::Request &req, adhoc_communication::SendEmDockingStation::Response &res)
 {
     /* Description:
@@ -614,6 +635,13 @@ void publish_topic(const fake_network::NetworkMessage network_msg) {
 
             publishMessage(data, network_msg.topic);
         }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_EM_AUCTION_RESULT)
+        {
+            adhoc_communication::EmAuctionResult data;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+            publishMessage(data, network_msg.topic);
+        }
         else if (network_msg.data_type == FRAME_DATA_TYPE_EM_DOCKING_STATION)
         {
             adhoc_communication::EmDockingStation data;
@@ -715,6 +743,7 @@ int main(int argc, char **argv)
     
     ros::ServiceServer sendEmRobotS = n_pub->advertiseService(node_prefix + "/send_em_robot", SendEmRobot);
     ros::ServiceServer sendEmAuctionS = n_pub->advertiseService(node_prefix + "/send_em_auction", SendEmAuction);
+    ros::ServiceServer sendEmAuctionResultS = n_pub->advertiseService(node_prefix + "/send_em_auction_result", SendEmAuctionResult);
     ros::ServiceServer sendEmDockingStationS = n_pub->advertiseService(node_prefix + "/send_em_docking_station", SendEmDockingStation);
         //ROS_ERROR("%s", sendEmDockingStationS.getService().c_str()); //F
 

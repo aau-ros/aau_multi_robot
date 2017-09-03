@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <adhoc_communication/SendEmAuction.h>
+#include <adhoc_communication/SendEmAuctionResult.h>
 #include "auction_structs.h"
 
 class Sender {

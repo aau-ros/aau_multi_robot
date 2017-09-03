@@ -1,4 +1,4 @@
-auction_duration: 3 # Duration (in seconds) of an auction, i.e., after 'auction_duration' seconds that an auction 
+auction_duration: 10 # Duration (in seconds) of an auction, i.e., after 'auction_duration' seconds that an auction 
                     # has been started, it is considered concluded and the winner is computed
 reauctioning_timeout: 60 # Interval of time (in seconds) after which the robot (once it has reached a queue, if it is
                          # not already queued) will start another auction to gain access to a docking station

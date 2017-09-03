@@ -1,7 +1,5 @@
 uint32 auction
 uint32 robot
 uint32 docking_station
-float32 starting_time
-EmBid bid
 uint32[] participants
-uint32 winning_robot
+EmBid winning_bid
