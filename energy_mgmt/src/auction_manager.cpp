@@ -309,7 +309,7 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
 {
     auction_mutex.lock();
 
-    ROS_INFO("Received bid for a new auction (%d)", msg.get()->auction);
+    ROS_INFO("Received new auction (%d) from robot %u", msg.get()->auction, msg.get()->robot);
 
     if(optimal_ds_is_set && (unsigned int)msg.get()->docking_station == optimal_ds_id) {
         if(auction_participation_state == MANAGING) {
