@@ -1675,6 +1675,7 @@ class Explorer
                 {
                     move_away_x = final_goal.at(0);
                     move_away_y = final_goal.at(1);
+                    ROS_DEBUG("move_away point: (%.1f, %.1f)", move_away_x, move_away_y);
                     ROS_INFO("Doing smartGoalBackoff");
                     if(final_goal.size() < 2)
                         log_major_error("final_goal.size() < 2");
@@ -1981,11 +1982,7 @@ class Explorer
     {  // TODO(minor) comments in the update_blabla functions, and lso in the other callbacks
         ROS_INFO_COND(LOG_STATE_TRANSITION, "State transition: %s -> %s", get_text_for_enum(robot_state).c_str(),
                   get_text_for_enum(new_state).c_str());
-        adhoc_communication::EmRobot msg;
-        msg.id = robot_id;
-        msg.state = new_state;
-        previous_state = robot_state;
-        robot_state = static_cast<robot_state::robot_state_t>(new_state);
+        
 //        pub_robot.publish(msg);
 
         if(reference_percentage() >= 100 && !checked_percentage && robot_state != finished) {
@@ -2023,18 +2020,23 @@ class Explorer
             full_battery = true;
             set_l5(false);
         }
+        
+        if(robot_state == COMPUTING_NEXT_GOAL)
+             set_l5(false);
             
         if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::AUCTIONING || robot_state == auctioning_2 || robot_state == auctioning_3 || robot_state == robot_state::IN_QUEUE) {
             full_battery = false;
             ds_just_left = false;
-            set_l5(false);
             ROS_INFO("full_battery and ds_just_left set to false");
         }
+        
+        if(robot_state == robot_state::IN_QUEUE)
+            set_l5(false);
         
         if(robot_state == CHARGING_ABORTED) {
             ROS_INFO("ds_just_left set to true");
             if(l5_is_true)
-                log_major_error("l5 is not zero, but charging was aborted!");
+                log_major_error("l5 is not zero, but charging was aborted!"); //althoug it could happen corretly if a robot lose an auction a moment before setting l5, maybe because a new robot is participating, etc.
             ds_just_left = true;
             full_battery = false;
             set_l5(false);
@@ -2074,6 +2076,12 @@ class Explorer
             ROS_INFO("increasing counter");
             explorer_count++;
        }
+       
+       adhoc_communication::EmRobot msg;
+        msg.id = robot_id;
+        msg.state = new_state;
+        previous_state = robot_state;
+        robot_state = static_cast<robot_state::robot_state_t>(new_state);
         
     }
 
