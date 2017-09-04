@@ -2056,7 +2056,7 @@ class Explorer
         ros::Duration time = ros::Time::now() - time_start;
 
         fs_csv_state.open(csv_state_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-        fs_csv_state << ros::Time::now().toSec() << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << "," << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << std::endl;
+        fs_csv_state << ros::Time::now().toSec() << "," << get_text_for_enum(robot_state).c_str() << "," << moving_along_path << "," << ros::Time::now().toSec() << "," << ros::WallTime::now() << std::endl;
         fs_csv_state.close();
         
         if(robot_state == stuck && (previous_state == robot_state::AUCTIONING || previous_state == auctioning_2 || robot_state == auctioning_3) )
@@ -2244,7 +2244,7 @@ class Explorer
             battery_charge_temp = battery_charge;
 
             fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-            fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now().toSec() << "," 
+            fs_csv << ros::Time::now().toSec() << "," << ros::WallTime::now() << "," 
                    << percentage << "," << percentage_2 << "," << exploration_travel_path_global << ","
                    << traveled_distance << ","
                    << map_progress.global_freespace << "," << discovered_free_cells_count << ","
