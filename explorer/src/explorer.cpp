@@ -2490,6 +2490,8 @@ class Explorer
 
     void finalize_exploration()
     {
+        counter++;
+        move_robot_away(counter);
     
         // finished exploration
         update_robot_state_2(finished);

@@ -51,41 +51,37 @@ bool reachable(int src, int dst) {
 }
 
 bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMessage::Response &res) {
-    //ROS_ERROR("Called!");
     
     std::fill(reachability_list.begin(), reachability_list.end(), false);
-    
-    std_msgs::Empty msg;
     
     fake_network::NetworkMessage msg2;
     msg2.source_robot = req.source_robot;
     msg2.payload = req.payload;
     msg2.data_type = req.data_type;
     msg2.topic = req.topic;
+    msg2.destination = req.destination;
     
-
-    //pub.publish(msg);
-    //ROS_ERROR("%s", req.topic.c_str());
-    
-    fake_network::SendMessage srv_msg;
-    srv_msg.request.topic = "hello";
-    
-    std::string source_robot_id_str = req.source_robot.substr(6,1);
+    std::string source_robot_id_str = req.source_robot.substr(6,1); //TODO doesn't work if we have more than 10 robots, but a lot of already existing code doesn't work with more than 10 robots, so...
     int source_robot_id = atoi(source_robot_id_str.c_str());
     
-    //ROS_ERROR("%s", req.source_robot.c_str());
-    //ROS_ERROR("%s", source_robot_id_str.c_str());
-    //ROS_ERROR("%d", source_robot_id);
-    
-    //if(msg2.topic == "send_frontier_for_coordinated_exploration")
-    //    ROS_ERROR("YES!");
+    bool broadcast;
+    int dest_robot_id;
+    if(req.destination == "" || req.destination.substr(0,3) == "mc_")
+        broadcast = true;
+    else if(req.destination.substr(0,6) == "robot_") {
+        broadcast = false;
+        std::string dest = req.destination.substr(6,1); //TODO doesn't work if we have more than 10 robots, but a lot of already existing code doesn't work with more than 10 robots, so...
+        dest_robot_id = atoi(dest.c_str());
+        if(dest_robot_id >= num_robots)
+            ROS_ERROR("dest_robot_id >= num_robots");
+    }
+    else
+        ROS_ERROR("invalid destination!!!");
     
     for(int i=0; i < num_robots; i++) {
     
-        if(source_robot_id == i) {
-            //ROS_ERROR("skip");
+        if(source_robot_id == i)
             continue;
-        }
         
         if(robot_list[i].finished)
             continue;
@@ -93,33 +89,10 @@ bool send_message(fake_network::SendMessage::Request  &req, fake_network::SendMe
         //if(req.topic == "map_other")
         //    ROS_ERROR("publishing map from robot %s to robot robot_%d", req.source_robot.c_str(), i);
     
-        
-        if(reachable(source_robot_id, i)) {
-            //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
-            //sc_publish_message_list[i].call(srv_msg);
+        if(reachable(source_robot_id, i) && (broadcast || dest_robot_id == i) )
             pub_publish_message_list[i].publish(msg2);
-        } else
+        else
             ; //ROS_ERROR("robot_%d and robot_%d cannot communicate", source_robot_id, i);
-        /*
-        if(euclidean_distance(robot_list[source_robot_id].x, robot_list[source_robot_id].y, robot_list[i].x, robot_list[i].y) <= wifi_range) {
-            //ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
-            //sc_publish_message_list[i].call(srv_msg);
-            pub_publish_message_list[i].publish(msg2);
-        }
-        else {
-
-                
-        
-            for(int j=0; j < robot_list.size(); j++)
-                for(int j2=0; j2 < robot_list.size(); j2++)
-                    if(euclidean_distance(robot_list[j].x, robot_list[j].y, robot_list[j2].x, robot_list[j2].y) < wifi_range)
-        
-        }
-            
-        */
-            
-        
-        //ROS_ERROR("returned");
     }
     
     return true;

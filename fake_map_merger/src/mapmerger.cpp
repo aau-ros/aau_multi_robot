@@ -264,7 +264,9 @@ void MapMerger::callback_remove_robot(const std_msgs::StringConstPtr &msg)
 
 void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &msg)
 {
-    ROS_DEBUG("Got a control message");
+    ROS_DEBUG("Got a control message from robot %s", msg.get()->src_robot.c_str());
+    for(unsigned int i = 0; i < msg.get()->update_numbers.size(); i++)
+        ROS_DEBUG("Requested update %d", msg.get()->update_numbers.at(i));    
     adhoc_communication::MmControl tmp = *msg.get();
     if(tmp.update_numbers.size() == 0)
     {
@@ -359,7 +361,7 @@ void MapMerger::callback_control(const adhoc_communication::MmControlConstPtr &m
         }
         ROS_INFO("Sending %lu updates back to %s\n\t\tminX:%i\tminY:%i\tmaxX:%i\tmaxY:%i",tmp.update_numbers.size(),tmp.src_robot.c_str(),min_x,min_y,max_x,max_y);
         for(int i = 0; i < tmp.update_numbers.size();i++)
-            ROS_INFO("Send %i",tmp.update_numbers.at(i));
+            ROS_INFO("Send update %i to robot %s",tmp.update_numbers.at(i), tmp.src_robot.c_str());
         sendMapOverNetwork(tmp.src_robot,&tmp.update_numbers,min_x,min_y,max_x,max_y);
         
         ROS_DEBUG("callback_control() executed");
@@ -1063,6 +1065,8 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
         updateMapArea(index_robots,toInsert);
         ROS_DEBUG("Adding new list entry");
         updateMan->addToupdateList(index_robots,msg.get()->update_numbers);
+        for(unsigned int i = 0; i < msg.get()->update_numbers.size(); i++)
+            ROS_DEBUG("Adding update %d from robot %s", msg.get()->update_numbers.at(i), msg.get()->src_robot.c_str());
         if(updateMan->isUpdatesMissing(index_robots))
         {
             ROS_DEBUG("Missed some updates for %s",robots->at(index_robots).c_str());

@@ -510,6 +510,7 @@ bool sendPacket(std::string &hostname_destination, std::string& payload, uint8_t
     msg.request.payload = payload;
     msg.request.data_type = data_type_;
     msg.request.topic = topic;
+    msg.request.destination = hostname_destination;
     
     sc_send_message.call(msg);
 
