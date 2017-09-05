@@ -204,6 +204,7 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
     } else if(robot_state == robot_state::exploring_for_graph_navigation) {
         substractEnergyRequiredForKeepingRobotAlive();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForAdvancedComputations();
 
     } else if(robot_state == robot_state::auctioning_3) {
         substractEnergyRequiredForKeepingRobotAlive();
