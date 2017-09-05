@@ -1499,6 +1499,7 @@ bool ExplorationPlanner::storeFrontier(double x, double y, int detected_by_robot
         new_frontier.detected_by_robot_str = detected_by_robot_str;
         new_frontier.x_coordinate = x;
         new_frontier.y_coordinate = y;
+        new_frontier.timestamp_distance_update = ros::Time(0);
         
         //F
         new_frontier.cluster_id = -1;
@@ -10062,10 +10063,20 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
             
             while(frontiers.at(frontier_index).list_distance_from_ds.size() < ds_list.size())
                 frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
+                
+                
 
-            if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic)
-                ;
-            else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
+            if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic) {
+                if(2 * euclidean_distance(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate) < max_available_distance && ros::Time::now() - frontiers.at(frontier_index).timestamp_distance_update > ros::Duration(5*60)) {
+                    double distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
+                    if(distance < 0)
+                        ;
+                    else {
+                        frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+                        frontiers.at(frontier_index).timestamp_distance_update = ros::Time::now();
+                    }
+                }
+            } else if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) < max_available_distance)
                 ;
             else {
                 double distance;
@@ -10076,8 +10087,10 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
                      distance = trajectory_plan_meters(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate);
                     if(distance < 0)
                         ;
-                    else
+                    else {
                         frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) = distance;
+                        frontiers.at(frontier_index).timestamp_distance_update = ros::Time::now();
+                    }
                 }
             }
 

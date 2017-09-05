@@ -87,6 +87,7 @@ namespace explorationPlanner
         std::vector<double> list_distance_from_ds;
         double _theta;
         bool operator() (frontier_t frontier_1,frontier_t frontier_2) { return (frontier_1.cost<frontier_2.cost);}
+        ros::Time timestamp_distance_update;
     } frontier, unreachable_frontier;
 
     struct ds_t
