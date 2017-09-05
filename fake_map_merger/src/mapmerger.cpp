@@ -996,6 +996,8 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
     nav_msgs::OccupancyGrid * toInsert = &tmp;
     int index_robots = -1;
     ROS_DEBUG("Got map from %s",msg.get()->src_robot.c_str());
+    for(unsigned int i = 0; i < msg.get()->update_numbers.size(); i++)
+            ROS_DEBUG("Update %d from robot %s is containted", msg.get()->update_numbers.at(i), msg.get()->src_robot.c_str());
     std::string src_robot = msg.get()->src_robot;
     if(has_local_map == false)
     {
@@ -1065,8 +1067,6 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
         updateMapArea(index_robots,toInsert);
         ROS_DEBUG("Adding new list entry");
         updateMan->addToupdateList(index_robots,msg.get()->update_numbers);
-        for(unsigned int i = 0; i < msg.get()->update_numbers.size(); i++)
-            ROS_DEBUG("Adding update %d from robot %s", msg.get()->update_numbers.at(i), msg.get()->src_robot.c_str());
         if(updateMan->isUpdatesMissing(index_robots))
         {
             ROS_DEBUG("Missed some updates for %s",robots->at(index_robots).c_str());
