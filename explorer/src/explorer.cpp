@@ -128,6 +128,7 @@ class Explorer
     bool ds_just_left;
     double move_away_x, move_away_y;
     bool exist_frontiers_reachable_with_current_available_distance;
+    bool printed_too_many;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -206,6 +207,7 @@ class Explorer
         ds_just_left = false;
         move_away_x = 0, move_away_y = 0;
         exist_frontiers_reachable_with_current_available_distance = false;
+        printed_too_many = false;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -3695,8 +3697,10 @@ class Explorer
         ros::Time prev_time = ros::Time::now();   
         while(ros::ok() && !exploration_finished) {
         
-            if(approximate_success >= 3)
+            if(approximate_success >= 3 && !printed_too_many) {
                 log_major_error("too many approximated successes");
+                printed_too_many = true;
+            }
             
             //ROS_DEBUG("Checking...");
             //if(exploration->getRobotPose(robotPose)) {
