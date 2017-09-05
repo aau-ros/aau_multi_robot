@@ -86,6 +86,7 @@ add_service_files(
    ChargingCompleted.srv
    AuctionResult.srv
    PathOnDsGraph.srv
+   NextDockingStation.srv
 )
 
 ## Generate actions in the 'action' folder

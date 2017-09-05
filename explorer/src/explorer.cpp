@@ -43,6 +43,7 @@
 #include "robot_state/GetRobotState.h"
 #include <std_srvs/Empty.h>
 #include <std_srvs/SetBool.h>
+#include <explorer/NextDockingStation.h>
 
 #ifdef PROFILE
 #include "google/profiler.h"
@@ -92,7 +93,7 @@ class Explorer
     ros::Subscriber sub_wait, sub_free_cells_count, sub_discovered_free_cells_count, sub_force_in_queue;
     std::vector<adhoc_communication::MmPoint> complex_path;
     ros::ServiceServer ss_robot_pose, ss_distance_from_robot, ss_distance, ss_reachable_target;
-    ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc, set_l5_sc;
+    ros::ServiceClient sc_get_robot_state, has_to_go_to_ds_sc, set_l5_sc, next_ds_sc;
     bool created;
     float queue_distance, min_distance_queue_ds, max_av_distance;
     float stored_robot_x, stored_robot_y;
@@ -224,6 +225,8 @@ class Explorer
         has_to_go_to_ds_sc = nh2.serviceClient<explorer::AuctionResult>("has_to_go_to_ds");
         
         set_l5_sc = nh2.serviceClient<std_srvs::SetBool>("energy_mgmt/set_l5");
+        
+        next_ds_sc = nh2.serviceClient<explorer::NextDockingStation>("energy_mgmt/next_ds");
         
         /* Robot state subscribers */
 //        sub_check_vacancy =
@@ -1216,21 +1219,8 @@ class Explorer
                                     ROS_DEBUG("maximum_traveling_distance: %.2f", maximum_available_distance);
                                     
                                     // we force to move to next ds
-                                    retry_recharging_current_ds = 0;
-                                    ds_path_counter++;
-//                                    optimal_ds_id = complex_path[ds_path_counter].id;
-                                    optimal_ds_x = complex_path[ds_path_counter].x; 
-                                    optimal_ds_y = complex_path[ds_path_counter].y; 
-//                                    double world_x, world_y;
-//                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
-//                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
-                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                    adhoc_communication::EmDockingStation msg;
-                                    msg.x = optimal_ds_x;
-                                    msg.y = optimal_ds_y;
-                                    pub_next_ds.publish(msg);
-                                    update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
-                                    
+                                    move_to_next_ds_on_path();
+
                                 }
                                 else {
                                     ROS_INFO("Cannot reach next DS on the path: reauction for current one");
@@ -1241,19 +1231,7 @@ class Explorer
                                 }
                             } else {
                                 retry_recharging_current_ds = 0;
-                                ds_path_counter++;
-//                                optimal_ds_id = complex_path[ds_path_counter].id;
-                                optimal_ds_x = complex_path[ds_path_counter].x; 
-                                optimal_ds_y = complex_path[ds_path_counter].y; 
-//                                    double world_x, world_y;
-//                                    map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
-//                                    ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
-                                ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
-                                adhoc_communication::EmDockingStation msg;
-                                msg.x = optimal_ds_x;
-                                msg.y = optimal_ds_y;
-                                pub_next_ds.publish(msg);
-                                update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
+                                move_to_next_ds_on_path();
                             }
                             
                             continue;
@@ -1315,13 +1293,6 @@ class Explorer
                     /* Check if the robot has found a reachable frontier */
                     if (goal_determined == true)
                     {
-                        //this can be true if we are at the end of the DS path (i.e., we have reached the last DS and we have 
-//                            if(moving_along_path) {
-//                                ROS_INFO("Finished path traversal");
-//                                moving_along_path = false;
-//                                std_msgs::Empty msg;
-//                                pub_next_ds.publish(msg);
-//                            }
                     
                         /* The robot has found a reachable frontier: it can move toward it */                            
                         update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
@@ -1365,15 +1336,6 @@ class Explorer
                             update_robot_state_2(robot_state::AUCTIONING);
                         }
                         else {
-                            
-//                            if(moving_along_path) {
-//                                ROS_INFO("moving_along_path: reauctiong for current DS (the last of the path)");
-//                                counter++;
-//                                move_robot_away(counter);
-//                                update_robot_state_2(robot_state::AUCTIONING);
-//                                std_msgs::Empty msg;
-//                                pub_next_ds.publish(msg);
-//                            }
                             
                             if(retries >= 4)
                                 log_major_error("too many retries, this shouldn't happend");
@@ -3861,6 +3823,24 @@ class Explorer
     
     double reference_percentage() {
         return percentage;
+    }
+    
+    void move_to_next_ds_on_path() {
+        retry_recharging_current_ds = 0;
+        ds_path_counter++;
+//      optimal_ds_id = complex_path[ds_path_counter].id;
+        optimal_ds_x = complex_path[ds_path_counter].x; 
+        optimal_ds_y = complex_path[ds_path_counter].y; 
+//      double world_x, world_y;
+//      map_to_world(optimal_ds_x, optimal_ds_y, &world_x, &world_y); //TODO to be implemented
+//      ROS_INFO("Going to next DS in path, which is at (%f, %f)", world_x, world_y);
+        ROS_INFO("Going to next DS in path, which is at (%f, %f)", optimal_ds_x, optimal_ds_y);
+        explorer::NextDockingStation srv_msg;
+        srv_msg.request.x = optimal_ds_x;
+        srv_msg.request.y = optimal_ds_y;
+        while(!next_ds_sc.call(srv_msg))
+            ROS_ERROR("call to next_ds_sc failed!");
+        update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
     }
     
     void log_major_error(std::string text) {

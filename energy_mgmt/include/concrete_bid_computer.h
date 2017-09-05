@@ -64,7 +64,7 @@ private:
     std::mutex robot_mutex, ds_mutex, message_mutex;
     explorer::battery_state::ConstPtr battery, next_battery;
     std::string log_path, robot_prefix;
-    DataLogger *data_logger;
+    DataLogger *data_logger, *data_logger2;
     ros::ServiceServer set_l5_ss;
 
     void loadParameters();

@@ -45,6 +45,7 @@
 #include "robot_state/robot_state_management.h"
 #include "robot_state_manager_interface.h"
 #include <std_srvs/Empty.h>
+#include <explorer/NextDockingStation.h>
 
 #include "gtest/gtest_prod.h"
 
@@ -542,7 +543,8 @@ class docking
     void inform_explorer_about_used_ds();
     void check_other_robots_state();
     bool printed_invalid_message_id;
-    ros::ServiceServer goal_ds_for_path_navigation_ss;
+    ros::ServiceServer goal_ds_for_path_navigation_ss, next_ds_ss;
+    bool next_ds_service_callback(explorer::NextDockingStation::Request &req, explorer::NextDockingStation::Response &res);
 
 //    AuctionManager auction_manager; //TODO
 

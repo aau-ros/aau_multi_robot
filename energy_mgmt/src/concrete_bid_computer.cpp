@@ -5,7 +5,9 @@ ConcreteBidComputer::ConcreteBidComputer() {
     initializeVariables();
     subscribeToTopics();
     data_logger = new DataLogger("energy_mgmt", robot_prefix, log_path);
-    data_logger->createLogFile("sent_bids.csv", "#sim_time,llh,l1,l2,l3,l4,l5\n");  
+    data_logger->createLogFile("sent_bids.csv", "#sim_time,llh,l1,l2,l3,l4,l5\n");
+    data_logger2 = new DataLogger("energy_mgmt", robot_prefix, log_path);
+    data_logger2->createLogFile("llh.csv", "#sim_time,llh,l1,l2,l3,l4,l5\n");    
 }
 
 void ConcreteBidComputer::loadParameters() {
@@ -69,6 +71,9 @@ void ConcreteBidComputer::updateLlh() {
     update_l2();
     update_l3();
     update_l4();
+    std::stringstream stream;
+    stream << ros::Time::now() << "," << llh << "," << l1 << "," << l2 << "," << l3 << "," << l4 << "," << l5 << std::endl;
+    data_logger2->updateLogFile("sent_bids.csv", stream);
 }
 
 void ConcreteBidComputer::update_l1() //TODO(minor) would be better to update them only when get_llh() is called, for efficiency... the problem is that the check participating == 0 would not allow it..

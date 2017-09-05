@@ -86,6 +86,7 @@ namespace explorationPlanner
         ros::Time timestamp;
         std::vector<double> list_distance_from_ds;
         double _theta;
+        bool operator() (frontier_t frontier_1,frontier_t frontier_2) { return (frontier_1.cost<frontier_2.cost);}
     } frontier, unreachable_frontier;
 
     struct ds_t
@@ -528,6 +529,7 @@ namespace explorationPlanner
             int num_robots;
             frontier_t frontier_under_negotiation;
             ros::ServiceClient goal_ds_for_path_navigation_sc;
+            void sort_frontiers();
             
             // Debugging
             bool test_mode;

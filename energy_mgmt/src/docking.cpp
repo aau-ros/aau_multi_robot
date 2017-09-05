@@ -164,6 +164,8 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
     
     goal_ds_for_path_navigation_ss = nh.advertiseService("energy_mgmt/graph_path", &docking::simple_compute_and_publish_path_on_ds_graph, this);
+    next_ds_ss = nh.advertiseService("energy_mgmt/next_ds", &docking::next_ds_service_callback, this);
+    
 
     /* Subscribers */
     sub_battery = nh.subscribe(my_prefix + "battery_state", 1000, &docking::cb_battery, this);
@@ -3653,4 +3655,64 @@ void docking::reply_for_vacancy_callback(const adhoc_communication::EmDockingSta
     }
     else
         ROS_INFO("but robot is not checking for vacancy");
+}
+
+bool docking::next_ds_service_callback(explorer::NextDockingStation::Request &req, explorer::NextDockingStation::Response &res) {
+    if(path.size() == 0)
+        log_major_error("path.size() == 0");
+    
+    if(index_of_ds_in_path < 0) {
+        log_major_error("index_of_ds_in_path");
+    }
+    
+    if ((unsigned int)index_of_ds_in_path < path.size() - 1)
+    {
+        ROS_INFO("Select next DS on the path in the DS graph to reach the final DS with EOs");
+        index_of_ds_in_path++;
+        ROS_DEBUG("%d", index_of_ds_in_path);
+        for (unsigned int i = 0; i < ds.size(); i++)
+            if (path[index_of_ds_in_path] == ds[i].id)
+            {   
+                ROS_INFO("Next DS on path: ds%d", ds[i].id);
+//                set_target_ds_given_index(i);  // TODO(minor) probably ok...
+                set_optimal_ds_given_index(i);    // TODO(minor) VERY BAD!!!!
+                break;
+            }
+            
+            bool found = false;
+            for(unsigned int i=0; i< ds.size(); i++)
+                if(fabs(ds.at(i).x - req.x) < 0.1 && fabs(ds.at(i).y - req.y) < 0.1) {
+                    found = true;
+                    break;
+                }
+            if(!found)
+                log_major_error("the next DS is invalid!!!");
+                
+    }
+    else {
+        if(moving_along_path) {
+            ROS_INFO("We have reached the final DS and charged at it");
+            moving_along_path = false;
+        }
+        else {
+            log_major_error("we are not moving along path!!!");
+            
+            optimal_ds_mutex.lock();
+            
+            moving_along_path = true;
+            bool found = false;
+            for(unsigned int i=0; i< ds.size(); i++)
+                if(fabs(ds.at(i).x - req.x) < 0.1 && fabs(ds.at(i).y - req.y) < 0.1) {
+                    ROS_INFO("forcing optimal DS to be ds%d", ds.at(i).id);
+                    set_optimal_ds(ds.at(i).id);
+                    found = true;
+                    break;
+                }
+            if(!found)
+                log_major_error("the next DS is invalid!!! (2)");
+                
+            optimal_ds_mutex.unlock();
+        }
+    }
+    return true;
 }

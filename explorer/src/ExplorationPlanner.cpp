@@ -5480,6 +5480,10 @@ bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy,
 
 }
 
+void ExplorationPlanner::sort_frontiers() {
+    std::sort(sorted_frontiers.begin(), sorted_frontiers.end(), frontier);
+}
+
 //bool ExplorationPlanner::my_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
 //{
 //    
@@ -9260,23 +9264,24 @@ void ExplorationPlanner::add_to_sorted_fontiers_list_if_convinient(frontier_t fr
             return;
         }
     
-    unsigned int k;
-    bool inserted = false;
-    for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
-        if(frontier.cost < sorted_frontiers.at(k).cost) {
-            sorted_frontiers.insert(sorted_frontiers.begin() + k, frontier);
-            if(sorted_frontiers.size() > limit_search*3 + 1)
-                ROS_ERROR("somethign went wrong...");
-            else if(sorted_frontiers.size() == limit_search*3 + 1) // times 3 to keep into account possible failures in the distance computation
-                sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
-            inserted = true;
-            }
-            
-    if(!inserted && k < limit_search*3 - 2) //TODO do we need the -2?
-        sorted_frontiers.push_back(frontier);
-        
-    if(sorted_frontiers.size() > limit_search*3)
-        ROS_ERROR("somethign went wrong...");
+//    unsigned int k;
+//    bool inserted = false;
+//    for(k=0; k<sorted_frontiers.size() && !inserted ; k++)
+//        if(frontier.cost < sorted_frontiers.at(k).cost) {
+//            sorted_frontiers.insert(sorted_frontiers.begin() + k, frontier);
+//            if(sorted_frontiers.size() > limit_search*3 + 1)
+//                ROS_ERROR("somethign went wrong...");
+//            else if(sorted_frontiers.size() == limit_search*3 + 1) // times 3 to keep into account possible failures in the distance computation
+//                sorted_frontiers.erase(sorted_frontiers.begin() + sorted_frontiers.size() - 1);
+//            inserted = true;
+//            }
+//            
+//    if(!inserted && k < limit_search*3 - 2) //TODO do we need the -2?
+//        sorted_frontiers.push_back(frontier);
+//        
+//    if(sorted_frontiers.size() > limit_search*3)
+//        ROS_ERROR("somethign went wrong...");
+    sorted_frontiers.push_back(frontier);
 }
 
 //bool ExplorationPlanner::my2_determine_goal_staying_alive(int mode, int strategy, double available_distance, std::vector<double> *final_goal, int count, std::vector<std::string> *robot_str_name, int actual_cluster_id, bool energy_above_th, int w1, int w2, int w3, int w4)
@@ -9707,6 +9712,8 @@ void ExplorationPlanner::my_sort_cost_0(bool energy_above_th, int w1, int w2, in
     {
         ROS_INFO("Sorting not possible, no frontiers available");
     }
+    
+    sort_frontiers();
     
     release_mutex(&store_frontier_mutex, __FUNCTION__);
     ROS_INFO("finished my_sort_cost_0");
