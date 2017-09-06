@@ -128,6 +128,8 @@ void battery_simulate::createLogFiles() {
     sim_time_start = ros::Time::now();
     wall_time_start = ros::WallTime::now();
 
+    std::string robot_name = robot_prefix.substr(1);
+    ROS_DEBUG("robot_name: %s", robot_name.c_str());
     data_logger = new DataLogger("energy_mgmt", robot_prefix, log_path); //TODO robot_prefix or robot_id?
     std::stringstream stream;
     stream << "#..." << std::endl;

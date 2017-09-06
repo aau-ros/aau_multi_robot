@@ -44,8 +44,11 @@ void AuctionManager::loadParameters() {
     }
     if(!nh_tilde.getParam("log_path", log_path))
         ROS_ERROR("invalid log_path"); //TODO during tests this is printed, but why?
-    if(!nh_tilde.getParam("robot_prefix", robot_name))
+    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
         ROS_ERROR("invalid robot_prefix");
+    if(!nh_tilde.getParam("robot_prefix", robot_prefix))
+        ROS_ERROR("invalid robot_prefix");
+    robot_name = robot_prefix.substr(1);
     nh_tilde.param<double>("sleep_time_between_two_participations", sleep_time_between_two_participations, 5); //s //TODO use
 }
 
@@ -68,7 +71,7 @@ void AuctionManager::logMetadata()
 
     /* Create directory */
     log_path = log_path.append("/energy_mgmt");
-    log_path = log_path.append(robot_name);
+    log_path = log_path.append(robot_prefix);
     boost::filesystem::path boost_log_path(log_path.c_str());
     if (!boost::filesystem::exists(boost_log_path))
     {

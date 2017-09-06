@@ -47,7 +47,7 @@ private:
     unsigned int local_auction_id;
     unsigned int num_robots;
     std::string auction_starting_topic, auction_reply_topic, auction_result_topic;
-    std::string log_path, robot_name;
+    std::string log_path, robot_name, robot_prefix;
     DataLogger *data_logger;
 
     void initializeVariables(unsigned int robot_id);
