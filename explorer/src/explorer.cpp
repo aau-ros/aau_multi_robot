@@ -1379,7 +1379,7 @@ class Explorer
                                         {
                                             exploration->discovered_new_frontier = false;
                                             exploration->updateOptimalDs();
-    //                                        final_goal.clear();
+                                            fallback_goal.clear();
                                             if(exploration->existFrontiersReachableWithFullBattery(maximum_available_distance-1, &error, &fallback_goal)) {
 
                                                 if(full_battery) {
@@ -3127,7 +3127,7 @@ class Explorer
                 exploration->next_auction_position_x = robotPose.getOrigin().getX();
                 exploration->next_auction_position_y = robotPose.getOrigin().getY();
                 
-                if( (position_x - pose_x) * (position_x - pose_x) + (position_y - pose_y) * (position_y - pose_y) < 5*5 ) {
+                if( (position_x - pose_x) * (position_x - pose_x) + (position_y - pose_y) * (position_y - pose_y) < 3*3 ) {
                       ROS_ERROR("Robot seems unable to closely reach the goal, but it is close enough to consider the goal reached... ");
                       if(moving_to_ds || going_home) 
                         log_minor_error("Robot didn't properly reach home/DS");
