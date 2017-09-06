@@ -124,7 +124,7 @@ void AuctionManager::tryToAcquireDs() {
         bid.robot_id = robot_id;
         bid.bid = bid_computer->getBid();
         auction_bids.push_back(bid);
-        sender->sendBid(bid, current_auction, auction_starting_topic, robot_id);
+        sender->sendNewAuction(bid, current_auction, auction_starting_topic, robot_id);
 
         scheduleAuctionTermination();
     }
@@ -202,6 +202,7 @@ bool AuctionManager::isThisRobotTheWinner(unsigned int winner_id) {
     {
         ROS_INFO("Winner of its own auction");  // TODO(minor) specify which auction
         ROS_INFO("winner_of_auction = true");
+//        set_l5(true);
         return true;
     }
     else
@@ -225,22 +226,24 @@ void AuctionManager::auctionReplyCallback(const adhoc_communication::EmAuction::
     auction_mutex.lock();
     ROS_DEBUG("Received bid (%.2f) from robot %d for auction %u", msg.get()->bid.bid, msg.get()->bid.robot, (unsigned int)msg.get()->auction);
 
-    if(auction_participation_state != MANAGING)
-        ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
+//    if(auction_participation_state != MANAGING)
+//        ROS_INFO("The robot received a bid, but it is not managing an auction: ignore it");
     
+    if(robot_id != msg.get()->robot)
+        ROS_ERROR("The received bid is for an auction started by robot_%u, which is not this robot", msg.get()->robot);
+    
+    else if (current_auction.auction_id != msg.get()->auction) 
+        ROS_ERROR("The received bid is not for the auction recently started by this robot (current auction is %d, received is %d): ignore it", current_auction.auction_id, msg.get()->auction);
+            
+    else if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
+        ROS_ERROR("The received bid is for ds_%u, which is not the one under auction (it's ds_%u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
+            
     else {
-//        if (current_auction.auction_id / pow(10, (ceil(log10(num_robots)))) != (unsigned int)msg.get()->auction / pow(10, (ceil(log10(num_robots))))) 
-        if (current_auction.auction_id != msg.get()->auction && robot_id == msg.get()->robot) 
-            ROS_ERROR("Received a bid that is not for the auction recently started by this robot (current auction is %d, received is %d): ignore it", current_auction.auction_id, msg.get()->auction);
-        else {
-            if (current_auction.docking_station_id != (unsigned int)msg.get()->docking_station) 
-                ROS_ERROR("Received a bid that is not for the docking station %u, which is not the one under auction (it's %u)", (unsigned int)msg.get()->docking_station, current_auction.docking_station_id);
-            ROS_DEBUG("Received bid (%f) from robot %d for currenct auction (%u)", msg.get()->bid.bid, msg.get()->bid.robot, current_auction.auction_id);
-            bid_t bid;
-            bid.robot_id = msg.get()->bid.robot;
-            bid.bid = msg.get()->bid.bid;
-            auction_bids.push_back(bid);
-        }
+        ROS_DEBUG("Bid accepted");
+        bid_t bid;
+        bid.robot_id = msg.get()->bid.robot;
+        bid.bid = msg.get()->bid.bid;
+        auction_bids.push_back(bid);
     }
 
     auction_mutex.unlock();
@@ -262,8 +265,12 @@ unsigned int AuctionManager::nextAuctionId()
 {
     ROS_DEBUG("Compute next auction ID");
     // Examples:
+    //   With 15 robots:
     //     23 * pow(10, (ceil(log10(15)))) + 11 = 23 * 10^2 + 11 = 2300 + 11 = 2311;
-    //     23 * pow(10, (ceil(log10(10)))) +  9 = 23 * 10^1 +  9 =  230 +  9 =  239;
+    //     23 * pow(10, (ceil(log10(15)))) +  9 = 23 * 10^2 +  9 = 2300 +  9 = 2309;
+    //   With 10 robots:
+    //     50 * pow(10, (ceil(log10(10)))) +  8 = 50 * 10^1 +  8 =  500 +  8 =  508;
+    //     50 * pow(10, (ceil(log10(10)))) +  7 = 50 * 10^1 +  8 =  500 +  9 =  508;
     
     local_auction_id++;
     unsigned int id = local_auction_id * pow(10, (ceil(log10(num_robots)))) + robot_id;
@@ -290,6 +297,7 @@ void AuctionManager::auctionResultCallback(const adhoc_communication::EmAuction:
             if(current_auction.docking_station_id == optimal_ds_id && msg.get()->docking_station == optimal_ds_id) {
                 winner_of_auction = true;
                 ROS_INFO("winner_of_auction = true");
+//                set_l5(true);
             }
             else {
                 ROS_INFO("The robot won an auction, but meanwhile it changed it's optimal DS and it is no more the auctioned one: ignoring auction result");
@@ -319,7 +327,7 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
 {
     auction_mutex.lock();
 
-    ROS_INFO("Received new auction (%d) from robot %u", msg.get()->auction, msg.get()->robot);
+    ROS_INFO("Received new auction (%d) from robot_%u for ds_%u", msg.get()->auction, msg.get()->robot, msg.get()->docking_station);
 
     if(optimal_ds_is_set && (unsigned int)msg.get()->docking_station == optimal_ds_id) {
         if(auction_participation_state == MANAGING) {
@@ -333,15 +341,16 @@ void AuctionManager::auctionStartingCallback(const adhoc_communication::EmAuctio
         
         else if(robot_cannot_participate_to_auctions) //TODO this is not tested properly, probably
             ROS_INFO("robot is searching for a path on graph: ignore auction");  
+            
         else {
             double bid_double = bid_computer->getBid();
-//            if (bid_double > msg.get()->bid)
-//            {
-//                ROS_INFO("The robot can place an higher bid than the one received");
+            if (bid_double > msg.get()->bid.bid)
+            {
+                ROS_INFO("The robot can place an higher bid than the one received");
                 current_auction = participateToOtherRobotAuction(bid_double, msg);
-//            }
-//            else
-//                ROS_INFO("The robot has no chance to win, so it won't place a bid for this auction");
+            }
+            else
+                ROS_INFO("The robot has no chance to win, so it won't place a bid for this auction");
         }
 
     }

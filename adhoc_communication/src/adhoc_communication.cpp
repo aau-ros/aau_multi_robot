@@ -525,19 +525,11 @@ bool joinMCGroup(adhoc_communication::ChangeMCMembership::Request &req, adhoc_co
 
 
 
-bool publishMessageFromFakeNetwork(fake_network::SendMessage::Request &req, fake_network::SendMessage::Response &res) {
-    ROS_ERROR("Called!");
-    return true;
-}
-
-void publish_topic(const fake_network::NetworkMessage network_msg) {
-    //ROS_ERROR("Called!");
-    //ROS_ERROR("%s", network_msg.topic.c_str());
-
+bool publishMessageFromFakeNetwork(fake_network::ReceiveMessage::Request &network_msg, fake_network::ReceiveMessage::Response &res) {
     try
     {
         std::string payload = network_msg.payload;
-        //ROS_ERROR("PUBLISH PACKET: %04x", network_msg.data_type); //F
+        ROS_ERROR("PUBLISH PACKET: %04x", network_msg.data_type);
         if (network_msg.data_type == FRAME_DATA_TYPE_MAP)
         {
             nav_msgs::OccupancyGrid map;
@@ -665,6 +657,146 @@ void publish_topic(const fake_network::NetworkMessage network_msg) {
 
         ROS_ERROR("NODE THROWS EXCEPTION: %u", e);
     }    
+    
+    ROS_ERROR("done");
+    return true;
+}
+
+void publish_topic(const fake_network::NetworkMessage network_msg) {
+    //ROS_ERROR("Called!");
+    //ROS_ERROR("%s", network_msg.topic.c_str());
+
+    try
+    {
+        std::string payload = network_msg.payload;
+        //ROS_ERROR("PUBLISH PACKET: %04x", network_msg.data_type); //F
+        if (network_msg.data_type == FRAME_DATA_TYPE_MAP)
+        {
+            nav_msgs::OccupancyGrid map;
+
+            desializeObject((unsigned char*) payload.data(),
+                    payload.length(), &map);
+
+            publishMessage(map, network_msg.topic);
+        }
+
+        if (network_msg.data_type == FRAME_DATA_TYPE_POSITION)
+        {
+
+            adhoc_communication::MmRobotPosition pos =
+                    adhoc_communication::MmRobotPosition();
+            //pos.position = getPoseStampFromNetworkString(
+            //		(unsigned char*) payload.data(), payload.length());
+            desializeObject((unsigned char*) payload.data(), payload.length(), &pos.position);
+            pos.src_robot = network_msg.source_robot;
+            publishMessage(pos, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_ANY)
+        {
+            adhoc_communication::RecvString data = adhoc_communication::RecvString();
+            data.src_robot = network_msg.source_robot;
+            data.data = payload;
+            publishMessage(data, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_POINT)
+        {
+            adhoc_communication::MmPoint point;
+            desializeObject((unsigned char*) payload.data(),
+                    payload.length(), &point);
+            point.src_robot = network_msg.source_robot;
+            publishMessage(point, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_CONTROLL_MSG)
+        {
+            adhoc_communication::MmControl msg;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &msg);
+            msg.src_robot = network_msg.source_robot;
+            publishMessage(msg, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_MAP_UPDATE)
+        {
+            adhoc_communication::MmMapUpdate mapUpdate;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &mapUpdate);
+            mapUpdate.src_robot = network_msg.source_robot;
+            publishMessage(mapUpdate, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_FRONTIER)
+        {
+            adhoc_communication::ExpFrontier frontier;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &frontier);
+
+            publishMessage(frontier, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_CLUSTER)
+        {
+            adhoc_communication::ExpCluster cluster;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &cluster);
+
+            publishMessage(cluster, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_AUCTION)
+        {
+            adhoc_communication::ExpAuction auc;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &auc);
+
+            publishMessage(auc, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_TWIST)
+        {
+            geometry_msgs::Twist twist;
+            desializeObject(
+                    (unsigned char*) payload.data(), payload.length(), &twist);
+
+            publishMessage(twist, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_ROBOT_UPDATE)
+        {
+            adhoc_communication::CMgrRobotUpdate r_up;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &r_up);
+
+            publishMessage(r_up, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_EM_AUCTION)
+        {
+            adhoc_communication::EmAuction data;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+            
+            publishMessage(data, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_EM_AUCTION_RESULT)
+        {
+            adhoc_communication::EmAuctionResult data;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+            publishMessage(data, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_EM_DOCKING_STATION)
+        {
+            adhoc_communication::EmDockingStation data;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+            publishMessage(data, network_msg.topic);
+        }
+        else if (network_msg.data_type == FRAME_DATA_TYPE_EM_ROBOT)
+        {
+            adhoc_communication::EmRobot data;
+            desializeObject((unsigned char*) payload.data(), payload.length(), &data);
+
+            publishMessage(data, network_msg.topic);
+        }
+        else
+            ROS_ERROR("UNKNOWN DATA TYPE!");
+
+    } catch (int e)
+    {
+
+        ROS_ERROR("NODE THROWS EXCEPTION: %u", e);
+    }    
 }
 
 void finished_exploration_callback(const std_msgs::Empty msg) {
@@ -758,12 +890,12 @@ int main(int argc, char **argv)
     //publishers_l.push_front(n_pub->advertise<adhoc_communication::MmRobotPosition>("position_other_robots ", 1000, true));
     
     
-    ros::ServiceServer ss_publish_message = b_pub.advertiseService(robot_prefix + node_prefix + "/publish_message", publishMessageFromFakeNetwork);
-    //ROS_ERROR("%s", ss_publish_message.getService().c_str());
+    ros::ServiceServer ss_publish_message = b_pub.advertiseService("adhoc_communication/publish_message_service", publishMessageFromFakeNetwork);
+//    ROS_ERROR("%s", ss_publish_message.getService().c_str());
     
-    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000, publish_topic);
+    ros::Subscriber sub = b_pub.subscribe("adhoc_communication/publish_message_topic", 1000000, publish_topic);
     
-    signal(SIGSEGV, handler); // install handler
+//    signal(SIGSEGV, handler); // install handler
     
     //int *p = 0;    
     //int a = *p;
@@ -823,6 +955,7 @@ int main(int argc, char **argv)
     
     finished_exploration = false;
 
+    ROS_INFO("Enter main loop");
     while (ros::ok() && !finished_exploration)
     {
         ros::spinOnce();
@@ -848,24 +981,33 @@ void publishMessage(message m, string topic)
     {
         bool pubExsists = false;
         std::string topic_w_prefix = "/" + hostname + "/" + topic;
+
         if (simulation_mode)
             topic = topic_w_prefix;
-        // ROS_ERROR("\n\e[1;34mRequested topic: %s\e[0m", topic.c_str());   //F
+        // ROS_ERROR("\n\e[1;34mRequested topic: %s\e[0m", topic.c_str());
+        
         for (std::list<ros::Publisher>::iterator i = publishers_l.begin(); i != publishers_l.end(); i++)
         {
-            //ROS_ERROR("\n\e[1;34mTopic: %s\e[0m", (*i).getTopic().c_str()); //F
+                
+            //ROS_ERROR("\n\e[1;34mTopic: %s\e[0m", (*i).getTopic().c_str());
             if ((*i).getTopic().compare(topic) == 0)
             {
-                //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str()); //F
+                if(topic == "adhoc_communication/send_em_auction/auction_reply")
+                    ROS_ERROR("%s", hostname.c_str());
+            
+                //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", (*i).getTopic().c_str());
                 (*i).publish(m);
                 pubExsists = true;
             }
         }
         if (!pubExsists)
         {
+            if(topic == "adhoc_communication/send_em_auction/auction_reply")
+                ROS_ERROR("%s", hostname.c_str());
+        
             publishers_l.push_front(n_pub->advertise<message>(topic, 1000, true));
             publishers_l.front().publish(m);
-            //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", publishers_l.front().getTopic().c_str()); //F
+            //ROS_ERROR("\n\e[1;34mPublishing on topic: %s\e[0m", publishers_l.front().getTopic().c_str());
             //todo check if ledge = true is working
         }
     }

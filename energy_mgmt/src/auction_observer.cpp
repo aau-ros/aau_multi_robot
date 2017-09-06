@@ -1,5 +1,17 @@
 #include "auction_observer.h"
 
+#include <std_srvs/SetBool.h>
+
+ros::ServiceClient set_l5_sc;
+
+void set_l5(bool value) {
+    std_srvs::SetBool srv_msg;
+    srv_msg.request.data = value;
+    while(!set_l5_sc.call(srv_msg))
+        ROS_ERROR("call to set_l5_sc failed!");
+    ROS_INFO("set l5 to %s", value ? "true" : "false");
+}
+
 AuctionObserver::AuctionObserver() {
     loadParameters();
     initializeVariables();
@@ -35,6 +47,8 @@ void AuctionObserver::initializeVariables() {
 void AuctionObserver::createSubscribers() {
     ros::NodeHandle nh;
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &AuctionObserver::newOptimalDsCallback, this);
+    
+    set_l5_sc = nh.serviceClient<std_srvs::SetBool>("energy_mgmt/set_l5");
 }
 
 void AuctionObserver::sanityChecks() { //TODO should be better tested
@@ -59,7 +73,7 @@ void AuctionObserver::sanityChecks() { //TODO should be better tested
         error_1 = true;
     }
 
-    if(current_auction.starting_time < 0 && time_manager->simulationTimeNow().toSec() > 600) {
+    if(current_auction.starting_time < 0 && time_manager->simulationTimeNow().toSec() > 1000) {
         ROS_FATAL("ROBOT SEEMS TO BE UNABLE TO START AN AUCTION");
         error_2 = true;
     }
@@ -89,8 +103,10 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
         if(robot_state == robot_state::CHOOSING_ACTION) {
             ROS_INFO("choosing_next_action state");
-            if(winnerOfNewAuction())
+            if(winnerOfNewAuction()) {
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
+                set_l5(true);
+            }
             else
                 setRobotState(robot_state::COMPUTING_NEXT_GOAL);
         }
@@ -174,7 +190,7 @@ void AuctionObserver::setRobotStateManager(RobotStateManagerInterface *robot_sta
 }
 
 void AuctionObserver::newOptimalDsCallback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-    ROS_INFO("AuctionObserver: received new optimal DS");
+    ROS_INFO("AuctionObserver: received new optimal DS (%u)", msg.get()->id);
     optimal_ds_id = msg.get()->id;
     auction_manager->setOptimalDs(msg.get()->id);
 }

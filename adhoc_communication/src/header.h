@@ -333,6 +333,7 @@ void publishMessage(message m, string topic);
 
 
 #include <fake_network/SendMessage.h>
+#include <fake_network/ReceiveMessage.h>
 #include <fake_network/NetworkMessage.h>
 #include "std_msgs/Empty.h"
 

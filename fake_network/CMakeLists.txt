@@ -57,6 +57,7 @@ add_message_files(
 add_service_files(
    FILES
    SendMessage.srv
+   ReceiveMessage.srv
    RobotPositionSrv.srv
 )
 

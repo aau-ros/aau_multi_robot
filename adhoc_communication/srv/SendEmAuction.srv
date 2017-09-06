@@ -1,5 +1,6 @@
 string topic
 string dst_robot
+uint32 source_robot
 adhoc_communication/EmAuction auction
 ---
 uint8 status

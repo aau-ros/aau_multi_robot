@@ -6,6 +6,7 @@
 class ConcreteSender : public Sender {
 public:
     ConcreteSender();
+    void sendNewAuction(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id);
     void sendResults(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id, std::vector<unsigned int> participants);
     void sendBid(bid_t bid, auction_t auction, std::string topic, unsigned int robot_id);
 };

@@ -59,7 +59,7 @@ int main(int argc, char** argv)
     ros::Subscriber sub = nh.subscribe("finished_exploration", 10 , &finished_exploration_callback);
     finished_bool = false;
     
-    double rate = 1; // Hz //TODO parameter, and in common among the other mains
+    double rate = 2; // Hz //TODO parameter, and in common among the other mains
     ros::Rate loop_rate(rate);
     
 //    ros::AsyncSpinner spinner(20);

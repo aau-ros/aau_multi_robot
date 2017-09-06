@@ -754,10 +754,7 @@ class Explorer
 //                                    ROS_INFO("Now it is ok...");
 //                                }
 
-                        if(!moving_along_path)
-                            update_robot_state_2(robot_state::CHOOSING_ACTION);
-                        else
-                            update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
+                    update_robot_state_2(robot_state::COMPUTING_NEXT_GOAL);
                         
                         
                         continue;
@@ -1987,7 +1984,8 @@ class Explorer
 
         if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
             if(use_l5) {
-                set_l5(true);
+//                set_l5(true);
+                l5_is_true = true;
                 exist_frontiers_reachable_with_current_available_distance = false;
             }
         }
@@ -3106,7 +3104,7 @@ class Explorer
             }
             
             time_before = ros::Time::now();
-            ros::Duration(1).sleep(); //TODO(minor)
+            ros::Duration(0.5).sleep();
         }
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
