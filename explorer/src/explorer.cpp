@@ -3207,7 +3207,7 @@ class Explorer
         ROS_DEBUG("Goal correctly set");
         ROS_DEBUG("Moving toward goal...");
         
-        ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
+        ros::Duration my_stuck_countdown = ros::Duration( TIMEOUT_CHECK_1 * 60);
         ros::Time time_before = ros::Time::now();
         prev_pose_x = pose_x;
         prev_pose_y = pose_y;
