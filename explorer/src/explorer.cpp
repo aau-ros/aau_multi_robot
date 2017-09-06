@@ -59,7 +59,7 @@
 #define OPP_ONLY_TWO_DS false
 #define IMM_CHARGE 0
 #define DEBUG false
-#define TIMEOUT_CHECK_1 3
+#define TIMEOUT_CHECK_1 2
 #define DS_GRAPG_NAVIGATION_ALLOWED true
 #define USE_L5 true
 
@@ -2967,7 +2967,7 @@ class Explorer
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
 //        int stuck_countdown = EXIT_COUNTDOWN;
-        ros::Duration my_stuck_countdown = ros::Duration( (TIMEOUT_CHECK_1 - 2) * 60);
+        ros::Duration my_stuck_countdown = ros::Duration( TIMEOUT_CHECK_1 * 60);
         ros::Duration my_fallback_countdown = ros::Duration(30);
         bool timer_started = false;
         ros::Time start_time_fallback;
@@ -3694,7 +3694,7 @@ class Explorer
                 { 
                     //if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY) {
                     //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
-                    if(countdown < ros::Duration(60))
+                    if(countdown < ros::Duration(30))
                     {
                         ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                         ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
