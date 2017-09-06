@@ -5001,10 +5001,10 @@ bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float available_
         }
         if(distance * 2 < available_distance)
         {
-//            final_goal->push_back(frontiers.at(i).x_coordinate);
-//            final_goal->push_back(frontiers.at(i).y_coordinate);            
-//            final_goal->push_back(frontiers.at(i).detected_by_robot);
-//            final_goal->push_back(frontiers.at(i).id);
+            final_goal->push_back(frontiers.at(i).x_coordinate);
+            final_goal->push_back(frontiers.at(i).y_coordinate);            
+            final_goal->push_back(frontiers.at(i).detected_by_robot);
+            final_goal->push_back(frontiers.at(i).id);
             release_mutex(&store_frontier_mutex, __FUNCTION__);
             return true;
         }
