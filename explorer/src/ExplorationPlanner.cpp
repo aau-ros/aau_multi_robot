@@ -4951,12 +4951,16 @@ bool ExplorationPlanner::recomputeGoal() {
 
 void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
-    fs_csv << "### Frontiers (in Stage coordinates) ###";
+    fs_csv << "### Frontiers (in Stage coordinates) ###" << std::endl;
     
     fs_csv << "# Remaining frontiers";
-    for(unsigned int i=0; i < frontiers.size(); i++)
-        fs_csv << frontiers.at(i).x_coordinate + robot_home_world_x << "," << frontiers.at(i).y_coordinate + robot_home_world_y << std::endl;
-        
+    for(unsigned int i=0; i < frontiers.size(); i++) {
+        fs_csv << frontiers.at(i).x_coordinate + robot_home_world_x << "," << frontiers.at(i).y_coordinate + robot_home_world_y;
+        for(unsigned int j=0; j < ds_list.size(); j++)
+            fs_csv << "," << ds_list.at(j).id << "," << frontiers.at(i).list_distance_from_ds.at(j);
+        fs_csv << std::endl;
+    }
+    
     fs_csv << "# Unreachable frontiers";
     for(unsigned int i=0; i < unreachable_frontiers.size(); i++)
         fs_csv << unreachable_frontiers.at(i).x_coordinate + robot_home_world_x << "," << unreachable_frontiers.at(i).y_coordinate + robot_home_world_y << std::endl;
@@ -7155,7 +7159,7 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
     ds.x = msg.x;
     ds.y = msg.y;
     ds.id = msg.id;
-    //ROS_ERROR("%d, %f, %f", ds.id, ds.x, ds.y);
+    ROS_DEBUG("New DS received: %d, %f, %f", ds.id, ds.x, ds.y);
     
 //    double dist = trajectory_plan_meters(0, 0, ds.x, ds.y);
     //ROS_ERROR("distance between (%d, %d) and (%.1f, %.1f): %f", 0, 0, ds.x, ds.y, dist);
@@ -7184,7 +7188,6 @@ void ExplorationPlanner::new_ds_on_graph_callback(const adhoc_communication::EmD
     mutex_ds.lock();      
     ds.has_EOs = true; 
     ds_list.push_back(ds);
-//    ROS_ERROR("%u", ds_list.size());
     mutex_ds.unlock();
 }
 
@@ -10063,8 +10066,6 @@ void ExplorationPlanner::updateDistances(double max_available_distance, bool use
             
             while(frontiers.at(frontier_index).list_distance_from_ds.size() < ds_list.size())
                 frontiers.at(frontier_index).list_distance_from_ds.push_back(-1);
-                
-                
 
             if(frontiers.at(frontier_index).list_distance_from_ds.at(ds_index) > 0 && use_heuristic) {
                 if(2 * euclidean_distance(ds_list.at(ds_index).x, ds_list.at(ds_index).y, frontiers.at(frontier_index).x_coordinate, frontiers.at(frontier_index).y_coordinate) < max_available_distance && ros::Time::now() - frontiers.at(frontier_index).timestamp_distance_update > ros::Duration(10*60)) {
