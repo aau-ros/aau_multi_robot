@@ -19,10 +19,8 @@
               "  map: image file to load\n"\
               "  resolution: map resolution [meters/pixel]"
 
-#define LOG_TRUE    true
-#define LOG_FALSE   false
 #define LOG_ALL     true
-#define LOG_SERVICE_CALL false
+#define LOG_SERVICE_CALL true
 #define LOG_LOCKING_INFO true
 
 class Server

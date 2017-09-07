@@ -77,6 +77,8 @@ boost::mutex costmap_mutex;
 boost::mutex log_mutex;
 boost::mutex state_mutex;
 
+double simulation_timeout;
+
 void sleepok(int t, ros::NodeHandle &nh)
 {
     if (nh.ok())
@@ -122,7 +124,6 @@ class Explorer
     int optimal_ds_id;
     unsigned int request_id;
     bool failure_with_full_battery;
-    double simulation_timeout;
     unsigned int reauctions;
     bool l5_is_true;
     bool use_l5;
@@ -272,8 +273,6 @@ class Explorer
         nh.param<std::string>("move_base_frame", move_base_frame, "map");
         nh.param<int>("wait_for_planner_result", waitForResult, 3);
         nh.param<float>("auction_timeout", auction_timeout, 3);
-        if(!nh.getParam("simulation_timeout", simulation_timeout))
-            ROS_FATAL("invalid timeout");
         nh.param<float>("checking_vacancy_timeout", checking_vacancy_timeout, 3);
 
         ROS_INFO("Costmap width: %d", costmap_width);
@@ -531,6 +530,8 @@ class Explorer
         /* Start main loop (it loops till the end of the exploration) */
         while (!exploration_finished)
         {       
+        
+            ROS_INFO("explore() iteration");
         
             std::vector<double> final_goal;
             std::vector<double> backoffGoal;
@@ -1722,7 +1723,6 @@ class Explorer
                 
                 if(ros::Time::now() - auction_start_time >= ros::Duration(5*60)) {
                     log_major_error("auctioning was forced to stop!");
-//                    update_robot_state_2(robot_state::GOING_IN_QUEUE);
                     ROS_INFO("ros::Time::now() - auction_start_time: %f", (ros::Time::now() - auction_start_time).toSec());
                     continue;   
                 }
@@ -1917,6 +1917,11 @@ class Explorer
                     ROS_DEBUG("Stored unreachable frontier");
                     ros::Duration(3).sleep();
                 }
+                
+                else if (robot_state == robot_state::GOING_IN_QUEUE) {
+                    ROS_ERROR("Robot cannot reach DS at (%.1f, %.1f) for going in queue!", optimal_ds_x, optimal_ds_y);
+                    update_robot_state_2(robot_state::IN_QUEUE);
+                }
             }
             
 //            exploration->trajectory_plan_store(stored_robot_x, stored_robot_y); //TODO(minor) here? yes it should be ok because even if the robot failes reaching the goal, in the worst case the travelled distance is 0, so it's ok if I add it to the global_travelled distance, and if instead it moved a little, I have to take note of this travelled distance...
@@ -1963,7 +1968,6 @@ class Explorer
         msg.state = new_state;
         previous_state = robot_state;
         robot_state = static_cast<robot_state::robot_state_t>(new_state);
-//        pub_robot.publish(msg);
 
         if(reference_percentage() >= 100 && !checked_percentage && robot_state != finished) {
             if(reference_percentage() > 100.1) {
@@ -1973,14 +1977,6 @@ class Explorer
             //ROS_INFO("100%% of the environment explored: the robot can conclude its exploration");
             checked_percentage = true;
         }
-           
-        
-//        if(robot_state_next == finished_next) {
-//            ROS_INFO("Have to finish...");
-//            //robot_state == auctioning_3;
-//            move_home_if_possible();
-//            finalize_exploration();
-//        }
 
         if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
             if(use_l5) {
@@ -2039,14 +2035,6 @@ class Explorer
             log_major_error("stucked after auction!!!");
         if(robot_state == stuck &&  previous_state == robot_state::GOING_CHARGING)
             log_major_error("stuck when going_charging!!!");
-            
-        
-        //TODO move this in update_robot_state, where the state is set to finished
-//        if(robot_state == finished || robot_state == dead || robot_state == stuck) {
-//            std_msgs::Empty msg;
-//            pub_finished_exploration.publish(msg);
-//            exploration_finished = true;
-//        }   
 
         robot_state::SetRobotState set_msg;
         set_msg.request.robot_state = robot_state;
@@ -2058,8 +2046,7 @@ class Explorer
             explorer_count++;
        }
        
-
-        
+       ROS_INFO("end update_robot_state_2");
     }
 
     void update_robot_state()
@@ -2076,10 +2063,6 @@ class Explorer
         }
         
         if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
-            finalize_exploration();
-        }
-        
-        if(ros::Time::now().toSec() > simulation_timeout) {
             finalize_exploration();
         }
         
@@ -3352,18 +3335,6 @@ class Explorer
         ROS_ERROR("shouldn't be called anymore!");
     }
 
-//    void reply_for_vacancy_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg)
-//    {
-//        state_mutex.lock();
-//        
-//        ROS_INFO("reply_for_vacancy_callback");
-
-//        if(robot_state == robot_state::CHECKING_VACANCY)
-//            update_robot_state_2(robot_state::GOING_IN_QUEUE);
-
-//        state_mutex.unlock();
-//    }
-
     bool reply_for_vacancy_callback_2(std_srvs::Empty::Response &res, std_srvs::Empty::Request &req)
     {
         state_mutex.lock();
@@ -3658,7 +3629,6 @@ class Explorer
             ros::Duration(sleeping_time).sleep();
 
         int starting_value_moving = TIMEOUT_CHECK_1 * 60; //seconds
-//        int starting_value_countdown_2 = 3 * TIMEOUT_CHECK_1 * 60; //seconds
         int starting_value_countdown_2 = 30 * 60; //seconds
         ros::Duration countdown = ros::Duration(starting_value_moving);
         ros::Duration countdown_2 = ros::Duration(starting_value_countdown_2);
@@ -3673,35 +3643,21 @@ class Explorer
         ros::Time prev_time = ros::Time::now();   
         while(ros::ok() && !exploration_finished) {
         
+            ROS_INFO("safety checks iteration");
+        
             if(approximate_success >= 3 && !printed_too_many) {
                 log_major_error("too many approximated successes");
                 printed_too_many = true;
             }
-            
-            //ROS_DEBUG("Checking...");
-            //if(exploration->getRobotPose(robotPose)) {
-            //    robot_x = robotPose.getOrigin().getX();
-            //    robot_y = robotPose.getOrigin().getY();
-            //}
-            
-            //IMPORTANT: be careful that a robot could change state while it is stucked, since it may continuosly change between 'moving_to_fonrtier' to 'robot_state::COMPUTING_NEXT_GOAL' to compute and try rearching a new goal!!!
-            //if((int) prev_robot_state == (int) robot_state && pose_x == prev_robot_x && pose_y == prev_robot_y) 
-            //if( ((int) prev_robot_state == (int) robot_state) && ((int) pose_x == (int) prev_robot_x) && ((int) pose_y == (int) prev_robot_y)) 
+
             if(robot_is_moving()) {
                 if (fabs(pose_x - prev_robot_x) < 0.1 && fabs(pose_y - prev_robot_y) < 0.1 ) 
                 { 
-                    //if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY) {
-                    //if(countdown <= ros::Duration(starting_value_moving - 60 * prints_count))
                     if(countdown < ros::Duration(30))
                     {
                         ROS_ERROR("Countdown to shutdown at %ds...", (int) countdown.toSec() );
                         ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );
-                        //prints_count++;   
                     }
-                    //}
-                    //else {
-                    //    ROS_DEBUG("Countdown to shutdown at %ds...", (int) countdown.toSec() );  
-                    //}
                     
                     countdown -= ros::Time::now() - prev_time;
                     
@@ -3735,7 +3691,6 @@ class Explorer
                             }
                             else {
                                 log_major_error("Robot is not moving anymore");
-                                //abort();
                                 log_stucked();
                             }
                         }
@@ -3743,16 +3698,10 @@ class Explorer
                 }
                 
                 else {
-                    //ROS_DEBUG("Robot is moving");
-                    //if(robot_state == robot_state::MOVING_TO_FRONTIER || robot_state == robot_state::GOING_CHARGING || robot_state == robot_state::GOING_CHECKING_VACANCY) //TODO complete
-                        countdown = ros::Duration(starting_value_moving);
-                    //else
-                    //    countdown = ros::Duration(starting_value_standing);
+                    countdown = ros::Duration(starting_value_moving);
                         
                     prev_robot_x = pose_x;
                     prev_robot_y = pose_y;
-    //                prev_robot_state = robot_state;
-                    //prints_count = 1;  
                     retries_moving = 0;
                 }
             }
@@ -3763,38 +3712,22 @@ class Explorer
                     countdown_2 -= ros::Time::now() - prev_time;
                     
                     if(countdown_2 < ros::Duration(0)) {
-                    
-                        /*
-                        if(!already_perfomed_recovery_procedure) {
-                            ROS_ERROR("Trying to recover from stuck...");
-                            stuck_x = pose_x;
-                            stuck_y = pose_y;
-                            geometry_msgs::Twist msg;
-                            msg.linear.y = -1;
-                            ros::NodeHandle nh;
-                            ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10);
-                            pub.publish(msg);
-                            already_perfomed_recovery_procedure = true;
-                            countdown = ros::Duration(starting_value_moving);
-                            countdown_2 = ros::Duration(starting_value_countdown_2);
-                        }
-                        else {
-                        */
-                            ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                            ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
-                            if(percentage_2 > 90)
-                                log_minor_error("deadlock / slow execution / waiting for auction result? BUT with percentage>90%!");
-                            else
-                                log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
-                                
-                            //abort();
-                            if(!robot_is_moving())
-                                log_major_error("robot has to be stopped even if it is not moving!");
-                                
-                            log_stopped();
-                        //}
+
+                        ROS_ERROR("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                        ROS_INFO("Robot is not moving from %d minutes!", starting_value_countdown_2 / 60);
+                        if(percentage_2 > 90)
+                            log_minor_error("deadlock / slow execution / waiting for auction result? BUT with percentage>90%!");
+                        else
+                            log_major_error("deadlock / slow execution / waiting for auction result??? and at <90%!!!");
+                            
+
+                        if(!robot_is_moving())
+                            log_major_error("robot has to be stopped even if it is not moving!");
+                            
+                        log_stopped();
+
                     }
-//                    starting_value_countdown_2 - 20*60
+                    
                     else if(countdown_2 < ros::Duration(starting_value_countdown_2 - 20*60) && prints_count == 2)
                     {
                         prints_count++;
@@ -3818,13 +3751,10 @@ class Explorer
                     countdown_2 = ros::Duration(starting_value_countdown_2);
                     prints_count = 0;
                 }
-            }
-            
-            //ROS_ERROR("%f, %f", pose_x, pose_y);
+            } 
 
             if( (stuck_x - pose_x) * (stuck_x - pose_x) + (stuck_y - pose_y) * (stuck_y - pose_y) >= 5*5 ) //pose_x and pose_y are in cells, not meters
                 ;
-                // already_perfomed_recovery_procedure = false;
             
             prev_time = ros::Time::now();
             ros::Duration(sleeping_time).sleep();
@@ -4186,6 +4116,13 @@ int main(int argc, char **argv)
 
     boost::thread thr_check_for_l5(boost::bind(&Explorer::check_for_l5, &explorer));
 
+    ros::NodeHandle private_nh("~");
+
+    if(!private_nh.getParam("simulation_timeout", simulation_timeout)) {
+        ROS_FATAL("invalid timeout");
+        simulation_timeout = 10800;
+    }
+
     /*
      * FIXME
      * Which rate is required in order not to oversee
@@ -4204,6 +4141,11 @@ int main(int argc, char **argv)
             //explorer.print_mutex_info("main()", "unlock");
             //ROS_DEBUG("unlock");
         }
+        
+        if(ros::Time::now().toSec() > simulation_timeout) {
+            explorer.finalize_exploration();
+        }
+        
         ros::Duration(0.1).sleep();
     }
 

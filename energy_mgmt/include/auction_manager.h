@@ -23,6 +23,7 @@ public:
     void lock();
     void unlock();
     void logMetadata();
+    void setL5(bool value);
 
 private:
     BidComputer *bid_computer;

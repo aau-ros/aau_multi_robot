@@ -437,3 +437,7 @@ void AuctionManager::setTimeManager(TimeManagerInterface *time_manager) {
 void AuctionManager::setSender(Sender *sender) {
     this->sender = sender;
 }
+
+void AuctionManager::setL5(bool value) {
+    bid_computer->setL5(value);
+}

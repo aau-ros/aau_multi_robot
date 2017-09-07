@@ -46,6 +46,7 @@ public:
     void updateLlh() override;
     void processMessages() override;
     void logMetadata() override;
+    void setL5(bool value) override;
 
 private:
     double w1, w2, w3, w4, w5;

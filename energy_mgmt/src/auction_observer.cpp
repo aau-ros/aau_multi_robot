@@ -1,17 +1,5 @@
 #include "auction_observer.h"
 
-#include <std_srvs/SetBool.h>
-
-ros::ServiceClient set_l5_sc;
-
-void set_l5(bool value) {
-    std_srvs::SetBool srv_msg;
-    srv_msg.request.data = value;
-    while(!set_l5_sc.call(srv_msg))
-        ROS_ERROR("call to set_l5_sc failed!");
-    ROS_INFO("set l5 to %s", value ? "true" : "false");
-}
-
 AuctionObserver::AuctionObserver() {
     loadParameters();
     initializeVariables();
@@ -47,8 +35,6 @@ void AuctionObserver::initializeVariables() {
 void AuctionObserver::createSubscribers() {
     ros::NodeHandle nh;
     sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10, &AuctionObserver::newOptimalDsCallback, this);
-    
-    set_l5_sc = nh.serviceClient<std_srvs::SetBool>("energy_mgmt/set_l5");
 }
 
 void AuctionObserver::sanityChecks() { //TODO should be better tested
@@ -94,6 +80,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
     ROS_INFO("locking");
     robot_state_manager->lockRobotState();
+    ROS_INFO("locked");
 
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
@@ -102,13 +89,15 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
         robot_state = getRobotState();
 
         if(robot_state == robot_state::CHOOSING_ACTION) {
-            ROS_INFO("choosing_next_action state");
             if(winnerOfNewAuction()) {
+                ROS_INFO("GOING_CHECKING_VACANCY");
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
-                set_l5(true);
+                auction_manager->setL5(true);
             }
-            else
-                setRobotState(robot_state::COMPUTING_NEXT_GOAL);
+            else {
+                ROS_INFO("COMPUTING_NEXT_GOAL");  
+                setRobotState(robot_state::COMPUTING_NEXT_GOAL); 
+            }
         }
 
         if(robot_state == robot_state::exploring_for_graph_navigation)
@@ -128,9 +117,12 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 if(winnerOfNewAuction()) {
                     if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                         ROS_ERROR("this should NOT happen!");
+                    ROS_INFO("GOING_CHECKING_VACANCY");  
                     setRobotState(robot_state::GOING_CHECKING_VACANCY);
-                } else
+                } else {
+                    ROS_INFO("GOING_IN_QUEUE");  
                     setRobotState(robot_state::GOING_IN_QUEUE);
+                }
             }
         }
         else
@@ -142,6 +134,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 ROS_INFO("winner of new auction");
                 if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                     ROS_ERROR("this should NOT happen!");
+                ROS_INFO("GOING_CHECKING_VACANCY");  
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
             } else {
                 auction_t current_auction = auction_manager->getCurrentAuction();
@@ -156,6 +149,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
             if(!auction_manager->isRobotWinnerOfMostRecentAuction()) {
                 if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                     ROS_ERROR("this should NOT happen!");
+                ROS_INFO("CHARGING_ABORTED");  
                 setRobotState(robot_state::CHARGING_ABORTED);
             }
 
@@ -165,7 +159,8 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
     ROS_INFO("unlocking");
     robot_state_manager->unlockRobotState();
-   
+    ROS_INFO("unlocked");
+    
     auction_manager->unlock();
 }
 

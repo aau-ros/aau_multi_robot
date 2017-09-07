@@ -29,6 +29,7 @@ public:
     virtual auction_t getCurrentAuction() = 0;
     virtual void lock() = 0;
     virtual void unlock() = 0;
+    virtual void setL5(bool value) = 0;
 };
 
 #endif // AUCTION_MANAGER_INTERFACE_H

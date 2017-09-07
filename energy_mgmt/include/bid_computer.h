@@ -9,6 +9,7 @@ public:
     virtual void updateLlh() = 0;
     virtual void processMessages() = 0;
     virtual void logMetadata() = 0;
+    virtual void setL5(bool value) = 0;
 };
 
 #endif // BID_COMPUTER_H

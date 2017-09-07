@@ -159,7 +159,6 @@ void end_simulation(const ros::TimerEvent &event) {
 
 bool fake_send_auction_callback(adhoc_communication::SendEmAuction::Request &req, adhoc_communication::SendEmAuction::Response &res) {
     int source_robot_id = req.source_robot;
-    ROS_ERROR("called!!!");
     adhoc_communication::EmAuction msg = req.auction;
     
     std::fill(reachability_list.begin(), reachability_list.end(), false);
