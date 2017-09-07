@@ -6,6 +6,12 @@
 #include <cerrno>
 #include "adhoc_communication/MmPoint.h"
 #include <ros/console.h>
+#include <utilities/data_logger.h>
+
+std::vector<int> my_missing_updates;
+
+DataLogger *received_missing_updates_log;
+DataLogger *missing_updates_log;
 
 //#define DEA_OPT_MAP_CHANGED
 //#define DEA_OPT_PARTIAL_MERGE
@@ -136,7 +142,13 @@ MapMerger::MapMerger()
     ROS_INFO("Prefix:%s",robot_prefix.c_str());
     ROS_INFO("Local Map Frame:%s",local_map_frame_id.c_str());
     robot_hostname = robot_name;
+    
+    received_missing_updates_log = new DataLogger("map_merger", robot_name, log_path);
+    missing_updates_log = new DataLogger("map_merger", robot_name, log_path);
+    received_missing_updates_log->createLogFile("received_missing_updates.log", "missing_update,sim_time");
+    missing_updates_log->createLogFile("missing_updates.log", "missing_update,sim_time");
 }
+
 void MapMerger::waitForLocalMetaData()
 {
     //ros::NodeHandle nodeHandle;
@@ -1078,13 +1090,49 @@ void MapMerger::callback_map_other(const adhoc_communication::MmMapUpdateConstPt
                 return;
             }
             ROS_DEBUG("%lu updates are missing,asking for them",listOfMissedUpdates->size());
+            
             for(int i = 0; i < listOfMissedUpdates->size(); i++)
             {
                 ROS_WARN("Miss: %i",listOfMissedUpdates->at(i));
+                bool found = false;
+                for(unsigned int j=0; !found && j < my_missing_updates.size(); j++)
+                    if(my_missing_updates.at(j) == listOfMissedUpdates->at(i))
+                        found = true;
+                if(!found) {
+                    my_missing_updates.push_back(listOfMissedUpdates->at(i));
+                    std::stringstream stream;
+                    stream << listOfMissedUpdates->at(i) << "," << ros::Time::now() << std::endl;
+                    missing_updates_log->updateLogFile("missing_updates.log", stream);
+                }
             }
+            
+            for(unsigned int j=0; j < my_missing_updates.size(); j++) {
+                bool found = false;
+                for(unsigned int i=0; !found && i < listOfMissedUpdates->size(); i++)
+                    if(my_missing_updates.at(j) == listOfMissedUpdates->at(i))
+                        found = true;
+                if(!found) {
+                    std::stringstream stream;
+                    stream << my_missing_updates.at(j) << "," << ros::Time::now() << std::endl;
+                    received_missing_updates_log->updateLogFile("received_missing_updates.log", stream);
+                    my_missing_updates.erase(my_missing_updates.begin() + j);
+                    j--;
+                }
+            }
+            
             sendControlMessage(listOfMissedUpdates,robots->at(index_robots));
+            
             delete listOfMissedUpdates;
         }
+        else
+            for(unsigned int j=0; j < my_missing_updates.size(); j++) {
+                std::stringstream stream;
+                stream << my_missing_updates.at(j) << "," << ros::Time::now() << std::endl;
+                received_missing_updates_log->updateLogFile("received_missing_updates.log", stream);
+                my_missing_updates.erase(my_missing_updates.begin() + j);
+                j--;
+            }
+            
         return;
     }
 }

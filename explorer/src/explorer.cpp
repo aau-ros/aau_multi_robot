@@ -2062,7 +2062,8 @@ class Explorer
             update_robot_state_2(srv.response.robot_state);
         }
         
-        if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+//        if(robot_state != finished && (reference_percentage() >= 95.0 || (reference_percentage() >= 90.0 && ros::Time::now().toSec() > 7200)) && ANTICIPATE_TERMINATION) {
+        if(robot_state != finished && reference_percentage() >= 98.0) {
             finalize_exploration();
         }
         
@@ -2128,8 +2129,9 @@ class Explorer
                 ROS_INFO("check for l5");
                 bool error;
                 std::vector<double> v;
-                exist_frontiers_reachable_with_current_available_distance = exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v) || !exploration->existFrontiersReachableWithFullBattery(maximum_available_distance, &error, &v); //TODO bad name for function
-                
+                exist_frontiers_reachable_with_current_available_distance = 
+                    exploration->existFrontiersReachableWithFullBattery(available_distance, &error, &v) || 
+                    !exploration->existFrontiersReachableWithFullBattery(maximum_available_distance, &error, &v); //TODO bad name for function
             }
             ros::Duration(5).sleep();
         }

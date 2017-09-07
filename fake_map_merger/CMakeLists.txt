@@ -13,6 +13,7 @@ adhoc_communication
 nav_msgs
 roscpp
 message_generation
+utilities
 )
 set(CMAKE_BUILD_TYPE Debug)
 ## System dependencies are found with CMake's conventions
