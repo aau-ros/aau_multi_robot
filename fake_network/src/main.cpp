@@ -233,7 +233,6 @@ int main(int argc, char** argv)
         std::string robot_prefix = "robot_" + SSTR(i) + "/";
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::ReceiveMessage>(robot_prefix + "adhoc_communication/publish_message_service"));
-//        ROS_ERROR("%s", sc_publish_message_list[i].getService().c_str());
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10000000));
 //        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
         sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 10000000, robot_absolute_position_callback));
@@ -248,7 +247,6 @@ int main(int argc, char** argv)
         
         fake_send_auction_sss.push_back(nh.advertiseService(robot_prefix + "fake_network/fake_send_auction", fake_send_auction_callback));
         pub_auction_starting_list.push_back(nh.advertise<adhoc_communication::EmAuction>(robot_prefix + "adhoc_communication/send_em_auction/auction_starting", 1000));
-        ROS_ERROR("%s", pub_auction_starting_list[i].getTopic().c_str());
         pub_auction_reply_list.push_back(nh.advertise<adhoc_communication::EmAuction>(robot_prefix + "adhoc_communication/send_em_auction/auction_reply", 1000));
         pub_auction_result_list.push_back(nh.advertise<adhoc_communication::EmAuction>(robot_prefix + "adhoc_communication/send_em_auction/auction_result", 1000));
     }
