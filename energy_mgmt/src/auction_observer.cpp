@@ -117,8 +117,9 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 if(winnerOfNewAuction()) {
                     if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                         ROS_ERROR("this should NOT happen!");
-                    ROS_INFO("GOING_CHECKING_VACANCY");  
-                    setRobotState(robot_state::GOING_CHECKING_VACANCY);
+                    ROS_INFO("GOING_CHECKING_VACANCY");
+                setRobotState(robot_state::GOING_CHECKING_VACANCY);
+                auction_manager->setL5(true);
                 } else {
                     ROS_INFO("GOING_IN_QUEUE");  
                     setRobotState(robot_state::GOING_IN_QUEUE);
@@ -134,8 +135,9 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
                 ROS_INFO("winner of new auction");
                 if(optimal_ds_id != auction_manager->getCurrentAuction().docking_station_id)
                     ROS_ERROR("this should NOT happen!");
-                ROS_INFO("GOING_CHECKING_VACANCY");  
+                ROS_INFO("GOING_CHECKING_VACANCY");
                 setRobotState(robot_state::GOING_CHECKING_VACANCY);
+                auction_manager->setL5(true);
             } else {
                 auction_t current_auction = auction_manager->getCurrentAuction();
                 if(current_auction.ending_time > 0 && (time_manager->simulationTimeNow().toSec() - current_auction.ending_time) > reauctioning_timeout) {

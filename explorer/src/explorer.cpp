@@ -3784,7 +3784,7 @@ class Explorer
         srv_msg.request.y = optimal_ds_y;
         while(!next_ds_sc.call(srv_msg))
             ROS_ERROR("call to next_ds_sc failed!");
-        update_robot_state_2(robot_state::GOING_CHECKING_VACANCY); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
+        update_robot_state_2(robot_state::AUCTIONING); //TODO(minor) maybe it should start an auction before, but in that case we must check that it is not too close to the last optimal_ds (in fact optimal_ds is the next one)
     }
     
     void log_major_error(std::string text) {
