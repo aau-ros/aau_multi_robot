@@ -20,7 +20,7 @@
               "  resolution: map resolution [meters/pixel]"
 
 #define LOG_ALL     true
-#define LOG_SERVICE_CALL true
+#define LOG_SERVICE_CALL false
 #define LOG_LOCKING_INFO true
 
 class Server

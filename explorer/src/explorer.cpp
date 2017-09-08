@@ -132,7 +132,7 @@ class Explorer
     bool exist_frontiers_reachable_with_current_available_distance;
     bool printed_too_many;
     std::vector<double> fallback_goal;
-    bool force_moving;
+    bool force_moving, forced_move_robot_to_stop;
     
     ros::ServiceClient set_robot_state_sc, get_robot_state_sc;
     ros::ServiceServer ss_check_vacancy;
@@ -213,6 +213,7 @@ class Explorer
         exist_frontiers_reachable_with_current_available_distance = false;
         printed_too_many = false;
         force_moving = false;
+        forced_move_robot_to_stop = false;
 
         /* Initial robot state */
         robot_state = robot_state::INITIALIZING;
@@ -2066,9 +2067,6 @@ class Explorer
         if(robot_state != finished && reference_percentage() >= 98.0) {
             finalize_exploration();
         }
-        
-        // TODO(minor) do we need the spin?
-        ros::spinOnce();
      
     }
 
@@ -2946,6 +2944,8 @@ class Explorer
     bool move_robot(int seq, double position_x, double position_y)
     {
         ROS_INFO("Preparing to move toward goal (%.1f, %.1f)...", position_x, position_y);
+        
+        forced_move_robot_to_stop = false;
 
         exploration->next_auction_position_x = position_x;
         exploration->next_auction_position_y = position_y;
@@ -3094,7 +3094,7 @@ class Explorer
 
         while (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
         {
-            if(!robot_is_moving()) {
+            if(forced_move_robot_to_stop) {
                 log_minor_error("robot was forced to stop from another thread");
                 ac.cancelGoal();
                 store_travelled_distance();
@@ -3665,6 +3665,7 @@ class Explorer
                     
                     
                     if(countdown < ros::Duration(0)) {
+                        forced_move_robot_to_stop = true;
                         if(robot_state == robot_state::GOING_CHARGING) {
                             log_minor_error("Force the robot to think that it has reached the target DS");
                             update_robot_state_2(robot_state::CHARGING);
