@@ -282,6 +282,9 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     
     battery.maximum_traveling_distance = -1;
     
+    data_logger = new DataLogger("ds_mgmt", robot_prefix, log_path);
+    data_logger->createLogFile("reachable_dss.csv", "sim_time,id\n");
+    
 }
 
 void docking::finalize_exploration_callback(const std_msgs::Empty msg) {
@@ -863,17 +866,14 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double swarm_direction_x = 0, swarm_direction_y = 0;
                 for (unsigned int i = 0; i < robots.size(); i++)
                 {
-                    double robot_i_optimal_ds_x = -1, robot_i_optimal_ds_y = -1;
-
+                    double robot_i_optimal_ds_x = 0, robot_i_optimal_ds_y = 0;
+                    
                     for (unsigned int k = 0; k < ds.size(); k++)
                         if (robots.at(i).selected_ds == ds.at(k).id)
                         {
                             robot_i_optimal_ds_x = ds.at(k).x;
                             robot_i_optimal_ds_y = ds.at(k).y;
                         }
-                        
-                    if(robot_i_optimal_ds_x < 0 || robot_i_optimal_ds_y < 0)
-                        ROS_ERROR("Invalid index(es)!");
 
                     swarm_direction_x += robot_i_optimal_ds_x - robots.at(i).x;
                     swarm_direction_y += robot_i_optimal_ds_y - robots.at(i).y;
@@ -881,7 +881,7 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
-                double theta_s = fabs(alpha - rho) / (double)180;
+                double theta_s = fabs(fabs(alpha) - fabs(rho)) / (double)180;
                 ROS_DEBUG("thetha_s: %.1f", theta_s);
                 if(theta_s < 0 || theta_s > 1)
                     ROS_ERROR("invalid theta!");
@@ -2393,9 +2393,13 @@ void docking::check_reachable_ds()
             break;
         }
 
-        if (reachable)
+        if (reachable || (*it).id == 0)
         {
             ROS_INFO("ds%d is now reachable", (*it).id);
+            
+            std::stringstream stream;
+            stream << ros::Time::now() << "," << it->id << std::endl;
+            data_logger->updateLogFile("reachable_dss.csv", stream);
             
             it->timestamp = ros::Time::now().toSec();
             

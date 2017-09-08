@@ -145,8 +145,8 @@ MapMerger::MapMerger()
     
     received_missing_updates_log = new DataLogger("map_merger", robot_name, log_path);
     missing_updates_log = new DataLogger("map_merger", robot_name, log_path);
-    received_missing_updates_log->createLogFile("received_missing_updates.log", "missing_update,sim_time");
-    missing_updates_log->createLogFile("missing_updates.log", "missing_update,sim_time");
+    received_missing_updates_log->createLogFile("received_missing_updates.log", "missing_update,sim_time\n");
+    missing_updates_log->createLogFile("missing_updates.log", "missing_update,sim_time\n");
 }
 
 void MapMerger::waitForLocalMetaData()
