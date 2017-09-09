@@ -881,7 +881,10 @@ void docking::compute_optimal_ds() //TODO(minor) best waw to handle errors in di
                 double rho = atan2(swarm_direction_y, swarm_direction_x) * 180 / PI; //degree; e.g., with atan2(1,1), rho is 45.00
                                                                               //To compute the value, the function takes into account the sign of both arguments in order to determine the quadrant.
                 double alpha = atan2((ds.at(d).y - robot->y), (ds.at(d).x - robot->x)) * 180 / PI;
-                double theta_s = fabs(fabs(alpha) - fabs(rho)) / (double)180;
+                double tmp = fabs(alpha - rho);
+                if(tmp > 180.0)
+                    tmp = tmp - 180.0;
+                double theta_s = tmp / 180.0;
                 ROS_DEBUG("thetha_s: %.1f", theta_s);
                 if(theta_s < 0 || theta_s > 1)
                     ROS_ERROR("invalid theta!");
