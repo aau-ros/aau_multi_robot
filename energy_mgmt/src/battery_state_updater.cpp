@@ -139,15 +139,15 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::MOVING_TO_FRONTIER) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForSensing();
         substractEnergyRequiredForLocomotion();
         subtractTraveledDistance();
 
     } else if(robot_state == robot_state::GOING_CHECKING_VACANCY) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForSensing();
         substractEnergyRequiredForLocomotion();
         subtractTraveledDistance();
 
@@ -157,8 +157,8 @@ void BatteryStateUpdater::updateBatteryState() { //TODO use visitor
 
     } else if(robot_state == robot_state::GOING_CHARGING) {
         substractEnergyRequiredForKeepingRobotAlive();
-        substractEnergyRequiredForSensing();
         substractEnergyRequiredForBasicComputations();
+        substractEnergyRequiredForSensing();
         substractEnergyRequiredForLocomotion();
         subtractTraveledDistance();
 

@@ -4932,12 +4932,12 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     
     ros::Time start = ros::Time::now();
     bool call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
-    while(!call_succeeded && ros::Time::now() - start < ros::Duration(5)) {
+    while(!call_succeeded && ros::Time::now() - start < ros::Duration(60)) {
         ROS_ERROR("failed goal_ds_for_path_navigation_sc.call()!");
         ros::Duration(1).sleep();
         call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
     }
-    if(ros::Time::now() - start >= ros::Duration(5) && !call_succeeded) {
+    if(ros::Time::now() - start >= ros::Duration(60) && !call_succeeded) {
         *result = 4;
         return false;
     }
