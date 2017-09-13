@@ -1434,6 +1434,9 @@ class Explorer
                                                             ds_path_size = complex_path.size();
                                                             update_robot_state_2(auctioning_2);
                                                             retries3++;
+                                                        } else if(result == 4) {
+                                                            log_major_error("cannot call ds_mgmt");
+                                                            exit(-1);
                                                         }
                                                         else
                                                             log_major_error("invalid result value");

@@ -4930,8 +4930,18 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     
     ROS_DEBUG("requesting path...");
     
-    while(!goal_ds_for_path_navigation_sc.call(msg))
+    ros::Time start = ros::Time::now();
+    bool call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
+    while(!call_succeeded && ros::Time::now() - start < ros::Duration(5)) {
         ROS_ERROR("failed goal_ds_for_path_navigation_sc.call()!");
+        ros::Duration(1).sleep();
+        call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
+    }
+    if(ros::Time::now() - start >= ros::Duration(5) && !call_succeeded) {
+        *result = 4;
+        return false;
+    }
+        
     //publish_goal_ds_for_path_navigation.publish(msg);
     for(int i=0; i < msg.response.positions.size(); i++)
         complex_path->push_back(msg.response.positions[i]);
@@ -4953,6 +4963,7 @@ void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
     fs_csv.open(csv_file.c_str(), std::fstream::in | std::fstream::app | std::fstream::out);
     fs_csv << "### Frontiers (in Stage coordinates) ###" << std::endl;
     
+    acquire_mutex(&store_frontier_mutex, __FUNCTION__);
     fs_csv << "# Remaining frontiers";
     for(unsigned int i=0; i < frontiers.size(); i++) {
         fs_csv << frontiers.at(i).x_coordinate + robot_home_world_x << "," << frontiers.at(i).y_coordinate + robot_home_world_y;
@@ -4966,6 +4977,7 @@ void ExplorationPlanner::logRemainingFrontiers(std::string csv_file) {
         fs_csv << unreachable_frontiers.at(i).x_coordinate + robot_home_world_x << "," << unreachable_frontiers.at(i).y_coordinate + robot_home_world_y << std::endl;
         
     fs_csv.close();
+    release_mutex(&store_frontier_mutex, __FUNCTION__);
 }
 
 bool ExplorationPlanner::existFrontiersReachableWithFullBattery(float available_distance, bool *error, std::vector<double> *final_goal) {
