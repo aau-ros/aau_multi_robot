@@ -30,6 +30,7 @@ void AuctionObserver::initializeVariables() {
     first_auction = true;
     winner_of_new_auction = false;
     robot_state = robot_state::INITIALIZING;
+    last_check_time = ros::Time::now();
 }
 
 void AuctionObserver::createSubscribers() {
@@ -84,6 +85,7 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
 
     if(!auction_manager->isRobotParticipatingToAuction()) {
         ROS_INFO("acting accorgint to state");
+        last_check_time = ros::Time::now();
 
         analyzeAuctionResult();
         robot_state = getRobotState();
@@ -156,8 +158,13 @@ void AuctionObserver::actAccordingToRobotStateAndAuctionResult() { //TODO this f
             }
 
     }
-    else
+    else {
         ROS_INFO("robot is under auction");
+        if(ros::Time::now() - last_check_time > ros::Duration(3*60)) {
+            ROS_FATAL("TOO LONG WAIT!!!");
+            ros::Duration(30).sleep();   
+        }
+    }
 
     ROS_INFO("unlocking");
     robot_state_manager->unlockRobotState();

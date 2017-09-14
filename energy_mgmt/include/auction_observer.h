@@ -33,7 +33,7 @@ private:
     unsigned int robot_state, prev_robot_state;
     bool new_victory;
     unsigned int last_used_auction_id, optimal_ds_id, current_auction_id;
-    ros::Time change_time;
+    ros::Time change_time, last_check_time;
     bool first_auction;
     bool winner_of_new_auction;
 

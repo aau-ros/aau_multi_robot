@@ -26,12 +26,13 @@ void RobotStateManager::setRobotState(unsigned int robot_state) {
     srv.request.setting_node = node_name;
     srv.request.robot_state = robot_state;
     while(!set_robot_state_sc.call(srv))
-        ROS_ERROR("call to get_robot_state failed");
+        ROS_ERROR("call to set_robot_state failed");
 }
 
 void RobotStateManager::lockRobotState() {
     robot_state::TryToLockRobotState try_msg;
     try_msg.request.locking_node = node_name;
+    ros::Time start_time = ros::Time::now();
     bool repeat = false, call_succeeded = false;
     do {
         ROS_INFO("trying to acquire lock on robot_state");
@@ -46,6 +47,10 @@ void RobotStateManager::lockRobotState() {
                 ROS_INFO("lock not acquired: retrying");
                 repeat = true;
                 ros::Duration(1).sleep();
+                if(ros::Time::now() - start_time > ros::Duration(3*60)) {
+                    ROS_FATAL("IMPOSSIBLE TO ACQUIRE LOCK");
+                    ros::Duration(59).sleep();
+                }
             } else
                 repeat = false;
         }

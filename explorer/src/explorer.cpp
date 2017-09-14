@@ -551,6 +551,12 @@ class Explorer
 
             ros::Time time_2 = ros::Time::now();
             ros::Time time = ros::Time::now();
+            
+            if(robot_state == CHOOSING_ACTION) {
+                ROS_INFO("choosing action");
+                continue;   
+            }
+            
             if(robot_state != robot_state::GOING_CHECKING_VACANCY && robot_state != robot_state::CHECKING_VACANCY && robot_state != robot_state::CHARGING && robot_state != robot_state::GOING_CHARGING && robot_state != robot_state::LEAVING_DS) {
                 
                 /**************************
@@ -1383,6 +1389,8 @@ class Explorer
 
                                                 if(full_battery) {
                                                     log_major_error("existFrontiersReachableWithFullBattery with full battery");
+                                                    costmap_mutex.unlock();
+                                                    print_mutex_info("explore()", "unlock");
                                                     update_robot_state_2(robot_state::MOVING_TO_FRONTIER);
                                                     force_moving = true;
                                                     continue;
