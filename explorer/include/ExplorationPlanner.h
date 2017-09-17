@@ -392,6 +392,7 @@ namespace explorationPlanner
             bool use_theta;
             void sendListDssWithEos();
             double available_distance_for_reply;
+            bool moving_along_path;
 
             /***************
              ** Debugging **
@@ -531,6 +532,7 @@ namespace explorationPlanner
             frontier_t frontier_under_negotiation;
             ros::ServiceClient goal_ds_for_path_navigation_sc;
             void sort_frontiers();
+            ros::Publisher pub_request_path;
             
             // Debugging
             bool test_mode;

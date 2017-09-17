@@ -164,6 +164,7 @@ docking::docking()  // TODO(minor) create functions; comments here and in .h fil
     sc_distance = nh.serviceClient<explorer::Distance>(my_prefix + "explorer/distance");
     
     goal_ds_for_path_navigation_ss = nh.advertiseService("energy_mgmt/graph_path", &docking::simple_compute_and_publish_path_on_ds_graph, this);
+    goal_ds_for_path_navigation_sub = nh.subscribe("energy_mgmt/graph_path_topic", 100, &docking::simple_compute_and_publish_path_on_ds_graph_topic, this);
     next_ds_ss = nh.advertiseService("energy_mgmt/next_ds", &docking::next_ds_service_callback, this);
     
 
@@ -3176,37 +3177,6 @@ bool docking::simple_compute_and_publish_path_on_ds_graph(explorer::PathOnDsGrap
     ROS_INFO("simple computing path on DS graph");
     moving_along_path = true;
 
-//    // compute closest DS
-//    double min_dist = numeric_limits<int>::max();
-//    ds_t *closest_ds = NULL;
-//    int retry = 0;
-//    while(closest_ds == NULL && retry < 10) {
-//        for (unsigned int i = 0; i < ds.size(); i++)
-//        {
-//            double dist = distance_from_robot(ds.at(i).x, ds.at(i).y);
-//            if (dist < 0) {
-//                ROS_ERROR("Distance computation failed");
-//                continue;
-//            }
-
-//            if (dist < min_dist)
-//            {
-//                min_dist = dist;
-//                closest_ds = &ds.at(i);
-//            }
-//        }
-//        retry++;
-//        if(closest_ds == NULL)
-//            ros::Duration(3).sleep();
-//    }
-//    
-//    if(closest_ds == NULL)  {
-//        std_msgs::Empty msg;
-//        pub_finish.publish(msg);
-//        log_major_error("impossible...");
-//        return;
-//    }
-
     path.clear();
     index_of_ds_in_path = 0;
     
@@ -3223,22 +3193,6 @@ bool docking::simple_compute_and_publish_path_on_ds_graph(explorer::PathOnDsGrap
         path_navigation_tries = 0;    
     }
     mutex_ds_graph.unlock();
-    
-//    if(path_navigation_tries > 4) {
-//        log_major_error("Too many times closest_ds->id == goal_ds_path_id in a row");
-//        ROS_INFO("finished_bool = true");
-//        finished_bool = true;
-//        finalize();
-//        return;
-//    }
-         
-//    bool ds_found_with_mst = find_path_2(0, 2, path);
-//    for (int i = 0; i < ds_mst.size(); i++)
-//        for (int j = 0; j < ds_mst.size(); j++)
-//            ROS_ERROR("(%d, %d): %.1f ", i, j, ds_graph[i][j]);    
-//    for (int i = 0; i < ds_mst.size(); i++)
-//        for (int j = 0; j < ds_mst.size(); j++)
-//            ROS_ERROR("(%d, %d): %d ", i, j, ds_mst[i][j]);
 
     if (ds_found_with_mst)
     {
@@ -3271,28 +3225,62 @@ bool docking::simple_compute_and_publish_path_on_ds_graph(explorer::PathOnDsGrap
     return true;
 }
 
-//void docking::goal_ds_for_path_navigation_callback(const adhoc_communication::EmDockingStation::ConstPtr &msg) {
-//    ROS_INFO("received goal ds for path navigation");
-//    moving_along_path = true;
-//    goal_ds_path_id = msg.get()->id;
-//    simple_compute_and_publish_path_on_ds_graph();
-//    if(finished_bool) {
+
+void docking::simple_compute_and_publish_path_on_ds_graph_topic(const explorer::RequestPath::ConstPtr &msg) {
+
+    ROS_INFO("simple computing path on DS graph with fallback procedure (publisher-subscribe)");
+    moving_along_path = true;
+
+    path.clear();
+    index_of_ds_in_path = 0;
+    
+    mutex_ds_graph.lock();
+    bool ds_found_with_mst = false;
+    if(msg.get()->goal_ds_id == msg.get()->closest_ds_id) {
+        log_minor_error("closest_ds->id == goal_ds_path_id, this should not happen...");
+        ds_found_with_mst = true;
+        path_navigation_tries++;
+        path.push_back(msg.get()->goal_ds_id);
+    }
+    else {
+        ds_found_with_mst = find_path_2(msg.get()->closest_ds_id, msg.get()->goal_ds_id, path);
+        path_navigation_tries = 0;    
+    }
+    mutex_ds_graph.unlock();
+
+    if (ds_found_with_mst)
+    {
+        ROS_INFO("Found path on DS graph to reach a DS with EOs");
+        
+        for (unsigned int j = 0; j < ds.size(); j++)
+            if (path[0] == ds[j].id)
+            {
+                //TODO(minor) it should be ok... but maybe it would be better to differenciate an "intermediate target DS" from "target DS": moreover, are we sure that we cannot compute the next optimal DS when moving_along_path is true?
+                set_optimal_ds_given_index(j);
+//                set_target_ds_given_index(j);
+//                ROS_INFO("target_ds: %d", get_target_ds_id());
+                break;
+            }
+            
+        adhoc_communication::MmListOfPoints msg_path;
+        for (unsigned int i = 0; i < path.size(); i++)
+            for (unsigned int j = 0; j < ds.size(); j++)
+                if (ds[j].id == path[i])
+                {
+                    adhoc_communication::MmPoint point;
+                    point.x = ds[j].x, point.y = ds[j].y;
+                    msg_path.positions.push_back(point);
+                }
+
+        pub_moving_along_path.publish(msg_path);
+        ROS_INFO("path published");
+    }
+    else {
+        log_major_error("No path found on DS graph: terminating exploration"); // this should not happen, since it means that either the DSs are not well placed (i.e., they cannot cover the whole environment) or that the battery life is not enough to move between neighboring DSs even when fully charged");
 //        std_msgs::Empty msg;
 //        pub_finish.publish(msg);
-//    } else {
-//        ROS_INFO("Robot needs to recharge");
-//        need_to_charge = true;
-//        if(!going_to_ds) //TODO(minor) very bad check... to be sure that only if the robot has not just won
-//                                  // another auction it will start its own (since maybe explorer is still not aware of this and so will communicate "robot_state::AUCTIONING" state...); do we have other similar problems?
-//        {
-//            ROS_INFO("calling start_new_auction()");
-////            start_new_auction();
-//        }
-//        else {
-//            ROS_INFO("going_to_ds is true, so we cannot start another auction");
-//        }
-//    }
-//}
+    }
+}
 
 void docking::compute_and_publish_path_on_ds_graph_to_home() {
 double min_dist = numeric_limits<int>::max();

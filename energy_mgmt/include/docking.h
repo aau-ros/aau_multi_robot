@@ -46,6 +46,7 @@
 #include "robot_state_manager_interface.h"
 #include <std_srvs/Empty.h>
 #include <explorer/NextDockingStation.h>
+#include <explorer/RequestPath.h>
 #include <utilities/data_logger.h>
 
 #include "gtest/gtest_prod.h"
@@ -547,6 +548,8 @@ class docking
     ros::ServiceServer goal_ds_for_path_navigation_ss, next_ds_ss;
     bool next_ds_service_callback(explorer::NextDockingStation::Request &req, explorer::NextDockingStation::Response &res);
     DataLogger *data_logger;
+    void simple_compute_and_publish_path_on_ds_graph_topic(const explorer::RequestPath::ConstPtr &msg);
+    ros::Subscriber goal_ds_for_path_navigation_sub;
 
 //    AuctionManager auction_manager; //TODO
 

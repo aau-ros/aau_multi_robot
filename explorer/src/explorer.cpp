@@ -509,8 +509,8 @@ class Explorer
         ros::Subscriber sub_new_optimal_ds = nh.subscribe("explorer/new_optimal_ds", 10,
                                                          &Explorer::new_optimal_docking_station_selected_callback, this);
 
-//        ros::Subscriber sub_moving_along_path =
-//            nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
+        ros::Subscriber sub_moving_along_path =
+            nh.subscribe("moving_along_path", 10, &Explorer::moving_along_path_callback, this);
         
         ros::Publisher pub_path = nh.advertise<std_msgs::String>("error_path", 1);
 
@@ -3414,18 +3414,20 @@ class Explorer
                */
     }
 
-//    void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
-//    {
-//        ROS_INFO("Moving along path");
-//        moving_along_path = true;
-//        ds_path_counter = 0;
+    void moving_along_path_callback(const adhoc_communication::MmListOfPoints::ConstPtr &msg)
+    {
+        ROS_INFO("Moving along path");
+        ds_path_counter = 0;
 
-//        complex_path.clear();
-//        ds_path_size = msg.get()->positions.size();
-//        for(int i=0; i < ds_path_size; i++)
-//            complex_path.push_back(msg.get()->positions[i]);
+        complex_path.clear();
+        ds_path_size = msg.get()->positions.size();
+        for(int i=0; i < ds_path_size; i++)
+            complex_path.push_back(msg.get()->positions[i]);
+            
+        moving_along_path = true;
+        exploration->moving_along_path = true;
 
-//    }
+    }
 
     void bat_callback(const explorer::battery_state::ConstPtr &msg)
     {

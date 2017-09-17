@@ -29,6 +29,7 @@
 //#include <map_merger/pointFromOtherRobot.h>
 #include <adhoc_communication/MmListOfPoints.h>
 #include <map_merger/TransformPoint.h>
+#include <explorer/RequestPath.h>
 #include <base_local_planner/trajectory_planner_ros.h>
 #include <math.h>
 #include "explorer/Distance.h"
@@ -298,6 +299,7 @@ ExplorationPlanner::ExplorationPlanner(int robot_id, bool robot_prefix_empty, st
     sub_ds_count = nh.subscribe("ds_count", 10, &ExplorationPlanner::ds_count_callback, this);
     
     publish_goal_ds_for_path_navigation = nh.advertise<adhoc_communication::EmDockingStation>("goal_ds_for_path_navigation", 10);
+    pub_request_path = nh.advertise<explorer::RequestPath>("energy_mgmt/graph_path_topic", 10);
     
     //ROS_ERROR("%s", sub_new_ds_on_graph.getTopic().c_str());
     //ROS_ERROR("%s", sub_ds_count.getTopic().c_str());
@@ -4932,14 +4934,35 @@ bool ExplorationPlanner::compute_and_publish_ds_path(double max_available_distan
     
     ros::Time start = ros::Time::now();
     bool call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
-    while(!call_succeeded && ros::Time::now() - start < ros::Duration(60)) {
-        ROS_ERROR("failed goal_ds_for_path_navigation_sc.call()!");
-        ros::Duration(1).sleep();
-        call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
-    }
-    if(ros::Time::now() - start >= ros::Duration(60) && !call_succeeded) {
-        *result = 4;
-        return false;
+    
+    if(num_robots > 2 && !call_succeeded) {
+        while(!call_succeeded && ros::Time::now() - start < ros::Duration(60)) {
+            ROS_ERROR("failed goal_ds_for_path_navigation_sc.call()!");
+            ros::Duration(1).sleep();
+            call_succeeded = goal_ds_for_path_navigation_sc.call(msg);
+        }
+        if(ros::Time::now() - start >= ros::Duration(60) && !call_succeeded) {
+            *result = 4;
+            return false;
+        }
+    } else if (!call_succeeded) {
+        ROS_INFO("failed goal_ds_for_path_navigation_sc.call() with 2 robots: trying with fallback procedure");
+        moving_along_path = false;
+        explorer::RequestPath req_msg;
+        req_msg.closest_ds_id = closest_ds->id;
+        req_msg.closest_ds_id = min_ds->id;
+        pub_request_path.publish(req_msg);
+        ROS_INFO("path requested: waiting");
+        ros::Duration(5).sleep();
+        while(!moving_along_path && ros::Time::now() - start < ros::Duration(60)) {
+            ROS_ERROR("waiting path!");
+            ros::Duration(3).sleep();
+        }
+        if(ros::Time::now() - start >= ros::Duration(60) && !moving_along_path) {
+            *result = 4;
+            return false;
+        } else
+            ROS_INFO("path received");
     }
         
     //publish_goal_ds_for_path_navigation.publish(msg);

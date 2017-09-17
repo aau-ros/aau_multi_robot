@@ -75,6 +75,7 @@ add_message_files(
   FILES
   Speed.msg
   battery_state.msg
+  RequestPath.msg
 )
 
 ## Generate services in the 'srv' folder
