@@ -2712,7 +2712,7 @@ void docking::update_robot_position()
     */
     
     fake_network::RobotPosition msg;
-    msg.id = robot_id;
+    msg.robot_id = robot_id;
     double x, y;
     
     rel_to_abs(robot->x, robot->y, &x, &y);

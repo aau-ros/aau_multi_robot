@@ -1618,6 +1618,7 @@ class Explorer
             if (robot_state == robot_state::MOVING_TO_FRONTIER)
             {
                 if(force_moving) {
+                    goal_determined = true;
                     force_moving = false;
                     if(fallback_goal.size() < 2)
                         ROS_FATAL("fallback_goal.size() < 2");

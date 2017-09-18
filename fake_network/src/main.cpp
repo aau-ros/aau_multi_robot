@@ -133,9 +133,9 @@ bool send_message(fake_network::SendMessage::Request &req, fake_network::SendMes
 }
 
 void robot_absolute_position_callback(const fake_network::RobotPosition msg) {
-    robot_list[msg.id].x = msg.world_x;
-    robot_list[msg.id].y = msg.world_y;
-    //ROS_ERROR("(%f, %f)", robot_list[msg.id].x, robot_list[msg.id].y);
+//    ROS_INFO("received robot position from robot %d (%.1f, %.1f)", msg.robot_id, msg.world_x, msg.world_y);
+    robot_list[msg.robot_id].x = msg.world_x;
+    robot_list[msg.robot_id].y = msg.world_y;
 }
 
 void end_simulation(const ros::TimerEvent &event) {
@@ -234,10 +234,9 @@ int main(int argc, char** argv)
         ss_send_message_list.push_back(nh.advertiseService(robot_prefix + "fake_network/send_message", send_message));   
         sc_publish_message_list.push_back(nh.serviceClient<fake_network::ReceiveMessage>(robot_prefix + "adhoc_communication/publish_message_service"));
         pub_publish_message_list.push_back(nh.advertise<fake_network::NetworkMessage>(robot_prefix + "adhoc_communication/publish_message_topic", 10000000));
-//        sc_robot_position_list.push_back(nh.serviceClient<fake_network::RobotPosition>(robot_prefix + "explorer/robot_pose"));
-        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 10000000, robot_absolute_position_callback));
+        sub_robot_position_list.push_back(nh.subscribe(robot_prefix + "fake_network/robot_absolute_position", 1000, robot_absolute_position_callback));
 //        sub_finished_exploration_list.push_back(nh.subscribe(robot_prefix + "finished_exploration_id", 1000, finished_exploration_callback));
-        //ss_robot_position_list.push_back(nh.advertiseService(robot_prefix + "fake_network/robot_absolute_position", robot_absolute_position_callback)); 
+
         robot_t robot;
         robot.x = 0;    //TODO not very good...
         robot.y = 0;
@@ -250,8 +249,6 @@ int main(int argc, char** argv)
         pub_auction_reply_list.push_back(nh.advertise<adhoc_communication::EmAuction>(robot_prefix + "adhoc_communication/send_em_auction/auction_reply", 1000));
         pub_auction_result_list.push_back(nh.advertise<adhoc_communication::EmAuction>(robot_prefix + "adhoc_communication/send_em_auction/auction_result", 1000));
     }
-    
-//    fake_network::RobotPosition robot_position;
     
     // Frequency of loop
     double rate = 30; // Hz
