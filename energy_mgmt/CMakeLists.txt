@@ -93,6 +93,7 @@ add_dependencies(concrete_sender adhoc_communication adhoc_communication_gencpp 
 add_dependencies(ds_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(battery_mgmt map_merger map_merger_gencpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(auction_mgmt utilities ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(battery_state_updater explorer_gencpp explorer_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(auction_manager
