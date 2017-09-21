@@ -1,8 +1,0 @@
-explore
-    - service
-    - set robot state
-    - check robot state
-battery
-    - read and set robot state
-docking:
-    - read state and service to explorer for auctioning AND auctioning_2 / path publication

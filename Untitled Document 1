@@ -1,7 +1,0 @@
-while(!isRobotWinner())
-    schedule()
-    while(isRobotWaiting() && !isRobotWinner())
-        ;
-    while(isRobotParticipating() && !isRobotWinner())
-        ;
-cancelScheduled()
