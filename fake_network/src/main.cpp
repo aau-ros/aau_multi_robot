@@ -209,7 +209,7 @@ bool fake_send_auction_callback(adhoc_communication::SendEmAuction::Request &req
             }
             
         } else
-            ROS_ERROR("unreachable");
+            ROS_DEBUG("unreachable");
     }
         
     if(!broadcast && !delivered)
