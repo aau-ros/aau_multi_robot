@@ -123,7 +123,7 @@ bool send_message(fake_network::SendMessage::Request &req, fake_network::SendMes
             }
         }
         else
-            ROS_ERROR("robot_%d and robot_%d cannot communicate", source_robot_id, i);
+            ROS_DEBUG("robot_%d and robot_%d cannot communicate", source_robot_id, i);
     }
     
     if(!broadcast && !delivered)
