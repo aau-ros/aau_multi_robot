@@ -208,8 +208,10 @@ bool fake_send_auction_callback(adhoc_communication::SendEmAuction::Request &req
                 break;
             }
             
-        } else
+        } else {
             ROS_DEBUG("unreachable");
+            delivered = true;
+        }
     }
         
     if(!broadcast && !delivered)
