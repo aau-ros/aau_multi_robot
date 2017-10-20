@@ -1877,18 +1877,23 @@ class Explorer
 
                     ROS_DEBUG("Storing visited...");
                     if(final_goal.size()<4) {
-                        if(fallback_goal.size() < 2)
-                            ROS_FATAL("fallback_goal.size() < 2");
+                        if(fallback_goal.size() < 4)
+                            log_major_error("fallback_goal.size() < 4");
                         else {
                             final_goal.clear();
                             final_goal.push_back(fallback_goal.at(0));
                             final_goal.push_back(fallback_goal.at(1));
                             final_goal.push_back(fallback_goal.at(2));
-                            final_goal.push_back(fallback_goal.at(3)); 
+                            final_goal.push_back(fallback_goal.at(3));
                             exploration->storeVisitedFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
                                                               robot_str.at(0), final_goal.at(3));
                             ROS_DEBUG("Stored Visited frontier");
                         }
+                    }
+                    else {
+                        exploration->storeVisitedFrontier(final_goal.at(0), final_goal.at(1), final_goal.at(2),
+                                                              robot_str.at(0), final_goal.at(3));
+                        ROS_DEBUG("Stored Visited frontier");
                     }
                 }
 
