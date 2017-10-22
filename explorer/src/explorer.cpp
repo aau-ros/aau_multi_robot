@@ -1876,6 +1876,10 @@ class Explorer
                     //    exploration->visited_frontiers.at(exploration->visited_frontiers.size() - 1).y_coordinate);
 
                     ROS_DEBUG("Storing visited...");
+
+                    if(robot_str.size() == 0)
+                        robot_str.push_back(std::to_string(robot_id));
+
                     if(final_goal.size()<4) {
                         if(fallback_goal.size() < 4)
                             log_major_error("fallback_goal.size() < 4");
